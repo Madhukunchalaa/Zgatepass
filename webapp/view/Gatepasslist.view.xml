@@ -1,0 +1,125 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.Gatepasslist"
+	xmlns="sap.m"
+	xmlns:l="sap.ui.layout"
+	xmlns:f="sap.ui.layout.form"
+	xmlns:core="sap.ui.core"
+	xmlns:mvc="sap.ui.core.mvc">
+	<Page showHeader="false">
+		<content>
+            <IconTabBar id="idMainIconTabBar" select=".onMainTabSelect" expanded="true" class="sapUiNoContentPadding">
+                <items>
+                    <IconTabFilter key="Requests" text="Gate Pass Requests" icon="sap-icon://request">
+                        <content>
+                            <Panel id="GatepasslistContainer" accessibleRole="Region" class="sapUiNoContentPadding">
+
+                                <VBox class="sapUiSmallMargin">
+                                    <HBox wrap="Wrap" justifyContent="Start">
+                                        <VBox class="sapUiSmallMarginEnd">
+                                            <Label text="Gate Pass Type"/>
+                                            <Select width="180px" selectedKey="{filterModel>/GatePassType}" change="onSearch">
+                                                <core:Item key="All" text="All"/>
+                                                <core:Item key="NRGP" text="NRGP"/>
+                                                <core:Item key="RGP" text="RGP"/>
+                                            </Select>
+                                        </VBox>
+                                        <VBox class="sapUiSmallMarginEnd">
+                                            <Label text="Status"/>
+                                            <Select width="180px" selectedKey="{filterModel>/Status}" change="onSearch">
+                                                <core:Item key="All" text="All"/>
+                                                <core:Item key="Pending" text="Pending"/>
+                                                <core:Item key="Approved" text="Approved"/>
+                                                <core:Item key="Rejected" text="Rejected"/>
+                                            </Select>
+                                        </VBox>
+                                        <VBox class="sapUiSmallMarginEnd">
+                                            <Label text="Request Number"/>
+                                            <SearchField width="200px" placeholder="Search Request No..." search="onSearch" value="{filterModel>/GatePassReqNo}"/>
+                                        </VBox>
+                                    </HBox>
+                                </VBox>
+
+                                <Table id="gatePassTable" items="{path: '/GateReqHdrSet'}" growing="true" growingThreshold="20">
+                                    <headerToolbar>
+                                        <Toolbar>
+                                            <Title text="Gate Pass Request Numbers"/>
+                                            <ToolbarSpacer/>
+                                            <Button text="New Request" icon="sap-icon://add" press="onCreate"/>
+                                            <Button text="Create Gate Pass" icon="sap-icon://document" press="onCreateGatePass" type="Emphasized"/>
+                                            <Button text="Refresh" icon="sap-icon://refresh" press="onRefresh"/>
+                                        </Toolbar>
+                                    </headerToolbar>
+                                    <columns>
+                                        <Column><Text text="Request No"/></Column>
+                                        <Column><Text text="Type"/></Column>
+                                        <Column><Text text="Plant"/></Column>
+                                        <Column><Text text="Vendor"/></Column>
+                                        <Column><Text text="Vehicle No"/></Column>
+                                        <Column><Text text="Department"/></Column>
+                                        <Column><Text text="No. of Packages"/></Column>
+                                        <Column><Text text="Status"/></Column>
+                                    </columns>
+                                    <items>
+                                        <ColumnListItem type="Inactive">
+                                            <cells>
+                                                <Text text="{GatePassReqNo}"/>
+                                                <Text text="{GatePassType}"/>
+                                                <Text text="{Plant}"/>
+                                                <Text text="{Vendor}"/>
+                                                <Text text="{VehicleNo}"/>
+                                                <Text text="{Department}"/>
+                                                <Text text="{NoOfPackages}"/>
+                                                <Text text="{Status}"/>
+                                            </cells>
+                                        </ColumnListItem>
+                                    </items>
+                                </Table>
+                            </Panel>
+                        </content>
+                    </IconTabFilter>
+
+                    <IconTabFilter key="GatePasses" text="Gate Passes" icon="sap-icon://shipping-status">
+                        <content>
+                            <Table id="gatePassHeaderTable" items="{path: '/GatePassHDRSet'}" growing="true" growingThreshold="20">
+                                <headerToolbar>
+                                    <Toolbar>
+                                        <Title text="Generated Gate Passes"/>
+                                        <ToolbarSpacer/>
+                                        <Button text="Refresh" icon="sap-icon://refresh" press="onRefreshHeaders"/>
+                                    </Toolbar>
+                                </headerToolbar>
+                                <columns>
+                                    <Column><Text text="Gate Pass No"/></Column>
+                                    <Column><Text text="Request No"/></Column>
+                                    <Column><Text text="Type"/></Column>
+                                    <Column><Text text="Plant"/></Column>
+                                    <Column><Text text="Vendor"/></Column>
+                                    <Column><Text text="Vehicle No"/></Column>
+                                    <Column><Text text="Challan No"/></Column>
+                                    <Column><Text text="Status"/></Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem type="Inactive">
+                                        <cells>
+                                            <Text text="{GatePassNo}"/>
+                                            <Text text="{GatePassReqNo}"/>
+                                            <Text text="{GatePassType}"/>
+                                            <Text text="{Plant}"/>
+                                            <Text text="{VendorName}"/>
+                                            <Text text="{VehicleNo}"/>
+                                            <Text text="{ChallanNumber}"/>
+                                            <ObjectStatus text="{Message}" 
+                                                state="{= ${Message} === 'Approved' ? 'Success' : 
+                                                          ${Message} === 'Rejected' ? 'Error' : 'Warning'}"/>
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </content>
+                    </IconTabFilter>
+                </items>
+            </IconTabBar>
+		</content>
+	</Page>
+
+</mvc:View>

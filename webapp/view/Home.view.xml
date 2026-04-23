@@ -1,0 +1,164 @@
+<mvc:View
+    controllerName="zgpms.meilpower.com.controller.Home"
+    xmlns="sap.m"
+    xmlns:l="sap.ui.layout"
+    xmlns:viz="sap.viz.ui5.controls"
+    xmlns:viz.feeds="sap.viz.ui5.controls.common.feeds"
+    xmlns:viz.data="sap.viz.ui5.data"
+    xmlns:core="sap.ui.core"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:f="sap.f"
+    height="100%">
+
+    <Page showHeader="false">
+
+        <landmarkInfo>
+            <PageAccessibleLandmarkInfo
+                rootRole="Region"
+                contentRole="Main"/>
+        </landmarkInfo>
+
+        <l:BlockLayout background="Default">
+
+            <!-- ================= CHART ROW ================= -->
+            <l:BlockLayoutRow>
+                <l:BlockLayoutCell class="sapUiNoContentPadding">
+
+                    <viz:VizFrame
+                        id="idStackedChart"
+                        uiConfig="{applicationSet:'fiori'}"
+                        height="400px"
+                        width="100%"
+                        vizType="stacked_column">
+                    </viz:VizFrame>
+
+                </l:BlockLayoutCell>
+            </l:BlockLayoutRow>
+
+            <!-- ================= KPI CARDS ROW ================= -->
+            <l:BlockLayoutRow>
+                <l:BlockLayoutCell>
+
+                    <f:GridContainer
+                        containerQuery="true"
+                        >
+
+                        <f:layout>
+                            <f:GridContainerSettings
+                                rowSize="10rem"
+                                columnSize="10rem"
+                            />
+                        </f:layout>
+
+                        <!-- Total RGP -->
+                        <GenericTile
+						class="sapUiSmallMargin"
+                            header="Total RGP Count"
+                            subheader="Overall Status"
+                            frameType="OneByOne"
+                            press="onPendingPress">
+                            <TileContent>
+                                <NumericContent
+                                    value="{/totalRGP}"
+                                    unit="Items"
+                                    state="Good"/>
+                            </TileContent>
+                        </GenericTile>
+
+                        <!-- Pending RGP -->
+                        <GenericTile
+						class="sapUiSmallMargin"
+                            header="Pending RGP Count"
+                            subheader="Overall Status"
+                            frameType="OneByOne"
+                            press="onPendingPress">
+                            <TileContent>
+                                <NumericContent
+                                    value="{/pendingRGP}"
+                                    unit="Items"
+                                    state="Warning"/>
+                            </TileContent>
+                        </GenericTile>
+
+                        <!-- Total NRGP -->
+                        <GenericTile
+						class="sapUiSmallMargin"
+                            header="Total NRGP Count"
+                            subheader="Overall Status"
+                            frameType="OneByOne"
+                            press="onPendingPress">
+                            <TileContent>
+                                <NumericContent
+                                    value="{/totalNRGP}"
+                                    unit="Items"
+                                    state="Good"/>
+                            </TileContent>
+                        </GenericTile>
+
+                        <!-- Pending NRGP -->
+                        <GenericTile
+						class="sapUiSmallMargin"
+                            header="Pending NRGP Count"
+                            subheader="Overall Status"
+                            frameType="OneByOne"
+                            press="onPendingPress">
+                            <TileContent>
+                                <NumericContent
+                                    value="{/pendingNRGP}"
+                                    unit="Items"
+                                    state="Error"/>
+                            </TileContent>
+                        </GenericTile>
+
+                    </f:GridContainer>
+
+                </l:BlockLayoutCell>
+            </l:BlockLayoutRow>
+
+            <!-- ================= TABLE ROW ================= -->
+            <l:BlockLayoutRow>
+                <l:BlockLayoutCell
+                    backgroundColorSet="ColorSet9"
+                    backgroundColorShade="ShadeA"
+                    width="3">
+
+                    <Table
+                        items="{path:'customer>/customers'}"
+                        fixedLayout="false">
+
+                        <headerToolbar>
+                            <Toolbar design="Transparent">
+                                <Title text="Over Due Returnables" level="H3"/>
+                            </Toolbar>
+                        </headerToolbar>
+
+                        <columns>
+                            <Column><Text text="Customer"/></Column>
+                            <Column minScreenWidth="Tablet"><Text text="Product"/></Column>
+                            <Column minScreenWidth="Desktop" hAlign="End"><Text text="Last Purchase"/></Column>
+                            <Column hAlign="Center"><Text text="Payment"/></Column>
+                            <Column hAlign="End"><Text text="Amount"/></Column>
+                        </columns>
+
+                        <items>
+                            <ColumnListItem>
+                                <cells>
+                                    <Text text="{customer>name}"/>
+                                    <Text text="{customer>productId}"/>
+                                    <Text text="{customer>lastPurchase}"/>
+                                    <ObjectNumber number="{customer>payment}"/>
+                                    <ObjectNumber
+                                        number="{customer>amount}"
+                                        unit="{customer>currencyCode}"/>
+                                </cells>
+                            </ColumnListItem>
+                        </items>
+
+                    </Table>
+
+                </l:BlockLayoutCell>
+            </l:BlockLayoutRow>
+
+        </l:BlockLayout>
+    </Page>
+</mvc:View>

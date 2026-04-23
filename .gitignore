@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.project
+.settings/
+.vscode/
+ui5-dist.yaml
+*.log
+.DS_Store

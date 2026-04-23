@@ -1,0 +1,132 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.Reports"
+	xmlns="sap.m"
+	xmlns:l="sap.ui.layout"
+	xmlns:f="sap.ui.layout.form"
+	xmlns:core="sap.ui.core"
+	xmlns:mvc="sap.ui.core.mvc">
+
+
+
+	<Page showHeader="false">
+		<landmarkInfo>
+			<PageAccessibleLandmarkInfo
+				rootRole="Region"
+				rootLabel="{i18n>Reports_rootLabel}"
+				contentRole="Main"
+				contentLabel="{i18n>Reports_contentLabel}"/>
+		</landmarkInfo>
+		<content>
+			<Panel
+				id="ReportsContainer"
+				accessibleRole="Region"
+				class="sapUiNoContentPadding">
+				<headerToolbar>
+					<Toolbar>
+						<Title
+							text="Meil Power"
+							level="H3"
+							textAlign="Left"/>
+						<ToolbarSpacer/>
+						
+					</Toolbar>
+				</headerToolbar>
+		 <content>
+
+            <!-- FILTER SECTION -->
+            <VBox class="sapUiSmallMargin">
+
+                <HBox wrap="Wrap" justifyContent="SpaceBetween">
+
+                    <VBox width="20%">
+                        <Label text="Report Type"/>
+                        <ComboBox
+                            id="reportType"
+                            selectionChange="onReportTypeChange"
+                            items="{filterModel>/reportTypes}">
+                            <core:Item key="{filterModel>key}" text="{filterModel>text}"/>
+                        </ComboBox>
+                    </VBox>
+
+                    <VBox width="20%">
+                        <Label text="From Date"/>
+                        <DatePicker id="fromDate"/>
+                    </VBox>
+
+                    <VBox width="20%">
+                        <Label text="To Date"/>
+                        <DatePicker id="toDate"/>
+                    </VBox>
+
+                    <VBox width="20%">
+                        <Label text="Department"/>
+                        <Input id="deptFilter"/>
+                    </VBox>
+
+                </HBox>
+
+                <HBox justifyContent="End" class="sapUiSmallMarginTop">
+                    <Button text="Search" type="Emphasized" press="onSearch"/>
+                    <Button text="Download" press="onDownload" class="sapUiSmallMarginBegin"/>
+                </HBox>
+
+            </VBox>
+
+            <!-- DETAIL TABLE -->
+            <Table
+                id="detailTable"
+                visible="{= !${viewModel>/isSummary} }"
+                items="{reportModel>/filteredData}">
+
+                <columns>
+                    <Column><Text text="Gate No"/></Column>
+                    <Column><Text text="Category"/></Column>
+                    <Column><Text text="Department"/></Column>
+                    <Column><Text text="Status"/></Column>
+                    <Column><Text text="Year"/></Column>
+                    <Column><Text text="Qty"/></Column>
+                </columns>
+
+                <items>
+                    <ColumnListItem>
+                        <cells>
+                            <Text text="{reportModel>gateNo}"/>
+                            <Text text="{reportModel>gateCategory}"/>
+                            <Text text="{reportModel>department}"/>
+                            <Text text="{reportModel>status}"/>
+                            <Text text="{reportModel>year}"/>
+                            <Text text="{reportModel>quantity}"/>
+                        </cells>
+                    </ColumnListItem>
+                </items>
+
+            </Table>
+
+            <!-- SUMMARY TABLE -->
+            <Table
+                id="summaryTable"
+                visible="{viewModel>/isSummary}"
+                items="{summaryModel>/summaryData}">
+
+                <columns>
+                    <Column><Text text="Key"/></Column>
+                    <Column><Text text="Pending Count"/></Column>
+                </columns>
+
+                <items>
+                    <ColumnListItem>
+                        <cells>
+                            <Text text="{summaryModel>key}"/>
+                            <Text text="{summaryModel>count}"/>
+                        </cells>
+                    </ColumnListItem>
+                </items>
+
+            </Table>
+
+        </content>
+	</Panel>
+
+		</content>
+	</Page>
+</mvc:View>

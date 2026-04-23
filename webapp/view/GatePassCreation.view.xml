@@ -1,0 +1,224 @@
+<mvc:View controllerName="zgpms.meilpower.com.controller.GatePassCreation"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:f="sap.ui.layout.form"
+    xmlns:core="sap.ui.core"
+    xmlns="sap.m">
+
+    <Page title="Create Gate Pass">
+
+        <content>
+
+            <!-- SECTION 1: SOURCE SELECTION -->
+            <f:SimpleForm editable="true"
+                layout="ColumnLayout"
+                title="Source Reference"
+                columnsXL="2"
+                columnsL="2"
+                columnsM="1">
+                <f:content>
+
+                    <Label text="Search By" required="true"/>
+                    <SegmentedButton
+                        selectedKey="{localModel>/SearchType}"
+                        selectionChange="onSegmentedButtonSearchTypeSelectionChange">
+                        <items>
+                            <SegmentedButtonItem key="PO"    text="Purchase Order"/>
+                            <SegmentedButtonItem key="GPREQ" text="Gate Pass Request No"/>
+                        </items>
+                    </SegmentedButton>
+
+                    <!-- PO PATH -->
+                    <Label text="Plant" required="true"
+                        visible="{= ${localModel>/SearchType} === 'PO' }"/>
+                    <ComboBox id="idPlantsForPOComboBox"
+                        visible="{= ${localModel>/SearchType} === 'PO' }"
+                        selectedKey="{localModel>/POPlant}"
+                        selectionChange="onPlantsComboBoxPOSelectionChange"
+                        placeholder="Select Plant to load POs"
+                        items="{path: 'plantModel>/plants'}">
+                        <core:Item key="{plantModel>Plant}" text="{plantModel>Plant} - {plantModel>PlantName}"/>
+                    </ComboBox>
+
+                    <Label text="Purchase Order" required="true"
+                        visible="{= ${localModel>/SearchType} === 'PO' }"/>
+                    <ComboBox id="idPosNumberSelect"
+                        visible="{= ${localModel>/SearchType} === 'PO' }"
+                        enabled="{= !!${localModel>/POPlant} }"
+                        selectedKey="{localModel>/PONumber}"
+                        selectionChange="onPosSelectChange"
+                        showSecondaryValues="true"
+                        filterSecondaryValues="true"
+                        placeholder="Search PO or Vendor..."
+                        items="{path: 'poModel>/pos'}">
+                        <core:ListItem key="{poModel>PurchaseOrder}" 
+                            text="{poModel>PurchaseOrder}" 
+                            additionalText="{poModel>VendorName}"/>
+                    </ComboBox>
+
+                    <!-- REQUEST PATH -->
+                    <Label text="Gate Pass Request No" required="true"
+                        visible="{= ${localModel>/SearchType} === 'GPREQ' }"/>
+                    <Input value="{localModel>/GatePassReqNo}"
+                        placeholder="Enter approved Request No"
+                        visible="{= ${localModel>/SearchType} === 'GPREQ' }"
+                        change="onGatePassReqNoInputChange"/>
+
+                </f:content>
+            </f:SimpleForm>
+
+            <!-- SECTION 2: VENDOR DETAILS (READ-ONLY) -->
+            <f:SimpleForm editable="false"
+                layout="ColumnLayout"
+                title="Vendor Details"
+                columnsXL="2"
+                columnsL="2"
+                columnsM="2">
+                <f:content>
+
+                    <Label text="Vendor"/>
+                    <Input value="{localModel>/Vendor}" editable="false"/>
+
+                    <Label text="Vendor Name"/>
+                    <Input value="{localModel>/VendorName}" editable="false"/>
+
+                    <Label text="City"/>
+                    <Input value="{localModel>/City}" editable="false"/>
+
+                    <Label text="Zip Code"/>
+                    <Input value="{localModel>/ZipCode}" editable="false"/>
+
+                    <Label text="Plant"/>
+                    <Input value="{localModel>/Plant}" editable="false"/>
+
+                </f:content>
+            </f:SimpleForm>
+
+            <!-- SECTION 3: GATE PASS DETAILS (EDITABLE) -->
+            <f:SimpleForm editable="true"
+                layout="ColumnLayout"
+                title="Gate Pass Details"
+                columnsXL="2"
+                columnsL="2"
+                columnsM="2">
+                <f:content>
+
+                    <Label text="Gate Pass Type"/>
+                    <Select selectedKey="{localModel>/GatePassType}">
+                        <core:Item key="NRGP" text="NRGP"/>
+                        <core:Item key="RGP"  text="RGP"/>
+                    </Select>
+
+                    <Label text="No. of Packages"/>
+                    <Input value="{localModel>/NoOfPackages}" type="Number" placeholder="0"/>
+
+                    <Label text="Vehicle No" required="true"/>
+                    <Input value="{localModel>/VehicleNo}" placeholder="e.g. TS09AB1234"/>
+
+                    <Label text="Challan No" required="true"/>
+                    <Input value="{localModel>/ChallanNumber}" placeholder="Delivery Note / Challan No"/>
+
+                    <Label text="Challan Date" required="true"/>
+                    <DatePicker value="{localModel>/ChallanDate}"
+                        valueFormat="yyyy-MM-dd"
+                        displayFormat="dd/MM/yyyy"
+                        maxDate="{localModel>/maxDate}"
+                        placeholder="dd/MM/yyyy"/>
+
+                    <Label text="Gate Entry No"/>
+                    <Input value="{localModel>/GateEntryNo}" placeholder="Gate Entry No"/>
+
+                    <Label text="Mode of Dispatch"/>
+                    <Input value="{localModel>/ModeOfDispatch}" placeholder="Road / Rail / Air"/>
+
+                    <Label text="Driver Name"/>
+                    <Input value="{localModel>/DriverName}" placeholder="Driver Name"/>
+
+                    <Label text="Driver License"/>
+                    <Input value="{localModel>/DriverLicense}" placeholder="Driver License No"/>
+
+                    <Label text="Helper Name"/>
+                    <Input value="{localModel>/HelperName}" placeholder="Helper Name"/>
+
+                    <Label text="Helper ID"/>
+                    <Input value="{localModel>/HelperId}" placeholder="Helper ID"/>
+
+                    <Label text="Remarks"/>
+                    <Input value="{localModel>/Remarks}" placeholder="Remarks"/>
+
+                    <Label text="Returnable Date"
+                        required="true"
+                        visible="{= ${localModel>/GatePassType} === 'RGP' }"/>
+                    <DatePicker value="{localModel>/ReturnableDate}"
+                        valueFormat="yyyy-MM-dd"
+                        displayFormat="dd/MM/yyyy"
+                        minDate="{localModel>/minDate}"
+                        visible="{= ${localModel>/GatePassType} === 'RGP' }"/>
+
+                </f:content>
+            </f:SimpleForm>
+
+            <!-- SECTION 4: ITEMS TABLE -->
+            <Table id="idGatePassItemNavTable"
+                items="{localModel>/GatePassItemNav}"
+                alternateRowColors="true">
+
+                <headerToolbar>
+                    <OverflowToolbar>
+                        <Title text="Items"/>
+                        <ToolbarSpacer/>
+                        <!-- <Button text="Add Row" icon="sap-icon://add" press="onAddRowButtonPress"/> -->
+                    </OverflowToolbar>
+                </headerToolbar>
+
+                <columns>
+                    <Column width="5%">  <Text text="#"/></Column>
+                    <Column width="15%"> <Text text="Material"/></Column>
+                    <Column width="22%"> <Text text="Description"/></Column>
+                    <Column width="5%"  hAlign="Center"><Text text="UOM"/></Column>
+                    <Column width="9%"  hAlign="End" visible="{= ${localModel>/SearchType} === 'PO' }"><Text text="PO Qty"/></Column>
+                    <Column width="9%"  hAlign="End" visible="{= ${localModel>/SearchType} === 'PO' }"><Text text="Balance Qty"/></Column>
+                    <Column width="10%" hAlign="End"><Text text="Received Qty"/></Column>
+                    <Column width="9%"  hAlign="End"><Text text="Net Price"/></Column>
+                    <Column width="9%"  hAlign="End"><Text text="Total Value"/></Column>
+                    <Column width="4%"/>
+                </columns>
+
+                <items>
+                    <ColumnListItem>
+                        <cells>
+                            <Text  text="{localModel>ItemNo}"/>
+                            <Text  text="{localModel>Material}"/>
+                            <Text  text="{localModel>Description}"/>
+                            <Text  text="{localModel>UOM}"/>
+                            <Input value="{localModel>ActualQuantity}" type="Number" textAlign="End" 
+                                visible="{= ${localModel>/SearchType} === 'PO' }"
+                                editable="{= ${localModel>/SearchType} === 'PO' }"/>
+                            <Text  text="{localModel>BalanceQuantity}"
+                                visible="{= ${localModel>/SearchType} === 'PO' }"/>
+                            <Input value="{localModel>RecievedQuantity}" type="Number" textAlign="End"
+                                placeholder="0.000"
+                                liveChange="onRecievedQuantityInputLiveChange"/>
+                            <Input value="{localModel>NetPrice}" type="Number" textAlign="End" 
+                                editable="{= ${localModel>/SearchType} === 'PO' }"
+                                liveChange="onRecievedQuantityInputLiveChange"/>
+                            <Input value="{localModel>Totalvalue}" type="Number" textAlign="End" placeholder="0.00"/>
+                            <Button icon="sap-icon://delete" press="onButtonDeletePress" type="Transparent"/>
+                        </cells>
+                    </ColumnListItem>
+                </items>
+
+            </Table>
+
+        </content>
+
+        <footer>
+            <Toolbar>
+                <ToolbarSpacer/>
+                <Button text="Create Gate Pass"
+                    type="Emphasized"
+                    press="onCreateGatePassButtonPress"/>
+            </Toolbar>
+        </footer>
+
+    </Page>
+</mvc:View>

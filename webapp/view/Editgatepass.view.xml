@@ -1,0 +1,293 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.Editgatepass"
+	xmlns="sap.m"
+	xmlns:l="sap.ui.layout"
+	xmlns:f="sap.ui.layout.form"
+	xmlns:core="sap.ui.core"
+	xmlns:mvc="sap.ui.core.mvc">
+
+
+
+	<Page showHeader="false">
+		<landmarkInfo>
+			<PageAccessibleLandmarkInfo
+				rootRole="Region"
+				rootLabel="{i18n>Editgatepass_rootLabel}"
+				contentRole="Main"
+				contentLabel="{i18n>Editgatepass_contentLabel}"/>
+		</landmarkInfo>
+		<content>
+			<Panel
+				id="EditgatepassContainer"
+				accessibleRole="Region"
+				class="sapUiNoContentPadding">
+				<headerToolbar>
+					<Toolbar>
+						<Title
+							text="Meil Power"
+							level="H3"
+							textAlign="Left"/>
+						<ToolbarSpacer/>
+						
+					</Toolbar>
+				</headerToolbar>
+
+					<!-- Edit GatePass Selection -->
+					
+	<VBox class="sapUiSmallMargin" id="gatepassEditBox">
+        <ComboBox
+            id="comboBox1"
+            width="300px"
+            placeholder="Select Gatepass Type"
+			 change="onGPassChange"
+            items="{
+                path: 'materialModel>/materials'
+            }">
+
+            <core:Item
+                key="{materialModel>matnr}"
+                text="{materialModel>maktx}" />
+
+        </ComboBox>
+    </VBox>
+
+					<!-- End of Edit Gatepass Selection -->
+
+
+
+
+
+
+		
+					<!-- Form starts here -->
+					<VBox class="sapUiSmallMargin" id="gatepassUpdateBox" visible="false">
+		<f:Form id="FormChangeColumn_threeGroups234"
+			editable="true">
+			<f:title>
+				<core:Title text="Edit GatePass" />
+			</f:title>
+			<f:layout>
+				<f:ColumnLayout
+					columnsM="2"
+					columnsL="3"
+					columnsXL="4"
+				/>
+			</f:layout>
+			<f:formContainers>
+				<f:FormContainer title="">
+				<f:FormElement label="GatePass For">
+							<f:fields>
+								<Select id="gatepassfor" selectedKey="{gfor}">
+									<items>
+										<core:Item text="Coal" key="coal"/>
+										<core:Item text="lignite" key="lignite"/>
+										<core:Item text="Ash" key="Ash"/>
+										<core:Item text="With PO" key="WPO"/>
+										<core:Item text="Without PO" key="WTPO"/>
+										<core:Item text="Scrap Gatepass" key="SCGP"/>
+										<core:Item text="PCP - CashPurchase" key="PCP-Cash"/>
+										<core:Item text="Empty Vehicle In" key="VHIN"/>
+
+									</items>
+								</Select>
+							</f:fields>
+						</f:FormElement>
+
+						<f:FormElement label="GatePass Type">
+							<f:fields>
+								<Select id="gatepasstype" selectedKey="{gtype}">
+									<items>
+										<core:Item text="Returnable" key="rgp"/>
+										<core:Item text="Non Retunable" key="nrgp"/>
+								</items>
+								</Select>
+							</f:fields>
+						</f:FormElement>
+
+
+							<f:FormElement label="Material Transfer">
+							<f:fields>
+								<Select id="gatepassopt" selectedKey="{gtype}">
+									<items>
+										<core:Item text="Internal" key="rgp"/>
+										<core:Item text="External" key="nrgp"/>
+								</items>
+								</Select>
+							</f:fields>
+						</f:FormElement>
+
+					<f:formElements>
+						<f:FormElement label="Plant">
+							<f:fields>
+								<Input value="{SupplierName}" id="plant"/>
+							</f:fields>
+						</f:FormElement>
+
+							<f:FormElement label="Vendor">
+							<f:fields>
+								<Input value="{SupplierName}" id="vendorid"/>
+							</f:fields>
+						</f:FormElement>
+
+							<f:FormElement label="vendor Address">
+							<f:fields>
+								<TextArea id="vendoraddr" value="Lorem ipsum dolor sit amet, consectetur el" maxLength="40" width="100%"/>
+							</f:fields>
+						</f:FormElement>
+
+
+							
+						
+						
+						<f:FormElement label="ZIP Code/City">
+							<f:fields>
+								<Input value="{ZIPCode}">
+									<layoutData>
+										<f:ColumnElementData cellsSmall="3" cellsLarge="2" />
+									</layoutData>
+								</Input>
+								<Input value="{City}" />
+							</f:fields>
+						</f:FormElement>
+						
+						
+					</f:formElements>
+				</f:FormContainer>
+				<f:FormContainer title="">
+					<f:formElements>
+						<f:FormElement label="Approval Required">
+							<f:fields>
+								<Select id="approvalrequired" selectedKey="{apvtype}">
+									<items>
+										<core:Item text="Yes" key="Y"/>
+										<core:Item text="No" key="N"/>
+									
+
+									</items>
+								</Select>
+							</f:fields>
+						</f:FormElement>
+
+						<f:FormElement label="Department">
+							<f:fields>
+								<Select id="department" selectedKey="{departmenttype}">
+									<items>
+										<core:Item text="O AND M " key="OM"/>
+										<core:Item text="Electrical" key="EL"/>
+									
+
+									</items>
+								</Select>
+							</f:fields>
+						</f:FormElement>
+
+						<f:FormElement label="Creation Date">
+							<f:fields>
+							<DatePicker value="{
+									path: '/date',
+									type: 'DateType',
+									formatOptions: {
+										source: {pattern: 'yyyy-MM-dd'}
+									}}" />
+							</f:fields>
+						</f:FormElement>
+						<f:FormElement label="Returnable Date">
+							<f:fields>
+							<DatePicker value="{
+									path: '/date',	
+									type: 'DateType',
+									formatOptions: {
+										source: {pattern: 'yyyy-MM-dd'}
+									}}" />
+							</f:fields>
+						</f:FormElement>
+							<f:FormElement label="Vehicle Number">
+							<f:fields>
+							<Input value="{SupplierName}" id="VehicleNumber"/>
+							</f:fields>
+						</f:FormElement>
+							<f:FormElement label="Mode of Dispatch">
+							<f:fields>
+							<Input value="{modeofdispatch}" id="modeofdispatch"/>
+							</f:fields>
+						</f:FormElement>
+						
+							<f:FormElement label="Remarks">
+							<f:fields>
+								<TextArea id="remarks" value="Remarks" maxLength="40" width="100%"/>
+							</f:fields>
+						</f:FormElement>
+					</f:formElements>
+				</f:FormContainer>
+			
+			</f:formContainers>
+		</f:Form>
+	</VBox>
+
+						<!-- Form Ends  here -->
+<!-- Table Starts here -->
+						<VBox id="gatepassUpdateTable" visible="false">
+<Table id="tableId" width="90%" mode='Delete' delete="deleteRow">
+<headerToolbar>
+<Toolbar>
+<ToolbarSpacer></ToolbarSpacer>
+<Button icon="sap-icon://add" type="Emphasized" press="onAdd" />
+</Toolbar>
+</headerToolbar>
+<columns>
+<Column width="50%">
+<Text text="sno" />
+</Column>
+<Column width="50%">
+<Text text="Item" />
+</Column>
+<Column width="50%">
+<Text text="Material" />
+</Column>
+<Column width="50%">
+<Text text="Description" />
+</Column>
+<Column width="50%">
+<Text text="Uom" />
+</Column>
+<Column width="50%">
+<Text text="Unit Price" />
+</Column>
+<Column width="50%">
+<Text text="Actual Qty" />
+</Column>
+<Column width="50%">
+<Text text="Received Qty" />
+</Column>
+<Column width="50%">
+<Text text="Total Value" />
+</Column>
+
+<Column width="50%">
+<Text text="Delete" />
+</Column>
+</columns>
+</Table>
+						
+						</VBox>
+
+<!-- Table Ends here -->
+
+
+	</Panel>
+
+		</content>
+			<footer>
+			<OverflowToolbar id="otbFooter">
+				<ToolbarSpacer/>
+				<Button type="Emphasized" text="Save">
+					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow" /></layoutData>
+				</Button>
+				<Button type="Emphasized" text="Reset">
+					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow" /></layoutData>
+				</Button>
+				
+			</OverflowToolbar>
+		</footer>
+	</Page>
+</mvc:View>

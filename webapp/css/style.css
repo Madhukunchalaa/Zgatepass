@@ -1,0 +1,9 @@
+.sapTntToolHeader .sapMImg {
+    height: 2.625rem;
+    top: 9px !important;
+}
+.sapFGridContainerListUl {
+    display: grid;
+    gap: 72px !important;
+    grid-auto-rows:4rem !important;
+}

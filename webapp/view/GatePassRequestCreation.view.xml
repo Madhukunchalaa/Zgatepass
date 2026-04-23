@@ -1,0 +1,210 @@
+<mvc:View controllerName="zgpms.meilpower.com.controller.GatePassRequestCreation"
+xmlns:mvc="sap.ui.core.mvc"
+xmlns:f="sap.ui.layout.form"
+xmlns:core="sap.ui.core"
+xmlns="sap.m">
+
+<Page title="Gate Pass Request Creation">
+
+    <content>
+
+
+        <!-- HEADER FORM -->
+        <f:SimpleForm editable="true"
+            layout="ResponsiveGridLayout"
+            title="Header Details"
+            columnsXL="2"
+            columnsL="2"
+            columnsM="1">
+
+            <f:content>
+
+                <!-- GENERAL -->
+                <core:Title text="General Information" />
+
+                <Label text="Gate Pass Type" />
+                <Select selectedKey="{localModel>/GatePassType}" change="onGatePassTypeChange">
+                    <core:Item key="NRGP" text="NRGP"/>
+                    <core:Item key="RGP" text="RGP"/>
+                </Select>
+
+                <Label text="Plant" />
+                <ComboBox id="idPlantsComboBox"
+                    selectedKey="{localModel>/Plant}"
+                    selectionChange="onPlantsComboBoxSelectionChange"
+                    items="{path: 'plantModel>/plants'}">
+                    <core:Item key="{plantModel>Plant}" text="{plantModel>Plant} - {plantModel>PlantName}"/>
+                </ComboBox>
+
+                <Label text="Department" />
+                <Select selectedKey="{localModel>/Department}">
+                    <core:Item key="" text="-- Select Department --"/>
+                    <core:Item key="Boiler Maintenance" text="Boiler Maintenance"/>
+                    <core:Item key="Turbine Maintenance" text="Turbine Maintenance"/>
+                    <core:Item key="Balance of Plant" text="Balance of Plant"/>
+                    <core:Item key="Ash Handling Plant" text="Ash Handling Plant"/>
+                    <core:Item key="Electrical" text="Electrical"/>
+                    <core:Item key="C &amp; I" text="C &amp; I"/>
+                    <core:Item key="Chemistry" text="Chemistry"/>
+                    <core:Item key="Environment" text="Environment"/>
+                    <core:Item key="Coal Handling Plant" text="Coal Handling Plant"/>
+                    <core:Item key="External Coal Handling Plant" text="External Coal Handling Plant"/>
+                    <core:Item key="Civil maintenance" text="Civil maintenance"/>
+                    <core:Item key="Information &amp; Technology" text="Information &amp; Technology"/>
+                    <core:Item key="Maintenance Planning" text="Maintenance Planning"/>
+                    <core:Item key="Main Plant Operation" text="Main Plant Operation"/>
+                    <core:Item key="Health &amp; Safety" text="Health &amp; Safety"/>
+                    <core:Item key="Human Resources &amp; Admin" text="Human Resources &amp; Admin"/>
+                    <core:Item key="Security" text="Security"/>
+                    <core:Item key="Procurement &amp; Contracts" text="Procurement &amp; Contracts"/>
+                    <core:Item key="Stores" text="Stores"/>
+                    <core:Item key="Accounts &amp; Finance" text="Accounts &amp; Finance"/>
+                    <core:Item key="Engineering &amp; Technical Services" text="Engineering &amp; Technical Services"/>
+                    <core:Item key="HSE" text="HSE"/>
+                    <core:Item key="Planning" text="Planning"/>
+                    <core:Item key="Civil" text="Civil"/>
+                    <core:Item key="Mechanical" text="Mechanical"/>
+                    <core:Item key="Commissioning" text="Commissioning"/>
+                    <core:Item key="P &amp; M" text="P &amp; M"/>
+                    <core:Item key="Billing &amp; Contracts" text="Billing &amp; Contracts"/>
+                    <core:Item key="Survey" text="Survey"/>
+                    <core:Item key="QA &amp; QC" text="QA &amp; QC"/>
+                    <core:Item key="Maintenance" text="Maintenance"/>
+                    <core:Item key="Logistics" text="Logistics"/>
+                    <core:Item key="Process" text="Process"/>
+                    <core:Item key="SEZ" text="SEZ"/>
+                    <core:Item key="Production" text="Production"/>
+                    <core:Item key="Hydro Mechanical" text="Hydro Mechanical"/>
+                    <core:Item key="E &amp; M (Electro Mechanical )" text="E &amp; M (Electro Mechanical )"/>
+                    <core:Item key="PMG (Project Monitoring Group)" text="PMG (Project Monitoring Group)"/>
+                    <core:Item key="Geology" text="Geology"/>
+                    <core:Item key="Stores T &amp; D" text="Stores T &amp; D"/>
+                    <core:Item key="Electrical T &amp; D" text="Electrical T &amp; D"/>
+                    <core:Item key="Fire Dept." text="Fire Dept."/>
+                    <core:Item key="O&amp;E Dept." text="O&amp;E Dept."/>
+                </Select>
+                <Label text="Vehicle No"/>
+                <Input value="{localModel>/VehicleNo}"/>
+
+                <Label text="Mode Of Dispatch"/>
+                <Input value="{localModel>/ModeOfDispatch}"/>
+                <!-- VENDOR -->
+                <core:Title text="Vendor Details"/>
+
+                <Label text="Vendor" />
+                <ComboBox selectedKey="{localModel>/Vendor}"
+                    selectionChange="onVendorChange"
+                    items="{vendorModel>/vendors}">
+                    <core:Item key="{vendorModel>Vendor}" text="{vendorModel>Name} - {vendorModel>Vendor}"/>
+                </ComboBox>
+
+                <Label text="Vendor Name"/>
+                <Input value="{localModel>/VendorName}" editable="false"/>
+
+                <Label text="City"/>
+                <Input value="{localModel>/City}" editable="false"/>
+
+                <Label text="Zip Code"/>
+                <Input value="{localModel>/ZipCode}" editable="false"/>
+
+                <Label text="Returnable Date"
+                    visible="{= ${localModel>/GatePassType} === 'RGP'}"/>
+                <DatePicker value="{localModel>/ReturnableDate}"
+                    valueFormat="yyyy-MM-dd"
+                    displayFormat="dd/MM/yyyy"
+                    visible="{= ${localModel>/GatePassType} === 'RGP'}"/>
+
+                <!-- EMPLOYEE &amp; APPROVAL -->
+                <core:Title text="Employee &amp; Approval Details"/>
+
+                <Label text="Requestor ID" />
+                <Input value="{localModel>/ReqEmpID}"/>
+
+                <Label text="HOD ID" />
+                <Input value="{localModel>/HODEmpID}"/>
+
+                <Label text="Finance HOD ID"/>
+                <Input value="{localModel>/FinanceHODId}"/>
+
+                <Label text="Plant HOD ID"/>
+                <Input value="{localModel>/PlantHODId}"/>
+
+                <Label text="No. of Packages"/>
+                <Input value="{localModel>/NoOfPackages}"/>
+
+                <Label text="Need Approval"/>
+                <Select selectedKey="{localModel>/ApprovalReq}">
+                    <core:Item key="Y" text="Yes"/>
+                    <core:Item key="N" text="No"/>
+                </Select>
+
+                <!-- <Label text="Remarks"/>
+                <HBox>
+                    <Button text="Add Remarks" icon="sap-icon://notes" press="onAddRemarksPress"/>
+                    <core:Icon src="sap-icon://accept" color="Positive" visible="{= !!${localModel>/Remarks} }" class="sapUiTinyMarginBegin sapUiTinyMarginTop"/>
+                </HBox> -->
+
+
+            </f:content>
+        </f:SimpleForm>
+
+        <!-- ITEMS TABLE -->
+        <Toolbar>
+            <Title text="Item Details"/>
+            <ToolbarSpacer/>
+            <Button text="Add Item" icon="sap-icon://add" press="onAddItemButtonPress"/>
+        </Toolbar>
+        <Table id="idGateReqItemNavTable"
+            items="{localModel>/GateReqItemNav}"
+            alternateRowColors="true">
+            <columns>
+                <Column width="5%"><Text text="#"/></Column>
+                <Column width="14%"><Text text="Material"/></Column>
+                <Column width="22%"><Text text="Description"/></Column>
+                <Column width="7%"><Text text="UOM"/></Column>
+               
+                <Column width="10%"><Text text="Sent Qty"/></Column>
+                <Column width="10%"><Text text="Requested Qty"/></Column>
+                <Column width="10%"><Text text="Unit Price"/></Column>
+                <Column width="10%"><Text text="Total Value"/></Column>
+                <Column width="5%"><Text text=""/></Column>
+            </columns>
+            <items>
+                <ColumnListItem>
+                    <cells>
+                        <Text text="{localModel>ItemNo}"/>
+                        <Input value="{localModel>Material}"
+                            showValueHelp="true"
+                            valueHelpRequest="onMaterialInputValueHelpRequest"
+                            placeholder="Material"/>
+                        <Input value="{localModel>Description}" placeholder="Description"/>
+                        <Input value="{localModel>UOM}" placeholder="UOM" maxLength="3"/>
+                        <Input value="{localModel>SentQuantity}" type="Number" placeholder="0" liveChange="onSentQtyChange"/>
+                        <Input value="{localModel>RequestedQuantity}" type="Number" placeholder="0" liveChange="onRequestedQtyChange"/>
+                        <Input value="{localModel>ItemNetPrice}" type="Number" placeholder="0.00" liveChange="onSentQtyChange"/>
+                        <Input value="{localModel>Totalvalue}" type="Number" placeholder="0.00" editable="false"/>
+                        <Button icon="sap-icon://delete" type="Transparent" press="onButtonDeletePress"/>
+                    </cells>
+                </ColumnListItem>
+            </items>
+        </Table>
+
+
+    </content>
+
+
+    <!-- FOOTER -->
+    <footer>
+        <Toolbar>
+            <ToolbarSpacer/>
+            <Button text="Reset Form"
+                type="Transparent"
+                press="onClearFormPress"/>
+            <Button text="Create Gate Pass Request"
+                type="Emphasized"
+                press="onSubmitPress"/>
+        </Toolbar>
+    </footer>
+
+</Page>
+</mvc:View>
