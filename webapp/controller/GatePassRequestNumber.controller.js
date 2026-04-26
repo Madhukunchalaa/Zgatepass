@@ -229,12 +229,16 @@ sap.ui.define([
         /* ================= HELPERS ================= */
 
         _navigateToCreation: function (reqNo, plant, category, type) {
-            this.getOwnerComponent().getRouter().navTo("GatePassRequestCreation", {
-                reqNo,
-                plant,
-                category,
-                type
-            });
+            if (type === "Receipt") {
+                this.getOwnerComponent().getRouter().navTo("ReceiptGatePass");
+            } else {
+                this.getOwnerComponent().getRouter().navTo("GatePassRequestCreation", {
+                    reqNo,
+                    plant,
+                    category,
+                    type
+                });
+            }
         },
 
         _setBusy: function (bState) {

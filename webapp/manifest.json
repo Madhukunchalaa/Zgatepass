@@ -136,6 +136,11 @@
 					"pattern": "GatePassReturnDetail/:reqNo:",
 					"name": "GatePassReturnDetail",
 					"target": "GatePassReturnDetail"
+				},
+				{
+					"pattern": "ReceiptGatePass",
+					"name": "ReceiptGatePass",
+					"target": "ReceiptGatePass"
 				}
 			],
 			"targets": {
@@ -178,6 +183,10 @@
 				"GatePassReturnDetail": {
 					"viewId": "GatePassReturnDetail",
 					"viewName": "GatePassReturnDetail"
+				},
+				"ReceiptGatePass": {
+					"viewId": "ReceiptGatePass",
+					"viewName": "ReceiptGatePass"
 				}
 			}
 		}

@@ -1,5 +1,5 @@
 <mvc:View
-	controllerName="zgpms.meilpower.com.controller.Creategatepass"
+	controllerName="zgpms.meilpower.com.controller.ReceiptGatePass"
 	xmlns="sap.m"
 	xmlns:l="sap.ui.layout"
 	xmlns:f="sap.ui.layout.form"

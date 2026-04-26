@@ -8,7 +8,7 @@ sap.ui.define([
 
     "use strict";
 
-    return BaseController.extend("zgpms.meilpower.com.controller.Creategatepass", {
+    return BaseController.extend("zgpms.meilpower.com.controller.ReceiptGatePass", {
 
         onInit: function () {
             // Local form model with all fields

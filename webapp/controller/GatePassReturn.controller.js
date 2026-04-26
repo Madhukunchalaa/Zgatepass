@@ -32,9 +32,16 @@ sap.ui.define([
                     
                     if (oData.results && oData.results.length > 0) {
                         var oHeader = oData.results[0];
+                        var sType = oHeader.GatePassType || "";
                         var aItems = oHeader.GatePassItemNav ? oHeader.GatePassItemNav.results : [];
                         
-                        // Check if SAP sent a completion message (Balance is 0)
+                        // 1. Block if NRGP
+                        if (sType === "NRGP") {
+                             MessageBox.error("This is a Non-Returnable (NRGP) Gate Pass. Return process is not required.");
+                             return;
+                        }
+
+                        // 2. Check if SAP sent a completion message (Balance is 0)
                         if (aItems.length > 0 && parseFloat(aItems[0].BalanceQuantity) === 0) {
                              var sMsg = aItems[0].Message || "All items already delivered/returned for this Gate Pass.";
                              MessageBox.information(sMsg);
