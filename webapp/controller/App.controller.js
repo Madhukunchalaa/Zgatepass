@@ -274,8 +274,16 @@ sap.ui.define([
 		 * @param {string[]} [aPlaceholderValues] The values which will repalce the placeholders in the i18n value
 		 * @returns {Promise<string>} The promise
 		 */
-		getBundleText: function(sI18nKey, aPlaceholderValues){
-			return	this.getBundleTextByModel(sI18nKey, this.getOwnerComponent().getModel("i18n"), aPlaceholderValues);
+		getBundleText: function (sI18nKey) {
+			if (!this._oResourceBundle) {
+				this.getOwnerComponent().getModel("i18n").getResourceBundle().then(function (oBundle) {
+					this._oResourceBundle = oBundle;
+					// Trigger a refresh to re-run formatters with the loaded bundle
+					this.getModel("side").updateBindings(true);
+				}.bind(this));
+				return sI18nKey;
+			}
+			return this._oResourceBundle.getText(sI18nKey);
 		},
 
 		_handleWindowResize: function (oDevice) {

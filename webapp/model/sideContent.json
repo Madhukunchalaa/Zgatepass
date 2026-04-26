@@ -1,89 +1,37 @@
 {
-	"selectedKey": "",
-
+	"selectedKey": "home",
 	"navigation": [
 		{
 			"titleI18nKey": "sideContentHome",
 			"icon": "sap-icon://home",
-			"expanded": true,
-			"key": "",
-			"items": []
+			"key": ""
 		},
 		{
-			"titleI18nKey": "sideContentSettings",
-			"icon": "sap-icon://settings",
-			"expanded": false,
-			"key": "masterSettings",
-			"items": []
+			"titleI18nKey": "sideContentGatePassRequestNumber",
+			"icon": "sap-icon://request",
+			"key": "GatePassRequestNumber"
 		},
 		{
-			"titleI18nKey": "sideContentStatistics",
-			"icon": "sap-icon://line-chart",
-			"expanded": true,
-			"key": "statistics",
-			"items": [
-				{
-					"titleI18nKey": "sideContentGatepassList",
-					"key": "GatepassList"
-				},
-				{
-					"titleI18nKey": "sideContentCreateGatepass",
-					"key": "GatePassRequestCreation"
-				},
-				{
-					"titleI18nKey": "sideContentGatePassCreation",
-					"key": "GatePassCreation"
-				},
-				{
-					"titleI18nKey": "sideContentEditGatepass",
-					"key": "Editgatepass"
-				}
-				
-			]
+			"titleI18nKey": "sideContentOutGatePass",
+			"icon": "sap-icon://outbound",
+			"key": "OutGatePass"
 		},
 		{
-			"titleI18nKey": "sideContentReports",
-			"icon": "sap-icon://settings",
-			"expanded": false,
-			"key": "Reports",
-			"items": []
-		}
-	
-	
-	],
-	"fixedNavigation": [
-		
+			"title": "Gate Pass List",
+			"icon": "sap-icon://list",
+			"key": "Gatepasslist"
+		},
 		{
-			"titleI18nKey": "sideContentLegal",
-			"icon": "sap-icon://compare",
-			"key": "legal"
+			"titleI18nKey": "sideContentGatePassExit",
+			"icon": "sap-icon://exit-resource",
+			"key": "GatePassExit"
+		},
+		{
+			"titleI18nKey": "sideContentGatePassEntry",
+			"icon": "sap-icon://inbound",
+			"key": "GatePassReturn"
 		}
 	],
-	"masterSettings": [
-		{
-			"titleI18nKey": "sideContentSystemSettings",
-			"key": "systemSettings",
-			"selected": true
-		},
-		{
-			"titleI18nKey": "sideContentOrderSettings",
-			"key": "orderSettings",
-			"selected": false
-		},
-		{
-			"titleI18nKey": "sideContentSupplierSettings",
-			"key": "supplierSettings",
-			"selected": false
-		},
-		{
-			"titleI18nKey": "sideContentCampaignSettings",
-			"key": "campaignSettings",
-			"selected": false
-		},
-		{
-			"titleI18nKey": "sideContentShippingSettings",
-			"key": "shippingSettings",
-			"selected": false
-		}
-	]
+	"fixedNavigation": [],
+	"masterSettings": []
 }

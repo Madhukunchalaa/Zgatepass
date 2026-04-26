@@ -1,0 +1,114 @@
+<mvc:View controllerName="zgpms.meilpower.com.controller.GatePassReturnDetail"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:f="sap.ui.layout.form"
+    xmlns:core="sap.ui.core"
+    xmlns="sap.m"
+    xmlns:l="sap.ui.layout">
+
+    <Page title="Gate Pass Return Details">
+        <content>
+            <Toolbar height="2rem" class="sapUiTinyMarginTop">
+                <ToolbarSpacer/>
+                <Text text="Return to contractor" class="returnHeaderText" />
+                <ToolbarSpacer/>
+            </Toolbar>
+
+            <f:SimpleForm editable="true" layout="ResponsiveGridLayout" title="Gate pass"
+                labelSpanL="4" labelSpanM="4" emptySpanL="0" emptySpanM="0"
+                columnsL="3" columnsM="2">
+                <f:content>
+                    <core:Title text="" />
+                    <Label text="Gate Pass No" />
+                    <Text text="{returnDetailModel>/GatePassNo}" />
+                    <Label text="Supplier" />
+                    <Text text="{returnDetailModel>/Vendor}" />
+                    <Label text="Vendor Name" />
+                    <Text text="{returnDetailModel>/VendorName}" />
+                    <Label text="Street and House No" />
+                    <Text text="{returnDetailModel>/Street}" />
+                    <Label text="City" />
+                    <Text text="{returnDetailModel>/City}" />
+                    <Label text="Postal Code" />
+                    <Text text="{returnDetailModel>/ZipCode}" />
+
+                    <core:Title text="" />
+                    <Label text="Gate pass Date" />
+                    <Text text="{path: 'returnDetailModel>/GatePassDate', type: 'sap.ui.model.type.Date', formatOptions: {pattern: 'dd.MM.yyyy'}}" />
+                    <Label text="Purchasing Doc" />
+                    <Text text="{returnDetailModel>/PurchasingDoc}" />
+                    <Label text="Challan Date" />
+                    <DatePicker value="{path: 'returnDetailModel>/ChallanDate', type: 'sap.ui.model.type.Date', formatOptions: {pattern: 'dd.MM.yyyy'}}" editable="{returnDetailModel>/editMode}" />
+                    <Label text="Gate Entry No" />
+                    <Input value="{returnDetailModel>/GateEntryNo}" editable="{returnDetailModel>/editMode}" />
+                    <Label text="Exp.Return date" />
+                    <DatePicker value="{path: 'returnDetailModel>/ReturnableDate', type: 'sap.ui.model.type.Date', formatOptions: {pattern: 'dd.MM.yyyy'}}" editable="{returnDetailModel>/editMode}" />
+                    <Label text="Return Date" />
+                    <DatePicker value="{path: 'returnDetailModel>/ActualReturnDate', type: 'sap.ui.model.type.Date', formatOptions: {pattern: 'dd.MM.yyyy'}}" editable="{returnDetailModel>/editMode}" />
+
+                    <core:Title text="" />
+                    <Label text="Department" />
+                    <Text text="{returnDetailModel>/Department}" />
+                    <Label text="No of Packages" />
+                    <Text text="{returnDetailModel>/NoOfPackages}" />
+                    <Label text="Delvry note/ Chlln No." />
+                    <Input value="{returnDetailModel>/ChallanNumber}" editable="{returnDetailModel>/editMode}" />
+                    <Label text="Extended Date of Return" />
+                    <Text text="" />
+                    <Label text="Gate pass type" />
+                    <Text text="{returnDetailModel>/GatePassType}" />
+                    <Label text="Gate Exit Date" />
+                    <Text text="{path: 'returnDetailModel>/GateExitDate', type: 'sap.ui.model.type.Date', formatOptions: {pattern: 'dd.MM.yyyy'}}" />
+                </f:content>
+            </f:SimpleForm>
+
+            <Table items="{returnDetailModel>/GateReqItmNav/results}" class="sapUiSmallMarginTop">
+                <columns>
+                    <Column width="50px"><Text text="Status" /></Column>
+                    <Column width="80px"><Text text="Item" /></Column>
+                    <Column><Text text="Material" /></Column>
+                    <Column minWidth="200px"><Text text="Material Description" /></Column>
+                    <Column width="80px"><Text text="UOM" /></Column>
+                    <Column><Text text="Sent Quantity" /></Column>
+                    <Column><Text text="Received Quantity" /></Column>
+                    <Column><Text text="Balance Quantity" /></Column>
+                    <Column><Text text="Unit Price" /></Column>
+                    <Column><Text text="Total Value" /></Column>
+                </columns>
+                <items>
+                    <ColumnListItem>
+                        <cells>
+                            <core:Icon src="sap-icon://status-completed" color="Positive" />
+                            <Text text="{returnDetailModel>ItemNo}" />
+                            <Text text="{returnDetailModel>Material}" />
+                            <Text text="{returnDetailModel>Description}" />
+                            <Text text="{returnDetailModel>UOM}" />
+                            <Text text="{returnDetailModel>SentQuantity}" />
+                            <Input value="{returnDetailModel>RecievedQuantity}" liveChange="onReceivedQtyChange" editable="{returnDetailModel>/editMode}" />
+                            <Text text="{returnDetailModel>BalanceQuantity}" />
+                            <Text text="{returnDetailModel>ItemNetPrice}" />
+                            <Text text="{returnDetailModel>Totalvalue}" />
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+
+            <Panel headerText="gate" class="sapUiMediumMarginTop">
+                <f:SimpleForm editable="true" layout="ResponsiveGridLayout">
+                    <f:content>
+                        <Label text="Remarks" />
+                        <TextArea value="{returnDetailModel>/Remarks}" width="100%" rows="2" />
+                        <Label text="Mode of Despatch" />
+                        <Text text="{returnDetailModel>/ModeOfDispatch}" />
+                        <Label text="Vehicle No" />
+                        <Text text="{returnDetailModel>/VehicleNo}" />
+                    </f:content>
+                </f:SimpleForm>
+            </Panel>
+
+            <HBox justifyContent="Center" class="sapUiMediumMarginTop sapUiLargeMarginBottom">
+                <Button text="Save" type="Emphasized" press="onSaveReturn" width="150px" class="sapUiSmallMarginEnd" visible="{returnDetailModel>/editMode}" />
+                <Button text="Print" press="onPrint" width="150px" />
+            </HBox>
+        </content>
+    </Page>
+</mvc:View>

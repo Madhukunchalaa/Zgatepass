@@ -1,0 +1,66 @@
+<mvc:View controllerName="zgpms.meilpower.com.controller.GatePassRequestNumber"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:f="sap.ui.layout.form"
+    xmlns:core="sap.ui.core"
+    xmlns:l="sap.ui.layout"
+    xmlns="sap.m">
+
+    <Page title="Gate Pass Request" showNavButton="false">
+        <content>
+            <VBox alignItems="Center" class="sapUiLargeMarginTop">
+                <Panel width="800px" headerText="Create Gate Pass Request">
+                    <f:SimpleForm editable="true" layout="ResponsiveGridLayout"
+                        labelSpanL="4" labelSpanM="4" emptySpanL="0" emptySpanM="0"
+                        columnsL="1" columnsM="1">
+                        <f:content>
+                            <core:Title text="General Information" />
+                            
+                            <Label text="Date" required="true" />
+                            <DatePicker value="{localModel>/Date}" 
+                                        valueFormat="dd.MM.yyyy" 
+                                        displayFormat="dd.MM.yyyy" />
+
+                            <Label text="Plant" required="true" />
+                            <ComboBox id="idPlantsComboBox"
+                                      selectedKey="{localModel>/Plant}"
+                                      placeholder="Select Plant"
+                                      items="{path: 'plantModel>/plants'}">
+                                <core:Item key="{plantModel>Plant}" text="{plantModel>Plant} - {plantModel>PlantName}"/>
+                            </ComboBox>
+
+                            <Label text="Fiscal Year" />
+                            <Input value="{localModel>/FiscalYear}" />
+
+                            <Label text="Request Number" />
+                            <Input value="{localModel>/GatePassReqNo}" editable="false" placeholder="Generated after save" />
+
+                            <core:Title text="Specifications" />
+
+                            <Label text="Gate Pass Type" required="true" />
+                            <RadioButtonGroup columns="3" selectedIndex="{localModel>/GatePassType}">
+                                <RadioButton text="Returnable" />
+                                <RadioButton text="Non Returnable" />
+                                <RadioButton text="Receipt of Material w/o PO" />
+                            </RadioButtonGroup>
+
+                            <Label text="Category" required="true" />
+                            <RadioButtonGroup columns="1" selectedIndex="{localModel>/InternalExternalType}">
+                                <RadioButton text="Internal-Chargeable" />
+                                <RadioButton text="Internal-Inside Premises" />
+                                <RadioButton text="Internal-Outside Premises" />
+                                <RadioButton text="External" />
+                                <RadioButton text="Inter Unit" />
+                            </RadioButtonGroup>
+
+                            <core:Title />
+                            <HBox justifyContent="End" class="sapUiSmallMarginTop">
+                                <Button text="Reset" press="onReset" class="sapUiSmallMarginEnd" />
+                                <Button text="Generate Request Number" type="Emphasized" press="onCreatePress" />
+                            </HBox>
+                        </f:content>
+                    </f:SimpleForm>
+                </Panel>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>

@@ -1,0 +1,52 @@
+<mvc:View
+    controllerName="zgpms.meilpower.com.controller.GatePassStep1"
+    xmlns="sap.m"
+    xmlns:f="sap.ui.layout.form"
+    xmlns:core="sap.ui.core"
+    xmlns:mvc="sap.ui.core.mvc"
+    height="100%">
+
+    <Page title="Gate Pass Request" showNavButton="true" navButtonPress="onNavBack">
+        <content>
+            <VBox class="sapUiSmallMargin">
+                <Panel headerText="Gate pass request" class="sapUiResponsiveMargin">
+                    <f:SimpleForm editable="true" layout="ColumnLayout" columnsM="2" columnsL="2">
+                        <f:content>
+                            <Label text="Date"/>
+                            <DatePicker value="{step1Model>/Date}" displayFormat="dd.MM.yyyy" valueFormat="yyyyMMdd"/>
+                            
+                            <Label text="Fiscal Year"/>
+                            <Input value="{step1Model>/FiscalYear}"/>
+
+                            <Label text="Plant"/>
+                            <Input value="{step1Model>/Plant}" placeholder="Enter Plant"/>
+
+                            <Label text="Gate Pass Req. No"/>
+                            <Input value="{step1Model>/GatePassReqNo}" editable="false"/>
+
+                            <Label text="Type"/>
+                            <RadioButtonGroup columns="3" selectedIndex="{step1Model>/TypeIndex}">
+                                <RadioButton text="Returnable"/>
+                                <RadioButton text="Non Returnable"/>
+                                <RadioButton text="Receipt of Material w/o PO"/>
+                            </RadioButtonGroup>
+
+                            <Label text="Category"/>
+                            <RadioButtonGroup columns="1" selectedIndex="{step1Model>/CategoryIndex}">
+                                <RadioButton text="Internal-Chargeable"/>
+                                <RadioButton text="Internal-Inside Premises"/>
+                                <RadioButton text="Internal-Outside Premises"/>
+                                <RadioButton text="External"/>
+                                <RadioButton text="Inter Unit"/>
+                            </RadioButtonGroup>
+                        </f:content>
+                    </f:SimpleForm>
+                    <HBox justifyContent="Center" class="sapUiSmallMarginTop">
+                        <Button text="Create" type="Emphasized" press="onNext" class="sapUiSmallMarginEnd" width="150px"/>
+                        <Button text="Display" press="onDisplay" width="150px"/>
+                    </HBox>
+                </Panel>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>

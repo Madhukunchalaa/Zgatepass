@@ -1,0 +1,32 @@
+<mvc:View controllerName="zgpms.meilpower.com.controller.GatePassExit"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:f="sap.ui.layout.form"
+    xmlns:core="sap.ui.core"
+    xmlns="sap.m">
+
+    <Page title="Gate Pass Exit" showNavButton="false">
+        <content>
+            <VBox alignItems="Center" class="sapUiLargeMarginTop">
+                <Panel width="600px" headerText="Gate pass exit">
+                    <f:SimpleForm editable="true" layout="ResponsiveGridLayout"
+                        labelSpanL="4" labelSpanM="4" emptySpanL="0" emptySpanM="0"
+                        columnsL="1" columnsM="1">
+                        <f:content>
+                            
+                            <Label text="Fiscal Year" required="true" />
+                            <Input value="{exitModel>/FiscalYear}" placeholder="e.g. 2026" />
+
+                            <Label text="Gate Pass No" required="true" />
+                            <Input value="{exitModel>/GatePassNo}" placeholder="Enter Gate Pass Number" />
+
+                            <core:Title />
+                            <HBox justifyContent="Start" class="sapUiSmallMarginTop">
+                                <Button text="Create" type="Emphasized" press="onCreateExit" width="120px" />
+                            </HBox>
+                        </f:content>
+                    </f:SimpleForm>
+                </Panel>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>

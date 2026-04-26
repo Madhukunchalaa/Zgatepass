@@ -1,0 +1,161 @@
+<mvc:View
+    controllerName="zgpms.meilpower.com.controller.UnifiedGatePass"
+    xmlns="sap.m"
+    xmlns:f="sap.ui.layout.form"
+    xmlns:core="sap.ui.core"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:l="sap.ui.layout"
+    height="100%">
+
+    <Page title="Gate Pass Request (Unified)" showNavButton="true" navButtonPress="onNavBack">
+        <content>
+            <VBox class="sapUiSmallMargin">
+                
+                <!-- Section 1: Initial Selection (Matches SAP Screen 1) -->
+                <Panel headerText="Initial Selection" expandable="true" expanded="true">
+                    <f:SimpleForm editable="true" layout="ColumnLayout" columnsM="2" columnsL="3">
+                        <f:content>
+                            <Label text="Date"/>
+                            <DatePicker value="{headerModel>/Date}" displayFormat="dd.MM.yyyy" valueFormat="yyyyMMdd"/>
+                            
+                            <Label text="Fiscal Year"/>
+                            <Input value="{headerModel>/FiscalYear}"/>
+
+                            <Label text="Plant"/>
+                            <Input value="{headerModel>/Plant}"/>
+
+                            <Label text="Gate Pass Req. No"/>
+                            <Input value="{headerModel>/GatePassReqNo}" placeholder="Generated after save" editable="false"/>
+
+                            <Label text="Type"/>
+                            <RadioButtonGroup columns="3" selectedIndex="{headerModel>/TypeIndex}">
+                                <RadioButton text="Returnable"/>
+                                <RadioButton text="Non Returnable"/>
+                                <RadioButton text="Receipt of Material w/o PO"/>
+                            </RadioButtonGroup>
+
+                            <Label text="Category"/>
+                            <RadioButtonGroup columns="1" selectedIndex="{headerModel>/CategoryIndex}">
+                                <RadioButton text="Internal-Chargeable"/>
+                                <RadioButton text="Internal-Inside Premises"/>
+                                <RadioButton text="Internal-Outside Premises"/>
+                                <RadioButton text="External"/>
+                                <RadioButton text="Inter Unit"/>
+                            </RadioButtonGroup>
+                        </f:content>
+                    </f:SimpleForm>
+                </Panel>
+
+                <!-- Section 2: Header Information (Matches SAP Screen 2) -->
+                <Panel headerText="Header Information" expandable="true" expanded="true">
+                    <f:SimpleForm editable="true" layout="ColumnLayout" columnsM="2" columnsL="3">
+                        <f:content>
+                            <core:Title text="Supplier Details"/>
+                            <Label text="Supplier"/>
+                            <Input value="{headerModel>/Supplier}"/>
+                            
+                            <Label text="Vendor Name"/>
+                            <Input value="{headerModel>/VendorName}"/>
+                            
+                            <Label text="Street and House No"/>
+                            <Input value="{headerModel>/Street}"/>
+                            
+                            <Label text="City"/>
+                            <Input value="{headerModel>/City}"/>
+                            
+                            <Label text="Postal Code"/>
+                            <Input value="{headerModel>/PostalCode}"/>
+
+                            <core:Title text="Request Details"/>
+                            <Label text="No of Packages"/>
+                            <Input value="{headerModel>/NoOfPackages}"/>
+                            
+                            <Label text="Exp. Return date" visible="{= ${headerModel>/TypeIndex} === 0 }"/>
+                            <DatePicker value="{headerModel>/ExpReturnDate}" displayFormat="dd.MM.yyyy" valueFormat="yyyyMMdd" visible="{= ${headerModel>/TypeIndex} === 0 }"/>
+                            
+                            <Label text="Department"/>
+                            <Select selectedKey="{headerModel>/Department}">
+                                <core:Item key="Civil" text="Civil"/>
+                                <core:Item key="Mechanical" text="Mechanical"/>
+                                <core:Item key="Logistics" text="Logistics"/>
+                                <core:Item key="IT" text="Information &amp; Technology"/>
+                                <!-- Add more as needed -->
+                            </Select>
+
+                            <core:Title text="Approval IDs"/>
+                            <Label text="Requester Emp ID"/>
+                            <Input value="{headerModel>/RequesterEmpID}"/>
+                            
+                            <Label text="HOD Emp ID"/>
+                            <Input value="{headerModel>/HODEmpID}"/>
+                            
+                            <Label text="Store HOD Emp ID"/>
+                            <Input value="{headerModel>/StoreHODEmpID}"/>
+                        </f:content>
+                    </f:SimpleForm>
+                </Panel>
+
+                <!-- Section 3: Items Table (Matches SAP Table) -->
+                <Table id="idItemsTable" items="{itemModel>/items}" headerText="Materials">
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="Materials ({= ${itemModel>/items}.length})"/>
+                            <ToolbarSpacer/>
+                            <Button text="Add Item" icon="sap-icon://add" press="onAddItem"/>
+                        </OverflowToolbar>
+                    </headerToolbar>
+                    <columns>
+                        <Column><Text text="Item"/></Column>
+                        <Column width="200px"><Text text="Material"/></Column>
+                        <Column><Text text="Description"/></Column>
+                        <Column><Text text="Unit"/></Column>
+                        <Column><Text text="Sent Qty"/></Column>
+                        <Column><Text text="Req. Qty"/></Column>
+                        <Column><Text text="Unit Price"/></Column>
+                        <Column><Text text="Total Value"/></Column>
+                        <Column><Text text="Actions"/></Column>
+                    </columns>
+                    <items>
+                        <ColumnListItem>
+                            <cells>
+                                <Text text="{itemModel>Item}"/>
+                                <Input value="{itemModel>Material}" showValueHelp="true"/>
+                                <Input value="{itemModel>Description}"/>
+                                <Input value="{itemModel>Unit}"/>
+                                <Input value="{itemModel>SentQuantity}" type="Number" change="onQuantityChange"/>
+                                <Input value="{itemModel>RequestedQuantity}" type="Number"/>
+                                <Input value="{itemModel>UnitPrice}" type="Number" change="onQuantityChange"/>
+                                <Text text="{itemModel>TotalValue}"/>
+                                <Button icon="sap-icon://delete" type="Transparent" press="onRemoveItem"/>
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+                </Table>
+
+                <!-- Section 4: Footer (Gate Info) -->
+                <Panel headerText="Gate Information" expandable="true" expanded="true">
+                    <f:SimpleForm editable="true" layout="ColumnLayout">
+                        <f:content>
+                            <Label text="Remarks"/>
+                            <TextArea value="{headerModel>/Remarks}" rows="3"/>
+                            
+                            <Label text="Mode of Dispatch"/>
+                            <Input value="{headerModel>/ModeOfDispatch}"/>
+                            
+                            <Label text="Vehicle No"/>
+                            <Input value="{headerModel>/VehicleNo}"/>
+                        </f:content>
+                    </f:SimpleForm>
+                </Panel>
+
+            </VBox>
+        </content>
+        <footer>
+            <OverflowToolbar>
+                <ToolbarSpacer/>
+                <Button text="Save" type="Emphasized" press="onSave" icon="sap-icon://save"/>
+                <Button text="Cancel" press="onNavBack"/>
+            </OverflowToolbar>
+        </footer>
+    </Page>
+</mvc:View>

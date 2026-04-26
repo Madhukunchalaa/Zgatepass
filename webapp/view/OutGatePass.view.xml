@@ -1,0 +1,27 @@
+<mvc:View controllerName="zgpms.meilpower.com.controller.OutGatePass"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:f="sap.ui.layout.form"
+    xmlns:core="sap.ui.core"
+    xmlns="sap.m">
+
+    <Page title="Out Gate Pass">
+        <content>
+            <VBox alignItems="Center" justifyContent="Center" class="sapUiLargeMarginTop">
+                <Panel width="500px" headerText="Out Gate pass">
+                    <f:SimpleForm editable="true" layout="ResponsiveGridLayout">
+                        <f:content>
+                            <Label text="Gate Pass Req No" />
+                            <Input value="{outModel>/ReqNo}" placeholder="Enter Request Number" showValueHelp="true" />
+
+                            <Label text="Fiscal Year" />
+                            <Input value="{outModel>/FiscalYear}" />
+
+                            <core:Title />
+                            <Button text="Create" type="Emphasized" press="onCreateOutGatePass" width="100px" class="sapUiSmallMarginTop" />
+                        </f:content>
+                    </f:SimpleForm>
+                </Panel>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>

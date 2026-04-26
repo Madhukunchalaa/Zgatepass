@@ -1,0 +1,23 @@
+<mvc:View
+    controllerName="zgpms.meilpower.com.controller.GatePassSuccess"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:mvc="sap.ui.core.mvc"
+    height="100%">
+
+    <Page title="Information" showHeader="false">
+        <content>
+            <VBox justifyContent="Center" alignItems="Center" height="100%">
+                <Panel width="400px" headerText="Information">
+                    <VBox class="sapUiMediumMargin">
+                        <Text text="{/reqNo}" class="sapUiSmallMarginBottom" style="bold"/>
+                        <Text text="Gate pass request created successfully"/>
+                        <HBox justifyContent="End" class="sapUiSmallMarginTop">
+                            <Button text="OK" type="Accept" icon="sap-icon://accept" press="onOk"/>
+                        </HBox>
+                    </VBox>
+                </Panel>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>

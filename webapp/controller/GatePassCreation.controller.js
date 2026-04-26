@@ -496,17 +496,26 @@ sap.ui.define([
                             if (sLowerMsg.includes("not yet approved") || sLowerMsg.includes("pending")) {
                                 MessageBox.warning(sMsg, {
                                     title: "Pending Approval",
-                                    onClose: function () { that._clearForm(); }
+                                    onClose: function () { 
+                                        that._clearForm();
+                                        that.getOwnerComponent().getRouter().navTo("home");
+                                    }
                                 });
                             } else if (sLowerMsg.includes("rejected")) {
                                 MessageBox.error(sMsg, {
                                     title: "Rejected",
-                                    onClose: function () { that._clearForm(); }
+                                    onClose: function () { 
+                                        that._clearForm();
+                                        that.getOwnerComponent().getRouter().navTo("home");
+                                    }
                                 });
                             } else {
                                 MessageBox.success(sMsg, {
                                     title: "Success",
-                                    onClose: function () { that._clearForm(); }
+                                    onClose: function () { 
+                                        that._clearForm();
+                                        that.getOwnerComponent().getRouter().navTo("home");
+                                    }
                                 });
                             }
                             console.log(sMsg)

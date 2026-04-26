@@ -13,7 +13,7 @@ sap.ui.define([
         onInit: function () {
             // Filter bar model
             var oFilterModel = new JSONModel({
-                GatePassType: "NRGP",
+                GatePassType: "All", // Default to All to show everything
                 FromDate: null,
                 ToDate: null,
                 Status: "All",
@@ -78,10 +78,10 @@ sap.ui.define([
             var oFilterData = this.getView().getModel("filterModel").getData();
             var aFilters = [];
 
-            if (oFilterData.GatePassType) {
+            if (oFilterData.GatePassType && oFilterData.GatePassType !== "All") {
                 aFilters.push(new Filter("GatePassType", FilterOperator.EQ, oFilterData.GatePassType));
             }
-            if (oFilterData.Status) {
+            if (oFilterData.Status && oFilterData.Status !== "All") {
                 aFilters.push(new Filter("Status", FilterOperator.EQ, oFilterData.Status));
             }
             if (oFilterData.GatePassReqNo) {

@@ -1,9 +1,148 @@
-.sapTntToolHeader .sapMImg {
-    height: 2.625rem;
-    top: 9px !important;
+/* Standard SAP Fiori Styles */
+.sapUiBody {
+    background-color: #f0f4f8 !important;
 }
-.sapFGridContainerListUl {
-    display: grid;
-    gap: 72px !important;
-    grid-auto-rows:4rem !important;
+
+/* ── Page Wrapper ───────────────────────────── */
+.gpRequestPage {
+    padding: 40px 20px;
+    min-height: 100%;
+}
+
+/* ── Card ────────────────────────────────────── */
+.gpCard {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 58, 120, 0.10);
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+/* ── Card Header ────────────────────────────── */
+.gpCardHeader {
+    padding: 24px 32px 20px 32px;
+    background: linear-gradient(135deg, #004a99 0%, #0066cc 100%);
+}
+
+.gpCardHeaderIcon {
+    font-size: 2rem !important;
+    color: rgba(255,255,255,0.85) !important;
+    margin-right: 12px;
+}
+
+.gpCardTitle {
+    color: #ffffff !important;
+    font-size: 1.15rem !important;
+    font-weight: 700 !important;
+}
+
+.gpCardSubtitle {
+    color: rgba(255,255,255,0.75) !important;
+    font-size: 0.8rem !important;
+    margin-top: 2px;
+}
+
+/* ── Divider ─────────────────────────────────── */
+.gpCardDivider {
+    height: 4px;
+    background: linear-gradient(90deg, #004a99, #00b4d8, #e2e8f0);
+}
+
+/* ── Card Body ───────────────────────────────── */
+.gpCardBody {
+    padding: 28px 32px;
+}
+
+/* ── Form Row ────────────────────────────────── */
+.gpFormRow {
+    margin-bottom: 20px;
+    gap: 16px;
+}
+
+.gpFormRowFull {
+    margin-bottom: 20px;
+}
+
+/* ── Field Group ─────────────────────────────── */
+.gpFieldGroup {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 200px;
+}
+
+/* ── Labels ──────────────────────────────────── */
+.gpLabel {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    color: #64748b !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    margin-bottom: 6px !important;
+}
+
+/* ── Inputs ──────────────────────────────────── */
+.gpInput .sapMInputBaseInner,
+.gpInput .sapMSltSelect {
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    background: #f8fafc !important;
+    font-size: 0.9rem !important;
+    color: #1e293b !important;
+    height: 38px !important;
+    padding: 0 12px !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+    width: 100% !important;
+}
+
+.gpInput.sapMInputBaseFocused .sapMInputBaseInner {
+    border-color: #004a99 !important;
+    box-shadow: 0 0 0 3px rgba(0, 74, 153, 0.12) !important;
+    background: #ffffff !important;
+}
+
+.gpInputReadonly .sapMInputBaseInner {
+    background: #f1f5f9 !important;
+    color: #94a3b8 !important;
+}
+
+/* ── Radio Groups ────────────────────────────── */
+.gpRadioGroup {
+    margin-top: 6px !important;
+}
+
+/* ── Card Footer ─────────────────────────────── */
+.gpCardFooter {
+    padding: 20px 32px;
+    border-top: 1px solid #f1f5f9;
+    background: #fafbfc;
+}
+
+/* ── Primary Button ──────────────────────────── */
+.gpBtnPrimary .sapMBtnInner {
+    background: #004a99 !important;
+    border-color: #004a99 !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    height: 40px !important;
+    padding: 0 20px !important;
+}
+
+.gpBtnPrimary:hover .sapMBtnInner {
+    background: #003a7a !important;
+}
+
+.gpBtnSecondary .sapMBtnInner {
+    border: 1.5px solid #cbd5e1 !important;
+    color: #475569 !important;
+    background: #ffffff !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    height: 40px !important;
+    padding: 0 20px !important;
+}
+
+.gpBtnSecondary:hover .sapMBtnInner {
+    border-color: #004a99 !important;
+    color: #004a99 !important;
+    background: #f0f4ff !important;
 }

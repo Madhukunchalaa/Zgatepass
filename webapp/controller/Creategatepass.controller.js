@@ -181,7 +181,10 @@ sap.ui.define([
                                 "Gate Pass Request created! Request No: " + sReqNo;
                             MessageBox.success(sMsg, {
                                 title: "Success",
-                                onClose: function () { that.onReset(); }
+                                onClose: function () { 
+                                    that.onReset();
+                                    that.getRouter().navTo("home");
+                                }
                             });
                         },
                         error: function (oError) {

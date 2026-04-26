@@ -6,19 +6,7 @@
 		"i18n": {
 			"bundleUrl": "i18n/i18n.properties",
 			"fallbackLocale": "en",
-			"supportedLocales": ["en", "de"],
-			"terminologies": {
-				"sports": {
-					"bundleUrl": "i18n/terminologies/sports/i18n.terminologies.sports.properties",
-					"bundleUrlRelativeTo": "manifest",
-					"supportedLocales": ["en", "de"]
-				},
-				"travel": {
-					"bundleUrl": "i18n/terminologies/travel/i18n.terminologies.travel.properties",
-					"bundleUrlRelativeTo": "manifest",
-					"supportedLocales": ["en", "de"]
-				}
-			}
+			"supportedLocales": ["en", "de"]
 		},
 		"title": "{{appTitle}}",
 		"description": "{{appDescription}}",
@@ -50,32 +38,25 @@
 		]
 	},
 	"sap.ui5": {
-		   "resources": {
-            "css": [
-                {
-                    "uri": "css/style.css"
-                }
-            ],
-            "js": []
-        },
-
+		"resources": {
+			"css": [
+				{
+					"uri": "css/style.css"
+				}
+			]
+		},
 		"rootView": {
 			"viewName": "zgpms.meilpower.com.view.App",
 			"type": "XML",
 			"id": "app"
 		},
-	
 		"dependencies": {
 			"minUI5Version": "1.77.0",
 			"libs": {
 				"sap.m": {},
-				"sap.suite.ui.microchart": {
-					"lazy": true
-				},
 				"sap.tnt": {},
 				"sap.ui.core": {},
-				"sap.ui.layout": {},
-				"sap.uxap": {}
+				"sap.ui.layout": {}
 			}
 		},
 		"models": {
@@ -89,77 +70,12 @@
 				"type": "sap.ui.model.resource.ResourceModel",
 				"settings": {
 					"bundleUrl": "i18n/i18n.properties",
-					"async": true,
-					"fallbackLocale": "en",
-					"supportedLocales": ["en", "de"],
-					"terminologies": {
-						"sports": {
-							"bundleUrl": "i18n/terminologies/sports/i18n.terminologies.sports.properties",
-							"bundleUrlRelativeTo": "manifest",
-							"supportedLocales": ["en", "de"]
-						},
-						"travel": {
-							"bundleUrl": "i18n/terminologies/travel/i18n.terminologies.travel.properties",
-							"bundleUrlRelativeTo": "manifest",
-							"supportedLocales": ["en", "de"]
-						}
-					},
-					"enhanceWith": [
-						{
-							"bundleUrl": "reuse/appvar1/i18n/i18n.properties",
-							"fallbackLocale": "en",
-							"supportedLocales": [
-								"en", "de"
-							],
-							"terminologies": {
-								"sports": {
-									"bundleUrl": "reuse/appvar1/i18n/terminologies/sports/i18n.terminologies.sports.properties",
-									"bundleUrlRelativeTo": "manifest",
-									"supportedLocales": [
-										"en", "de"
-									]
-								},
-								"travel": {
-									"bundleUrl": "reuse/appvar1/i18n/terminologies/travel/i18n.terminologies.travel.properties",
-									"bundleUrlRelativeTo": "manifest",
-									"supportedLocales": [
-										"en", "de"
-									]
-								}
-							}
-						},
-						{
-							"bundleUrl": "reuse/appvar2/i18n/i18n.properties",
-							"bundleUrlRelativeTo": "manifest",
-							"supportedLocales": [
-								"en",
-								"de"
-							],
-							"fallbackLocale": "en",
-							"terminologies": {
-								"travel": {
-									"bundleUrl": "reuse/appvar2/i18n/terminologies/travel/i18n.terminologies.travel.properties",
-									"bundleUrlRelativeTo": "manifest",
-									"supportedLocales": [
-										"en", "de"
-									]
-								}
-							}
-						}
-					]
+					"async": true
 				}
 			},
 			"side": {
 				"type": "sap.ui.model.json.JSONModel",
 				"uri": "model/sideContent.json"
-			},
-			"alerts": {
-				"type": "sap.ui.model.json.JSONModel",
-				"uri": "model/alerts.json"
-			},
-			"customer": {
-				"type": "sap.ui.model.json.JSONModel",
-				"uri": "model/customers.json"
 			}
 		},
 		"routing": {
@@ -177,70 +93,49 @@
 					"target": "home"
 				},
 				{
-					"pattern": "Reports",
-					"name": "Reports",
-					"target": "Reports"
+					"pattern": "GatePassRequestNumber",
+					"name": "GatePassRequestNumber",
+					"target": "GatePassRequestNumber"
 				},
 				{
-					"pattern": "MasterSettings",
-					"name": "masterSettings",
-					"target": [
-						"detailSettings",
-						"masterSettings"
-					]
-				},
-				{
-					"pattern": "MasterSettings/SystemSettings",
-					"name": "systemSettings",
-					"target": [
-						"detailSettings",
-						"masterSettings"
-					]
-				},
-				{
-					"pattern": "Statistics",
-					"name": "statistics",
-					"target": "statistics"
-				},
-				{
-					"pattern": "GatepassList",
-					"name": "GatepassList",
-					"target": "GatepassList"
-				},
-				{
-					"pattern": "OrderStatistics",
-					"name": "orderStatistics",
-					"target": "orderStatistics"
-				},
-				{
-					"pattern": "Editgatepass",
-					"name": "Editgatepass",
-					"target": "Editgatepass"
-				},
-					{
-					"pattern": "Creategatepass",
-					"name": "Creategatepass",
-					"target": "Creategatepass"
-				},
-				{
-					"pattern": "GatePassRequestCreation",
+					"pattern": "GatePassRequestCreation/:reqNo:/:plant:/:category:/:type:",
 					"name": "GatePassRequestCreation",
 					"target": "GatePassRequestCreation"
 				},
 				{
-					"pattern": "GatePassCreation/:reqNo:",
-					"name": "GatePassCreation",
-					"target": "GatePassCreation"
+					"pattern": "OutGatePass",
+					"name": "OutGatePass",
+					"target": "OutGatePass"
 				},
 				{
-					"pattern": "ImportantLinks",
-					"name": "importantLinks",
-					"target": "importantLinks"
+					"pattern": "Gatepasslist",
+					"name": "Gatepasslist",
+					"target": "Gatepasslist"
 				},
 				{
-					"pattern": "Legal",
-					"name": "legal",
-					"target": "legal"
+					"pattern": "OutGatePassDetail/:reqNo:",
+					"name": "OutGatePassDetail",
+					"target": "OutGatePassDetail"
+				},
+				{
+					"pattern": "GatePassExit",
+					"name": "GatePassExit",
+					"target": "GatePassExit"
+				},
+				{
+					"pattern": "GatePassExitDetail/:reqNo:",
+					"name": "GatePassExitDetail",
+					"target": "GatePassExitDetail"
+				},
+				{
+					"pattern": "GatePassReturn",
+					"name": "GatePassReturn",
+					"target": "GatePassReturn"
+				},
+				{
+					"pattern": "GatePassReturnDetail/:reqNo:",
+					"name": "GatePassReturnDetail",
+					"target": "GatePassReturnDetail"
 				}
 			],
 			"targets": {
@@ -248,63 +143,41 @@
 					"viewId": "home",
 					"viewName": "Home"
 				},
-				"Reports": {
-					"viewId": "Reports",
-					"viewName": "Reports"
-				},
-				"appSettings": {
-					"viewId": "appSettings",
-					"viewName": "settings.AppSettings"
-				},
-				"masterSettings": {
-					"viewId": "masterSettings",
-					"viewName": "settings.MasterSettings",
-					"controlId": "appSettings",
-					"controlAggregation": "masterPages",
-					"parent": "appSettings"
-				},
-				"detailSettings": {
-					"viewId": "detailSettings",
-					"viewName": "settings.DetailSettings",
-					"controlId": "appSettings",
-					"controlAggregation": "detailPages",
-					"parent": "appSettings"
-				},
-				"statistics": {
-					"viewId": "statistics",
-					"viewName": "Statistics"
-				},
-				"GatepassList": {
-					"viewId": "GatepassList",
-					"viewName": "GatepassList"
-				},
-				"orderStatistics": {
-					"viewId": "orderStatistics",
-					"viewName": "OrderStatistics"
-				},
-					"Creategatepass": {
-					"viewId": "Creategatepass",
-					"viewName": "Creategatepass"
+				"GatePassRequestNumber": {
+					"viewId": "GatePassRequestNumber",
+					"viewName": "GatePassRequestNumber"
 				},
 				"GatePassRequestCreation": {
 					"viewId": "GatePassRequestCreation",
 					"viewName": "GatePassRequestCreation"
 				},
-				"GatePassCreation": {
-					"viewId": "GatePassCreation",
-					"viewName": "GatePassCreation"
+				"OutGatePass": {
+					"viewId": "OutGatePass",
+					"viewName": "OutGatePass"
 				},
-					"Editgatepass": {
-					"viewId": "Editgatepass",
-					"viewName": "Editgatepass"
+				"OutGatePassDetail": {
+					"viewId": "OutGatePassDetail",
+					"viewName": "OutGatePassDetail"
 				},
-				"importantLinks": {
-					"viewId": "importantLinks",
-					"viewName": "ImportantLinks"
+				"Gatepasslist": {
+					"viewId": "Gatepasslist",
+					"viewName": "Gatepasslist"
 				},
-				"legal": {
-					"viewId": "legal",
-					"viewName": "Legal"
+				"GatePassExit": {
+					"viewId": "GatePassExit",
+					"viewName": "GatePassExit"
+				},
+				"GatePassExitDetail": {
+					"viewId": "GatePassExitDetail",
+					"viewName": "GatePassExitDetail"
+				},
+				"GatePassReturn": {
+					"viewId": "GatePassReturn",
+					"viewName": "GatePassReturn"
+				},
+				"GatePassReturnDetail": {
+					"viewId": "GatePassReturnDetail",
+					"viewName": "GatePassReturnDetail"
 				}
 			}
 		}
