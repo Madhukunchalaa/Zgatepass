@@ -1,0 +1,218 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.Analytics"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:core="sap.ui.core"
+	xmlns:viz="sap.viz.ui5.controls"
+	xmlns:viz.data="sap.viz.ui5.data"
+	xmlns:viz.feeds="sap.viz.ui5.controls.common.feeds"
+	height="100%">
+
+	<Page title="Analytics &amp; Reports" class="gpmsPage" showHeader="false">
+		<content>
+			<ScrollContainer vertical="true" horizontal="false" height="100%" width="100%">
+				<VBox class="gpmsAnalyticsPage">
+
+					<!-- ── Page Header ─────────────────────────────────── -->
+					<HBox alignItems="Center" justifyContent="SpaceBetween" class="gpmsAnalyticsHeader">
+						<VBox>
+							<Title text="Analytics Dashboard" level="H1" class="gpmsAnalyticsTitle"/>
+							<Text text="Gate Pass Management — Live Summary" class="gpmsAnalyticsSubTitle"/>
+						</VBox>
+						<Button icon="sap-icon://home" text="Home" press=".onNavHome" type="Transparent" class="gpmsAnalyticsHomeBtn"/>
+					</HBox>
+
+					<!-- ── KPI Tiles ───────────────────────────────────── -->
+					<HBox wrap="Wrap" class="gpmsKpiRow">
+
+						<VBox class="gpmsKpiCard gpmsKpiTotal">
+							<HBox alignItems="Center">
+								<core:Icon src="sap-icon://documents" class="gpmsKpiIcon"/>
+								<VBox class="gpmsKpiTextBox">
+									<Title text="{analytics>/tiles/total}" level="H1" class="gpmsKpiNum"/>
+									<Text text="Total Gate Passes" class="gpmsKpiLbl"/>
+								</VBox>
+							</HBox>
+						</VBox>
+
+						<VBox class="gpmsKpiCard gpmsKpiPending">
+							<HBox alignItems="Center">
+								<core:Icon src="sap-icon://pending" class="gpmsKpiIcon"/>
+								<VBox class="gpmsKpiTextBox">
+									<Title text="{analytics>/tiles/pending}" level="H1" class="gpmsKpiNum"/>
+									<Text text="Total Pending" class="gpmsKpiLbl"/>
+								</VBox>
+							</HBox>
+						</VBox>
+
+						<VBox class="gpmsKpiCard gpmsKpiNrgp">
+							<HBox alignItems="Center">
+								<core:Icon src="sap-icon://add-document" class="gpmsKpiIcon"/>
+								<VBox class="gpmsKpiTextBox">
+									<Title text="{analytics>/tiles/nrgpPending}" level="H1" class="gpmsKpiNum"/>
+									<Text text="NRGP Pending" class="gpmsKpiLbl"/>
+								</VBox>
+							</HBox>
+						</VBox>
+
+						<VBox class="gpmsKpiCard gpmsKpiRgp">
+							<HBox alignItems="Center">
+								<core:Icon src="sap-icon://shipping-status" class="gpmsKpiIcon"/>
+								<VBox class="gpmsKpiTextBox">
+									<Title text="{analytics>/tiles/rgpPending}" level="H1" class="gpmsKpiNum"/>
+									<Text text="RGP Pending" class="gpmsKpiLbl"/>
+								</VBox>
+							</HBox>
+						</VBox>
+
+						<VBox class="gpmsKpiCard gpmsKpiApproved">
+							<HBox alignItems="Center">
+								<core:Icon src="sap-icon://accept" class="gpmsKpiIcon"/>
+								<VBox class="gpmsKpiTextBox">
+									<Title text="{analytics>/tiles/approved}" level="H1" class="gpmsKpiNum"/>
+									<Text text="Approved" class="gpmsKpiLbl"/>
+								</VBox>
+							</HBox>
+						</VBox>
+
+						<VBox class="gpmsKpiCard gpmsKpiRejected">
+							<HBox alignItems="Center">
+								<core:Icon src="sap-icon://cancel" class="gpmsKpiIcon"/>
+								<VBox class="gpmsKpiTextBox">
+									<Title text="{analytics>/tiles/rejected}" level="H1" class="gpmsKpiNum"/>
+									<Text text="Rejected" class="gpmsKpiLbl"/>
+								</VBox>
+							</HBox>
+						</VBox>
+
+					</HBox>
+
+					<!-- ── Charts Row ─────────────────────────────────── -->
+					<HBox wrap="Wrap" class="gpmsChartsRow" alignItems="Stretch">
+
+						<!-- Grouped Column Chart -->
+						<VBox class="gpmsChartCard gpmsChartLarge">
+							<HBox alignItems="Center" class="gpmsChartCardHeader">
+								<core:Icon src="sap-icon://bar-chart" class="gpmsChartIcon"/>
+								<Title text="Status by Type (NRGP vs RGP)" level="H3" class="gpmsChartCardTitle"/>
+							</HBox>
+							<viz:VizFrame id="idBarChart" vizType="column" width="100%" height="300px">
+								<viz:dataset>
+									<viz.data:FlattenedDataset data="{analytics>/barData}">
+										<viz.data:dimensions>
+											<viz.data:DimensionDefinition name="Status" value="{analytics>status}"/>
+										</viz.data:dimensions>
+										<viz.data:measures>
+											<viz.data:MeasureDefinition name="NRGP" value="{analytics>nrgp}"/>
+											<viz.data:MeasureDefinition name="RGP"  value="{analytics>rgp}"/>
+										</viz.data:measures>
+									</viz.data:FlattenedDataset>
+								</viz:dataset>
+								<viz:feeds>
+									<viz.feeds:FeedItem uid="categoryAxis" type="Dimension" values="Status"/>
+									<viz.feeds:FeedItem uid="valueAxis"    type="Measure"   values="NRGP,RGP"/>
+								</viz:feeds>
+							</viz:VizFrame>
+						</VBox>
+
+						<!-- Donut Chart -->
+						<VBox class="gpmsChartCard gpmsChartSmall">
+							<HBox alignItems="Center" class="gpmsChartCardHeader">
+								<core:Icon src="sap-icon://donut-chart" class="gpmsChartIcon"/>
+								<Title text="Overall Status Split" level="H3" class="gpmsChartCardTitle"/>
+							</HBox>
+							<viz:VizFrame id="idDonutChart" vizType="donut" width="100%" height="300px">
+								<viz:dataset>
+									<viz.data:FlattenedDataset data="{analytics>/pieData}">
+										<viz.data:dimensions>
+											<viz.data:DimensionDefinition name="Status" value="{analytics>status}"/>
+										</viz.data:dimensions>
+										<viz.data:measures>
+											<viz.data:MeasureDefinition name="Count" value="{analytics>count}"/>
+										</viz.data:measures>
+									</viz.data:FlattenedDataset>
+								</viz:dataset>
+								<viz:feeds>
+									<viz.feeds:FeedItem uid="color" type="Dimension" values="Status"/>
+									<viz.feeds:FeedItem uid="size"  type="Measure"   values="Count"/>
+								</viz:feeds>
+							</viz:VizFrame>
+						</VBox>
+
+					</HBox>
+
+					<!-- ── NRGP vs RGP Summary Cards ──────────────────── -->
+					<HBox wrap="Wrap" class="gpmsTypeRow">
+
+						<VBox class="gpmsTypeCard gpmsTypeNrgp">
+							<HBox alignItems="Center" class="gpmsTypeCardHeader">
+								<core:Icon src="sap-icon://add-document" class="gpmsTypeHdrIcon"/>
+								<Title text="NRGP Summary" level="H3" class="gpmsTypeHdrTitle"/>
+								<ToolbarSpacer/>
+								<ObjectNumber number="{analytics>/tiles/nrgpTotal}" unit="Total" state="None" class="gpmsTypeTotalBadge"/>
+							</HBox>
+							<VBox class="gpmsTypeStatList">
+								<HBox justifyContent="SpaceBetween" alignItems="Center" class="gpmsTypeStat">
+									<HBox alignItems="Center">
+										<core:Icon src="sap-icon://pending" class="gpmsTypeStatIcon gpmsStatPending"/>
+										<Text text="Pending" class="gpmsTypeStatLabel"/>
+									</HBox>
+									<Text text="{analytics>/tiles/nrgpPending}" class="gpmsTypeStatVal gpmsStatPending"/>
+								</HBox>
+								<HBox justifyContent="SpaceBetween" alignItems="Center" class="gpmsTypeStat">
+									<HBox alignItems="Center">
+										<core:Icon src="sap-icon://accept" class="gpmsTypeStatIcon gpmsStatApproved"/>
+										<Text text="Approved" class="gpmsTypeStatLabel"/>
+									</HBox>
+									<Text text="{analytics>/tiles/nrgpApproved}" class="gpmsTypeStatVal gpmsStatApproved"/>
+								</HBox>
+								<HBox justifyContent="SpaceBetween" alignItems="Center" class="gpmsTypeStat">
+									<HBox alignItems="Center">
+										<core:Icon src="sap-icon://cancel" class="gpmsTypeStatIcon gpmsStatRejected"/>
+										<Text text="Rejected" class="gpmsTypeStatLabel"/>
+									</HBox>
+									<Text text="{analytics>/tiles/nrgpRejected}" class="gpmsTypeStatVal gpmsStatRejected"/>
+								</HBox>
+							</VBox>
+						</VBox>
+
+						<VBox class="gpmsTypeCard gpmsTypeRgp">
+							<HBox alignItems="Center" class="gpmsTypeCardHeader">
+								<core:Icon src="sap-icon://shipping-status" class="gpmsTypeHdrIcon"/>
+								<Title text="RGP Summary" level="H3" class="gpmsTypeHdrTitle"/>
+								<ToolbarSpacer/>
+								<ObjectNumber number="{analytics>/tiles/rgpTotal}" unit="Total" state="None" class="gpmsTypeTotalBadge"/>
+							</HBox>
+							<VBox class="gpmsTypeStatList">
+								<HBox justifyContent="SpaceBetween" alignItems="Center" class="gpmsTypeStat">
+									<HBox alignItems="Center">
+										<core:Icon src="sap-icon://pending" class="gpmsTypeStatIcon gpmsStatPending"/>
+										<Text text="Pending" class="gpmsTypeStatLabel"/>
+									</HBox>
+									<Text text="{analytics>/tiles/rgpPending}" class="gpmsTypeStatVal gpmsStatPending"/>
+								</HBox>
+								<HBox justifyContent="SpaceBetween" alignItems="Center" class="gpmsTypeStat">
+									<HBox alignItems="Center">
+										<core:Icon src="sap-icon://accept" class="gpmsTypeStatIcon gpmsStatApproved"/>
+										<Text text="Approved" class="gpmsTypeStatLabel"/>
+									</HBox>
+									<Text text="{analytics>/tiles/rgpApproved}" class="gpmsTypeStatVal gpmsStatApproved"/>
+								</HBox>
+								<HBox justifyContent="SpaceBetween" alignItems="Center" class="gpmsTypeStat">
+									<HBox alignItems="Center">
+										<core:Icon src="sap-icon://cancel" class="gpmsTypeStatIcon gpmsStatRejected"/>
+										<Text text="Rejected" class="gpmsTypeStatLabel"/>
+									</HBox>
+									<Text text="{analytics>/tiles/rgpRejected}" class="gpmsTypeStatVal gpmsStatRejected"/>
+								</HBox>
+							</VBox>
+						</VBox>
+
+					</HBox>
+
+				</VBox>
+			</ScrollContainer>
+		</content>
+	</Page>
+
+</mvc:View>

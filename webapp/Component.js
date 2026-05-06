@@ -4,7 +4,7 @@ sap.ui.define([
 	"sap/ui/core/routing/History",
 	"sap/ui/Device",
 	"sap/ui/model/resource/ResourceModel"
-], function(UIComponent, models, History, Device) {
+], function(UIComponent, models, History, Device, ResourceModel) {
 	"use strict";
 
 	return UIComponent.extend("zgpms.meilpower.com.Component", {

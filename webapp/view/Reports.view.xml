@@ -1,132 +1,110 @@
 <mvc:View
 	controllerName="zgpms.meilpower.com.controller.Reports"
 	xmlns="sap.m"
-	xmlns:l="sap.ui.layout"
-	xmlns:f="sap.ui.layout.form"
+	xmlns:mvc="sap.ui.core.mvc"
 	xmlns:core="sap.ui.core"
-	xmlns:mvc="sap.ui.core.mvc">
-
-
-
-	<Page showHeader="false">
-		<landmarkInfo>
-			<PageAccessibleLandmarkInfo
-				rootRole="Region"
-				rootLabel="{i18n>Reports_rootLabel}"
-				contentRole="Main"
-				contentLabel="{i18n>Reports_contentLabel}"/>
-		</landmarkInfo>
+	xmlns:f="sap.f"
+	height="100%">
+	<Page
+		id="reportsPage"
+		title="Gate Pass Reports &amp; Analytics"
+		class="gpmsPage">
+		<headerContent>
+			<Button icon="sap-icon://refresh" press=".onRefresh" type="Transparent"/>
+		</headerContent>
 		<content>
-			<Panel
-				id="ReportsContainer"
-				accessibleRole="Region"
-				class="sapUiNoContentPadding">
-				<headerToolbar>
-					<Toolbar>
-						<Title
-							text="Meil Power"
-							level="H3"
-							textAlign="Left"/>
-						<ToolbarSpacer/>
-						
-					</Toolbar>
-				</headerToolbar>
-		 <content>
+			<VBox class="gpmsContentWrapper sapUiMediumMargin">
+				
+				<!-- Summary Cards -->
+				<HBox justifyContent="SpaceBetween" class="sapUiSmallMarginBottom">
+					<f:Card class="gpmsSummaryCard" width="220px">
+						<f:header>
+							<f:CardHeader title="Total Requests" subtitle="All Time" iconSrc="sap-icon://activities"/>
+						</f:header>
+						<f:content>
+							<VBox alignItems="Center" class="sapUiSmallMargin">
+								<Title text="42" level="H1" class="gpmsCardValue"/>
+							</VBox>
+						</f:content>
+					</f:Card>
+					<f:Card class="gpmsSummaryCard" width="220px">
+						<f:header>
+							<f:CardHeader title="Pending Approval" subtitle="Action Required" iconSrc="sap-icon://message-warning"/>
+						</f:header>
+						<f:content>
+							<VBox alignItems="Center" class="sapUiSmallMargin">
+								<Title text="12" level="H1" class="gpmsCardValue warning"/>
+							</VBox>
+						</f:content>
+					</f:Card>
+					<f:Card class="gpmsSummaryCard" width="220px">
+						<f:header>
+							<f:CardHeader title="Approved" subtitle="Ready for Exit" iconSrc="sap-icon://sys-enter-2"/>
+						</f:header>
+						<f:content>
+							<VBox alignItems="Center" class="sapUiSmallMargin">
+								<Title text="25" level="H1" class="gpmsCardValue success"/>
+							</VBox>
+						</f:content>
+					</f:Card>
+					<f:Card class="gpmsSummaryCard" width="220px">
+						<f:header>
+							<f:CardHeader title="Completed" subtitle="Closed Passes" iconSrc="sap-icon://shipping-status"/>
+						</f:header>
+						<f:content>
+							<VBox alignItems="Center" class="sapUiSmallMargin">
+								<Title text="5" level="H1" class="gpmsCardValue info"/>
+							</VBox>
+						</f:content>
+					</f:Card>
+				</HBox>
 
-            <!-- FILTER SECTION -->
-            <VBox class="sapUiSmallMargin">
-
-                <HBox wrap="Wrap" justifyContent="SpaceBetween">
-
-                    <VBox width="20%">
-                        <Label text="Report Type"/>
-                        <ComboBox
-                            id="reportType"
-                            selectionChange="onReportTypeChange"
-                            items="{filterModel>/reportTypes}">
-                            <core:Item key="{filterModel>key}" text="{filterModel>text}"/>
-                        </ComboBox>
-                    </VBox>
-
-                    <VBox width="20%">
-                        <Label text="From Date"/>
-                        <DatePicker id="fromDate"/>
-                    </VBox>
-
-                    <VBox width="20%">
-                        <Label text="To Date"/>
-                        <DatePicker id="toDate"/>
-                    </VBox>
-
-                    <VBox width="20%">
-                        <Label text="Department"/>
-                        <Input id="deptFilter"/>
-                    </VBox>
-
-                </HBox>
-
-                <HBox justifyContent="End" class="sapUiSmallMarginTop">
-                    <Button text="Search" type="Emphasized" press="onSearch"/>
-                    <Button text="Download" press="onDownload" class="sapUiSmallMarginBegin"/>
-                </HBox>
-
-            </VBox>
-
-            <!-- DETAIL TABLE -->
-            <Table
-                id="detailTable"
-                visible="{= !${viewModel>/isSummary} }"
-                items="{reportModel>/filteredData}">
-
-                <columns>
-                    <Column><Text text="Gate No"/></Column>
-                    <Column><Text text="Category"/></Column>
-                    <Column><Text text="Department"/></Column>
-                    <Column><Text text="Status"/></Column>
-                    <Column><Text text="Year"/></Column>
-                    <Column><Text text="Qty"/></Column>
-                </columns>
-
-                <items>
-                    <ColumnListItem>
-                        <cells>
-                            <Text text="{reportModel>gateNo}"/>
-                            <Text text="{reportModel>gateCategory}"/>
-                            <Text text="{reportModel>department}"/>
-                            <Text text="{reportModel>status}"/>
-                            <Text text="{reportModel>year}"/>
-                            <Text text="{reportModel>quantity}"/>
-                        </cells>
-                    </ColumnListItem>
-                </items>
-
-            </Table>
-
-            <!-- SUMMARY TABLE -->
-            <Table
-                id="summaryTable"
-                visible="{viewModel>/isSummary}"
-                items="{summaryModel>/summaryData}">
-
-                <columns>
-                    <Column><Text text="Key"/></Column>
-                    <Column><Text text="Pending Count"/></Column>
-                </columns>
-
-                <items>
-                    <ColumnListItem>
-                        <cells>
-                            <Text text="{summaryModel>key}"/>
-                            <Text text="{summaryModel>count}"/>
-                        </cells>
-                    </ColumnListItem>
-                </items>
-
-            </Table>
-
-        </content>
-	</Panel>
-
+				<!-- Data Table -->
+				<Table
+					id="reportsTable"
+					items="{path: '/GateReqHdrSet', sorter: {path: 'GatePassReqNo', descending: true}}"
+					growing="true"
+					growingThreshold="20"
+					class="gpmsMainTable sapUiSmallMarginTop">
+					<headerToolbar>
+						<OverflowToolbar class="gpmsSectionBar">
+							<core:Icon src="sap-icon://list" class="gpmsSectionBarIcon"/>
+							<Title text="Gate Pass Requests Summary" level="H3"/>
+							<ToolbarSpacer/>
+							<SearchField
+								width="250px"
+								placeholder="Search by Request/Vendor..."
+								search=".onSearch"
+								class="gpmsSearchField"/>
+							<Button icon="sap-icon://download" type="Transparent" press=".onExport"/>
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column width="10rem"><Text text="Request Number" class="gpmsHeaderText"/></Column>
+						<Column width="8rem"><Text text="Date" class="gpmsHeaderText"/></Column>
+						<Column width="8rem"><Text text="Type" class="gpmsHeaderText"/></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Vendor Name" class="gpmsHeaderText"/></Column>
+						<Column width="10rem" hAlign="Center"><Text text="Status" class="gpmsHeaderText"/></Column>
+						<Column width="5rem" hAlign="Center"><Text text="Action" class="gpmsHeaderText"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem vAlign="Middle" type="Navigation" press=".onItemPress" class="gpmsItemRow">
+							<cells>
+								<ObjectIdentifier title="{GatePassReqNo}" class="gpmsReqIdText"/>
+								<Text text="{path: 'GatePassDate', type: 'sap.ui.model.type.Date', formatOptions: {pattern: 'dd-MM-yyyy'}}"/>
+								<ObjectStatus text="{GatePassType}" state="{= ${GatePassType} === 'RGP' ? 'Warning' : 'Information'}" class="gpmsBadgeSmall"/>
+								<Text text="{VendorName}" class="gpmsVendorText"/>
+								<ObjectStatus
+									text="{GPStatus}"
+									state="{= ${GPStatus} === 'APPROVED' ? 'Success' : (${GPStatus} === 'REJECTED' ? 'Error' : 'Warning')}"
+									icon="{= ${GPStatus} === 'APPROVED' ? 'sap-icon://sys-enter-2' : (${GPStatus} === 'REJECTED' ? 'sap-icon://sys-cancel-2' : 'sap-icon://alert')}"
+									class="gpmsStatusCell"/>
+								<Button icon="sap-icon://display" type="Transparent" press=".onItemPress"/>
+							</cells>
+						</ColumnListItem>
+					</items>
+				</Table>
+			</VBox>
 		</content>
 	</Page>
 </mvc:View>

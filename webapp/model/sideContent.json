@@ -1,37 +1,6 @@
 {
-	"selectedKey": "home",
-	"navigation": [
-		{
-			"titleI18nKey": "sideContentHome",
-			"icon": "sap-icon://home",
-			"key": ""
-		},
-		{
-			"titleI18nKey": "sideContentGatePassRequestNumber",
-			"icon": "sap-icon://request",
-			"key": "GatePassRequestNumber"
-		},
-		{
-			"titleI18nKey": "sideContentOutGatePass",
-			"icon": "sap-icon://outbound",
-			"key": "OutGatePass"
-		},
-		{
-			"title": "Gate Pass List",
-			"icon": "sap-icon://list",
-			"key": "Gatepasslist"
-		},
-		{
-			"titleI18nKey": "sideContentGatePassExit",
-			"icon": "sap-icon://exit-resource",
-			"key": "GatePassExit"
-		},
-		{
-			"titleI18nKey": "sideContentGatePassEntry",
-			"icon": "sap-icon://inbound",
-			"key": "GatePassReturn"
-		}
-	],
+	"selectedKey": "",
+	"navigation": [],
 	"fixedNavigation": [],
 	"masterSettings": []
 }

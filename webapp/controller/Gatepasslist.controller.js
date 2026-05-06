@@ -1,127 +1,112 @@
 sap.ui.define([
-    './BaseController',
-    'sap/ui/model/json/JSONModel',
-    "sap/ui/model/Filter",
-    "sap/ui/model/FilterOperator",
-    "sap/m/MessageToast"
-], function (BaseController, JSONModel, Filter, FilterOperator, MessageToast) {
+	"./BaseController",
+	"sap/ui/model/Filter",
+	"sap/ui/model/FilterOperator",
+	"sap/ui/model/json/JSONModel"
+], function (BaseController, Filter, FilterOperator, JSONModel) {
+	"use strict";
 
-    "use strict";
+	return BaseController.extend("zgpms.meilpower.com.controller.GatePassList", {
 
-    return BaseController.extend("zgpms.meilpower.com.controller.Gatepasslist", {
+		onInit: function () {
+			this.getView().setModel(new JSONModel({ items: [] }), "gatePassList");
+			this.getRouter().getRoute("GatePassList").attachPatternMatched(this._onRouteMatched, this);
+		},
 
-        onInit: function () {
-            // Filter bar model
-            var oFilterModel = new JSONModel({
-                GatePassType: "All", // Default to All to show everything
-                FromDate: null,
-                ToDate: null,
-                Status: "All",
-                GatePassReqNo: ""
-            });
-            this.getView().setModel(oFilterModel, "filterModel");
+		_onRouteMatched: function () {
+			this.getView().getModel("gatePassList").setProperty("/items", []);
+			this._getData();
+		},
 
-            // Model for the second tab (Gate Passes)
-            var oHeaderModel = new JSONModel({ gatePassHeaders: [] });
-            this.getView().setModel(oHeaderModel, "headerModel");
+		_getData: function () {
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) {
+				return;
+			}
 
-            // Initial load trigger
-            this.onSearch();
-        },
+			var that = this;
+			var aAllResults = [];
+			var iDone = 0;
 
-        onAfterRendering: function () {
-            // Load gate pass list after rendering to ensure bindings are ready
-            this.onSearch();
-        },
+			function onBothDone() {
+				iDone++;
+				if (iDone === 2) {
+					sap.ui.core.BusyIndicator.hide();
+					that.getView().getModel("gatePassList").setProperty("/items", aAllResults);
+					that._updateCount();
+				}
+			}
 
-        _loadGatePassList: function (aFilters) {
-            var oTable = this.byId("gatePassTable");
-            if (!oTable) {
-                console.error("Table 'gatePassTable' not found.");
-                return;
-            }
-            var oBinding = oTable.getBinding("items");
-            if (oBinding) {
-                console.log("Applying filters to GateReqHdrSet:", aFilters);
-                oBinding.filter(aFilters);
-            } else {
-                console.warn("Binding for 'gatePassTable' not ready yet.");
-            }
-        },
+			sap.ui.core.BusyIndicator.show(0);
 
-        onRefresh: function () {
-            this.onSearch();
-        },
+			oODataModel.read("/GateReqHdrSet", {
+				filters: [new Filter("GatePassType", FilterOperator.EQ, "NRGP"), new Filter("Status", FilterOperator.EQ, "All")],
+				success: function (oData) {
+					aAllResults = aAllResults.concat(oData.results || []);
+					onBothDone();
+				},
+				error: function () { onBothDone(); }
+			});
 
-        onRefreshHeaders: function () {
-            this._loadGatePassHeaders();
-        },
+			oODataModel.read("/GateReqHdrSet", {
+				filters: [new Filter("GatePassType", FilterOperator.EQ, "RGP"), new Filter("Status", FilterOperator.EQ, "All")],
+				success: function (oData) {
+					aAllResults = aAllResults.concat(oData.results || []);
+					onBothDone();
+				},
+				error: function () { onBothDone(); }
+			});
+		},
 
-        onMainTabSelect: function (oEvent) {
-            var sKey = oEvent.getParameter("key");
-            if (sKey === "GatePasses") {
-                this._loadGatePassHeaders();
-            } else {
-                this.onSearch();
-            }
-        },
+		onSearchFieldLiveChange: function () {
+			this._applyFilters();
+		},
 
-        _loadGatePassHeaders: function () {
-            var oTable = this.byId("gatePassHeaderTable");
-            var oBinding = oTable ? oTable.getBinding("items") : null;
-            if (oBinding) {
-                oBinding.filter([]); // Clear or apply headers filters if needed
-            }
-        },
+		onSelectFilterChange: function () {
+			this._applyFilters();
+		},
 
-        _getCurrentFilters: function () {
-            var oFilterData = this.getView().getModel("filterModel").getData();
-            var aFilters = [];
+		onResetButtonPress: function () {
+			this.byId("idGatePassSearchField").setValue("");
+			this.byId("idStatusFilterSelect").setSelectedKey("");
+			this.byId("idTypeFilterSelect").setSelectedKey("");
+			this._applyFilters();
+		},
 
-            if (oFilterData.GatePassType && oFilterData.GatePassType !== "All") {
-                aFilters.push(new Filter("GatePassType", FilterOperator.EQ, oFilterData.GatePassType));
-            }
-            if (oFilterData.Status && oFilterData.Status !== "All") {
-                aFilters.push(new Filter("Status", FilterOperator.EQ, oFilterData.Status));
-            }
-            if (oFilterData.GatePassReqNo) {
-                aFilters.push(new Filter("GatePassReqNo", FilterOperator.Contains, oFilterData.GatePassReqNo));
-            }
-            return aFilters;
-        },
+		_applyFilters: function () {
+			var oBinding = this.byId("idItemsGatePassTable").getBinding("items");
+			var aFilters = [];
 
-        onSearch: function () {
-            var aFilters = this._getCurrentFilters();
-            this._loadGatePassList(aFilters);
-        },
+			var sSearch = this.byId("idGatePassSearchField").getValue().trim();
+			if (sSearch) {
+				aFilters.push(new Filter("GatePassReqNo", FilterOperator.Contains, sSearch));
+			}
 
-        onClear: function () {
-            this.getView().getModel("filterModel").setData({
-                GatePassType: "NRGP",
-                FromDate: null,
-                ToDate: null,
-                Status: "All",
-                GatePassReqNo: ""
-            });
-            this.onSearch();
-        },
+			var sStatus = this.byId("idStatusFilterSelect").getSelectedKey();
+			if (sStatus) {
+				aFilters.push(new Filter("Status", FilterOperator.EQ, sStatus));
+			}
 
-        onCreate: function () {
-            this.getOwnerComponent().getRouter().navTo("GatePassRequestCreation");
-        },
+			var sType = this.byId("idTypeFilterSelect").getSelectedKey();
+			if (sType) {
+				aFilters.push(new Filter("GatePassType", FilterOperator.EQ, sType));
+			}
 
-        onCreateGatePass: function () {
-            this.getOwnerComponent().getRouter().navTo("GatePassCreation", { reqNo: "" });
-        },
+			oBinding.filter(aFilters);
+			this._updateCount();
+		},
 
-        onItemPress: function (oEvent) {
-            var oItem = oEvent.getSource();
-            var oContext = oItem.getBindingContext();
-            var sReqNo = oContext.getProperty("GatePassReqNo");
+		_updateCount: function () {
+			var oBinding = this.byId("idItemsGatePassTable").getBinding("items");
+			if (oBinding) {
+				this.byId("idItemCountText").setText(oBinding.getLength() + " Items");
+			}
+		},
 
-            this.getOwnerComponent().getRouter().navTo("GatePassRequestCreation", {
-                reqNo: sReqNo
-            });
-        }
-    });
+		onColumnListItemPress: function (oEvent) {
+			var oItem = oEvent.getSource().getBindingContext("gatePassList").getObject();
+			console.log("Selected:", oItem.GatePassReqNo);
+		}
+
+	});
 });

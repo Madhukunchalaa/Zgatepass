@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gate Pass Creation · Meil Power</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --navy: #1A237E;
+            --navy-d: #121859;
+            --navy-m: #283593;
+            --navy-l: #3949AB;
+            --navy-pale: #E8EAF6;
+            --navy-ghost: #F0F2FB;
+            --red: #CC2020;
+            --red-d: #A81818;
+            --red-pale: #FDECEA;
+            --bg: #F4F5F9;
+            --surface: #FFFFFF;
+            --border: #DDE0EF;
+            --border-m: #C5C9E0;
+            --text: #1A1E3C;
+            --text-m: #3D4463;
+            --text-muted: #7B82A8;
+            --success: #1B6B3A;
+            --success-bg: #E8F5ED;
+            --success-brd: #A8D8B8;
+            --shadow: 0 3px 12px rgba(26, 35, 126, 0.09);
+            --shadow-lg: 0 6px 24px rgba(26, 35, 126, 0.13);
+            --r: 10px;
+            --r-sm: 6px;
+            --r-lg: 14px;
+            --t: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        html,
+        body {
+            min-height: 100%;
+            background: var(--bg);
+            font-family: 'IBM Plex Sans', sans-serif;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        /* ── TOP BAR ── */
+        .topbar {
+            height: 60px;
+            background: linear-gradient(108deg, var(--navy-d) 0%, var(--navy) 55%, var(--navy-m) 100%);
+            border-bottom: 3px solid var(--red);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            padding: 0 1.5rem;
+            gap: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .tb-back {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--r-sm);
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 1.05rem;
+            border: 1px solid transparent;
+            transition: all var(--t);
+            background: none;
+        }
+
+        .tb-back:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+        }
+
+        .tb-logo {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin-right: 4px;
+        }
+
+        .tb-logo-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 3px;
+        }
+
+        .tb-logo-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .tb-logo-name {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.5px;
+        }
+
+        .tb-divider {
+            width: 1px;
+            height: 22px;
+            background: rgba(255, 255, 255, 0.22);
+            margin: 0 4px;
+        }
+
+        .tb-center {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .tb-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.4px;
+        }
+
+        .tb-sub {
+            margin-top: 2px;
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.62);
+        }
+
+        .tb-submit {
+            background: var(--red);
+            color: #fff;
+            border: none;
+            border-radius: var(--r-sm);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            padding: 0 16px;
+            height: 33px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(204, 32, 32, 0.40);
+            transition: all var(--t);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tb-submit:hover {
+            background: var(--red-d);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(204, 32, 32, 0.45);
+        }
+
+        /* ── PAGE ── */
+        .page {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem 5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.125rem;
+        }
+
+        /* ── SECTION ── */
+        .section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: box-shadow var(--t), border-color var(--t);
+        }
+
+        .section:hover {
+            border-color: var(--border-m);
+            box-shadow: var(--shadow-lg), 0 0 0 1px rgba(26, 35, 126, 0.06);
+        }
+
+        .sec-head {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0 1.1rem 0 0.85rem;
+            min-height: 2.875rem;
+            background: linear-gradient(108deg, var(--navy-ghost) 0%, #fff 100%);
+            border-bottom: 1px solid var(--border);
+            border-left: 4px solid var(--navy);
+        }
+
+        .sec-icon {
+            font-size: 0.9rem;
+            color: var(--navy);
+        }
+
+        .sec-title {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--navy-d);
+            text-transform: uppercase;
+            letter-spacing: 1.1px;
+            flex: 1;
+        }
+
+        .badge {
+            background: var(--navy-pale);
+            border: 1px solid rgba(26, 35, 126, 0.22);
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-size: 0.62rem;
+            font-weight: 700;
+            color: var(--navy);
+            letter-spacing: 0.7px;
+        }
+
+        .badge-red {
+            background: var(--red-pale);
+            border: 1px solid rgba(204, 32, 32, 0.22);
+            color: var(--red);
+        }
+
+        /* ── FORM ── */
+        .form-body {
+            padding: 1.125rem 1.375rem 0.875rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1rem 1.5rem;
+        }
+
+        .fg {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .label {
+            font-size: 0.62rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .label .req {
+            color: var(--red);
+            margin-left: 2px;
+        }
+
+        .inp,
+        .sel,
+        .textarea {
+            width: 100%;
+            height: 38px;
+            background: #FAFBFE;
+            border: 1.5px solid var(--border);
+            border-radius: var(--r-sm);
+            color: var(--text);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 0.875rem;
+            padding: 0 0.75rem;
+            outline: none;
+            transition: all var(--t);
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .inp::placeholder {
+            color: rgba(123, 130, 168, 0.50);
+        }
+
+        .inp:hover,
+        .sel:hover {
+            border-color: var(--border-m);
+        }
+
+        .inp:focus,
+        .sel:focus {
+            border-color: var(--navy);
+            box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.11);
+            background: #fff;
+        }
+
+        .inp.ro {
+            background: #F5F7FB;
+            border-color: #E8EBF5;
+            color: var(--text-muted);
+            cursor: default;
+        }
+
+        .sel {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237B82A8'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-color: #FAFBFE;
+            padding-right: 2.2rem;
+        }
+
+        .sel:focus {
+            background-color: #fff;
+        }
+
+        .textarea {
+            height: auto;
+            padding: 0.6rem 0.75rem;
+            resize: vertical;
+        }
+
+        .textarea:focus {
+            border-color: var(--navy);
+            box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.11);
+            background: #fff;
+        }
+
+        /* ── ATTACH ── */
+        .attach-body {
+            padding: 1rem 1.375rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .attach-btn {
+            background: var(--navy-ghost);
+            border: 1.5px dashed rgba(26, 35, 126, 0.32);
+            border-radius: var(--r-sm);
+            color: var(--navy);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0.5rem 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all var(--t);
+        }
+
+        .attach-btn:hover {
+            background: var(--navy-pale);
+            border-color: var(--navy);
+            box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.09);
+        }
+
+        .file-chip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--success-bg);
+            border: 1px solid var(--success-brd);
+            border-radius: var(--r-sm);
+            padding: 5px 12px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--success);
+        }
+
+        .file-chip svg {
+            flex-shrink: 0;
+        }
+
+        /* ── TABLE ── */
+        .tbl-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead tr {
+            background: linear-gradient(108deg, var(--navy-d) 0%, var(--navy) 55%, var(--navy-m) 100%);
+            border-bottom: 2.5px solid var(--red);
+        }
+
+        thead th {
+            font-size: 0.62rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.90);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 0.7rem 0.75rem;
+            text-align: left;
+            border-right: 1px solid rgba(255, 255, 255, 0.12);
+            white-space: nowrap;
+        }
+
+        thead th:last-child {
+            border-right: none;
+        }
+
+        tbody tr {
+            transition: background var(--t);
+        }
+
+        tbody tr:nth-child(even) {
+            background: #FAFBFE;
+        }
+
+        tbody tr:hover {
+            background: var(--navy-ghost);
+        }
+
+        tbody td {
+            padding: 0.45rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .sno {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--navy);
+            text-align: center;
+        }
+
+        .ti {
+            width: 100%;
+            background: #FAFBFE;
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            color: var(--text);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 0.8rem;
+            padding: 5px 8px;
+            outline: none;
+            transition: all var(--t);
+        }
+
+        .ti:focus {
+            border-color: var(--navy);
+            box-shadow: 0 0 0 2px rgba(26, 35, 126, 0.11);
+            background: #fff;
+        }
+
+        .ti-amt {
+            background: var(--success-bg);
+            border: 1px solid var(--success-brd);
+            border-radius: var(--r-sm);
+            color: var(--success);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 5px 8px;
+            text-align: right;
+            width: 100%;
+            outline: none;
+        }
+
+        .t-del {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: rgba(204, 32, 32, 0.45);
+            font-size: 0.85rem;
+            padding: 4px 6px;
+            border-radius: 5px;
+            transition: all var(--t);
+        }
+
+        .t-del:hover {
+            color: var(--red);
+            background: var(--red-pale);
+        }
+
+        /* ── HEADER ACTIONS ── */
+        .add-btn {
+            background: var(--navy-pale);
+            border: 1px solid rgba(26, 35, 126, 0.22);
+            border-radius: var(--r-sm);
+            color: var(--navy);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            padding: 0 12px;
+            height: 28px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all var(--t);
+        }
+
+        .add-btn:hover {
+            background: var(--navy);
+            color: #fff;
+            border-color: var(--navy);
+            box-shadow: 0 2px 10px rgba(26, 35, 126, 0.28);
+        }
+
+        /* ── REMARKS + TOTAL ── */
+        .remarks-body {
+            padding: 1.125rem 1.375rem 1.375rem;
+            display: flex;
+            gap: 1.75rem;
+            flex-wrap: wrap;
+        }
+
+        .rem-left {
+            flex: 1 1 55%;
+            min-width: 240px;
+        }
+
+        .rem-right {
+            flex: 0 1 35%;
+            min-width: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .total-lbl {
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--navy);
+            text-transform: uppercase;
+            margin-bottom: 0.4rem;
+        }
+
+        .total-val {
+            width: 100%;
+            height: 3.25rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--navy-d);
+            background: linear-gradient(135deg, var(--navy-ghost) 0%, #FAFCFF 100%);
+            border: 1.5px solid var(--border-m);
+            border-top: 3px solid var(--navy);
+            border-radius: var(--r-sm);
+            text-align: right;
+            padding: 0 1rem;
+            outline: none;
+            box-shadow: var(--shadow);
+            letter-spacing: -0.5px;
+        }
+
+        /* ── FOOTER ── */
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+            height: 3.75rem;
+            background: #ffffff;
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -3px 16px rgba(26, 35, 126, 0.09);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.875rem;
+            padding: 0 2rem;
+        }
+
+        .btn-clear {
+            background: #fff;
+            border: 1.5px solid var(--border);
+            border-radius: var(--r);
+            color: var(--text-muted);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0 1.25rem;
+            height: 38px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all var(--t);
+        }
+
+        .btn-clear:hover {
+            color: var(--text-m);
+            border-color: var(--border-m);
+            background: #F5F7FB;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, var(--navy-d) 0%, var(--navy) 55%, var(--navy-l) 100%);
+            border: none;
+            border-radius: var(--r);
+            color: #fff;
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 0.83rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            padding: 0 1.5rem;
+            height: 38px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            box-shadow: 0 4px 18px rgba(26, 35, 126, 0.40);
+            transition: all var(--t);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-submit::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2.5px;
+            background: var(--red);
+        }
+
+        .btn-submit:hover {
+            background: linear-gradient(135deg, #121859 0%, var(--navy-d) 55%, var(--navy) 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 22px rgba(26, 35, 126, 0.50);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-m);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--navy-l);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+        <button class="tb-back">&#8592;</button>
+        <div class="tb-logo">
+            <!-- Meil-style M logo mark -->
+            <div class="tb-logo-icon">
+                <svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="36" height="36" rx="4" fill="#fff" />
+                    <!-- M letter in red -->
+                    <path d="M4 8 L4 28 L9 28 L9 14 L14 22 L18 22 L23 14 L23 28 L28 28 L28 8 L22 8 L16 18 L10 8 Z"
+                        fill="#CC2020" />
+                    <!-- Gear/cog symbol below -->
+                    <circle cx="18" cy="30" r="2" fill="#1A237E" />
+                    <circle cx="11" cy="30" r="1.4" fill="#1A237E" />
+                    <circle cx="25" cy="30" r="1.4" fill="#1A237E" />
+                </svg>
+            </div>
+            <span class="tb-logo-name">MEIL POWER</span>
+        </div>
+        <div class="tb-divider"></div>
+        <div class="tb-center">
+            <div class="tb-title">Gate Pass Request</div>
+            <div class="tb-sub">Non-Returnable Gate Pass (NRGP)</div>
+        </div>
+        <button class="tb-submit">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+            Submit
+        </button>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="page">
+
+        <!-- S1: Gate Pass Details -->
+        <div class="section">
+            <div class="sec-head">
+                <svg class="sec-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--navy)">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                </svg>
+                <span class="sec-title">Gate Pass Details</span>
+                <span class="badge">NRGP</span>
+            </div>
+            <div class="form-body">
+                <div class="form-grid">
+                    <div class="fg">
+                        <label class="label">GP Date <span class="req">*</span></label>
+                        <input type="date" class="inp" value="2025-07-14" />
+                    </div>
+                    <div class="fg">
+                        <label class="label">GP Type <span class="req">*</span></label>
+                        <select class="sel">
+                            <option>Non-Returnable Gatepass (NRGP)</option>
+                            <option>Returnable Gatepass (RGP)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- S2: Vendor Information -->
+        <div class="section">
+            <div class="sec-head">
+                <svg class="sec-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--navy)">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+                <span class="sec-title">Vendor Information</span>
+            </div>
+            <div class="form-body">
+                <div class="form-grid">
+                    <div class="fg">
+                        <label class="label">Vendor <span class="req">*</span></label>
+                        <input class="inp" type="text" value="BHEL Industrial Supplies Ltd."
+                            placeholder="Search and select vendor…" />
+                    </div>
+                    <div class="fg">
+                        <label class="label">Vendor Address</label>
+                        <input class="inp ro" type="text" readonly
+                            value="Plot 14, Phase II, IDA Nacharam, Hyderabad — 500076" />
+                    </div>
+                    <div class="fg">
+                        <label class="label">Vendor's GST</label>
+                        <input class="inp ro" type="text" readonly value="36AABCB1234D1Z5" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- S3: Photo Attachment -->
+        <div class="section">
+            <div class="sec-head">
+                <svg class="sec-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--navy)">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                </svg>
+                <span class="sec-title">Photo Attachment</span>
+            </div>
+            <div class="attach-body">
+                <button class="attach-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+                    </svg>
+                    Browse &amp; Upload
+                </button>
+                <div class="file-chip">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    gate_pass_photo.pdf &nbsp;<span style="opacity:0.55;font-weight:400;">214 KB</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- S4: Table of Items -->
+        <div class="section">
+            <div class="sec-head">
+                <svg class="sec-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--navy)">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <line x1="3" y1="9" x2="21" y2="9" />
+                    <line x1="3" y1="15" x2="21" y2="15" />
+                    <line x1="9" y1="3" x2="9" y2="21" />
+                </svg>
+                <span class="sec-title">Table of Items</span>
+                <button class="add-btn" onclick="addRow()">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                        stroke-linecap="round">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    Add Row
+                </button>
+            </div>
+            <div class="tbl-wrap">
+                <table id="itemsTable">
+                    <thead>
+                        <tr>
+                            <th style="width:3.5rem;text-align:center;">S.No</th>
+                            <th>Brief Description of Material</th>
+                            <th style="width:13%;">HSN Code</th>
+                            <th style="width:9%;text-align:right;">Quantity</th>
+                            <th style="width:8%;">UOM</th>
+                            <th style="width:11%;text-align:right;">Rate (Rs.)</th>
+                            <th style="width:11%;text-align:right;">Amount</th>
+                            <th style="width:3.5rem;text-align:center;">Del</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody">
+                        <tr>
+                            <td class="sno">01</td>
+                            <td><input class="ti" type="text" value="Industrial Grade Transformer Coil" /></td>
+                            <td><input class="ti" type="text" value="8504.40" /></td>
+                            <td><input class="ti" type="number" value="5" style="text-align:right;"
+                                    onchange="calcRow(this)" /></td>
+                            <td><select class="ti" style="padding:5px 4px;">
+                                    <option>EA</option>
+                                    <option>KG</option>
+                                    <option>NOS</option>
+                                    <option>MTR</option>
+                                </select></td>
+                            <td><input class="ti" type="number" value="12500" style="text-align:right;"
+                                    onchange="calcRow(this)" /></td>
+                            <td><input class="ti-amt" readonly value="62,500.00" /></td>
+                            <td style="text-align:center;"><button class="t-del" onclick="delRow(this)">✕</button></td>
+                        </tr>
+                        <tr>
+                            <td class="sno">02</td>
+                            <td><input class="ti" type="text" value="Copper Busbars 50×6 mm" /></td>
+                            <td><input class="ti" type="text" value="7407.10" /></td>
+                            <td><input class="ti" type="number" value="20" style="text-align:right;"
+                                    onchange="calcRow(this)" /></td>
+                            <td><select class="ti" style="padding:5px 4px;">
+                                    <option>MTR</option>
+                                    <option>EA</option>
+                                    <option>KG</option>
+                                </select></td>
+                            <td><input class="ti" type="number" value="850" style="text-align:right;"
+                                    onchange="calcRow(this)" /></td>
+                            <td><input class="ti-amt" readonly value="17,000.00" /></td>
+                            <td style="text-align:center;"><button class="t-del" onclick="delRow(this)">✕</button></td>
+                        </tr>
+                        <tr>
+                            <td class="sno">03</td>
+                            <td><input class="ti" type="text" value="Insulation Tape Roll (HV Grade)" /></td>
+                            <td><input class="ti" type="text" value="3919.10" /></td>
+                            <td><input class="ti" type="number" value="50" style="text-align:right;"
+                                    onchange="calcRow(this)" /></td>
+                            <td><select class="ti" style="padding:5px 4px;">
+                                    <option>NOS</option>
+                                    <option>EA</option>
+                                    <option>KG</option>
+                                </select></td>
+                            <td><input class="ti" type="number" value="0" style="text-align:right;"
+                                    onchange="calcRow(this)" /></td>
+                            <td><input class="ti-amt" readonly value="0.00" /></td>
+                            <td style="text-align:center;"><button class="t-del" onclick="delRow(this)">✕</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- S5: Remarks & Summary -->
+        <div class="section">
+            <div class="sec-head">
+                <svg class="sec-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--navy)">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                </svg>
+                <span class="sec-title">Remarks &amp; Summary</span>
+            </div>
+            <div class="remarks-body">
+                <div class="rem-left">
+                    <label class="label" style="display:block;margin-bottom:0.35rem;">Remarks</label>
+                    <textarea class="inp textarea" rows="4"
+                        placeholder="Enter remarks or special instructions…">Material dispatched for off-site maintenance work at Warangal sub-station. Return not expected. Approved by Project Manager.</textarea>
+                </div>
+                <div class="rem-right">
+                    <div class="total-lbl">Final Total (Rs.)</div>
+                    <input class="total-val" id="grandTotal" readonly value="79,500.00" />
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /page -->
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <button class="btn-clear">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+            Clear All
+        </button>
+        <button class="btn-submit">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+            Submit Gate Pass
+        </button>
+    </div>
+
+    <script>
+        let rowCount = 3;
+
+        function addRow() {
+            rowCount++;
+            const n = String(rowCount).padStart(2, '0');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+      <td class="sno">${n}</td>
+      <td><input class="ti" type="text" placeholder="Enter description…"/></td>
+      <td><input class="ti" type="text" placeholder="HSN code"/></td>
+      <td><input class="ti" type="number" value="1" style="text-align:right;" onchange="calcRow(this)"/></td>
+      <td><select class="ti" style="padding:5px 4px;"><option>EA</option><option>KG</option><option>LTR</option><option>NOS</option><option>MTR</option><option>SET</option><option>PCS</option><option>TON</option></select></td>
+      <td><input class="ti" type="number" value="0" style="text-align:right;" onchange="calcRow(this)"/></td>
+      <td><input class="ti-amt" readonly value="0.00"/></td>
+      <td style="text-align:center;"><button class="t-del" onclick="delRow(this)">✕</button></td>`;
+            document.getElementById('tbody').appendChild(tr);
+            tr.querySelector('input[type=text]').focus();
+        }
+
+        function delRow(btn) {
+            btn.closest('tr').remove();
+            recalcAll(); renumber();
+        }
+
+        function calcRow(inp) {
+            const row = inp.closest('tr');
+            const nums = row.querySelectorAll('input[type=number]');
+            if (nums.length >= 2) {
+                const amt = (parseFloat(nums[0].value) || 0) * (parseFloat(nums[1].value) || 0);
+                row.querySelector('.ti-amt').value = amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            recalcAll();
+        }
+
+        function recalcAll() {
+            let total = 0;
+            document.querySelectorAll('.ti-amt').forEach(a => {
+                total += parseFloat(a.value.replace(/,/g, '')) || 0;
+            });
+            document.getElementById('grandTotal').value = total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function renumber() {
+            document.querySelectorAll('#tbody tr').forEach((tr, i) => {
+                tr.querySelector('.sno').textContent = String(i + 1).padStart(2, '0');
+            });
+            rowCount = document.querySelectorAll('#tbody tr').length;
+        }
+    </script>
+</body>
+
+</html>

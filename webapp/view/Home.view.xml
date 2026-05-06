@@ -1,164 +1,65 @@
 <mvc:View
-    controllerName="zgpms.meilpower.com.controller.Home"
-    xmlns="sap.m"
-    xmlns:l="sap.ui.layout"
-    xmlns:viz="sap.viz.ui5.controls"
-    xmlns:viz.feeds="sap.viz.ui5.controls.common.feeds"
-    xmlns:viz.data="sap.viz.ui5.data"
-    xmlns:core="sap.ui.core"
-    xmlns:mvc="sap.ui.core.mvc"
-    xmlns:f="sap.f"
-    height="100%">
+	controllerName="zgpms.meilpower.com.controller.Home"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:f="sap.f"
+	xmlns:core="sap.ui.core"
+	height="100%">
+	<Page title="Dashboard" class="gpmsDashboardPage" showHeader="false">
+		<content>
+			<VBox class="gpmsDashboardHero" alignItems="Center" justifyContent="Center">
+				<VBox alignItems="Center" class="gpmsHeroTextContainer">
+					<Title text="GATE PASS MANAGEMENT SYSTEM" level="H1" class="gpmsHeroTitle"/>
+					<Text text="Industrial Logistics &amp; Security Control Dashboard" class="gpmsHeroSubTitle"/>
+				</VBox>
 
-    <Page showHeader="false">
+				<HBox wrap="Wrap" justifyContent="Center" class="gpmsDashboardCardsContainer">
+					<!-- NRGP Card -->
+					<GenericTile class="gpmsDashCard nrgpCard" press=".onPressNRGP" header="NRGP REQUEST" subheader="Non-Returnable Gate Pass">
+						<TileContent>
+							<core:Icon src="sap-icon://add-document" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
 
-        <landmarkInfo>
-            <PageAccessibleLandmarkInfo
-                rootRole="Region"
-                contentRole="Main"/>
-        </landmarkInfo>
+					<!-- RGP Card -->
+					<GenericTile class="gpmsDashCard rgpCard" press=".onPressRGP" header="RGP REQUEST" subheader="Returnable Gate Pass">
+						<TileContent>
+							<core:Icon src="sap-icon://shipping-status" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
 
-        <l:BlockLayout background="Default">
+					<!-- Analytics Card -->
+					<GenericTile class="gpmsDashCard reportsCard" press=".onGenericTileAnalyticsPress" header="REPORTS" subheader="View Statistics &amp; Logs">
+						<TileContent>
+							<core:Icon src="sap-icon://business-objects-experience" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
 
-            <!-- ================= CHART ROW ================= -->
-            <l:BlockLayoutRow>
-                <l:BlockLayoutCell class="sapUiNoContentPadding">
+					<!-- Inward Gate Pass Card -->
+					<GenericTile class="gpmsDashCard inwardCard" press=".onPressInward" header="INWARD GATE PASS" subheader="Return Items (RGP)">
+						<TileContent>
+							<core:Icon src="sap-icon://down-back" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
 
-                    <viz:VizFrame
-                        id="idStackedChart"
-                        uiConfig="{applicationSet:'fiori'}"
-                        height="400px"
-                        width="100%"
-                        vizType="stacked_column">
-                    </viz:VizFrame>
+					<!-- Out Gate Pass Card -->
+					<GenericTile class="gpmsDashCard outCard" press=".onPressOutGatePass" header="OUT GATE PASS" subheader="Generate &amp; Print Pass">
+						<TileContent>
+							<core:Icon src="sap-icon://shipping-status" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+					<GenericTile class="gpmsDashCard listCard"
+    press=".onPressGatePassList"
+    header="GATE PASS LIST"
+    subheader="View All Requests">
 
-                </l:BlockLayoutCell>
-            </l:BlockLayoutRow>
+    <TileContent>
+        <core:Icon src="sap-icon://list" class="gpmsCardIcon"/>
+    </TileContent>
 
-            <!-- ================= KPI CARDS ROW ================= -->
-            <l:BlockLayoutRow>
-                <l:BlockLayoutCell>
-
-                    <f:GridContainer
-                        containerQuery="true"
-                        >
-
-                        <f:layout>
-                            <f:GridContainerSettings
-                                rowSize="10rem"
-                                columnSize="10rem"
-                            />
-                        </f:layout>
-
-                        <!-- Total RGP -->
-                        <GenericTile
-						class="sapUiSmallMargin"
-                            header="Total RGP Count"
-                            subheader="Overall Status"
-                            frameType="OneByOne"
-                            press="onPendingPress">
-                            <TileContent>
-                                <NumericContent
-                                    value="{/totalRGP}"
-                                    unit="Items"
-                                    state="Good"/>
-                            </TileContent>
-                        </GenericTile>
-
-                        <!-- Pending RGP -->
-                        <GenericTile
-						class="sapUiSmallMargin"
-                            header="Pending RGP Count"
-                            subheader="Overall Status"
-                            frameType="OneByOne"
-                            press="onPendingPress">
-                            <TileContent>
-                                <NumericContent
-                                    value="{/pendingRGP}"
-                                    unit="Items"
-                                    state="Warning"/>
-                            </TileContent>
-                        </GenericTile>
-
-                        <!-- Total NRGP -->
-                        <GenericTile
-						class="sapUiSmallMargin"
-                            header="Total NRGP Count"
-                            subheader="Overall Status"
-                            frameType="OneByOne"
-                            press="onPendingPress">
-                            <TileContent>
-                                <NumericContent
-                                    value="{/totalNRGP}"
-                                    unit="Items"
-                                    state="Good"/>
-                            </TileContent>
-                        </GenericTile>
-
-                        <!-- Pending NRGP -->
-                        <GenericTile
-						class="sapUiSmallMargin"
-                            header="Pending NRGP Count"
-                            subheader="Overall Status"
-                            frameType="OneByOne"
-                            press="onPendingPress">
-                            <TileContent>
-                                <NumericContent
-                                    value="{/pendingNRGP}"
-                                    unit="Items"
-                                    state="Error"/>
-                            </TileContent>
-                        </GenericTile>
-
-                    </f:GridContainer>
-
-                </l:BlockLayoutCell>
-            </l:BlockLayoutRow>
-
-            <!-- ================= TABLE ROW ================= -->
-            <l:BlockLayoutRow>
-                <l:BlockLayoutCell
-                    backgroundColorSet="ColorSet9"
-                    backgroundColorShade="ShadeA"
-                    width="3">
-
-                    <Table
-                        items="{path:'customer>/customers'}"
-                        fixedLayout="false">
-
-                        <headerToolbar>
-                            <Toolbar design="Transparent">
-                                <Title text="Over Due Returnables" level="H3"/>
-                            </Toolbar>
-                        </headerToolbar>
-
-                        <columns>
-                            <Column><Text text="Customer"/></Column>
-                            <Column minScreenWidth="Tablet"><Text text="Product"/></Column>
-                            <Column minScreenWidth="Desktop" hAlign="End"><Text text="Last Purchase"/></Column>
-                            <Column hAlign="Center"><Text text="Payment"/></Column>
-                            <Column hAlign="End"><Text text="Amount"/></Column>
-                        </columns>
-
-                        <items>
-                            <ColumnListItem>
-                                <cells>
-                                    <Text text="{customer>name}"/>
-                                    <Text text="{customer>productId}"/>
-                                    <Text text="{customer>lastPurchase}"/>
-                                    <ObjectNumber number="{customer>payment}"/>
-                                    <ObjectNumber
-                                        number="{customer>amount}"
-                                        unit="{customer>currencyCode}"/>
-                                </cells>
-                            </ColumnListItem>
-                        </items>
-
-                    </Table>
-
-                </l:BlockLayoutCell>
-            </l:BlockLayoutRow>
-
-        </l:BlockLayout>
-    </Page>
+</GenericTile>
+				</HBox>
+			</VBox>
+		</content>
+	</Page>
 </mvc:View>

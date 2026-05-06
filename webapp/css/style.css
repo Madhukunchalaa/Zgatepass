@@ -1,148 +1,734 @@
-/* Standard SAP Fiori Styles */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+/* ─── CSS Variables (Exact Match) ───────────────────────── */
+:root {
+    --navy:        #1A237E;
+    --navy-d:      #121859;
+    --navy-m:      #283593;
+    --navy-l:      #3949AB;
+    --navy-pale:   #E8EAF6;
+    --navy-ghost:  #F0F2FB;
+    --red:         #CC2020;
+    --red-d:       #A81818;
+    --red-pale:    #FDECEA;
+    --bg:          #F4F5F9;
+    --surface:     #FFFFFF;
+    --border:      #DDE0EF;
+    --border-m:    #C5C9E0;
+    --text:        #1A1E3C;
+    --text-m:      #3D4463;
+    --text-muted:  #7B82A8;
+    --success:     #1B6B3A;
+    --success-bg:  #E8F5ED;
+    --success-brd: #A8D8B8;
+    --shadow:      0 3px 12px rgba(26,35,126,0.09);
+    --shadow-lg:   0 6px 24px rgba(26,35,126,0.13);
+    --r:           10px;
+    --r-sm:        6px;
+    --r-lg:        14px;
+}
+
+/* ─── Dashboard Redesign ───────────────────────────────── */
+.gpmsDashboardHero {
+    position: relative !important;
+    min-height: calc(100vh - 60px) !important;
+    width: 100% !important;
+    padding: 3rem !important;
+    overflow: hidden !important;
+}
+
+.gpmsDashboardHero::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.5)), url('../assets/img/power_plant.png') no-repeat center center !important;
+    background-size: cover !important;
+    filter: blur(8px) !important;
+    transform: scale(1.1) !important; /* Prevents blurry edges */
+    z-index: 0 !important;
+}
+
+.gpmsHeroTextContainer, .gpmsDashboardCardsContainer {
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+.gpmsHeroTextContainer {
+    margin-bottom: 3rem !important;
+    text-align: center !important;
+}
+
+.gpmsHeroTitle.sapMTitle {
+    color: var(--navy) !important;
+    font-size: 2.2rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 1px !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.gpmsHeroSubTitle.sapMText {
+    color: var(--text-muted) !important;
+    font-size: 1rem !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+}
+
+.gpmsDashboardCardsContainer {
+    gap: 1.5rem !important;
+}
+
+.gpmsDashCard.sapMGT {
+    background: #ffffff !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    width: 220px !important;
+    height: 160px !important;
+    margin: 1rem !important;
+    transition: all 0.25s ease !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+}
+
+.gpmsDashCard.sapMGT:hover {
+    transform: translateY(-5px) !important;
+    border-color: var(--navy) !important;
+    box-shadow: 0 8px 24px rgba(26,35,126,0.1) !important;
+}
+
+.gpmsDashCard .sapMGTTitle {
+    color: #e91029 !important;
+    font-weight: 800 !important;
+    font-size: 1.1rem !important;
+}
+
+.gpmsDashCard .sapMGTSubHdr {
+    color: var(--navy) !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    opacity: 0.9 !important;
+}
+
+.gpmsCardIcon.sapUiIcon {
+    font-size: 2.2rem !important;
+    color: var(--navy) !important;
+    margin-top: 10px !important;
+}
+
+.gpmsDashCard.reportsCard .sapMGTTitle {
+    color: #4CAF50 !important; /* Green for Analytics */
+}
+
+.gpmsDashCard.inwardCard .sapMGTTitle {
+    color: #FF9800 !important; /* Orange for Inward */
+}
+
+.gpmsDashCard .sapMGTHdrContent {
+    padding-bottom: 0 !important;
+}
+
+/* ─── Global ────────────────────────────────────────────── */
+.sapUiBody, .sapMText, .sapMLabel, .sapMTitle, .sapMBtnInner, .sapMInputBaseInner, .sapMSltInner, .sapMTabStripItemText {
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
 .sapUiBody {
-    background-color: #f0f4f8 !important;
+    background: var(--bg) !important;
+    color: var(--text) !important;
 }
 
-/* ── Page Wrapper ───────────────────────────── */
-.gpRequestPage {
-    padding: 40px 20px;
-    min-height: 100%;
+/* ─── ShellBar & Sidebar ───────────────────────────────── */
+.gpmsShellBar.sapTntToolHeader {
+    background: #ffffff !important;
+    border-bottom: 2px solid var(--border) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+    height: 60px !important;
 }
 
-/* ── Card ────────────────────────────────────── */
-.gpCard {
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 58, 120, 0.10);
-    overflow: hidden;
-    margin: 0 auto;
+.gpmsShellBarTitle.sapMTitle {
+    color: var(--navy) !important;
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
 }
 
-/* ── Card Header ────────────────────────────── */
-.gpCardHeader {
-    padding: 24px 32px 20px 32px;
-    background: linear-gradient(135deg, #004a99 0%, #0066cc 100%);
+.gpmsSideNav.sapTntSideNavigation {
+    background-color: var(--navy) !important;
+    border-right: none !important;
 }
 
-.gpCardHeaderIcon {
-    font-size: 2rem !important;
-    color: rgba(255,255,255,0.85) !important;
-    margin-right: 12px;
+.gpmsSideNav .sapTntNavListItem {
+    background-color: transparent !important;
 }
 
-.gpCardTitle {
+.gpmsSideNav .sapTntNavListItem .sapMText,
+.gpmsSideNav .sapTntNavListItem .sapUiIcon {
+    color: rgba(255,255,255,0.8) !important;
+}
+
+.gpmsSideNav .sapTntNavListItemSelected {
+    background-color: rgba(255,255,255,0.15) !important;
+    border-left: 4px solid var(--red) !important;
+}
+
+.gpmsSideNav .sapTntNavListItemSelected .sapMText,
+.gpmsSideNav .sapTntNavListItemSelected .sapUiIcon {
     color: #ffffff !important;
-    font-size: 1.15rem !important;
     font-weight: 700 !important;
 }
 
-.gpCardSubtitle {
-    color: rgba(255,255,255,0.75) !important;
-    font-size: 0.8rem !important;
-    margin-top: 2px;
+/* ─── Section Card ─────────────────────────────────────── */
+.gpmsSection.sapMPanel {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow) !important;
+    margin-bottom: 1.125rem !important;
+    overflow: hidden !important;
+}
+.gpmsSection.sapMPanel:hover {
+    border-color: var(--border-m) !important;
+    box-shadow: var(--shadow-lg) !important;
 }
 
-/* ── Divider ─────────────────────────────────── */
-.gpCardDivider {
-    height: 4px;
-    background: linear-gradient(90deg, #004a99, #00b4d8, #e2e8f0);
+.gpmsSectionBar.sapMTB {
+    background: linear-gradient(108deg, var(--navy-ghost) 0%, #fff 100%) !important;
+    border-bottom: 1px solid var(--border) !important;
+    border-left: 4px solid var(--navy) !important;
+    padding: 0 1rem !important;
+    min-height: 2.875rem !important;
 }
 
-/* ── Card Body ───────────────────────────────── */
-.gpCardBody {
-    padding: 28px 32px;
-}
-
-/* ── Form Row ────────────────────────────────── */
-.gpFormRow {
-    margin-bottom: 20px;
-    gap: 16px;
-}
-
-.gpFormRowFull {
-    margin-bottom: 20px;
-}
-
-/* ── Field Group ─────────────────────────────── */
-.gpFieldGroup {
-    flex: 1 1 calc(50% - 8px);
-    min-width: 200px;
-}
-
-/* ── Labels ──────────────────────────────────── */
-.gpLabel {
-    font-size: 0.75rem !important;
-    font-weight: 600 !important;
-    color: #64748b !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.06em !important;
-    margin-bottom: 6px !important;
-}
-
-/* ── Inputs ──────────────────────────────────── */
-.gpInput .sapMInputBaseInner,
-.gpInput .sapMSltSelect {
-    border: 1.5px solid #e2e8f0 !important;
-    border-radius: 8px !important;
-    background: #f8fafc !important;
+.gpmsSectionBarIcon.sapUiIcon {
     font-size: 0.9rem !important;
-    color: #1e293b !important;
+    color: var(--navy) !important;
+}
+
+.gpmsSectionBarLabel.sapMLabel {
+    color: var(--navy-d) !important;
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.1px !important;
+}
+
+.gpmsBadge.sapMObjStatus .sapMObjStatusText {
+    background: var(--navy-pale) !important;
+    border: 1px solid rgba(26,35,126,0.22) !important;
+    border-radius: 20px !important;
+    padding: 3px 10px !important;
+    font-size: 0.62rem !important;
+    font-weight: 700 !important;
+    color: var(--navy) !important;
+    letter-spacing: 0.7px !important;
+}
+
+/* ─── Form & Fields ────────────────────────────────────── */
+.gpmsFieldLabel.sapMLabel {
+    font-size: 0.62rem !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.8px !important;
+}
+
+.gpmsFieldInput .sapMInputBaseInner,
+.gpmsFieldInput .sapMSltSelect,
+.gpmsFieldInput.sapMInputBase .sapMInputBaseInner {
+    background: #FAFBFE !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: var(--r-sm) !important;
+    color: var(--text) !important;
+    font-family: 'IBM Plex Sans', sans-serif !important;
+    font-size: 0.875rem !important;
     height: 38px !important;
-    padding: 0 12px !important;
-    transition: border-color 0.2s, box-shadow 0.2s !important;
-    width: 100% !important;
 }
 
-.gpInput.sapMInputBaseFocused .sapMInputBaseInner {
-    border-color: #004a99 !important;
-    box-shadow: 0 0 0 3px rgba(0, 74, 153, 0.12) !important;
+.gpmsFieldInput.sapMInputBaseFocused .sapMInputBaseInner,
+.gpmsFieldInput.sapMComboBoxBaseFocused .sapMInputBaseInner {
+    border-color: var(--navy) !important;
+    box-shadow: 0 0 0 3px rgba(26,35,126,0.11) !important;
+    background: #fff !important;
+}
+
+.gpmsFieldInputReadonly .sapMInputBaseInner {
+    background: #F5F7FB !important;
+    border-color: #E8EBF5 !important;
+    color: var(--text-muted) !important;
+}
+
+/* ─── Attachment ────────────────────────────────────────── */
+.gpmsFileUploader.sapUiUfdFileUploader .sapUiUfdFileUploaderBrowse .sapMBtnInner {
+    background: var(--navy-ghost) !important;
+    border: 1.5px dashed rgba(26,35,126,0.32) !important;
+    border-radius: var(--r-sm) !important;
+    color: var(--navy) !important;
+    font-weight: 500 !important;
+}
+
+.gpmsFileNameBox.sapMHBox {
+    background: var(--success-bg) !important;
+    border: 1px solid var(--success-brd) !important;
+    border-radius: var(--r-sm) !important;
+    padding: 5px 12px !important;
+}
+
+.gpmsFileNameText.sapMText {
+    font-size: 0.78rem !important;
+    font-weight: 500 !important;
+    color: var(--success) !important;
+}
+
+/* ─── Items Table ─────────────────────────────────────── */
+.gpmsItemTable.sapMList .sapMListTblHeader {
+    background: #f4f6f9 !important; /* Light grey background */
+    border-bottom: 2px solid var(--navy) !important;
+    height: 3rem !important;
+}
+
+.gpmsItemTable .sapMListTblHeaderCell .sapMText {
+    color: var(--navy) !important; /* Dark Navy text */
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.8px !important;
+}
+
+.gpmsItemTable.sapMList .sapMListTblHeaderCell {
+    border-right: 1px solid rgba(255,255,255,0.12) !important;
+}
+
+/* ─── Forms & Inputs ─────────────────────────────────────── */
+.gpmsFieldLabel.sapMLabel {
+    color: var(--text-m) !important;
+    font-size: 0.65rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.6px !important;
+    margin-bottom: 4px !important;
+}
+
+.gpmsFieldInput.sapMInputBase:not(.sapMTextArea) .sapMInputBaseInner,
+.gpmsFieldInput.sapMSlt,
+.gpmsFieldInput.sapMComboBoxInner,
+.gpmsFieldInput.sapMInputBase:not(.sapMTextArea) .sapMInputBaseContentWrapper {
     background: #ffffff !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: var(--r-sm) !important;
+    height: 2.35rem !important;
+    font-size: 0.8rem !important;
+    color: var(--text) !important;
+    transition: all 0.2s ease !important;
 }
 
-.gpInputReadonly .sapMInputBaseInner {
-    background: #f1f5f9 !important;
-    color: #94a3b8 !important;
+.gpmsFieldInput.sapMTextArea .sapMTextAreaInner {
+    background: #ffffff !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: var(--r-sm) !important;
+    font-size: 0.8rem !important;
+    color: var(--text) !important;
+    height: auto !important;
 }
 
-/* ── Radio Groups ────────────────────────────── */
-.gpRadioGroup {
-    margin-top: 6px !important;
+/* Focus State */
+.gpmsFieldInput.sapMInputBase.sapMInputBaseFocused .sapMInputBaseInner,
+.gpmsFieldInput.sapMInputBase.sapMInputBaseFocused .sapMInputBaseContentWrapper,
+.gpmsFieldInput.sapMSlt.sapMSltFocused {
+    border-color: var(--navy) !important;
+    box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.08) !important;
+    background: #fff !important;
 }
 
-/* ── Card Footer ─────────────────────────────── */
-.gpCardFooter {
-    padding: 20px 32px;
-    border-top: 1px solid #f1f5f9;
-    background: #fafbfc;
+.gpmsFieldInputReadonly.sapMInputBase .sapMInputBaseInner {
+    background: var(--navy-ghost) !important;
+    border-color: var(--border-m) !important;
+    color: var(--text-m) !important;
+    font-weight: 500 !important;
 }
 
-/* ── Primary Button ──────────────────────────── */
-.gpBtnPrimary .sapMBtnInner {
-    background: #004a99 !important;
-    border-color: #004a99 !important;
+/* Fix for Select and ComboBox arrows */
+.gpmsFieldInput.sapMSlt .sapMSltArrow,
+.gpmsFieldInput.sapMComboBoxBaseArrow {
+    color: var(--navy) !important;
+    font-size: 0.8rem !important;
+}
+
+.gpmsTotalLabel.sapMLabel {
+    color: var(--text-muted) !important;
+    font-size: 0.65rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+}
+
+.gpmsTotalAmount.sapMText {
+    font-family: 'IBM Plex Sans', sans-serif !important;
+    font-size: 1.8rem !important;
+    font-weight: 700 !important;
+    color: var(--navy) !important;
+    text-align: right !important;
+    display: block !important;
+    line-height: 1 !important;
+}
+
+/* ─── Table Adjustments ─────────────────────────────────── */
+.gpmsItemTable.sapMList .sapMLIB {
+    border-bottom: 1px solid var(--navy-ghost) !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+}
+
+.gpmsSnoText.sapMText {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    color: var(--navy) !important;
+}
+
+.gpmsTableInput.sapMInputBase .sapMInputBaseInner,
+.gpmsTableInput.sapMSlt {
+    background: #FAFBFE !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-sm) !important;
+    font-size: 0.75rem !important;
+    height: 2.1rem !important;
+}
+
+.gpmsHeaderText.sapMText {
+    font-weight: 700 !important;
+    color: var(--text) !important;
+    font-size: 0.7rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+.gpmsTableLabel.sapMLabel {
+    color: var(--text-muted) !important;
+    font-size: 0.6rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 2px !important;
+    display: block !important;
+}
+
+.gpmsItemTable thead {
+    background-color: #f8f9fa !important;
+}
+
+.gpmsItemTable th {
+    border-bottom: 2px solid var(--navy-ghost) !important;
+    padding: 10px 0 !important;
+}
+
+.gpmsItemRow {
+    border-bottom: 1px solid var(--border-light) !important;
+}
+
+.gpmsActionBtn.sapMBtn {
+    padding: 0 !important;
+    margin: 0 2px !important;
+}
+
+.gpmsActionBtn.sapMBtn .sapMBtnInner {
+    border: 1px solid var(--border) !important;
+    background: #ffffff !important;
+    border-radius: 4px !important;
+    width: 32px !important;
+    height: 32px !important;
+}
+
+.gpmsActionBtn.sapMBtn:hover .sapMBtnInner {
+    background: var(--navy-ghost) !important;
+    border-color: var(--navy) !important;
+}
+
+.gpmsDeleteBtn.sapMBtn .sapMBtnIcon {
+    color: var(--red) !important;
+}
+
+.gpmsAmountText {
+    background: var(--success-bg) !important;
+    border: 1px solid var(--success-brd) !important;
+    border-radius: var(--r-sm) !important;
+    color: var(--success) !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    padding: 6px 10px !important;
+    text-align: right !important;
+    display: inline-block !important;
+}
+
+/* ─── Remarks & Total ───────────────────────────────────── */
+.gpmsTotalInput.sapMInputBase .sapMInputBaseInner {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 1.55rem !important;
+    font-weight: 700 !important;
+    color: var(--navy-d) !important;
+    background: linear-gradient(135deg, var(--navy-ghost) 0%, #FAFCFF 100%) !important;
+    border: 1.5px solid var(--border-m) !important;
+    border-top: 3px solid var(--navy) !important;
+    border-radius: var(--r-sm) !important;
+    height: 3.25rem !important;
+    letter-spacing: -0.5px !important;
+}
+
+/* ─── Footer & Buttons ─────────────────────────────────── */
+.gpmsFooterBar.sapMTB {
+    background: #ffffff !important;
+    border-top: 1px solid var(--border) !important;
+    box-shadow: 0 -3px 16px rgba(26,35,126,0.09) !important;
+    height: 3.25rem !important;
+}
+
+.gpmsSubmitBtn.sapMBtn .sapMBtnInner {
+    background: var(--navy) !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    border-radius: 6px !important;
     color: #ffffff !important;
-    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    padding: 0 40px !important;
+    height: 44px !important;
+    line-height: 44px !important;
+    box-shadow: 0 4px 15px rgba(26,35,126,0.2) !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+.gpmsSubmitBtn.sapMBtn:hover .sapMBtnInner {
+    background: var(--navy-d) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(26,35,126,0.3) !important;
+}
+
+.gpmsSubmitBtn.sapMBtn:hover .sapMBtnText,
+.gpmsSubmitBtn.sapMBtn:hover .sapMBtnIcon {
+    color: #4CAF50 !important; /* Bright Green on Hover */
+}
+
+/* ─── Analytics Dashboard ────────────────────────────────── */
+.gpmsAnalyticsPage {
+    padding: 1.5rem 2rem 3rem !important;
+    background: var(--bg) !important;
+    min-height: 100% !important;
+}
+
+.gpmsAnalyticsHeader {
+    margin-bottom: 1.5rem !important;
+    padding-bottom: 1rem !important;
+    border-bottom: 2px solid var(--border) !important;
+}
+
+.gpmsAnalyticsTitle.sapMTitle {
+    color: var(--navy) !important;
+    font-size: 1.6rem !important;
+    font-weight: 800 !important;
+}
+
+.gpmsAnalyticsSubTitle.sapMText {
+    color: var(--text-muted) !important;
+    font-size: 0.85rem !important;
+    margin-top: 0.2rem !important;
+}
+
+/* ── KPI Tiles ── */
+.gpmsKpiRow {
+    gap: 1rem !important;
+    margin-bottom: 1.5rem !important;
+    flex-wrap: wrap !important;
+}
+
+.gpmsKpiCard {
+    flex: 1 1 160px !important;
+    min-width: 160px !important;
+    padding: 1.2rem 1.4rem !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    cursor: default !important;
+}
+
+.gpmsKpiCard:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: var(--shadow-lg) !important;
+}
+
+.gpmsKpiIcon.sapUiIcon {
+    font-size: 2rem !important;
+    margin-right: 1rem !important;
+    opacity: 0.9 !important;
+    flex-shrink: 0 !important;
+}
+
+.gpmsKpiTextBox { gap: 0.1rem !important; }
+
+.gpmsKpiNum.sapMTitle {
+    font-size: 2rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    color: #ffffff !important;
+}
+
+.gpmsKpiLbl.sapMText {
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.8px !important;
+    text-transform: uppercase !important;
+    color: rgba(255,255,255,0.82) !important;
+    margin-top: 0.25rem !important;
+}
+
+/* KPI colour variants */
+.gpmsKpiTotal   { background: linear-gradient(135deg, #1A237E, #3949AB) !important; }
+.gpmsKpiPending { background: linear-gradient(135deg, #E65100, #F57C00) !important; }
+.gpmsKpiNrgp    { background: linear-gradient(135deg, #6A1B9A, #9C27B0) !important; }
+.gpmsKpiRgp     { background: linear-gradient(135deg, #00695C, #00897B) !important; }
+.gpmsKpiApproved{ background: linear-gradient(135deg, #1B6B3A, #2E7D32) !important; }
+.gpmsKpiRejected{ background: linear-gradient(135deg, #B71C1C, #CC2020) !important; }
+
+.gpmsKpiTotal .gpmsKpiIcon,
+.gpmsKpiPending .gpmsKpiIcon,
+.gpmsKpiNrgp .gpmsKpiIcon,
+.gpmsKpiRgp .gpmsKpiIcon,
+.gpmsKpiApproved .gpmsKpiIcon,
+.gpmsKpiRejected .gpmsKpiIcon {
+    color: rgba(255,255,255,0.85) !important;
+}
+
+/* ── Charts ── */
+.gpmsChartsRow {
+    gap: 1rem !important;
+    margin-bottom: 1.5rem !important;
+    align-items: stretch !important;
+}
+
+.gpmsChartCard {
+    background: var(--surface) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow) !important;
+    padding: 1.2rem 1.4rem !important;
+    flex: 1 1 300px !important;
+    min-width: 280px !important;
+}
+
+.gpmsChartLarge { flex-grow: 2 !important; }
+.gpmsChartSmall { flex-grow: 1 !important; }
+
+.gpmsChartCardHeader {
+    margin-bottom: 0.8rem !important;
+    gap: 0.5rem !important;
+}
+
+.gpmsChartIcon.sapUiIcon {
+    color: var(--navy) !important;
+    font-size: 1.1rem !important;
+}
+
+.gpmsChartCardTitle.sapMTitle {
+    color: var(--text) !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+}
+
+/* ── Type Summary Cards ── */
+.gpmsTypeRow {
+    gap: 1rem !important;
+}
+
+.gpmsTypeCard {
+    flex: 1 1 280px !important;
+    background: var(--surface) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow) !important;
+    overflow: hidden !important;
+}
+
+.gpmsTypeNrgp { border-top: 4px solid #6A1B9A !important; }
+.gpmsTypeRgp  { border-top: 4px solid #00695C !important; }
+
+.gpmsTypeCardHeader {
+    padding: 1rem 1.4rem 0.8rem !important;
+    border-bottom: 1px solid var(--border) !important;
+    gap: 0.5rem !important;
+}
+
+.gpmsTypeHdrIcon.sapUiIcon { font-size: 1.1rem !important; color: var(--navy) !important; }
+.gpmsTypeHdrTitle.sapMTitle { font-size: 0.95rem !important; font-weight: 700 !important; color: var(--text) !important; }
+
+.gpmsTypeStatList { padding: 0.6rem 1.4rem 1rem !important; gap: 0.1rem !important; }
+
+.gpmsTypeStat {
+    padding: 0.55rem 0 !important;
+    border-bottom: 1px solid var(--navy-ghost) !important;
+}
+
+.gpmsTypeStat:last-child { border-bottom: none !important; }
+
+.gpmsTypeStatIcon.sapUiIcon { font-size: 0.9rem !important; margin-right: 0.5rem !important; }
+.gpmsTypeStatLabel.sapMText { color: var(--text-m) !important; font-size: 0.88rem !important; }
+
+.gpmsTypeStatVal.sapMText {
+    font-weight: 700 !important;
+    font-size: 1.05rem !important;
+}
+
+/* Status colours */
+.gpmsStatPending  { color: #E65100 !important; }
+.gpmsStatApproved { color: var(--success) !important; }
+.gpmsStatRejected { color: var(--red) !important; }
+
+.gpmsSubmitBtn.sapMBtn .sapMBtnIcon {
+    color: #ffffff !important;
+    font-size: 1rem !important;
+}
+
+.gpmsSubmitBtn.sapMBtn::after {
+    display: none !important;
+}
+
+.gpmsClearBtn.sapMBtn .sapMBtnInner {
+    background: #fff !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: var(--r) !important;
+    color: var(--text-muted) !important;
     font-weight: 500 !important;
+}
+
+.gpmsAddBtn.sapMBtn .sapMBtnInner {
+    background: var(--navy-pale) !important;
+    border: 1px solid rgba(26,35,126,0.22) !important;
+    border-radius: var(--r-sm) !important;
+    color: var(--navy) !important;
+    font-weight: 600 !important;
+}
+
+.gpmsTextAreaBig.sapMTextArea .sapMTextAreaInner {
+    height: auto !important;
+    min-height: 120px !important;
+}
+
+/* Document Generation Buttons */
+.dcBtn.sapMBtn .sapMBtnInner {
+    background: linear-gradient(135deg, #0277BD 0%, #01579B 100%) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 6px !important;
     height: 40px !important;
-    padding: 0 20px !important;
 }
 
-.gpBtnPrimary:hover .sapMBtnInner {
-    background: #003a7a !important;
-}
-
-.gpBtnSecondary .sapMBtnInner {
-    border: 1.5px solid #cbd5e1 !important;
-    color: #475569 !important;
-    background: #ffffff !important;
-    border-radius: 8px !important;
-    font-weight: 500 !important;
+.ewayBtn.sapMBtn .sapMBtnInner {
+    background: linear-gradient(135deg, #3949AB 0%, #283593 100%) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 6px !important;
     height: 40px !important;
-    padding: 0 20px !important;
 }
 
-.gpBtnSecondary:hover .sapMBtnInner {
-    border-color: #004a99 !important;
-    color: #004a99 !important;
-    background: #f0f4ff !important;
+.dcBtn.sapMBtn:hover .sapMBtnInner,
+.ewayBtn.sapMBtn:hover .sapMBtnInner {
+    filter: brightness(1.2) !important;
+    box-shadow: var(--shadow-lg) !important;
 }
+

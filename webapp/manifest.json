@@ -56,7 +56,9 @@
 				"sap.m": {},
 				"sap.tnt": {},
 				"sap.ui.core": {},
-				"sap.ui.layout": {}
+				"sap.ui.layout": {},
+				"sap.ui.unified": {},
+				"sap.viz": {}
 			}
 		},
 		"models": {
@@ -72,121 +74,92 @@
 					"bundleUrl": "i18n/i18n.properties",
 					"async": true
 				}
-			},
-			"side": {
-				"type": "sap.ui.model.json.JSONModel",
-				"uri": "model/sideContent.json"
 			}
 		},
 		"routing": {
 			"config": {
 				"routerClass": "sap.m.routing.Router",
-				"controlId": "mainContents",
+				"controlId": "idMainApp",
 				"viewType": "XML",
 				"controlAggregation": "pages",
 				"viewPath": "zgpms.meilpower.com.view"
 			},
 			"routes": [
 				{
-					"pattern": "",
 					"name": "home",
-					"target": "home"
+					"pattern": "",
+					"target": "TargetHome"
 				},
 				{
-					"pattern": "GatePassRequestNumber",
-					"name": "GatePassRequestNumber",
-					"target": "GatePassRequestNumber"
+					"name": "GatePassCreation",
+					"pattern": "GatePassCreation/:type:",
+					"target": "TargetGatePassCreation"
 				},
 				{
-					"pattern": "GatePassRequestCreation/:reqNo:/:plant:/:category:/:type:",
-					"name": "GatePassRequestCreation",
-					"target": "GatePassRequestCreation"
-				},
+  "name": "GatePassList",
+  "pattern": "GatePassList",
+  "target": "TargetGatePassList"
+},
 				{
-					"pattern": "OutGatePass",
 					"name": "OutGatePass",
-					"target": "OutGatePass"
+					"pattern": "OutGatePass",
+					"target": [
+						"TargetOutGatePass"
+					]
 				},
 				{
-					"pattern": "Gatepasslist",
-					"name": "Gatepasslist",
-					"target": "Gatepasslist"
+					"name": "reports",
+					"pattern": "reports",
+					"target": [
+						"TargetReports"
+					]
 				},
 				{
-					"pattern": "OutGatePassDetail/:reqNo:",
-					"name": "OutGatePassDetail",
-					"target": "OutGatePassDetail"
+					"name": "InwardGatePass",
+					"pattern": "InwardGatePass",
+					"target": [
+						"TargetInwardGatePass"
+					]
 				},
 				{
-					"pattern": "GatePassExit",
-					"name": "GatePassExit",
-					"target": "GatePassExit"
-				},
-				{
-					"pattern": "GatePassExitDetail/:reqNo:",
-					"name": "GatePassExitDetail",
-					"target": "GatePassExitDetail"
-				},
-				{
-					"pattern": "GatePassReturn",
-					"name": "GatePassReturn",
-					"target": "GatePassReturn"
-				},
-				{
-					"pattern": "GatePassReturnDetail/:reqNo:",
-					"name": "GatePassReturnDetail",
-					"target": "GatePassReturnDetail"
-				},
-				{
-					"pattern": "ReceiptGatePass",
-					"name": "ReceiptGatePass",
-					"target": "ReceiptGatePass"
+					"name": "analytics",
+					"pattern": "analytics",
+					"target": ["TargetAnalytics"]
 				}
 			],
 			"targets": {
-				"home": {
-					"viewId": "home",
-					"viewName": "Home"
+				"TargetHome": {
+					"viewName": "Home",
+					"viewLevel": 1
 				},
-				"GatePassRequestNumber": {
-					"viewId": "GatePassRequestNumber",
-					"viewName": "GatePassRequestNumber"
+				"TargetGatePassCreation": {
+					"viewName": "GatePassCreation",
+					"viewLevel": 2
 				},
-				"GatePassRequestCreation": {
-					"viewId": "GatePassRequestCreation",
-					"viewName": "GatePassRequestCreation"
-				},
-				"OutGatePass": {
+				"TargetGatePassList": {
+  "viewType": "XML",
+  "viewId": "GatePassList",
+  "viewName": "GatePassList"
+},
+				"TargetOutGatePass": {
+					"viewType": "XML",
 					"viewId": "OutGatePass",
 					"viewName": "OutGatePass"
 				},
-				"OutGatePassDetail": {
-					"viewId": "OutGatePassDetail",
-					"viewName": "OutGatePassDetail"
+				"TargetReports": {
+					"viewType": "XML",
+					"viewId": "Reports",
+					"viewName": "Reports"
 				},
-				"Gatepasslist": {
-					"viewId": "Gatepasslist",
-					"viewName": "Gatepasslist"
+				"TargetInwardGatePass": {
+					"viewType": "XML",
+					"viewId": "InwardGatePass",
+					"viewName": "InwardGatePass"
 				},
-				"GatePassExit": {
-					"viewId": "GatePassExit",
-					"viewName": "GatePassExit"
-				},
-				"GatePassExitDetail": {
-					"viewId": "GatePassExitDetail",
-					"viewName": "GatePassExitDetail"
-				},
-				"GatePassReturn": {
-					"viewId": "GatePassReturn",
-					"viewName": "GatePassReturn"
-				},
-				"GatePassReturnDetail": {
-					"viewId": "GatePassReturnDetail",
-					"viewName": "GatePassReturnDetail"
-				},
-				"ReceiptGatePass": {
-					"viewId": "ReceiptGatePass",
-					"viewName": "ReceiptGatePass"
+				"TargetAnalytics": {
+					"viewType": "XML",
+					"viewId": "Analytics",
+					"viewName": "Analytics"
 				}
 			}
 		}

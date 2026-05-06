@@ -1,599 +1,626 @@
 sap.ui.define([
-    "sap/ui/core/mvc/Controller",
-    "sap/ui/model/json/JSONModel",
-    "sap/ui/model/Filter",
-    "sap/ui/model/FilterOperator",
-    "sap/m/MessageToast",
-    "sap/m/MessageBox"
-], function (Controller, JSONModel, Filter, FilterOperator, MessageToast, MessageBox) {
-    "use strict";
+	"./BaseController",
+	"sap/ui/model/json/JSONModel",
+	"sap/m/MessageBox",
+	"sap/m/MessageToast"
+], function (BaseController, JSONModel, MessageBox, MessageToast) {
+	"use strict";
 
-    return Controller.extend("zgpms.meilpower.com.controller.GatePassCreation", {
+	return BaseController.extend("zgpms.meilpower.com.controller.GatePassCreation", {
+		formatter: {
+			formatHsnCodeDesc: function (sCode, sDesc) {
+				if (sCode && sDesc) {
+					return sCode + " - " + sDesc;
+				}
+				return sCode || sDesc || "";
+			},
+			formatMaterial: function (sCode, sName) {
+				if (sCode && sName) {
+					return sCode + " - " + sName;
+				}
+				return sCode || sName || "";
+			}
+		},
 
-        onInit: function () {
-            var oLocalModel = new JSONModel(this._getEmptyForm());
-            this.getView().setModel(oLocalModel, "localModel");
+		onMaterialValueHelp: function (oEvent) {
 
-            var oPlantModel = new JSONModel({ plants: [] });
-            oPlantModel.setSizeLimit(3000);
-            this.getView().setModel(oPlantModel, "plantModel");
+			this._oInputSource = oEvent.getSource();
+			this._oRowContext = this._oInputSource.getBindingContext("gp");
+			 var oGpModel = this.getView().getModel("gp");
+             var sPlant = oGpModel.getProperty("/Plant");
 
-            var oPoModel = new JSONModel({ pos: [] });
-            this.getView().setModel(oPoModel, "poModel");
+			 if(!sPlant){
+				console.log('please selct plant first')
+			 sap.m.MessageToast.show("Please select plant first");
+			 return;
+			 }
 
-            this._loadPlants();
+			if (!this._pMaterialValueHelp) {
+				this._pMaterialValueHelp = sap.ui.core.Fragment.load({
+					id: this.getView().getId(),
+					name: "zgpms.meilpower.com.view.fragments.MaterialValueHelp",
+					controller: this
+				}).then(function (oDialog) {
+					this.getView().addDependent(oDialog);
+					return oDialog;
+				}.bind(this));
+			}
 
-            var oRouter = this.getOwnerComponent().getRouter();
-            oRouter.getRoute("GatePassCreation").attachPatternMatched(this._onRouteMatched, this);
-        },
+			this._pMaterialValueHelp.then(function (oDialog) {
+				oDialog.getBinding("items").filter([]);
+				oDialog.open();
+			});
+		},
 
-        _onRouteMatched: function (oEvent) {
-            this._clearForm(); // Always clear to ensure fresh start between tabs
+		onMaterialValueHelpSearch: function (oEvent) {
+			var sValue = oEvent.getParameter("value");
+			var oFilter = new sap.ui.model.Filter({
+				filters: [
+					new sap.ui.model.Filter("Material", sap.ui.model.FilterOperator.Contains, sValue),
+					new sap.ui.model.Filter("MaterialName", sap.ui.model.FilterOperator.Contains, sValue),
+					new sap.ui.model.Filter("HsnDesc", sap.ui.model.FilterOperator.Contains, sValue)
+				],
+				and: false
+			});
+			oEvent.getSource().getBinding("items").filter([oFilter]);
+		},
 
-            var sReqNo = oEvent.getParameter("arguments").reqNo;
-            if (sReqNo) {
-                var oLocalModel = this.getView().getModel("localModel");
-                oLocalModel.setProperty("/SearchType", "GPREQ");
-                oLocalModel.setProperty("/GatePassReqNo", sReqNo);
-                this._loadRequestData(sReqNo);
-            }
-        },
+		onMaterialValueHelpConfirm: function (oEvent) {
+			var oSelectedItem = oEvent.getParameter("selectedItem");
+			if (!oSelectedItem) {
+				return;
+			}
 
-        // ─── LOAD MASTERS ────────────────────────────────────────────────
+			var oSelectedMaterial = oSelectedItem.getBindingContext("materials").getObject();
+			var oModel = this.getView().getModel("gp");
+			var sPath = this._oRowContext.getPath();
 
-        _loadPlants: function () {
-            var oODataModel = this.getOwnerComponent().getModel();
-            var oPlantModel = this.getView().getModel("plantModel");
-            oODataModel.read("/ZPlantSet", {
-                success: function (oData) {
-                    oPlantModel.setProperty("/plants", oData.results);
-                },
-                error: function () {
-                    MessageToast.show("Failed to load plants.");
-                }
-            });
-        },
+			oModel.setProperty(sPath + "/material", oSelectedMaterial.Material);
+			oModel.setProperty(sPath + "/materialName", oSelectedMaterial.MaterialName);
+			oModel.setProperty(sPath + "/hsnCode", oSelectedMaterial.HsnCode);
+			oModel.setProperty(sPath + "/hsnDesc", oSelectedMaterial.HsnDesc);
+			oModel.setProperty(sPath + "/uom", oSelectedMaterial.UOM);
+			oModel.setProperty(sPath + "/rate", oSelectedMaterial.UnitPrice);
+			
+			// Recalculate amount for this row
+			var fQty = parseFloat(oModel.getProperty(sPath + "/quantity")) || 0;
+			var fRate = parseFloat(oSelectedMaterial.UnitPrice) || 0;
+			var fAmount = fQty * fRate;
+			oModel.setProperty(sPath + "/amount", fAmount.toLocaleString('en-IN', {
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2
+			}));
+			this._recalcTotal();
+			
+			this._oInputSource.setValueState("None");
+		},
 
-        // ─── SEARCH TYPE TOGGLE ──────────────────────────────────────────
+		onMaterialValueHelpCancel: function () {
+			// Do nothing
+		},
 
-        onSegmentedButtonSearchTypeSelectionChange: function (oEvent) {
-            var sKey = oEvent.getParameter("item").getKey();
-            var oFresh = this._getEmptyForm();
-            oFresh.SearchType = sKey;
-            this.getView().getModel("localModel").setData(oFresh);
-            this.getView().getModel("poModel").setProperty("/pos", []);
-        },
+		onInit: function () {
+			this._resetModel();
+			
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (oODataModel) {
+				oODataModel.metadataLoaded().then(function() {
+					this._loadPlants();
+					this._loadVendors();
+					this._loadMaterials();
+				}.bind(this));
+			} else {
+				this._loadPlants();
+				this._loadVendors();
+				this._loadMaterials();
+			}
 
-        // ─── PO PATH ─────────────────────────────────────────────────────
+			this.getRouter().getRoute("GatePassCreation").attachPatternMatched(this._onRouteMatched, this);
+		},
 
-        onPlantsComboBoxPOSelectionChange: function (oEvent) {
-            var oSelectedItem = oEvent.getParameter("selectedItem");
-            if (!oSelectedItem) { return; }
-            var sPlant = oSelectedItem.getKey();
-            var oLocalModel = this.getView().getModel("localModel");
-            oLocalModel.setProperty("/POPlant", sPlant);
-            oLocalModel.setProperty("/PONumber", "");
-            this.getView().getModel("poModel").setProperty("/pos", []);
-            this._loadPOsByPlant(sPlant);
-        },
+		_onRouteMatched: function (oEvent) {
+			var oArgs = oEvent.getParameter("arguments");
+			var sType = oArgs ? oArgs.type : null;
+			
+			// Reset model on tab switch
+			this._resetModel();
+			
+			var oModel = this.getView().getModel("gp");
+			if (oModel) {
+				if (sType) {
+					oModel.setProperty("/GatePassType", sType);
+					oModel.setProperty("/isTypeEditable", false);
+				} else {
+					oModel.setProperty("/GatePassType", "");
+					oModel.setProperty("/isTypeEditable", true);
+				}
+			}
+		},
 
-        _loadPOsByPlant: function (sPlant) {
-            var oODataModel = this.getOwnerComponent().getModel();
-            var oPoModel = this.getView().getModel("poModel");
-            var that = this;
+		_loadPlants: function () {
+			var oPlantModel = new JSONModel({
+				results: []
+			});
+			this.getView().setModel(oPlantModel, "plants");
 
-            this._sPOLoadingForPlant = sPlant;
-            oPoModel.setProperty("/pos", []);
-            this.getView().setBusy(true);
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) { return; }
 
-            oODataModel.read("/ZGatePOHdrSet", {
-                urlParameters: { "$filter": "Plant eq '" + sPlant + "'" },
-                success: function (oData) {
-                    that.getView().setBusy(false);
-                    if (that._sPOLoadingForPlant !== sPlant) { return; }
-                    var aPos = oData.results || [];
-                    oPoModel.setProperty("/pos", aPos);
-                    if (aPos.length === 0) {
-                        MessageToast.show("No POs found for plant: " + sPlant);
-                    } else {
-                        MessageToast.show(aPos.length + " PO(s) loaded.");
-                    }
-                },
-                error: function () {
-                    that.getView().setBusy(false);
-                    MessageToast.show("Failed to load POs for selected plant.");
-                }
-            });
-        },
+			sap.ui.core.BusyIndicator.show(0);
+			oODataModel.read("/ZPlantSet", {
+				success: function (oData) {
+					sap.ui.core.BusyIndicator.hide();
+					var aResults = oData.results || [];
+					if (aResults.length === 0) { return; }
+					var aNormalized = aResults.map(function (p) {
+						return {
+							Plant: p.Plant || p.Matnr || "",
+							PlantName: p.PlantName || p.Pname || p.Name1 || p.Plantname || p.Plant || "",
+							CoCode: p.CoCode || p.CompanyCode || "",
+							UOM: p.Meins || p.Uom || p.BaseUOM || ""
+						};
+					});
+					oPlantModel.setProperty("/results", aNormalized);
+				},
+				error: function (oError) {
+					sap.ui.core.BusyIndicator.hide();
+					console.error("Failed to load plants from OData", oError);
+					var sMsg = "OData Error: Could not fetch Plants from ZPlantSet.";
+					try {
+						var oResp = JSON.parse(oError.responseText);
+						sMsg += "\nDetails: " + (oResp.error.message.value || oResp.error.message || "Unknown error");
+					} catch (e) {}
+					MessageBox.error(sMsg);
+				}
+			});
+		},
 
-        onPosSelectChange: function (oEvent) {
-            var oSelectedItem = oEvent.getParameter("selectedItem");
-            if (!oSelectedItem) { return; }
-            var sPONumber = oSelectedItem.getKey();
-            var aPos = this.getView().getModel("poModel").getProperty("/pos");
-            var oPO = aPos.find(function (p) { return p.PurchaseOrder === sPONumber; });
-            if (!oPO) { return; }
+		_resetModel: function () {
+			var oViewModel = new JSONModel({
+				GatePassReqNo: "",
+				GatePassType: "",
+				isTypeEditable: true,
+				Cocode: "",
+				Plant: "",
+				FiscalYear: String(new Date().getFullYear()),
+				// gpDate: new Date(),
+				returnableDate: new Date(),
+				vendor: "",
+				vendorName: "",
+				vendorAddress: "",
+				vendorGST: "",
+				fileName: "",
+				Department: "",
+				items: [
+					this._newItem(1)
+				],
+				remarks: "",
+				finalTotal: "0.00"
+			});
+			this.getView().setModel(oViewModel, "gp");
+		},
 
-            var oLocalModel = this.getView().getModel("localModel");
-            oLocalModel.setProperty("/PONumber", sPONumber);
-            oLocalModel.setProperty("/Plant", oPO.Plant || "");
-            oLocalModel.setProperty("/Vendor", oPO.Supplier || "");
-            oLocalModel.setProperty("/VendorName", oPO.VendorName || "");
-            oLocalModel.setProperty("/ZipCode", oPO.PostalCode || "");
-            oLocalModel.setProperty("/City", oPO.City || "");
-            oLocalModel.setProperty("/GatePassType", oPO.GatePassType || "NRGP");
+		_newItem: function (iSno) {
+			return {
+				sno: String(iSno).padStart(2, '0'),
+				material: "",
+				hsnCode: "",
+				hsnDesc: "",
+				quantity: 1,
+				uom: "",
+				rate: 0,
+				amount: "0.00"
+			};
+		},
 
-            this._loadPOItems(sPONumber, oPO.Plant || "");
-        },
 
-        _loadPOItems: function (sPONumber, sPlant) {
-            var oODataModel = this.getOwnerComponent().getModel();
-            var that = this;
-            var sUrl = "/ZGatePOHdrSet(PurchaseOrder='" + sPONumber + "',Plant='" + sPlant + "')/GatePoItemNav";
+		_loadMaterials: function (sPlant) {
+			var oMaterialsModel = this.getView().getModel("materials");
+			if (!oMaterialsModel) {
+				oMaterialsModel = new JSONModel({ results: [] });
+				this.getView().setModel(oMaterialsModel, "materials");
+			}
 
-            this.getView().setBusy(true);
-            oODataModel.read(sUrl, {
-                urlParameters: { "$top": "500" },
-                success: function (oData) {
-                    that.getView().setBusy(false);
-                    var aItems = oData.results || [];
-                    if (aItems.length > 0) {
-                        that._applyPOItems(aItems);
-                        MessageToast.show(aItems.length + " item(s) loaded.");
-                    } else {
-                        that.getView().getModel("localModel").setProperty("/GatePassItemNav", [that._getEmptyItem()]);
-                        MessageToast.show("No items found for this PO.");
-                    }
-                },
-                error: function (oError) {
-                    that.getView().setBusy(false);
-                    console.error("PO items load failed:", oError.responseText);
-                    that.getView().getModel("localModel").setProperty("/GatePassItemNav", [that._getEmptyItem()]);
-                    MessageToast.show("Could not load PO items.");
-                }
-            });
-        },
+			oMaterialsModel.setProperty("/results", []);
 
-        _applyPOItems: function (aPoItems) {
-            // Map ZGatePOItm fields → GatePassItm fields (for payload)
-            var aItems = aPoItems.map(function (oItem) {
-                return {
-                    ItemNo: oItem.ItemNo || "",
-                    Material: oItem.Material || "",
-                    Description: oItem.MaterialDesc || "",   // MaterialDesc → Description
-                    UOM: oItem.UOM || "EA",
-                    ActualQuantity: oItem.POQuantity || "0.000",  // POQuantity → ActualQuantity
-                    BalanceQuantity: oItem.BalanceQuantity || "0.000", // display only
-                    NetPrice: oItem.NetPrice || "0.00",
-                    RecievedQuantity: oItem.RecievedQuanty || "0.000",
-                    Totalvalue: "0.00"
-                };
-            });
-            this.getView().getModel("localModel").setProperty("/GatePassItemNav", aItems);
-        },
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) { return; }
 
-        // ─── REQUEST PATH ─────────────────────────────────────────────────
+			if (!sPlant) {
+			  console.log("please select plant first")
+			}
+			var aFilters = [
+				new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sPlant)
+			];
 
-        onGatePassReqNoInputChange: function (oEvent) {
-            var sReqNo = oEvent.getParameter("value").trim();
-            if (sReqNo) {
-                this._loadRequestData(sReqNo);
-            }
-        },
+			sap.ui.core.BusyIndicator.show(0);
+			oODataModel.read("/ZMaterialSet", {
+				filters: aFilters,
+				success: function (oData) {
+					sap.ui.core.BusyIndicator.hide();
+					var aResults = oData.results || [];
+					if (aResults.length === 0) {
+						console.warn("No materials found for plant " + sPlant);
+						
+						return;
+					}
+					var aNormalized = aResults.map(function (m) {
+						return {
+							Material: m.Material || m.Matnr || "",
+							MaterialName: m.Maktx || m.MaterialDesc || m.Description || m.MatDesc || m.Materialtxt || m.Material || "",
+							HsnDesc: m.HSNDesc || "",
+							HsnCode: m.HSNCode || "",
+							UOM: m.Meins || m.Uom || m.BaseUOM || m.UOM || "",
+							UnitPrice: parseFloat(m.UnitPrice) || 0
+						};
+					});
+					oMaterialsModel.setProperty("/results", aNormalized);
+				},
+				error: function (oError) {
+					sap.ui.core.BusyIndicator.hide();
+					console.error("Failed to fetch materials for plant " + sPlant, oError);
+					var sMsg = "Failed to load materials for plant " + sPlant;
+					try {
+						var oResp = JSON.parse(oError.responseText);
+						sMsg += "\nDetails: " + (oResp.error.message.value || oResp.error.message || "Unknown error");
+					} catch (e) {
+						if (oError.message) { sMsg += "\nMessage: " + oError.message; }
+					}
+					MessageBox.error(sMsg);
+				}
+			});
+		},
 
-        _loadRequestData: function (sReqNo) {
-            var oODataModel = this.getOwnerComponent().getModel();
-            var oLocalModel = this.getView().getModel("localModel");
 
-            this.getView().setBusy(true);
-            oODataModel.read("/GateReqHdrSet", {
-                urlParameters: { "$expand": "GateReqItmNav" },
-                filters: [new Filter("GatePassReqNo", FilterOperator.EQ, sReqNo)],
-                success: function (oData) {
-                    this.getView().setBusy(false);
-                    var aResults = oData.results || [];
-                    if (aResults.length === 0) {
-                        MessageToast.show("No request found for: " + sReqNo);
-                        return;
-                    }
-                    var oHdr = aResults[0];
-                    // GateReqHdr fields map directly to GatePassHDR fields
-                    oLocalModel.setProperty("/GatePassType", oHdr.GatePassType || "NRGP");
-                    oLocalModel.setProperty("/Plant", oHdr.Plant || "");
-                    oLocalModel.setProperty("/Vendor", oHdr.Vendor || "");
-                    oLocalModel.setProperty("/VendorName", oHdr.VendorName || "");
-                    oLocalModel.setProperty("/ZipCode", oHdr.ZipCode || "");
-                    oLocalModel.setProperty("/City", oHdr.City || "");
-                    oLocalModel.setProperty("/Department", oHdr.Department || "");
-                    oLocalModel.setProperty("/ModeOfDispatch", oHdr.ModeOfDispatch || "");
-                    oLocalModel.setProperty("/Remarks", oHdr.Remarks || "");
-                    oLocalModel.setProperty("/VehicleNo", oHdr.VehicleNo || "");
-                    // Try both correct and misspelled backend properties
-                    var sPkgs = oHdr.NoOfPackages || oHdr.NoOfPacakages || "";
-                    oLocalModel.setProperty("/NoOfPackages", oHdr.NoOfPackages || "");
-                    oLocalModel.setProperty("/ReqEmpID", oHdr.ReqEmpID || "");
-                    oLocalModel.setProperty("/HODEmpID", oHdr.HODEmpID || "");
-                    oLocalModel.setProperty("/ApprovalReq", oHdr.ApprovalReq || "X");
+	onPlantChange: function (oEvent) {
+    var oSelectedItem = oEvent.getParameter("selectedItem");
 
-                    var aReqItems = (oHdr.GateReqItmNav && oHdr.GateReqItmNav.results) || [];
-                    if (aReqItems.length > 0) {
-                        this._applyRequestItems(aReqItems);
-                    } else {
-                        this._loadRequestItemsFallback(sReqNo);
-                    }
-                    MessageToast.show("Request data loaded.");
-                }.bind(this),
-                error: function (oError) {
-                    this.getView().setBusy(false);
-                    var sMsg = "Could not load request.";
-                    try { sMsg = JSON.parse(oError.responseText).error.message.value || sMsg; } catch (e) { /**/ }
-                    MessageToast.show(sMsg);
-                }.bind(this)
-            });
-        },
+    if (oSelectedItem) {
+        var sKey = oSelectedItem.getKey();
+		var isPlantSelected = true;
+        var oGpModel = this.getView().getModel("gp");
+         console.log(oGpModel)
+        oGpModel.setProperty("/Plant", sKey);
+        var aItems = oGpModel.getProperty("/items");
+        aItems.forEach(function (item) {
+            item.material = "";
+            item.materialName = "";
+            item.hsnCode = "";
+            item.hsnDesc = "";
+            item.uom = "";
+            item.rate = 0;
+            item.amount = "0.00";
+        });
+        oGpModel.setProperty("/items", aItems);
+        this._recalcTotal();
 
-        _loadRequestItemsFallback: function (sReqNo) {
-            var oODataModel = this.getOwnerComponent().getModel();
-            var that = this;
-            oODataModel.read("/GateReqItmSet", {
-                filters: [new Filter("GatePassReqNo", FilterOperator.EQ, sReqNo)],
-                success: function (oData) {
-                    var aItems = oData.results || [];
-                    if (aItems.length > 0) {
-                        that._applyRequestItems(aItems);
-                    } else {
-                        that.getView().getModel("localModel").setProperty("/GatePassItemNav", [that._getEmptyItem()]);
-                        MessageToast.show("No items found for this request.");
-                    }
-                },
-                error: function () {
-                    that.getView().getModel("localModel").setProperty("/GatePassItemNav", [that._getEmptyItem()]);
-                }
-            });
-        },
+        this._loadVendors(sKey);
+        this._loadMaterials(sKey);
+		
 
-        _applyRequestItems: function (aReqItems) {
-            // GateReqItm fields map directly to GatePassItm fields
-            var aItems = aReqItems.map(function (oItem) {
-                return {
-                    ItemNo: oItem.ItemNo || "",
-                    Material: oItem.Material || "",
-                    Description: oItem.Description || "",
-                    UOM: oItem.UOM || "EA",
-                    ActualQuantity: oItem.ActualQuantity || "0.000",
-                    BalanceQuantity: "0.000",
-                    NetPrice: oItem.ItemNetPrice || "0.00",
-                    RecievedQuantity: oItem.RecievedQuantity || "0.000",
-                    Totalvalue: oItem.Totalvalue || "0.00"
-                };
-            });
-            this.getView().getModel("localModel").setProperty("/GatePassItemNav", aItems);
-        },
+        sap.m.MessageToast.show("Materials refreshed for selected plant");
+    }
+},
 
-        // ─── ITEM TABLE ACTIONS ──────────────────────────────────────────
+onMaterialChange: function (oEvent) {
 
-        onAddRowButtonPress: function () {
-            var oModel = this.getView().getModel("localModel");
-            var aItems = oModel.getProperty("/GatePassItemNav") || [];
-            var aNewItems = aItems.slice(); // Create a copy
-            aNewItems.push(this._getEmptyItem());
-            oModel.setProperty("/GatePassItemNav", aNewItems);
-        },
+    var oGpModel = this.getView().getModel("gp");
+    var sPlant = oGpModel.getProperty("/Plant");
 
-        onButtonDeletePress: function (oEvent) {
-            var oContext = oEvent.getSource().getParent().getBindingContext("localModel");
-            var iIndex = parseInt(oContext.getPath().split("/").pop(), 10);
-            var oModel = this.getView().getModel("localModel");
-            var aItems = oModel.getProperty("/GatePassItemNav");
-            if (aItems.length > 1) {
-                aItems.splice(iIndex, 1);
-                oModel.setProperty("/GatePassItemNav", aItems);
-            } else {
-                MessageToast.show("At least one item is required.");
-            }
-        },
+    if (!sPlant) {
+        console.log("❌ Please select plant first");
+        sap.m.MessageToast.show("Please select Plant first");
+        return;
+    }
 
-        onRecievedQuantityInputLiveChange: function (oEvent) {
-            var oInput = oEvent.getSource();
-            var oContext = oInput.getBindingContext("localModel");
-            var oModel = this.getView().getModel("localModel");
-            var sPath = oContext.getPath();
+    var oSource = oEvent.getSource();
+    var oContext = oSource.getBindingContext("gp");
 
-            var fEntered = parseFloat(oEvent.getParameter("value")) || 0;
-            var fPOQuantity = parseFloat(oModel.getProperty(sPath + "/ActualQuantity")) || 0;
-            var fNetPrice = parseFloat(oModel.getProperty(sPath + "/NetPrice")) || 0;
+    var oItem = oEvent.getParameter("selectedItem");
+    var sKey = oItem ? oItem.getKey() : oSource.getValue();
 
-            // 1. Calculate Balance Quantity = PO Qty - Received Qty
-            var fBalance = fPOQuantity - fEntered;
-            oModel.setProperty(sPath + "/BalanceQuantity", fBalance.toFixed(3));
+    console.log("Selected Material:", sKey);
 
-            // 2. Calculate Total Value = Received Qty * Net Price
-            var fTotalValue = fEntered * fNetPrice;
-            oModel.setProperty(sPath + "/Totalvalue", fTotalValue.toFixed(2));
+    var aMaterials = this.getView().getModel("materials").getProperty("/results");
 
-            // 3. Validation
-            if (fEntered > fPOQuantity) {
-                oInput.setValueState("Error");
-                oInput.setValueStateText("Received Qty cannot exceed PO Qty (" + fPOQuantity + ")");
-            } else {
-                oInput.setValueState("None");
-            }
+    var oMaterial = aMaterials.find(function (m) {
+        return m.Material === sKey;
+    });
 
-            // console.log("Item logic update - PO Qty:", fPOQuantity, "New Balance:", fBalance.toFixed(3));
-        },
+    if (oMaterial) {
+        oContext.getModel().setProperty(oContext.getPath() + "/hsnCode", oMaterial.HsnCode);
+        oContext.getModel().setProperty(oContext.getPath() + "/hsnDesc", oMaterial.HsnDesc || oMaterial.MaterialName);
+        oContext.getModel().setProperty(oContext.getPath() + "/uom", oMaterial.UOM);
+        oContext.getModel().setProperty(oContext.getPath() + "/rate", oMaterial.UnitPrice);
 
-        // ─── VALIDATIONS ─────────────────────────────────────────────────
+        // Recalculate amount for this row
+        var fQty = parseFloat(oContext.getModel().getProperty(oContext.getPath() + "/quantity")) || 0;
+        var fRate = parseFloat(oMaterial.UnitPrice) || 0;
+        var fAmount = fQty * fRate;
+        oContext.getModel().setProperty(oContext.getPath() + "/amount", fAmount.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }));
+        this._recalcTotal();
+    } else {
+        console.log("❌ Material not found in list");
+    }
+},
 
-        _validate: function (oData) {
-            // Source Reference
-            if (oData.SearchType === "PO" && !oData.PONumber) {
-                MessageToast.show("Please select a Purchase Order."); return false;
-            }
-            if (oData.SearchType === "GPREQ" && !oData.GatePassReqNo) {
-                MessageToast.show("Please enter Gate Pass Request No."); return false;
-            }
+		_loadVendors: function (sPlant) {
+			var oVendorModel = new JSONModel({
+				results: []
+			});
+			this.getView().setModel(oVendorModel, "vendors");
 
-            // Mandatory Fields
-            if (!oData.VehicleNo) {
-                MessageToast.show("Vehicle Number is required."); return false;
-            }
-            if (!oData.ChallanNumber) {
-                MessageToast.show("Challan Number is required."); return false;
-            }
-            if (!oData.ChallanDate) {
-                MessageToast.show("Challan Date is required."); return false;
-            }
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) { return; }
 
-            // RGP Specific
-            if (oData.GatePassType === "RGP" && !oData.ReturnableDate) {
-                MessageBox.error("Returnable Date is mandatory for RGP."); return false;
-            }
-            if (oData.GatePassType === "RGP" && oData.ReturnableDate) {
-                var oReturnDate = new Date(oData.ReturnableDate);
-                var oToday = new Date();
-                oToday.setHours(0, 0, 0, 0); // Compare dates only
-                if (oReturnDate < oToday) {
-                    MessageBox.error("Returnable Date cannot be a past date."); return false;
-                }
-            }
+			if (!sPlant) {
+				sPlant = this.getView().getModel("gp").getProperty("/Plant") || "2301";
+			}
+			var aFilters = [
+				new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sPlant)
+			];
 
-            // Challan Date Validation (No Future Dates)
-            if (oData.ChallanDate) {
-                var oChallanDate = new Date(oData.ChallanDate);
-                var oToday = new Date();
-                oToday;
-                if (oChallanDate > oToday) {
-                    MessageBox.error("Challan Date cannot be a future date."); return false;
-                }
-            }
+			oODataModel.read("/ZVendorSet", {
+				filters: aFilters,
+				success: function (oData) {
+					var aResults = oData.results || [];
+					if (aResults.length === 0) { return; }
+					var aNormalized = aResults.map(function (v) {
+						return {
+							Vendor: v.Vendor || v.Lifnr || "",
+							VendorName: v.Name || v.VendorName || v.Name1 || "Unknown Vendor",
+							Street: v.Address || v.Street || "",
+							City: v.City || "",
+							PostalCode: v.ZipCode || v.PostalCode || "",
+							Country: v.Country || "",
+							VendorGST: v.VendorGST || v.TaxNumber1 || ""
+						};
+					});
+					oVendorModel.setProperty("/results", aNormalized);
+				},
+				error: function (oError) {
+					console.error("Failed to load vendors from OData, using fallback data", oError);
+				}
+			});
+		},
 
-            // Item Validation
-            var aItems = oData.GatePassItemNav || [];
-            for (var i = 0; i < aItems.length; i++) {
-                var fRcv = parseFloat(aItems[i].RecievedQuantity) || 0;
-                if (fRcv <= 0) {
-                    MessageToast.show("Enter Received Quantity for item " + (i + 1) + ".");
-                    return false;
-                }
-            }
-            return true;
-        },
+		onVendorSelect: function (oEvent) {
+			var oItem = oEvent.getParameter("selectedItem");
+			if (!oItem) { return; }
 
-        // ─── SUBMIT ──────────────────────────────────────────────────────
+			var sKey = oItem.getKey();
+			var aVendors = this.getView().getModel("vendors").getProperty("/results");
+			var oVendor = aVendors.find(function (v) { return v.Vendor === sKey; });
+			if (!oVendor) { return; }
 
-        onCreateGatePassButtonPress: function () {
-            var oData = this.getView().getModel("localModel").getData();
-            if (!this._validate(oData)) { return; }
+			var sAddress = [oVendor.Street, oVendor.City, oVendor.PostalCode, oVendor.Country].filter(Boolean).join(", ");
 
-            var aItemsPayload;
-            if (oData.SearchType === "PO") {
-                // Map items for PO-based submission (ZGatePOHdrSet)
-                aItemsPayload = oData.GatePassItemNav.map(function (oItem, iIdx) {
-                    return {
-                        PurchaseOrder: oData.PONumber || "",
-                        GatePassNo: "",
-                        GatePassType: oData.GatePassType,
-                        ItemNo: oItem.ItemNo || ((iIdx + 1) * 10).toString().padStart(5, "0"),
-                        Material: oItem.Material || "",
-                        MaterialDesc: oItem.Description || "",
-                        UOM: oItem.UOM || "EA",
-                        POQuantity: parseFloat(oItem.ActualQuantity || 0).toFixed(3),
-                        NetPrice: oItem.NetPrice || "0.00",
-                        BalanceQuantity: parseFloat(oItem.BalanceQuantity || 0).toFixed(3),
-                        RecievedQuanty: parseFloat(oItem.RecievedQuantity || 0).toFixed(3)
-                    };
-                });
-            } else {
-                // Map items for Request-based submission — exact GatePassItm entity fields from metadata
-                aItemsPayload = oData.GatePassItemNav.map(function (oItem, index) {
-                    return {
-                        GatePassType: oData.GatePassType,
-                        GatePassNo: "",
-                        GatePassReqNo: oData.GatePassReqNo || "",
-                        ItemNo: ((index + 1) * 10).toString().padStart(5, '0'),
-                        Material: oItem.Material || "",
-                        Description: oItem.Description || "",
-                        UOM: oItem.UOM || "EA",
-                        NetPrice: parseFloat(oItem.NetPrice || 0).toFixed(2),
-                        ItemNetPrice: parseFloat(oItem.NetPrice || 0).toFixed(2).toString(),
-                        ActualQuantity: parseFloat(oItem.ActualQuantity || 0).toFixed(3),
-                        RecievedQuantity: parseFloat(oItem.RecievedQuantity || 0).toFixed(3),
-                        Totalvalue: parseFloat(oItem.Totalvalue || 0).toFixed(2)
-                    };
-                });
-            }
+			var oGp = this.getView().getModel("gp");
+			oGp.setProperty("/vendorAddress", sAddress);
+			oGp.setProperty("/vendorGST", oVendor.VendorGST);
+		},
 
-            // ChallanDate: model stores "yyyy-MM-dd", backend expects "yyyyMMdd"
-            var sChallanDate = (oData.ChallanDate || "").replace(/-/g, "");
+		onAddItem: function () {
+			var oGp = this.getView().getModel("gp");
+			var aItems = oGp.getProperty("/items");
+			aItems.push(this._newItem(aItems.length + 1));
+			oGp.setProperty("/items", aItems);
+		},
 
-            var oPayload = {};
-            var sEntitySet = "";
+		onRemoveItem: function (oEvent) {
+			var oItem = oEvent.getSource().getBindingContext("gp").getObject();
+			var oGp = this.getView().getModel("gp");
+			var aItems = oGp.getProperty("/items");
+			var iIndex = aItems.indexOf(oItem);
+			if (iIndex > -1) {
+				aItems.splice(iIndex, 1);
+				// Renumber
+				aItems.forEach(function (it, i) {
+					it.sno = String(i + 1).padStart(2, '0');
+				});
+				oGp.setProperty("/items", aItems);
+				this._recalcTotal();
+			}
+		},
 
-            if (oData.SearchType === "PO") {
-                // PO-based submission to ZGatePOHdrSet
-                sEntitySet = "/ZGatePOHdrSet";
-                oPayload = {
-                    PurchaseOrder: oData.PONumber || "",
-                    Plant: oData.Plant,
-                    Supplier: oData.Vendor,
-                    VendorName: oData.VendorName || "",
-                    City: oData.City || "",
-                    PostalCode: oData.ZipCode || "",
-                    MaterialCategory: "P",
-                    ChallanDate: sChallanDate,
-                    ChallanNumber: oData.ChallanNumber || "",
-                    GateEntryNo: oData.GateEntryNo || "",
-                    NoOfPacakages: parseInt(oData.NoOfPackages) || 0,
-                    ModeOfDispatch: oData.ModeOfDispatch || "",
-                    DriverName: oData.DriverName || "",
-                    HelperName: oData.HelperName || "",
-                    HelperId: oData.HelperId || "",
-                    DriverLicense: oData.DriverLicense || "",
-                    VehicleNo: oData.VehicleNo || "",
-                    GatePassNo: "",
-                    GatePassType: oData.GatePassType,
-                    GatePoItemNav: aItemsPayload
-                };
-            } else {
-                // Request-based submission to GatePassHDRSet — exact GatePassHDR entity fields from metadata
-                sEntitySet = "/GatePassHDRSet";
-                oPayload = {
-                    GatePassType: oData.GatePassType,
-                    GatePassNo: "",
-                    GatePassReqNo: oData.GatePassReqNo || "",
-                    Plant: oData.Plant,
-                    Vendor: oData.Vendor,
-                    VendorName: oData.VendorName || "",
-                    ZipCode: oData.ZipCode || "",
-                    City: oData.City || "",
-                    ApprovalReq: oData.ApprovalReq || "X",
-                    Department: oData.Department || "",
-                    VehicleNo: oData.VehicleNo || "",
-                    ModeOfDispatch: oData.ModeOfDispatch || "",
-                    Remarks: oData.Remarks || "",
-                    ReturnableDate: oData.ReturnableDate || "",
-                    Message: "",
-                    GatePassItemNav: aItemsPayload
-                };
-            }
+		onQtyRateChange: function (oEvent) {
+			var oSource = oEvent.getSource();
+			var oContext = oSource.getBindingContext("gp");
+			var oModel = this.getView().getModel("gp");
 
-            // console.log("Submitting to " + sEntitySet + ":", JSON.stringify(oPayload));
+			// For live calculation, manually sync the value being typed to the model
+			var sBindingPath = oSource.getBindingPath("value");
+			if (sBindingPath) {
+				oModel.setProperty(oContext.getPath() + "/" + sBindingPath, parseFloat(oSource.getValue()) || 0);
+			}
 
-            var oODataModel = this.getOwnerComponent().getModel();
-            var that = this;
+			var oItem = oContext.getObject();
+			var fQty = parseFloat(oItem.quantity) || 0;
+			var fRate = parseFloat(oItem.rate) || 0;
+			var fAmount = fQty * fRate;
 
-            oODataModel.refreshSecurityToken(
-                function () {
-                    // console.log("CSRF token refreshed — firing POST to " + sEntitySet);
-                    oODataModel.create(sEntitySet, oPayload, {
-                        success: function (oResponse) {
-                            // console.log("POST success response:", JSON.stringify(oResponse));
-                            var sGatePassNo = oResponse.GatePassNo || "";
-                            var sMsg = oResponse.Message ||
-                                "Gate Pass created successfully! Gate Pass No: " + sGatePassNo;
-                            var sLowerMsg = sMsg.toLowerCase();
+			oModel.setProperty(oContext.getPath() + "/amount", fAmount.toLocaleString('en-IN', {
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2
+			}));
 
-                            if (sLowerMsg.includes("not yet approved") || sLowerMsg.includes("pending")) {
-                                MessageBox.warning(sMsg, {
-                                    title: "Pending Approval",
-                                    onClose: function () { 
-                                        that._clearForm();
-                                        that.getOwnerComponent().getRouter().navTo("home");
-                                    }
-                                });
-                            } else if (sLowerMsg.includes("rejected")) {
-                                MessageBox.error(sMsg, {
-                                    title: "Rejected",
-                                    onClose: function () { 
-                                        that._clearForm();
-                                        that.getOwnerComponent().getRouter().navTo("home");
-                                    }
-                                });
-                            } else {
-                                MessageBox.success(sMsg, {
-                                    title: "Success",
-                                    onClose: function () { 
-                                        that._clearForm();
-                                        that.getOwnerComponent().getRouter().navTo("home");
-                                    }
-                                });
-                            }
-                            console.log(sMsg)
-                        },
-                        error: function (oError) {
-                            console.error("POST error response:", oError.responseText);
-                            var sMsg = "Error creating Gate Pass.";
-                            try {
-                                var oBody = JSON.parse(oError.responseText);
-                                var aDetails = (oBody.error.innererror &&
-                                    oBody.error.innererror.errordetails) || [];
-                                sMsg = aDetails.length > 0
-                                    ? aDetails.map(function (e) { return e.message; }).join("\n")
-                                    : (oBody.error.message.value || sMsg);
-                            } catch (e) { /**/ }
-                            MessageBox.error(sMsg);
-                        }
-                    });
-                },
-                function () { MessageToast.show("Failed to fetch CSRF token."); },
-                true
-            );
-        },
+			this._recalcTotal();
+		},
 
-        // ─── HELPERS ─────────────────────────────────────────────────────
+		_recalcTotal: function () {
+			var oGp = this.getView().getModel("gp");
+			var aItems = oGp.getProperty("/items");
+			var fTotal = 0;
 
-        _getEmptyItem: function () {
-            return {
-                ItemNo: "",
-                Material: "",
-                Description: "",
-                UOM: "EA",
-                ActualQuantity: "0.000",
-                BalanceQuantity: "0.000",
-                NetPrice: "0.00",
-                RecievedQuantity: "0.000",
-                Totalvalue: "0.00"
-            };
-        },
+			aItems.forEach(function (it) {
+				var fAmt = parseFloat(String(it.amount).replace(/,/g, '')) || 0;
+				fTotal += fAmt;
+			});
 
-        _getEmptyForm: function () {
-            return {
-                SearchType: "PO",
-                GatePassType: "NRGP",
-                GatePassNo: "",
-                GatePassReqNo: "",
-                POPlant: "",
-                PONumber: "",
-                Plant: "",
-                Vendor: "",
-                VendorName: "",
-                ZipCode: "",
-                City: "",
-                ApprovalReq: "X",
-                Department: "",
-                VehicleNo: "",
-                NoOfPackages: "",
-                ChallanNumber: "",
-                ChallanDate: "",
-                GateEntryNo: "",
-                ModeOfDispatch: "",
-                DriverName: "",
-                DriverLicense: "",
-                HelperName: "",
-                HelperId: "",
-                Remarks: "",
-                ReturnableDate: "",
-                Message: "",
-                minDate: new Date(),
-                maxDate: new Date(),
-                GatePassItemNav: [this._getEmptyItem()]
-            };
-        },
+			oGp.setProperty("/finalTotal", fTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+		},
 
-        _clearForm: function () {
-            this.getView().getModel("localModel").setData(this._getEmptyForm());
-            this.getView().getModel("poModel").setProperty("/pos", []);
+		onSubmit: function () {
+    try {
+
+        // ✅ Get data correctly
+        var oGp = this.getView().getModel("gp").getData();
+		
+
+       
+
+       
+        if (!oGp.Plant) {
+            sap.m.MessageBox.error("Please select Plant first");
+            console.log('plant not selected')
+            return;
         }
 
-    });
+		if(!oGp.VehicleNo){
+			console.log('vehicle is not  selected')
+			 sap.m.MessageBox.error("Please select Vehicle Number");
+			return;
+		}
+
+
+        var oVendorModel = this.getView().getModel("vendors");
+        var aVendorList = (oVendorModel && oVendorModel.getProperty("/results")) || [];
+
+        var oSelectedVendor = aVendorList.find(function (v) {
+            return v.Vendor === oGp.vendor;
+        }) || {};
+
+        // ✅ Date formatting function
+        var fnFormatDate = function (oDate) {
+            if (!oDate) return "";
+
+            if (typeof oDate === "string" && oDate.length === 8 && !isNaN(oDate)) {
+                return oDate;
+            }
+
+            var d = (oDate instanceof Date) ? oDate : new Date(oDate);
+            if (isNaN(d.getTime())) return "";
+
+            var y = d.getFullYear();
+            var m = String(d.getMonth() + 1).padStart(2, '0');
+            var day = String(d.getDate()).padStart(2, '0');
+
+            return y + m + day;
+        };
+
+        var sReturnDate = fnFormatDate(oGp.returnableDate);
+
+        // ✅ Payload creation
+        var oPayload = {
+            GatePassType: oGp.GatePassType,
+            Cocode: oGp.Cocode,
+            Plant: oGp.Plant,
+            FiscalYear: oGp.FiscalYear,
+            Vendor: oGp.vendor,
+            VendorName: oSelectedVendor.VendorName,
+            VendorGST: oGp.vendorGST,
+            ZipCode: oSelectedVendor.PostalCode,
+            City: oSelectedVendor.City,
+            ApprovalReq: "X",
+            Department: oGp.Department,
+            VehicleNo: oGp.VehicleNo || "",
+            ModeOfDispatch: oGp.ModeOfDispatch,
+            Remarks: oGp.Remarks,
+            ReturnableDate: sReturnDate,
+
+            // ✅ Items mapping
+            GateReqItemNav: (oGp.items || []).map(function (it, index) {
+                var fQty = parseFloat(String(it.quantity).replace(/,/g, '')) || 0;
+                var fRate = parseFloat(String(it.rate).replace(/,/g, '')) || 0;
+                var fValue = fQty * fRate;
+
+                return {
+                    GatePassType: oGp.GatePassType || "",
+                    ItemNo: String((index + 1) * 10).padStart(5, '0'),
+                    Material: it.material || "",
+                    HSNCode: it.hsnCode || "",
+                    UOM: it.uom || "EA",
+                    ItemNetPrice: fRate.toFixed(2),
+                    RequestedQuantity: fQty.toFixed(3),
+                    Totalvalue: fValue.toFixed(2),
+                    Remarks: it.remarks || ""
+                };
+            })
+        };
+
+        // ✅ Backend check
+        var oODataModel = this.getOwnerComponent().getModel();
+        if (!oODataModel) {
+            MessageBox.error("Backend OData service not connected.");
+            return;
+        }
+
+        // ✅ Call backend
+        sap.ui.core.BusyIndicator.show(0);
+
+        oODataModel.create("/GatePassReqHdrSet", oPayload, {
+            success: function (oData) {
+                sap.ui.core.BusyIndicator.hide();
+
+                var sReqNo = oData.GatePassReqNo || "";
+                var sMsg = oData.Message || "Gate Pass Request created successfully!";
+                
+                // Prevent duplicate request number if it's already in the message
+                var sDisplayMsg = sMsg;
+                if (sReqNo && sMsg.indexOf(sReqNo) === -1) {
+                    sDisplayMsg += "\nRequest Number: " + sReqNo;
+                }
+
+                MessageBox.success(sDisplayMsg, {
+                    actions: [MessageBox.Action.OK, "Copy Number"],
+                    emphasizedAction: MessageBox.Action.OK,
+                    onClose: function (sAction) {
+                        if (sAction === "Copy Number") {
+                            navigator.clipboard.writeText(sReqNo).then(function() {
+                                MessageToast.show("Request Number " + sReqNo + " copied!");
+                            }).catch(function(err) {
+                                // Fallback for browsers that don't support clipboard API
+                                var textArea = document.createElement("textarea");
+                                textArea.value = sReqNo;
+                                document.body.appendChild(textArea);
+                                textArea.select();
+                                document.execCommand('copy');
+                                document.body.removeChild(textArea);
+                                MessageToast.show("Request Number copied!");
+                            });
+                        }
+                        this._resetModel();
+                    }.bind(this)
+                });
+            }.bind(this),
+
+            error: function (oError) {
+                sap.ui.core.BusyIndicator.hide();
+
+                var sErrorMsg = "Failed to create Gate Pass.";
+                try {
+                    var oResp = JSON.parse(oError.responseText);
+                    sErrorMsg = oResp.error.message.value;
+                } catch (e) {}
+
+                MessageBox.error(sErrorMsg);
+            }
+        });
+
+    } catch (err) {
+        sap.ui.core.BusyIndicator.hide();
+        MessageBox.error("Client Error: " + err.message);
+        console.error(err);
+    }
+},
+
+
+
+		onClear: function () {
+			this._resetModel();
+		}
+	});
 });
