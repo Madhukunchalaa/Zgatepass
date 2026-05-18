@@ -27,11 +27,15 @@ sap.ui.define([
 			var that = this;
 			var aAllResults = [];
 			var iDone = 0;
+			var iTarget = 3;
 
 			function onBothDone() {
 				iDone++;
-				if (iDone === 2) {
+				if (iDone === iTarget) {
 					sap.ui.core.BusyIndicator.hide();
+					aAllResults.forEach(function (oItem) {
+						oItem.PendingAt = that._computePendingAt(oItem);
+					});
 					that.getView().getModel("gatePassList").setProperty("/items", aAllResults);
 					that._updateCount();
 				}
@@ -39,19 +43,73 @@ sap.ui.define([
 
 			sap.ui.core.BusyIndicator.show(0);
 
+			// 1. Fetch NRGP requests
 			oODataModel.read("/GateReqHdrSet", {
 				filters: [new Filter("GatePassType", FilterOperator.EQ, "NRGP"), new Filter("Status", FilterOperator.EQ, "All")],
 				success: function (oData) {
-					aAllResults = aAllResults.concat(oData.results || []);
+					var aMapped = (oData.results || []).map(function(oItem) {
+						var sRaw = oItem.ApprovalReq || oItem.Status || "";
+						var sStatus = oItem.Status || "Pending";
+						if (sRaw === "A" || sRaw === "APPROVED" || sRaw === "Approved") sStatus = "Approved";
+						else if (sRaw === "R" || sRaw === "REJECTED" || sRaw === "Rejected") sStatus = "Rejected";
+						else if (sRaw === "AM" || sRaw === "AMENDMENT" || sRaw === "Amendment") sStatus = "Amendment";
+						
+						oItem.Status = sStatus;
+						return oItem;
+					});
+					aAllResults = aAllResults.concat(aMapped);
 					onBothDone();
 				},
 				error: function () { onBothDone(); }
 			});
 
+			// 2. Fetch RGP requests
 			oODataModel.read("/GateReqHdrSet", {
 				filters: [new Filter("GatePassType", FilterOperator.EQ, "RGP"), new Filter("Status", FilterOperator.EQ, "All")],
 				success: function (oData) {
-					aAllResults = aAllResults.concat(oData.results || []);
+					var aMapped = (oData.results || []).map(function(oItem) {
+						var sRaw = oItem.ApprovalReq || oItem.Status || "";
+						var sStatus = oItem.Status || "Pending";
+						if (sRaw === "A" || sRaw === "APPROVED" || sRaw === "Approved") sStatus = "Approved";
+						else if (sRaw === "R" || sRaw === "REJECTED" || sRaw === "Rejected") sStatus = "Rejected";
+						else if (sRaw === "AM" || sRaw === "AMENDMENT" || sRaw === "Amendment") sStatus = "Amendment";
+						
+						oItem.Status = sStatus;
+						return oItem;
+					});
+					aAllResults = aAllResults.concat(aMapped);
+					onBothDone();
+				},
+				error: function () { onBothDone(); }
+			});
+
+			// 3. Fetch PO Gate Passes from GateInPoHdrSet (filtered by logged-in user's plant)
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var sPlant = oUserModel ? oUserModel.getProperty("/Plant") : "";
+			var aPoFilters = [];
+			if (sPlant) {
+				aPoFilters.push(new Filter("Plant", FilterOperator.EQ, sPlant));
+			}
+
+			// 3. Fetch PO Gate Passes from GateReqHdrSet (filtered by GatePassType eq 'PO')
+			oODataModel.read("/GateReqHdrSet", {
+				filters: [new Filter("GatePassType", FilterOperator.EQ, "PO"), new Filter("Status", FilterOperator.EQ, "All")],
+				success: function (oData) {
+					var aPoResults = (oData.results || []).map(function (oItem) {
+						return {
+							GatePassReqNo: "", // No request number for PO gate passes
+							GatePassNo: oItem.GatePassNo || "",
+							PurchaseOrder: oItem.GatePassReqNo || oItem.GatePassreqNo || "", // Store PO for dialog details
+							GatePassType: "GP with PO",
+							Status: oItem.Status || "Pending",
+							Plant: oItem.Plant || "",
+							VendorName: oItem.VendorName || "",
+							Department: oItem.Department || "",
+							VehicleNo: oItem.VehicleNo || "",
+							PendingAt: ""
+						};
+					});
+					aAllResults = aAllResults.concat(aPoResults);
 					onBothDone();
 				},
 				error: function () { onBothDone(); }
@@ -105,7 +163,30 @@ sap.ui.define([
 
 		onColumnListItemPress: function (oEvent) {
 			var oItem = oEvent.getSource().getBindingContext("gatePassList").getObject();
-			console.log("Selected:", oItem.GatePassReqNo);
+			if (oItem.GatePassType === "GP with PO") {
+				sap.m.MessageBox.information(
+					"Gate Pass No: " + oItem.GatePassNo + "\n" +
+					"Purchase Order: " + oItem.PurchaseOrder + "\n" +
+					"Type: Gate Pass with PO\n" +
+					"Status: " + oItem.Status + "\n" +
+					"Plant: " + oItem.Plant + "\n" +
+					"Vendor: " + oItem.VendorName + "\n" +
+					"Department: " + oItem.Department + "\n" +
+					"DC/Invoice Number: " + (oItem.VehicleNo || "N/A") + "\n\n" +
+					"Note: This Gate Pass was created directly from Purchase Order details and is finalized on creation.",
+					{ title: "PO Gate Pass Details" }
+				);
+				return;
+			}
+			this.getRouter().navTo("OutGatePass", { reqNo: oItem.GatePassReqNo });
+		},
+
+		_computePendingAt: function (oItem) {
+			if (oItem.GatePassType === "GP with PO") return "";
+			if (oItem.Status !== "Pending") return "";
+			if (!oItem.HODRemarks) return "HOD";
+			if (!oItem.STORERemarks) return "Store";
+			return "";
 		}
 
 	});

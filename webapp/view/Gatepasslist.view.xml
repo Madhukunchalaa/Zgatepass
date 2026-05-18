@@ -23,6 +23,7 @@
                         <core:Item key="" text="All Types" />
                         <core:Item key="NRGP" text="NRGP" />
                         <core:Item key="RGP" text="RGP" />
+                        <core:Item key="GP with PO" text="GP with PO" />
                     </Select>
                 </contentMiddle>
                 <contentRight>
@@ -41,7 +42,7 @@
 
                 <headerToolbar>
                     <Toolbar>
-                        <Title text="Gate Pass List" level="H3" />
+                        <Title text="Gate Pass Redquest List" level="H3" />
                         <ToolbarSpacer />
                         <Text id="idItemCountText" text="" />
                     </Toolbar>
@@ -69,6 +70,9 @@
                     <Column width="12rem" minScreenWidth="Small" demandPopin="true">
                         <Text text="Vehicle No." />
                     </Column>
+                    <Column width="10rem" minScreenWidth="Tablet" demandPopin="true">
+                        <Text text="Pending At" />
+                    </Column>
                 </columns>
 
                 <items>
@@ -83,6 +87,10 @@
                             <Text text="{gatePassList>VendorName}" />
                             <Text text="{gatePassList>Department}" />
                             <Text text="{gatePassList>VehicleNo}" />
+                            <ObjectStatus
+                                text="{= ${gatePassList>PendingAt} ? 'Pending at ' + ${gatePassList>PendingAt} : ''}"
+                                state="{= ${gatePassList>PendingAt} ? 'Warning' : 'None'}"
+                                icon="{= ${gatePassList>PendingAt} ? 'sap-icon://approvals' : ''}" />
                         </cells>
                     </ColumnListItem>
                 </items>

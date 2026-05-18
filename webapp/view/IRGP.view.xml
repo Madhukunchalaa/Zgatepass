@@ -1,0 +1,499 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.IRGP"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns="sap.m"
+	xmlns:layout="sap.ui.layout"
+	xmlns:t="sap.ui.table"
+	xmlns:core="sap.ui.core"
+	height="100%">
+	<Page title="{irgp>/ui/title}" class="gpmsPage" showHeader="false">
+		<content>
+			<VBox class="gpmsContentWrapper sapUiMediumMargin">
+
+				<!-- ─── IRGP LIST VIEW (LIST Mode) ─── -->
+				<VBox visible="{= ${irgp>/ui/currentStep} === 'LIST' }">
+					<!-- Hero Banner for List -->
+					<HBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMarginBottom">
+						<VBox>
+							<Title text="IRGP Workflow Dashboard" level="H2" class="gpmsHeroTitle"/>
+							<Text text="Track Internal Returnable Gate Passes across multi-persona store and user cycles" class="gpmsHeroSubTitle sapUiTinyMarginTop"/>
+						</VBox>
+						<HBox>
+							<Button text="Create New IRGP" icon="sap-icon://add" type="Emphasized" press="onPressCreateNewIRGP" class="sapUiSmallMarginEnd"/>
+							<Button icon="sap-icon://home" press="onNavHome" type="Default" tooltip="Go to Dashboard"/>
+						</HBox>
+					</HBox>
+
+					<!-- Segmented IconTabBar to filter by Workflow Stage -->
+					<IconTabBar id="idIRGPIconTabBar" select="onFilterIRGPList" class="sapUiMediumMarginTop gpmsIconTabBar" expandable="false">
+						<items>
+							<IconTabFilter icon="sap-icon://circle-task-2" iconColor="Default" text="All Passes" key="ALL" />
+							<IconTabFilter icon="sap-icon://workflow-tasks" iconColor="Critical" text="Pending Reservation (User)" key="PENDING_RESERVATION" />
+							<IconTabFilter icon="sap-icon://shipping-status" iconColor="Negative" text="Pending Returns (Stores)" key="PENDING_RECEIPT" />
+							<IconTabFilter icon="sap-icon://accept" iconColor="Positive" text="Closed Passes" key="CLOSED" />
+						</items>
+						<content>
+							<!-- Gorgeous Fiori Table for IRGPs -->
+							<Table id="idIRGPListTable" items="{irgpGlobal>/documents}" noDataText="No Internal Returnable Gate Pass records found." alternateRowColors="true" growing="true" class="sapUiSizeCompact gpmsItemTable">
+								<columns>
+									<Column width="160px">
+										<Text text="Gate Pass No" class="gpmsHeaderText"/>
+									</Column>
+									<Column width="110px">
+										<Text text="Request Date" class="gpmsHeaderText"/>
+									</Column>
+									<Column width="130px">
+										<Text text="Department" class="gpmsHeaderText"/>
+									</Column>
+									<Column minScreenWidth="Tablet" demandPopin="true">
+										<Text text="Requested User" class="gpmsHeaderText"/>
+									</Column>
+									<Column minScreenWidth="Tablet" demandPopin="true">
+										<Text text="Contract Employee" class="gpmsHeaderText"/>
+									</Column>
+									<Column width="180px">
+										<Text text="Status" class="gpmsHeaderText"/>
+									</Column>
+									<Column width="150px" hAlign="Right">
+										<Text text="Actions" class="gpmsHeaderText"/>
+									</Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<cells>
+											<ObjectIdentifier title="{irgpGlobal>IRGPNo}" class="gpmsSnoText"/>
+											<Text text="{irgpGlobal>GEDate}"/>
+											<Text text="{irgpGlobal>Department}"/>
+											<Text text="{irgpGlobal>RequestUser}"/>
+											<Text text="{irgpGlobal>ContractEmployeeName}"/>
+											
+											<!-- Gorgeous Workflow Status Mappings -->
+											<ObjectStatus
+												text="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' ? 'Pending Reservation' : ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' ? 'Pending Receipt (Stores)' : 'Closed &amp; Archived' }"
+												state="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' ? 'Warning' : ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' ? 'Error' : 'Success' }"
+												icon="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' ? 'sap-icon://workflow-tasks' : ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' ? 'sap-icon://shipping-status' : 'sap-icon://accept' }"/>
+
+											<!-- Dynamic Actions matching stage -->
+											<HBox justifyContent="End" alignItems="Center">
+												<!-- Link MRN (User Mode) -->
+												<Button text="Link MRN" type="Emphasized" icon="sap-icon://edit" press="onActionLinkMRN" visible="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' }" class="gpmsActionBtn"/>
+												
+												<!-- Verify Returns (Store Mode) -->
+												<Button text="Verify Return" type="Emphasized" icon="sap-icon://shipping-status" press="onActionVerifyReturn" visible="{= ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' }" class="gpmsActionBtn"/>
+												
+												<!-- View details (Archived/Closed) -->
+												<Button text="View" type="Transparent" icon="sap-icon://show" press="onActionViewClosed" visible="{= ${irgpGlobal>StatusCode} === 'CLOSED' }" class="gpmsActionBtn"/>
+											</HBox>
+										</cells>
+									</ColumnListItem>
+								</items>
+							</Table>
+						</content>
+					</IconTabBar>
+				</VBox>
+
+				<!-- ─── IRGP FORM VIEW (CREATE & DETAIL Modes) ─── -->
+				<VBox visible="{= ${irgp>/ui/currentStep} !== 'LIST' }">
+
+					<!-- PAGE TITLE HEADER -->
+					<HBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMarginBottom">
+						<Title text="{= ${irgp>/ui/currentStep} === 'CREATE' ? 'Add IRGP' : 'IRGP Details' }" level="H2" class="gpmsHeroTitle"/>
+					</HBox>
+
+				<!-- ─── FORM CARD ─── -->
+				<Panel class="gpmsSection" expandable="false">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<core:Icon src="sap-icon://document-text" class="gpmsSectionBarIcon"/>
+							<Label text="Form" class="gpmsSectionBarLabel"/>
+							<ToolbarSpacer/>
+							<Button icon="sap-icon://home" press="onNavHome" type="Transparent" tooltip="Go to Dashboard"/>
+						</Toolbar>
+					</headerToolbar>
+					<content>
+						<!-- ─── Grid for CREATE Mode ─── -->
+						<layout:Grid visible="{= ${irgp>/ui/currentStep} === 'CREATE' }" defaultSpan="XL6 L6 M6 S12" vSpacing="0" class="gpmsGridForm">
+							<!-- Request date -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Request date" class="gpmsFieldLabel"/>
+								<DatePicker value="{irgp>/header/GEDate}" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+							</VBox>
+
+							<!-- Due date -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Due date" class="gpmsFieldLabel"/>
+								<DatePicker value="{irgp>/header/DueDate}" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" editable="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%"/>
+							</VBox>
+
+							<!-- Department -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Department" class="gpmsFieldLabel"/>
+								<ComboBox value="{irgp>/header/Department}" editable="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%" items="{irgp>/dropdowns/departments}">
+									<core:Item key="{irgp>key}" text="{irgp>text}"/>
+								</ComboBox>
+							</VBox>
+
+							<!-- Requested User -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Requested User" class="gpmsFieldLabel"/>
+								<ComboBox value="{irgp>/header/RequestUser}" editable="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%" items="{irgp>/dropdowns/users}">
+									<core:Item key="{irgp>key}" text="{irgp>text}"/>
+								</ComboBox>
+							</VBox>
+
+							<!-- Contract Name -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Contract Name" class="gpmsFieldLabel"/>
+								<ComboBox value="{irgp>/header/ContractName}" editable="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%" items="{irgp>/dropdowns/contracts}">
+									<core:Item key="{irgp>key}" text="{irgp>text}"/>
+								</ComboBox>
+							</VBox>
+
+							<!-- Contract/TAQA Employee Name -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Contract/TAQA Employee Name" class="gpmsFieldLabel"/>
+								<Input value="{irgp>/header/ContractEmployeeName}" editable="{irgp>/ui/headerEditable}" class="gpmsFieldInput" placeholder="Enter Employee Name" width="100%"/>
+							</VBox>
+
+							<!-- Request Type -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Request Type" class="gpmsFieldLabel"/>
+								<Select selectedKey="{irgp>/header/RequestType}" enabled="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%">
+									<core:Item key="HxGN EAM" text="HxGN EAM"/>
+									<core:Item key="Emergency" text="Emergency Maintenance"/>
+									<core:Item key="PlantShutdown" text="Plant Shutdown"/>
+								</Select>
+							</VBox>
+						</layout:Grid>
+
+						<!-- ─── Grid for DETAIL Mode ─── -->
+						<layout:Grid visible="{= ${irgp>/ui/currentStep} !== 'CREATE' }" defaultSpan="XL6 L6 M6 S12" vSpacing="0" class="gpmsGridForm">
+							<!-- Gatepass No -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Gatepass No" class="gpmsFieldLabel"/>
+								<Input value="{irgp>/header/IRGPNo}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+							</VBox>
+
+							<!-- Request date -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Request date" class="gpmsFieldLabel"/>
+								<DatePicker value="{irgp>/header/GEDate}" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+							</VBox>
+
+							<!-- Due date -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Due date" class="gpmsFieldLabel"/>
+								<DatePicker value="{irgp>/header/DueDate}" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" editable="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%"/>
+							</VBox>
+
+							<!-- Revised Due date -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Revised Due date" class="gpmsFieldLabel"/>
+								<DatePicker value="{irgp>/header/RevisedDueDate}" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+							</VBox>
+
+							<!-- Returned date -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Returned date" class="gpmsFieldLabel"/>
+								<DatePicker value="{irgp>/header/ReturnedDate}" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+							</VBox>
+
+							<!-- Return User -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL3 L3 M3 S12"/>
+								</layoutData>
+								<Label text="Return User" class="gpmsFieldLabel"/>
+								<Input value="{irgp>/header/ReturnUser}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+							</VBox>
+
+							<!-- MR Number -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL3 L3 M3 S12"/>
+								</layoutData>
+								<Label text="MR Number" class="gpmsFieldLabel"/>
+								<Input value="{irgp>/header/MRNumber}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+							</VBox>
+
+							<!-- Requested User -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Requested User" class="gpmsFieldLabel"/>
+								<ComboBox value="{irgp>/header/RequestUser}" editable="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%" items="{irgp>/dropdowns/users}">
+									<core:Item key="{irgp>key}" text="{irgp>text}"/>
+								</ComboBox>
+							</VBox>
+
+							<!-- Department -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Department" class="gpmsFieldLabel"/>
+								<ComboBox value="{irgp>/header/Department}" editable="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%" items="{irgp>/dropdowns/departments}">
+									<core:Item key="{irgp>key}" text="{irgp>text}"/>
+								</ComboBox>
+							</VBox>
+
+							<!-- Contract Name -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Contract Name" class="gpmsFieldLabel"/>
+								<ComboBox value="{irgp>/header/ContractName}" editable="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%" items="{irgp>/dropdowns/contracts}">
+									<core:Item key="{irgp>key}" text="{irgp>text}"/>
+								</ComboBox>
+							</VBox>
+
+							<!-- Contract/TAQA Employee Name -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Contract/TAQA Employee Name" class="gpmsFieldLabel"/>
+								<Input value="{irgp>/header/ContractEmployeeName}" editable="{irgp>/ui/headerEditable}" class="gpmsFieldInput" placeholder="Enter Employee Name" width="100%"/>
+							</VBox>
+
+							<!-- Request Type -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Request Type" class="gpmsFieldLabel"/>
+								<Select selectedKey="{irgp>/header/RequestType}" enabled="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%">
+									<core:Item key="HxGN EAM" text="HxGN EAM"/>
+									<core:Item key="Emergency" text="Emergency Maintenance"/>
+									<core:Item key="PlantShutdown" text="Plant Shutdown"/>
+								</Select>
+							</VBox>
+						</layout:Grid>
+					</content>
+				</Panel>
+
+				<!-- ─── ITEMS TABLE CARD ─── -->
+				<Panel class="gpmsSection" expandable="false">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<core:Icon src="sap-icon://grid" class="gpmsSectionBarIcon"/>
+							<Label text="Table of Items" class="gpmsSectionBarLabel"/>
+						</Toolbar>
+					</headerToolbar>
+					<content>
+						<t:Table
+							id="idIRGPItemsTable"
+							rows="{irgp>/items}"
+							visibleRowCount="5"
+							selectionMode="None"
+							alternateRowColors="true"
+							class="sapUiSizeCompact gpmsItemTable">
+							<t:columns>
+								
+								<!-- SNo -->
+								<t:Column width="60px" hAlign="Center">
+									<Label text="SNo" class="gpmsHeaderText"/>
+									<t:template>
+										<Text text="{irgp>SNo}" class="gpmsSnoText"/>
+									</t:template>
+								</t:Column>
+
+								<!-- Item Code / Tools -->
+								<t:Column width="160px">
+									<Label text="{= ${irgp>/ui/currentStep} === 'CREATE' ? 'Item Code/Tools' : 'Item Code' }" class="gpmsHeaderText"/>
+									<t:template>
+										<VBox>
+											<ComboBox value="{irgp>ItemCode}" visible="{irgp>/ui/itemsEditable}" class="gpmsTableInput" items="{irgp>/dropdowns/items}" width="100%">
+												<core:Item key="{irgp>key}" text="{irgp>text}"/>
+											</ComboBox>
+											<Input value="{irgp>ItemCode}" visible="{= !${irgp>/ui/itemsEditable} }" editable="false" class="gpmsTableInput gpmsFieldInputReadonly" width="100%"/>
+										</VBox>
+									</t:template>
+								</t:Column>
+
+								<!-- Item Description -->
+								<t:Column width="280px">
+									<Label text="Item Description" class="gpmsHeaderText"/>
+									<t:template>
+										<Input value="{irgp>ItemDescription}" editable="{irgp>/ui/itemsEditable}" placeholder="e.g. Hydraulic Jack Pump" class="gpmsTableInput"/>
+									</t:template>
+								</t:Column>
+
+								<!-- Quantity (CREATE mode only) -->
+								<t:Column width="110px" hAlign="Right" visible="{= ${irgp>/ui/currentStep} === 'CREATE' }">
+									<Label text="Quantity" class="gpmsHeaderText"/>
+									<t:template>
+										<Input value="{irgp>SentQuantity}" type="Number" editable="{irgp>/ui/itemsEditable}" class="gpmsTableInput" textAlign="Right"/>
+									</t:template>
+								</t:Column>
+
+								<!-- Sent Qty (Detail/edit modes only) -->
+								<t:Column width="110px" hAlign="Right" visible="{= ${irgp>/ui/currentStep} !== 'CREATE' }">
+									<Label text="Sent Qty" class="gpmsHeaderText"/>
+									<t:template>
+										<Input value="{irgp>SentQuantity}" type="Number" editable="false" class="gpmsTableInput gpmsFieldInputReadonly" textAlign="Right"/>
+									</t:template>
+								</t:Column>
+
+								<!-- Recvd Qty (Detail/edit modes only) -->
+								<t:Column width="110px" hAlign="Right" visible="{= ${irgp>/ui/currentStep} !== 'CREATE' }">
+									<Label text="Recvd Qty" class="gpmsHeaderText"/>
+									<t:template>
+										<Input value="{irgp>RecievedQuantity}" type="Number" editable="false" class="gpmsTableInput gpmsFieldInputReadonly" textAlign="Right"/>
+									</t:template>
+								</t:Column>
+
+								<!-- Bal Qty (Detail/edit modes only) -->
+								<t:Column width="110px" hAlign="Right" visible="{= ${irgp>/ui/currentStep} !== 'CREATE' }">
+									<Label text="Bal Qty" class="gpmsHeaderText"/>
+									<t:template>
+										<Input value="{irgp>BalanceQuantity}" type="Number" editable="false" class="gpmsTableInput gpmsFieldInputReadonly" textAlign="Right"/>
+									</t:template>
+								</t:Column>
+
+								<!-- UOM -->
+								<t:Column width="110px">
+									<Label text="UOM" class="gpmsHeaderText"/>
+									<t:template>
+										<VBox>
+											<ComboBox value="{irgp>UOM}" visible="{irgp>/ui/itemsEditable}" class="gpmsTableInput" items="{irgp>/dropdowns/uoms}" width="100%">
+												<core:Item key="{irgp>key}" text="{irgp>text}"/>
+											</ComboBox>
+											<Input value="{irgp>UOM}" visible="{= !${irgp>/ui/itemsEditable} }" editable="false" class="gpmsTableInput gpmsFieldInputReadonly" width="100%"/>
+										</VBox>
+									</t:template>
+								</t:Column>
+
+								<!-- MR Number (Detail/edit modes only) -->
+								<t:Column width="160px" visible="{= ${irgp>/ui/currentStep} !== 'CREATE' }">
+									<Label text="MRNumber" class="gpmsHeaderText"/>
+									<t:template>
+										<Input value="{irgp>MRNumber}" editable="{irgp>/ui/mrNumberEditable}" placeholder="Enter MR Number" class="gpmsTableInput"/>
+									</t:template>
+								</t:Column>
+
+								<!-- Location -->
+								<t:Column width="160px">
+									<Label text="Location" class="gpmsHeaderText"/>
+									<t:template>
+										<Input value="{irgp>Location}" editable="{irgp>/ui/itemsEditable}" class="gpmsTableInput"/>
+									</t:template>
+								</t:Column>
+
+								<!-- Mp2ItemCode -->
+								<t:Column width="130px">
+									<Label text="Mp2ItemCode" class="gpmsHeaderText"/>
+									<t:template>
+										<Input value="{irgp>Mp2ItemCode}" editable="{irgp>/ui/itemsEditable}" class="gpmsTableInput"/>
+									</t:template>
+								</t:Column>
+
+								<!-- DefaultBin -->
+								<t:Column width="110px">
+									<Label text="DefaultBin" class="gpmsHeaderText"/>
+									<t:template>
+										<Input value="{irgp>DefaultBin}" editable="{irgp>/ui/itemsEditable}" class="gpmsTableInput"/>
+									</t:template>
+								</t:Column>
+
+								<!-- Action Column (CREATE mode only) -->
+								<t:Column width="100px" hAlign="Center" visible="{= ${irgp>/ui/currentStep} === 'CREATE' }">
+									<Label text="Action" class="gpmsHeaderText"/>
+									<t:template>
+										<HBox justifyContent="Center" alignItems="Center">
+											<Button icon="sap-icon://add" type="Transparent" press="onAddItem" class="gpmsActionBtn sapUiTinyMarginEnd"/>
+											<Button icon="sap-icon://delete" type="Transparent" press="onDeleteItem" class="gpmsActionBtn gpmsDeleteBtn"/>
+										</HBox>
+									</t:template>
+								</t:Column>
+
+							</t:columns>
+						</t:Table>
+					</content>
+				</Panel>
+
+				<!-- ─── REMARKS & STATUS & BUTTONS PANEL ─── -->
+				<Panel class="gpmsSection" expandable="false">
+					<content>
+						<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" class="gpmsGridForm">
+							
+							<!-- Remarks -->
+							<VBox>
+								<layoutData>
+									<layout:GridData span="{= ${irgp>/ui/currentStep} === 'CREATE' ? 'XL12 L12 M12 S12' : 'XL6 L6 M6 S12' }"/>
+								</layoutData>
+								<Label text="Remarks" class="gpmsFieldLabel"/>
+								<TextArea value="{irgp>/header/Remarks}" editable="{irgp>/ui/headerEditable}" rows="3" class="gpmsFieldInput" placeholder="Enter remarks" width="100%"/>
+							</VBox>
+
+							<!-- Status (Detail/edit modes only) -->
+							<VBox visible="{= ${irgp>/ui/currentStep} !== 'CREATE' }">
+								<layoutData>
+									<layout:GridData span="XL6 L6 M6 S12"/>
+								</layoutData>
+								<Label text="Status" class="gpmsFieldLabel"/>
+								<Select selectedKey="{irgp>/header/StatusCode}" enabled="false" class="gpmsFieldInput" width="100%">
+									<core:Item key="OPEN" text="OPEN"/>
+									<core:Item key="CLOSED" text="CLOSED"/>
+									<core:Item key="PENDING_RESERVATION" text="PENDING_RESERVATION"/>
+								</Select>
+							</VBox>
+
+						</layout:Grid>
+
+						<!-- Custom bottom action buttons matching screenshots exactly -->
+						<HBox class="sapUiSmallMarginTop" justifyContent="Start" alignItems="Center">
+							
+							<Button text="Submit" type="Emphasized" press="onSubmit" visible="{irgp>/ui/submitVisible}" class="gpmsSubmitBtn sapUiTinyMarginEnd"/>
+							<Button text="Submit Reservation" type="Emphasized" press="onSubmitReservation" visible="{irgp>/ui/submitResVisible}" class="gpmsSubmitBtn sapUiTinyMarginEnd"/>
+							<Button text="Verify &amp; Close IRGP" type="Accept" press="onCloseIRGP" visible="{irgp>/ui/closeVisible}" class="gpmsSubmitBtn sapUiTinyMarginEnd"/>
+							<Button text="Print Slip" type="Default" icon="sap-icon://print" press="onPrint" visible="{irgp>/ui/printVisible}" class="sapUiTinyMarginEnd"/>
+							<Button text="Back" type="Reject" press="onNavHome"/>
+
+						</HBox>
+					</content>
+				</Panel>
+
+				</VBox>
+			</VBox>
+		</content>
+	</Page>
+</mvc:View>

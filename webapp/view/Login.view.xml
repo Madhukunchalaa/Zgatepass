@@ -1,0 +1,48 @@
+<mvc:View
+    controllerName="zgpms.meilpower.com.controller.Login"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    displayBlock="true">
+
+    <Page showHeader="false" enableScrolling="false">
+
+        <VBox
+            justifyContent="Center"
+            alignItems="Center"
+            height="100%"
+            class="gpmsLoginBg">
+
+            <VBox alignItems="Center" class="gpmsLoginCard">
+
+                <Image
+                    src="assets/img/logo.png"
+                    height="56px"
+                    class="gpmsLoginLogo"/>
+
+                <Title
+                    text="Gate Pass Management"
+                    level="H2"
+                    class="gpmsLoginAppTitle"/>
+
+                <Text
+                    text="MEIL POWER"
+                    class="gpmsLoginCompany"/>
+
+                <core:Icon
+                    src="sap-icon://person-placeholder"
+                    class="gpmsLoginUserIcon"/>
+
+                <BusyIndicator class="sapUiSmallMarginTop"/>
+
+                <Text
+                    text="Signing in with SAP..."
+                    class="gpmsLoginLabel sapUiTinyMarginTop"/>
+
+            </VBox>
+
+        </VBox>
+
+    </Page>
+
+</mvc:View>

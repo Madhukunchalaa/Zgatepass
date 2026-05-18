@@ -48,16 +48,75 @@
 							<core:Icon src="sap-icon://shipping-status" class="gpmsCardIcon"/>
 						</TileContent>
 					</GenericTile>
-					<GenericTile class="gpmsDashCard listCard"
-    press=".onPressGatePassList"
-    header="GATE PASS LIST"
-    subheader="View All Requests">
+					<!-- Gate Pass Requests List Card -->
+					<GenericTile class="gpmsDashCard listCard" press=".onGenericTileGatePassListPress" header="GATE PASS REQUESTS LIST" subheader="View All Requests">
+						<TileContent>
+							<core:Icon src="sap-icon://list" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
 
-    <TileContent>
-        <core:Icon src="sap-icon://list" class="gpmsCardIcon"/>
-    </TileContent>
+					<!-- Gate Pass List Card -->
+					<GenericTile class="gpmsDashCard nrgpListCard" press=".onPressNRGPList" header="GATE PASS LIST" subheader="Out Gate Pass Records">
+						<TileContent>
+							<core:Icon src="sap-icon://document-text" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
 
-</GenericTile>
+					<!-- Gate Pass with PO Card -->
+					<GenericTile class="gpmsDashCard poCard" press=".onGenericTileGatePassWithPOPress" header="GATE PASS WITH PO/PETTY CASH" subheader="PO Based Gate Entry">
+						<TileContent>
+							<core:Icon src="sap-icon://purchase-order" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- IRGP Card -->
+					<GenericTile class="gpmsDashCard irgpCard" press=".onPressIRGP" header="IRGP WORKFLOW" subheader="Internal Returnable GP">
+						<TileContent>
+							<core:Icon src="sap-icon://process" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- Add PCP Card -->
+					<GenericTile class="gpmsDashCard pcpCard" press=".onPressAddPCP" header="ADD PCP" subheader="Petty Cash Purchase">
+						<TileContent>
+							<core:Icon src="sap-icon://lead" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- Ash Gate Pass Card -->
+					<GenericTile class="gpmsDashCard ashCard" press=".onPressAshGatePassCreation" header="ASH GP REQUEST" subheader="Ash Disposal Creation">
+						<TileContent>
+							<core:Icon src="sap-icon://factory" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- Ash Gate Pass List Card -->
+					<GenericTile class="gpmsDashCard ashListCard" press=".onPressAshGatePassList" header="ASH GP LIST" subheader="Ash Requests &amp; Approvals">
+						<TileContent>
+							<core:Icon src="sap-icon://list" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- Scrap Request Card -->
+					<GenericTile class="gpmsDashCard" press=".onPressScrapRequestCreation" header="SCRAP REQUEST" subheader="Scrap Collection Request">
+						<TileContent>
+							<core:Icon src="sap-icon://delete" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- Scrap Request List Card -->
+					<GenericTile class="gpmsDashCard" press=".onPressScrapRequestList" header="SCRAP REQUEST LIST" subheader="Scrap Approvals">
+						<TileContent>
+							<core:Icon src="sap-icon://list" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- Add Scrap Gatepass Card -->
+					<GenericTile class="gpmsDashCard" press=".onPressScrapGatepassCreation" header="ADD SCRAP GATEPASS" subheader="Scrap Sale &amp; Outward">
+						<TileContent>
+							<core:Icon src="sap-icon://sales-document" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
 				</HBox>
 			</VBox>
 		</content>

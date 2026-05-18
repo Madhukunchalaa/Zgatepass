@@ -19,7 +19,7 @@
 					<headerToolbar>
 						<Toolbar class="gpmsSectionBar">
 							<core:Icon src="sap-icon://document-text" class="gpmsSectionBarIcon"/>
-							<Label text="Gate Pass Details" class="gpmsSectionBarLabel"/>
+							<Label text="Gate Pass Request Details" class="gpmsSectionBarLabel"/>
 							<ToolbarSpacer/>
 
 							<ObjectStatus text="{gp>/GatePassType}" class="gpmsBadge"/>
@@ -34,7 +34,8 @@
 								selectedKey="{gp>/Plant}"
 								items="{path: 'plants>/results'}"
 								selectionChange=".onPlantChange"
-								placeholder="Select Plant..."
+								change=".onComboBoxPlantChange"
+								placeholder="Select or type Plant code..."
 								class="gpmsFieldInput"
 								width="100%">
 								<core:ListItem key="{plants>Plant}" text="{plants>Plant} - {plants>PlantName}"/>
@@ -58,17 +59,13 @@
 							<Select
                              id="gpType"
                              selectedKey="{gp>/GatePassType}"
-                             editable="false"
+                             enabled="{gp>/isTypeEditable}"
                              class="gpmsFieldInput"
                              width="100%">
     
     <core:Item key="NRGP" text="Non-Returnable Gatepass (NRGP)"/>
     <core:Item key="RGP" text="Returnable Gatepass (RGP)"/>
 </Select>
-						</VBox>
-						<VBox class="sapUiSmallMargin">
-							<Label text="Vehicle No" class="gpmsFieldLabel"/>
-							<Input value="{gp>/VehicleNo}" placeholder="e.g. TS09AB1234" class="gpmsFieldInput" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin" visible="{= ${gp>/GatePassType} === 'RGP' }">
 							<Label text="Returnable Date" required="true" class="gpmsFieldLabel"/>
@@ -77,14 +74,6 @@
 								displayFormat="dd-MM-yyyy"
 								class="gpmsFieldInput"
 								width="100%"/>
-						</VBox>
-						<VBox class="sapUiSmallMargin">
-							<Label text="Mode of Dispatch" class="gpmsFieldLabel"/>
-							<Select selectedKey="{gp>/ModeOfDispatch}" class="gpmsFieldInput" width="100%">
-								<core:Item key="Road" text="Road"/>
-								<core:Item key="Rail" text="Rail"/>
-								<core:Item key="Air" text="Air"/>
-							</Select>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="Department" required="true" class="gpmsFieldLabel"/>
@@ -226,40 +215,48 @@
 						class="gpmsItemTable">
 						<columns>
 							<Column width="3rem" hAlign="Center"><Text text="#" class="gpmsHeaderText"/></Column>
+							<Column width="12rem"><Text text="Material" class="gpmsHeaderText"/></Column>
 							<Column width="15rem"><Text text="Material Description" class="gpmsHeaderText"/></Column>
 							<Column width="8rem"><Text text="HSN Code" class="gpmsHeaderText"/></Column>
 							<Column width="8rem"><Text text="Quantity" class="gpmsHeaderText"/></Column>
 							<Column width="7rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
 							<Column width="8rem"><Text text="Rate (Rs.)" class="gpmsHeaderText"/></Column>
 							<Column width="10rem"><Text text="Amount" class="gpmsHeaderText"/></Column>
-							<Column width="3rem" hAlign="Center"><Text text="" class="gpmsHeaderText"/></Column>
+							<Column width="4rem" hAlign="Center"><Text text="" class="gpmsHeaderText"/></Column>
 						</columns>
 						<items>
 							<ColumnListItem vAlign="Middle" class="gpmsItemRow">
 								<cells>
 									<Text text="{gp>sno}" class="gpmsSnoText"/>
-									
-									<Input 
-										value="{gp>material}" 
-										description="{gp>materialName}"
-										showValueHelp="true" 
-										valueHelpRequest=".onMaterialValueHelp" 
-										class="gpmsTableInput" 
-										placeholder="Select material..."/>
-									
 
-									<VBox>
-										<Input 
-											value="{parts: [{path: 'gp>hsnCode'}, {path: 'gp>hsnDesc'}], formatter: '.formatter.formatHsnCodeDesc'}" 
-											class="gpmsTableInput" 
-											placeholder="Code"
-											editable="false"/>
-									</VBox>
-									
+									<Input
+										value="{gp>material}"
+										showValueHelp="true"
+										valueHelpRequest=".onMaterialValueHelp"
+										class="gpmsTableInput"
+										width="100%"
+										placeholder="Material no. or F4..."/>
+
+									<Input
+										value="{gp>materialName}"
+										showValueHelp="true"
+										valueHelpRequest=".onDescriptionEdit"
+										class="gpmsTableInput"
+										width="100%"
+										placeholder="Description (click icon for full edit)..."/>
+
+									<Input
+										value="{gp>hsnCode}"
+										showSuggestion="true"
+										filterSuggests="false"
+										suggest=".onHsnCodeInputSuggest"
+										suggestionItemSelected=".onHsnCodeInputSuggestionItemSelected"
+										class="gpmsTableInput"
+										placeholder="HSN code or desc..."/>
 
 									<Input value="{gp>quantity}" type="Number" textAlign="Right" liveChange=".onQtyRateChange" class="gpmsTableInput"/>
 
-									<Input value="{gp>uom}" editable="false" class="gpmsTableInput" textAlign="Center"/>
+									<Input value="{gp>uom}" class="gpmsTableInput" textAlign="Center" placeholder="UOM..."/>
 
 									<Input value="{gp>rate}" type="Number" textAlign="Right" liveChange=".onQtyRateChange" class="gpmsTableInput"/>
 
@@ -285,9 +282,11 @@
 							<Label text="Remarks" class="gpmsFieldLabel"/>
 							<TextArea
 								value="{gp>/Remarks}"
-								placeholder="Enter detailed remarks here..."
+								placeholder="Enter detailed remarks here (up to 250 characters)..."
 								rows="6"
 								width="100%"
+								maxLength="250"
+								showExceededText="true"
 								class="gpmsFieldInput gpmsTextAreaBig"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin" justifyContent="End" alignItems="End">

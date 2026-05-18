@@ -12,15 +12,18 @@ sap.ui.define([
 			this.getRouter().getRoute("InwardGatePass").attachPatternMatched(this._onRouteMatched, this);
 		},
 
-		_onRouteMatched: function () {
+		_onRouteMatched: function (oEvent) {
 			this._resetModel();
+			var sGPNo = oEvent.getParameter("arguments").gpNo;
+			if (sGPNo) {
+				this._loadByGPNo(sGPNo);
+			}
 		},
 
 		_resetModel: function () {
 			this._rawHeader = null;
-			var oModel = new JSONModel({
+			var oData = {
 				GatePassNo: "",
-				
 				DueDate: "",
 				RevisedDueDate: "",
 				ReceivedDate: null,
@@ -43,8 +46,13 @@ sap.ui.define([
 				EWayBillNo: "",
 				EWayBillDate: null,
 				FinalTotal: "0.00"
-			});
-			this.getView().setModel(oModel, "inward");
+			};
+			var oModel = this.getView().getModel("inward");
+			if (oModel) {
+				oModel.setData(oData);
+			} else {
+				this.getView().setModel(new JSONModel(oData), "inward");
+			}
 		},
 
 		_formatDate: function (vDate) {
@@ -79,7 +87,11 @@ sap.ui.define([
 		onSearchRGP: function (oEvent) {
 			var sQuery = oEvent.getParameter("query");
 			if (!sQuery) { return; }
+			this._resetModel();
+			this._loadByGPNo(sQuery);
+		},
 
+		_loadByGPNo: function (sGPNo) {
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (!oODataModel) {
 				MessageBox.error("Backend OData service not connected.");
@@ -87,16 +99,15 @@ sap.ui.define([
 			}
 
 			sap.ui.core.BusyIndicator.show(0);
-			this._resetModel();
 
 			oODataModel.read("/GatePassHDRSet", {
-				filters: [new sap.ui.model.Filter("GatePassNo", sap.ui.model.FilterOperator.EQ, sQuery)],
+				filters: [new sap.ui.model.Filter("GatePassNo", sap.ui.model.FilterOperator.EQ, sGPNo)],
 				urlParameters: { "$expand": "GatePassItemNav" },
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
 					var oResult = oData.results && oData.results[0];
 					if (!oResult) {
-						MessageBox.error("RGP Gate Pass " + sQuery + " not found.");
+						MessageBox.error("RGP Gate Pass " + sGPNo + " not found.");
 						return;
 					}
 					if (oResult.GatePassType !== "RGP") {
@@ -165,7 +176,7 @@ sap.ui.define([
 			oModel.setProperty("/VendorName",     oData.VendorName || "");
 			oModel.setProperty("/VendorGST",      oData.VendorGST || "");
 			oModel.setProperty("/items",          aMapped);
-			oModel.setProperty("/showLogistics",  false);
+			oModel.setProperty("/showLogistics",  true);
 			this._calculateFinalTotal();
 		},
 
@@ -550,6 +561,57 @@ sap.ui.define([
 			doc.setFont("helvetica", "normal"); doc.text("Materials received back against RGP. Transaction for returnable items receipt.", margin + 12, y + 6);
 
 			doc.save("InwardDC_" + (oInward.GatePassNo || "Draft") + ".pdf");
+		},
+
+		onInsuranceCheck: function (oEvent) {
+			var bSelected = oEvent.getParameter("selected");
+			var oInwardModel = this.getView().getModel("inward");
+			var oInwardData = oInwardModel ? oInwardModel.getData() : {};
+
+			if (bSelected) {
+				if (!this._pInsuranceDialog) {
+					this._pInsuranceDialog = sap.ui.core.Fragment.load({
+						id: this.getView().getId(),
+						name: "zgpms.meilpower.com.view.fragments.InwardInsuranceDialog",
+						controller: this
+					}).then(function (oDialog) {
+						this.getView().addDependent(oDialog);
+						var oModel = new sap.ui.model.json.JSONModel({});
+						oDialog.setModel(oModel, "insurance");
+						return oDialog;
+					}.bind(this));
+				}
+				this._pInsuranceDialog.then(function (oDialog) {
+					var oInsModel = oDialog.getModel("insurance");
+					oInsModel.setData({
+						InvoiceNo: oInwardData.GatePassNo || "",
+						InsuranceDate: new Date().toLocaleDateString('en-GB').split('/').join('-'),
+						ReceivedDate: oInwardData.ReceivedDate || new Date().toLocaleDateString('en-GB').split('/').join('-'),
+						Vendor: oInwardData.Vendor || "",
+						VendorAddress: oInwardData.VendorAddress || "",
+						ModeOfTransport: oInwardData.ModeOfTransport || "",
+						VehicleNo: oInwardData.VehicleNo || "",
+						InvoiceValue: oInwardData.FinalTotal ? oInwardData.FinalTotal.toString().replace(/,/g, '') : "",
+						RgpDescription: oInwardData.Remarks || oInwardData.DCNotes || ""
+					});
+					oDialog.open();
+				});
+			}
+		},
+
+		onInsuranceSubmit: function () {
+			sap.m.MessageToast.show("Insurance details saved locally. Ready for backend mapping.");
+			this.byId("idInsuranceRequired").setSelected(true);
+			this._pInsuranceDialog.then(function (oDialog) {
+				oDialog.close();
+			});
+		},
+
+		onInsuranceCancel: function () {
+			this.byId("idInsuranceRequired").setSelected(false);
+			this._pInsuranceDialog.then(function (oDialog) {
+				oDialog.close();
+			});
 		}
 	});
 });

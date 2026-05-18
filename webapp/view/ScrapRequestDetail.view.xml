@@ -1,0 +1,98 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.ScrapRequestDetail"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:core="sap.ui.core"
+	xmlns:layout="sap.ui.layout"
+	xmlns:unified="sap.ui.unified"
+	height="100%">
+	<Page
+		id="scrapRequestDetailPage"
+		title="Scrap Request Detail"
+		showNavButton="true"
+		navButtonPress=".onNavBack"
+		class="gpmsPage">
+		<content>
+			<VBox class="gpmsContentWrapper sapUiMediumMargin">
+				
+				<MessageStrip text="{scrap>/requestId} - Current Status: {scrap>/status}" type="{= ${scrap>/status} === 'Approved' ? 'Success' : (${scrap>/status} === 'Rejected' || ${scrap>/status} === 'AM' || ${scrap>/status} === 'AMENDMENT' ? 'Error' : 'Warning')}" showIcon="true" class="sapUiSmallMarginBottom"/>
+
+				<!-- Main Form -->
+				<Panel class="gpmsSection" expandable="false">
+					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" hSpacing="1">
+						<VBox class="sapUiSmallMargin">
+							<Label text="Request date" class="gpmsFieldLabel"/>
+							<Input value="{scrap>/requestDateStr}" editable="false" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+					</layout:Grid>
+				</Panel>
+
+				<!-- Table of Items -->
+				<Panel class="gpmsSection" expandable="false">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<Label text="Table of Items" class="gpmsSectionBarLabel"/>
+						</Toolbar>
+					</headerToolbar>
+					<Table items="{scrap>/items}" noDataText="No items added." class="gpmsItemTable">
+						<columns>
+							<Column width="3rem"><Text text="SNo" class="gpmsHeaderText"/></Column>
+							<Column width="15rem"><Text text="Type" class="gpmsHeaderText"/></Column>
+							<Column><Text text="Description" class="gpmsHeaderText"/></Column>
+							<Column width="10rem"><Text text="Qty" class="gpmsHeaderText"/></Column>
+							<Column width="10rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
+						</columns>
+						<items>
+							<ColumnListItem class="gpmsItemRow">
+								<cells>
+									<Text text="{scrap>sno}" class="gpmsTableText"/>
+									<Input value="{scrap>type}" editable="false" class="gpmsTableInput"/>
+									<Input value="{scrap>description}" editable="false" class="gpmsTableInput"/>
+									<Input value="{scrap>quantity}" editable="false" class="gpmsTableInput"/>
+									<Input value="{scrap>uom}" editable="false" class="gpmsTableInput"/>
+								</cells>
+							</ColumnListItem>
+						</items>
+					</Table>
+				</Panel>
+
+				<!-- Additional Details -->
+				<Panel class="gpmsSection" expandable="false">
+					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" hSpacing="1">
+						<VBox class="sapUiSmallMargin">
+							<Label text="Weighment slip Ticket No" class="gpmsFieldLabel"/>
+							<Input value="{scrap>/weighmentSlipNo}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Challan Date &amp; Time" class="gpmsFieldLabel"/>
+							<Input value="{scrap>/challanDateTime}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vehicle Name &amp; Number" class="gpmsFieldLabel"/>
+							<Input value="{scrap>/vehicleDetails}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Scrap Collect From Area" class="gpmsFieldLabel"/>
+							<Input value="{scrap>/collectArea}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+						
+						<VBox class="sapUiSmallMargin">
+							<Label text="Remarks" class="gpmsFieldLabel"/>
+							<Input value="{scrap>/remarks}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+					</layout:Grid>
+				</Panel>
+			</VBox>
+		</content>
+		<footer>
+			<OverflowToolbar class="gpmsFooterBar">
+				<Button text="Approve" type="Accept" press=".onApprove" visible="{= ${scrap>/status} !== 'Approved'}" class="sapUiSmallMarginBegin"/>
+				<Button text="Reject" type="Reject" press=".onReject" visible="{= ${scrap>/status} !== 'Approved'}"/>
+				<Button text="Amend" type="Emphasized" press=".onAmend" visible="{= ${scrap>/status} !== 'Approved'}"/>
+				<ToolbarSpacer/>
+				<Button text="Back" press=".onNavBack" />
+			</OverflowToolbar>
+		</footer>
+	</Page>
+</mvc:View>

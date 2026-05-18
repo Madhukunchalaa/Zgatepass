@@ -1,0 +1,51 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.AshGatePassList"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:core="sap.ui.core"
+	height="100%">
+	<Page
+		title="Ash Gate Pass List"
+		showNavButton="true"
+		navButtonPress=".onNavBack"
+		class="gpmsPage">
+		<content>
+			<VBox class="sapUiSmallMargin">
+				<Table
+					id="ashListTable"
+					items="{ashList>/}"
+					noDataText="No Ash Gate Passes found"
+					class="gpmsTable"
+					alternateRowColors="true">
+					<headerToolbar>
+						<OverflowToolbar>
+							<Title text="Requests" level="H2"/>
+							<ToolbarSpacer/>
+							<SearchField width="300px" search=".onSearch" placeholder="Search Request No..." class="gpmsFieldInput"/>
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column><Text text="Request No" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Vendor" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Vehicle No" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Final Total" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Status" class="gpmsTableHeaderText"/></Column>
+						<Column hAlign="Center"><Text text="Action" class="gpmsTableHeaderText"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem type="Navigation" press=".onRowPress" class="gpmsTableRow">
+							<cells>
+								<Text text="{ashList>requestId}" class="gpmsTableText"/>
+								<Text text="{= ${ashList>vendor} === 'V1' ? 'Ramco Cement Ltd' : 'Domestic Vendor'}" class="gpmsTableText"/>
+								<Text text="{ashList>VehicleNo}" class="gpmsTableText"/>
+								<Text text="{ashList>finalTotal}" class="gpmsTableText"/>
+								<ObjectStatus text="{ashList>status}" state="{= ${ashList>status} === 'OPEN' ? 'Warning' : 'Success'}"/>
+								<Button icon="sap-icon://navigation-right-arrow" type="Transparent" press=".onRowPress" tooltip="Open Request"/>
+							</cells>
+						</ColumnListItem>
+					</items>
+				</Table>
+			</VBox>
+		</content>
+	</Page>
+</mvc:View>

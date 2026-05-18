@@ -1,0 +1,205 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.GatePassWithPO"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns="sap.m"
+	xmlns:layout="sap.ui.layout"
+	xmlns:core="sap.ui.core"
+	height="100%">
+	<Page title="{= ${gpo>/SourceType} === 'PO' ? 'Gate Entry against PO' : ${gpo>/SourceType} === 'PETTY CASH' ? 'Gate Entry against Petty Cash' : 'Gate Entry' }" class="sapUiContentPadding gpmsPage">
+		<headerContent>
+			<Button icon="sap-icon://home" press="onNavHome" type="Transparent"/>
+		</headerContent>
+		<content>
+			<VBox class="gpmsMainContainer">
+
+				<!-- Header Details Panel -->
+				<Panel expandable="false" class="gpmsPanel sapUiSmallMarginBottom">
+					<headerToolbar>
+						<Toolbar height="3rem">
+							<core:Icon src="sap-icon://header" class="sapUiSmallMarginEnd"/>
+							<Title text="GATE ENTRY DETAILS" level="H3"/>
+							<ToolbarSpacer/>
+						</Toolbar>
+					</headerToolbar>
+					<layout:Grid defaultSpan="XL4 L4 M6 S12" vSpacing="0" class="gpmsGridForm">
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="GE Date" required="true" class="gpmsFieldLabel"/>
+							<DatePicker
+								id="idGEDate"
+								value="{gpo>/GEDate}"
+								displayFormat="dd-MM-yyyy"
+								valueFormat="yyyy-MM-dd"
+								class="gpmsFieldInput"
+								width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Source Type" required="true" class="gpmsFieldLabel"/>
+							<Select id="idSourceType" selectedKey="{gpo>/SourceType}" width="100%" class="gpmsFieldInput" change=".onSourceTypeChange">
+								<core:Item key="" text="Select Source Type"/>
+								<core:Item key="PO"         text="PO"/>
+								<core:Item key="PettyCash" text="Petty Cash"/>
+							</Select>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin" visible="{= ${gpo>/SourceType} !== 'PettyCash' }">
+							<Label text="PO Number" class="gpmsFieldLabel"/>
+							<Input id="idPurchaseOrder" value="{gpo>/PurchaseOrder}" placeholder="Enter PO Number" class="gpmsFieldInput" showValueHelp="true" valueHelpRequest=".onPOValueHelp" change=".onPOChange"/>
+						</VBox>
+
+						<!-- Standard Vendor Code Input for PO Mode -->
+						<VBox class="sapUiSmallMargin" visible="{= ${gpo>/SourceType} !== 'PettyCash' }">
+							<Label text="Vendor Code" class="gpmsFieldLabel"/>
+							<Input id="idVendor" value="{gpo>/Vendor}" placeholder="Enter Vendor Code" class="gpmsFieldInput" editable="false"/>
+						</VBox>
+
+						<!-- Dynamic Vendor ComboBox for Petty Cash Mode -->
+						<VBox class="sapUiSmallMargin" visible="{= ${gpo>/SourceType} === 'PettyCash' }">
+							<Label text="Vendor Code / Name" required="true" class="gpmsFieldLabel"/>
+							<ComboBox
+								id="idVendorSelect"
+								selectedKey="{gpo>/Vendor}"
+								placeholder="Search and select vendor..."
+								selectionChange=".onVendorSelect"
+								class="gpmsFieldInput"
+								width="100%"
+								items="{path: 'vendors>/results', templateShareable: false}">
+								<core:ListItem key="{vendors>Vendor}" text="{vendors>VendorName}" additionalText="{vendors>Vendor}"/>
+							</ComboBox>
+						</VBox>
+ 
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vendor Name" required="{= ${gpo>/SourceType} === 'PettyCash' }" class="gpmsFieldLabel"/>
+							<Input id="idVendorDesc" value="{gpo>/VendorDesc}" placeholder="Vendor Name" class="gpmsFieldInput" editable="false"/>
+						</VBox>
+ 
+						<VBox class="sapUiSmallMargin">
+							<Label text="Plant" required="true" class="gpmsFieldLabel"/>
+							<Input id="idPlant" value="{gpo>/Plant}" placeholder="Enter Plant" class="gpmsFieldInput" change=".onPlantChange" editable="{= ${gpo>/SourceType} !== 'PO' }"/>
+						</VBox>
+ 
+						<VBox class="sapUiSmallMargin">
+							<Label text="Department" required="true" class="gpmsFieldLabel"/>
+							<Input id="idDepartment" value="{gpo>/Department}" placeholder="Enter Department" class="gpmsFieldInput" editable="{= ${gpo>/SourceType} !== 'PO' }"/>
+						</VBox>
+ 
+						<VBox class="sapUiSmallMargin">
+							<Label text="RGP Number" class="gpmsFieldLabel"/>
+							<Input id="idRGPNumber" value="{gpo>/RGPNumber}" placeholder="Enter RGP Number" class="gpmsFieldInput gpmsPoHighlightedField" editable="{= ${gpo>/SourceType} !== 'PO' }"/>
+						</VBox>
+ 
+						<VBox class="sapUiSmallMargin">
+							<Label text="DC / Invoice No" class="gpmsFieldLabel"/>
+							<Input id="idDCNumber" value="{gpo>/DCNumber}" placeholder="Enter DC or Invoice No" class="gpmsFieldInput"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin" visible="{= ${gpo>/SourceType} === 'PettyCash' }">
+							<Label text="DC Date" class="gpmsFieldLabel"/>
+							<DatePicker
+								id="idDCdateDatePicker"
+								value="{gpo>/DCdate}"
+								displayFormat="dd-MM-yyyy"
+								valueFormat="yyyy-MM-dd"
+								class="gpmsFieldInput"
+								width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="PCP No" class="gpmsFieldLabel"/>
+							<Input id="idPCPNo" value="{gpo>/PCPNo}" placeholder="Enter PCP No" class="gpmsFieldInput gpmsPoHighlightedField" editable="{= ${gpo>/SourceType} !== 'PO' }"/>
+						</VBox>
+ 
+						<VBox class="sapUiSmallMargin">
+							<Label text="Budget Code" class="gpmsFieldLabel"/>
+							<Input id="idBudgetCode" value="{gpo>/BudgetCode}" placeholder="Enter Budget Code" class="gpmsFieldInput gpmsPoHighlightedField" editable="{= ${gpo>/SourceType} !== 'PO' }"/>
+						</VBox>
+ 
+						<VBox class="sapUiSmallMargin">
+							<Label text="Total Cost (Rs.)" class="gpmsFieldLabel"/>
+							<Input id="idTotalCost" value="{gpo>/TotalCost}" placeholder="Not required for Petty Cash" type="Number" class="gpmsFieldInput" editable="false"/>
+						</VBox>
+ 
+						<VBox class="sapUiSmallMargin">
+							<Label text="RR No" class="gpmsFieldLabel"/>
+							<Input id="idRRNo" value="{gpo>/RRNo}" placeholder="Enter RR Details" class="gpmsFieldInput"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin" visible="{= ${gpo>/SourceType} !== 'PettyCash' }">
+							<Label text="Inspection Status" class="gpmsFieldLabel"/>
+							<Select id="idInspectionStatus" selectedKey="{gpo>/InspectionStatus}" width="100%" class="gpmsFieldInput">
+								<core:Item key="Open" text="Open"/>
+								<core:Item key="Pending" text="Pending"/>
+								<core:Item key="Completed" text="Completed"/>
+							</Select>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin" visible="{= ${gpo>/SourceType} !== 'PettyCash' }">
+							<Label text="Inspected Date" class="gpmsFieldLabel"/>
+							<DatePicker
+								id="idInspectedDate"
+								value="{gpo>/Inspectiondate}"
+								displayFormat="dd-MM-yyyy"
+								valueFormat="yyyy-MM-dd"
+								class="gpmsFieldInput"
+								width="100%"
+								editable="false"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin" visible="false">
+							<Label text="Gate Entry No" class="gpmsFieldLabel"/>
+							<Input value="{gpo>/GateEntryNo}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+
+					</layout:Grid>
+
+					<VBox class="sapUiSmallMargin sapUiSmallMarginTop">
+						<Label text="Remarks" class="gpmsFieldLabel"/>
+						<TextArea id="idRemarks" value="{gpo>/Remarks}" placeholder="Enter remarks..." rows="3" width="100%" class="gpmsTextArea"/>
+					</VBox>
+
+				</Panel>
+
+				<!-- Items Panel -->
+				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginBottom">
+					<headerToolbar>
+						<Toolbar height="3rem">
+							<core:Icon src="sap-icon://list" class="sapUiSmallMarginEnd"/>
+							<Title text="ITEMS" level="H3"/>
+							<ToolbarSpacer/>
+							<Button text="Add Item" icon="sap-icon://add" press=".onAddItem" type="Transparent" class="gpmsAddBtn" visible="{= ${gpo>/SourceType} !== 'PO' }"/>
+						</Toolbar>
+					</headerToolbar>
+					<Table id="idItemsTable" items="{gpo>/GateInPoNav}" class="gpmsItemTable">
+						<columns>
+							<Column width="6rem"><Text text="Item No" class="gpmsHeaderText"/></Column>
+							<Column><Text text="Item Description" class="gpmsHeaderText"/></Column>
+							<Column width="10rem" hAlign="Right"><Text text="QTY" class="gpmsHeaderText"/></Column>
+							<Column width="8rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
+							<Column width="3rem"></Column>
+						</columns>
+						<items>
+							<ColumnListItem>
+								<cells>
+									<Input value="{gpo>ItemNo}" placeholder="Item No" class="gpmsTableInput" editable="{= ${gpo>/SourceType} !== 'PO' }"/>
+									<Input value="{gpo>ItemDescription}" placeholder="Item Description" class="gpmsTableInput" editable="{= ${gpo>/SourceType} !== 'PO' }"/>
+									<Input value="{gpo>POQuantity}" placeholder="0.000" type="Number" textAlign="Right" class="gpmsTableInput" editable="{= ${gpo>/SourceType} !== 'PO' }"/>
+									<Input value="{gpo>UOM}" placeholder="UOM" class="gpmsTableInput" editable="{= ${gpo>/SourceType} !== 'PO' }"/>
+									<Button icon="sap-icon://delete" type="Transparent" press=".onDeleteItem" class="gpmsDeleteBtn" visible="{= ${gpo>/SourceType} !== 'PO' }"/>
+								</cells>
+							</ColumnListItem>
+						</items>
+					</Table>
+				</Panel>
+
+			</VBox>
+		</content>
+		<footer>
+			<Toolbar class="gpmsFooterBar">
+				<ToolbarSpacer/>
+				<Button text="RESET" press=".onReset" icon="sap-icon://refresh" class="sapUiSmallMarginEnd"/>
+				<Button text="SUBMIT GATE PASS" type="Accept" press=".onSubmit" icon="sap-icon://sys-add" class="gpmsSubmitBtn sapUiSmallMarginEnd"/>
+			</Toolbar>
+		</footer>
+	</Page>
+</mvc:View>

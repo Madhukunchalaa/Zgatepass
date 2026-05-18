@@ -1,0 +1,49 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.ScrapRequestList"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:core="sap.ui.core"
+	height="100%">
+	<Page
+		title="Scrap Request List"
+		showNavButton="true"
+		navButtonPress=".onNavBack"
+		class="gpmsPage">
+		<content>
+			<VBox class="sapUiSmallMargin">
+				<Table
+					id="scrapRequestTable"
+					items="{scrapList>/}"
+					noDataText="No Scrap Requests found"
+					class="gpmsTable"
+					alternateRowColors="true">
+					<headerToolbar>
+						<OverflowToolbar>
+							<Title text="Scrap Requests" level="H2"/>
+							<ToolbarSpacer/>
+							<SearchField width="300px" search=".onSearch" placeholder="Search Request No..." class="gpmsFieldInput"/>
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column><Text text="Request No" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Date" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Vehicle No" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Status" class="gpmsTableHeaderText"/></Column>
+						<Column hAlign="Center"><Text text="Action" class="gpmsTableHeaderText"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem type="Navigation" press=".onRowPress" class="gpmsTableRow">
+							<cells>
+								<Text text="{scrapList>requestId}" class="gpmsTableText"/>
+								<Text text="{scrapList>requestDateStr}" class="gpmsTableText"/>
+								<Text text="{scrapList>vehicleDetails}" class="gpmsTableText"/>
+								<ObjectStatus text="{scrapList>status}" state="{= ${scrapList>status} === 'Approved' ? 'Success' : (${scrapList>status} === 'Rejected' || ${scrapList>status} === 'AM' || ${scrapList>status} === 'AMENDMENT' ? 'Error' : 'Warning') }"/>
+								<Button icon="sap-icon://navigation-right-arrow" type="Transparent" press=".onRowPress" tooltip="Open Request"/>
+							</cells>
+						</ColumnListItem>
+					</items>
+				</Table>
+			</VBox>
+		</content>
+	</Page>
+</mvc:View>

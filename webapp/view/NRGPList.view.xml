@@ -1,0 +1,114 @@
+<mvc:View
+    controllerName="zgpms.meilpower.com.controller.NRGPList"
+    xmlns="sap.m"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:core="sap.ui.core">
+
+    <Page title="Out Gate Pass List">
+        <subHeader>
+            <Bar>
+                <contentLeft>
+                    <SearchField id="idNRGPSearchField" width="18rem"
+                        placeholder="Search by GP No. or Req No."
+                        liveChange=".onSearchFieldLiveChange" />
+                </contentLeft>
+                <contentMiddle>
+                    <Select id="idNRGPTypeSelect" width="10rem" change=".onSelectFilterChange">
+                        <core:Item key="" text="All Types" />
+                        <core:Item key="NRGP" text="NRGP" />
+                        <core:Item key="RGP" text="RGP" />
+                        <core:Item key="PO" text="PO" />
+                    </Select>
+                    <Select id="idNRGPStatusSelect" width="14rem" change=".onSelectFilterChange">
+                        <core:Item key="" text="All Status" />
+                        <core:Item key="OPEN" text="OPEN" />
+                        <core:Item key="AWAITING FOR VENDOR ACKNOWLEDGEMENT" text="Awaiting Acknowledgement" />
+                        <core:Item key="CLOSED" text="CLOSED" />
+                        <core:Item key="Pending" text="Pending" />
+                        <core:Item key="Approved" text="Approved" />
+                        <core:Item key="Rejected" text="Rejected" />
+                    </Select>
+                </contentMiddle>
+                <contentRight>
+                    <DatePicker id="idNRGPFromDatePicker" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" width="9rem" change=".onDatePickerChange" placeholder="From Date"/>
+                    <DatePicker id="idNRGPToDatePicker" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" width="9rem" change=".onDatePickerChange" placeholder="To Date"/>
+                    <Button icon="sap-icon://clear-filter" text="Reset" press=".onResetButtonPress" />
+                </contentRight>
+            </Bar>
+        </subHeader>
+
+        <content>
+            <Table id="idItemsNRGPTable"
+                items="{nrgpList>/items}"
+                noDataText="No gate pass records found."
+                growing="true"
+                alternateRowColors="true"
+                sticky="ColumnHeaders,HeaderToolbar">
+
+                <headerToolbar>
+                    <Toolbar>
+                        <Title text="Out Gate Pass List" level="H3" />
+                        <ToolbarSpacer />
+                        <Text id="idNRGPCountText" text="" />
+                    </Toolbar>
+                </headerToolbar>
+
+                <columns>
+                    <Column width="9rem">
+                        <Text text="GP No." wrapping="false"/>
+                    </Column>
+                    <Column width="9rem">
+                        <Text text="Req No." wrapping="false"/>
+                    </Column>
+                    <Column width="5rem">
+                        <Text text="Type" wrapping="false"/>
+                    </Column>
+                    <Column width="9rem">
+                        <Text text="Date" wrapping="false"/>
+                    </Column>
+                    <Column width="5rem" minScreenWidth="Tablet" demandPopin="true">
+                        <Text text="Plant" wrapping="false"/>
+                    </Column>
+                    <Column width="12rem" minScreenWidth="Desktop" demandPopin="true">
+                        <Text text="Department" wrapping="false"/>
+                    </Column>
+                    <Column width="13rem" minScreenWidth="Desktop" demandPopin="true">
+                        <Text text="Vendor GST" wrapping="false"/>
+                    </Column>
+                    <Column width="10rem" minScreenWidth="Desktop" demandPopin="true">
+                        <Text text="Vehicle No." wrapping="false"/>
+                    </Column>
+                    <Column width="5rem" hAlign="Center" minScreenWidth="Tablet" demandPopin="true">
+                        <Text text="Items" wrapping="false"/>
+                    </Column>
+                    <Column>
+                        <Text text="Status" wrapping="false"/>
+                    </Column>
+                </columns>
+
+                <items>
+                    <ColumnListItem type="Navigation" press=".onColumnListItemPress">
+                        <cells>
+                            <Text text="{nrgpList>GatePassNo}" wrapping="false" class="sapMObjectIdentifierTitle"/>
+                            <Text text="{nrgpList>GatePassreqNo}" wrapping="false"/>
+                            <ObjectStatus
+                                text="{nrgpList>GatePassType}"
+                                state="{= ${nrgpList>GatePassType} === 'RGP' ? 'Information' : ${nrgpList>GatePassType} === 'PO' ? 'Success' : 'None'}"/>
+                            <Text text="{nrgpList>GatePassDate}" wrapping="false"/>
+                            <Text text="{nrgpList>Plant}" wrapping="false"/>
+                            <Text text="{nrgpList>Department}" wrapping="false"/>
+                            <Text text="{nrgpList>VendorGST}" wrapping="false"/>
+                            <Text text="{nrgpList>VehicleNo}" wrapping="false"/>
+                            <ObjectNumber number="{nrgpList>NoOfItems}" emphasized="false"/>
+                            <ObjectStatus
+                                text="{= ${nrgpList>GPStatus} ? ${nrgpList>GPStatus} : 'Not Set'}"
+                                state="{nrgpList>StatusState}"/>
+                        </cells>
+                    </ColumnListItem>
+                </items>
+
+            </Table>
+        </content>
+    </Page>
+
+</mvc:View>

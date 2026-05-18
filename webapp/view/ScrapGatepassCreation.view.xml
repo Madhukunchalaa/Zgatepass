@@ -1,0 +1,138 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.ScrapGatepassCreation"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:core="sap.ui.core"
+	xmlns:layout="sap.ui.layout"
+	xmlns:unified="sap.ui.unified"
+	height="100%">
+	<Page
+		id="scrapGatepassCreationPage"
+		title="Add Scrap Gatepass"
+		showNavButton="true"
+		navButtonPress=".onNavBack"
+		class="gpmsPage">
+		<content>
+			<VBox class="gpmsContentWrapper sapUiMediumMargin">
+				
+				<!-- Main Form -->
+				<Panel class="gpmsSection" expandable="false">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<Label text="Form" class="gpmsSectionBarLabel"/>
+						</Toolbar>
+					</headerToolbar>
+					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" hSpacing="1">
+						<VBox class="sapUiSmallMargin">
+							<Label text="Request date" class="gpmsFieldLabel"/>
+							<DatePicker
+								dateValue="{scrapGp>/requestDate}"
+								displayFormat="dd-MM-yyyy"
+								class="gpmsFieldInput"
+								width="100%"
+								editable="false"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin"></VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vendor" required="true" class="gpmsFieldLabel"/>
+							<ComboBox
+								selectedKey="{scrapGp>/vendor}"
+								selectionChange=".onVendorSelect"
+								placeholder="Select Vendor"
+								class="gpmsFieldInput"
+								width="100%">
+								<core:Item key="V1" text="Sri Manikandan Traders" />
+								<core:Item key="V2" text="Metal Scrap Buyers Pvt Ltd" />
+							</ComboBox>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="File Attachment" class="gpmsFieldLabel"/>
+							<unified:FileUploader
+								id="gpFileUploader"
+								buttonText="Choose File"
+								class="gpmsFieldInput"
+								width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vendor Address" class="gpmsFieldLabel"/>
+							<Input value="{scrapGp>/vendorAddress}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vendor's GST" class="gpmsFieldLabel"/>
+							<Input value="{scrapGp>/vendorGST}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+					</layout:Grid>
+				</Panel>
+
+				<!-- Table of Items -->
+				<Panel class="gpmsSection" expandable="false">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<Label text="Table of Items" class="gpmsSectionBarLabel"/>
+							<ToolbarSpacer/>
+							<Button text="Add Row" icon="sap-icon://add" press=".onAddItem" class="gpmsAddBtn"/>
+						</Toolbar>
+					</headerToolbar>
+					<Table items="{scrapGp>/items}" noDataText="No items added." class="gpmsItemTable">
+						<columns>
+							<Column width="3rem"><Text text="SNo" class="gpmsHeaderText"/></Column>
+							<Column width="12rem"><Text text="Material Type" class="gpmsHeaderText"/></Column>
+							<Column><Text text="Description of Material" class="gpmsHeaderText"/></Column>
+							<Column width="7rem"><Text text="Avail Qty" class="gpmsHeaderText"/></Column>
+							<Column width="7rem"><Text text="Sendout Qty" class="gpmsHeaderText"/></Column>
+							<Column width="8rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
+							<Column width="5rem" hAlign="Center"><Text text="Action" class="gpmsHeaderText"/></Column>
+						</columns>
+						<items>
+							<ColumnListItem class="gpmsItemRow">
+								<cells>
+									<Text text="{scrapGp>sno}" class="gpmsTableText"/>
+									<Select selectedKey="{scrapGp>type}" change=".onMaterialTypeSelect" class="gpmsFieldInput" width="100%">
+										<core:Item key="" text="Select Material" />
+										<core:Item key="Metal" text="Metal" />
+										<core:Item key="Rubber" text="Rubber" />
+										<core:Item key="Oil" text="Oil" />
+										<core:Item key="Plastic" text="Plastic" />
+										<core:Item key="Copper" text="Copper" />
+										<core:Item key="Batteries" text="Batteries" />
+										<core:Item key="Spent Oil(Barrel Capacity)" text="Spent Oil(Barrel Capacity)" />
+									</Select>
+									<Input value="{scrapGp>description}" class="gpmsTableInput" placeholder="Enter description"/>
+									<Input value="{scrapGp>availQty}" editable="false" class="gpmsTableInput gpmsFieldInputReadonly"/>
+									<Input value="{scrapGp>sendoutQty}" type="Number" class="gpmsTableInput"/>
+									<Input value="{scrapGp>uom}" editable="false" class="gpmsTableInput gpmsFieldInputReadonly"/>
+									<HBox>
+										<Button icon="sap-icon://add" type="Transparent" press=".onAddItem" class="sapUiTinyMarginEnd" />
+										<Button icon="sap-icon://delete" type="Transparent" press=".onRemoveItem" />
+									</HBox>
+								</cells>
+							</ColumnListItem>
+						</items>
+					</Table>
+				</Panel>
+
+				<!-- Remarks & Vehicle -->
+				<Panel class="gpmsSection" expandable="false">
+					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" hSpacing="1">
+						<VBox class="sapUiSmallMargin">
+							<Label text="Remarks" class="gpmsFieldLabel"/>
+							<TextArea value="{scrapGp>/remarks}" rows="3" placeholder="Enter remarks" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vehicle No." required="true" class="gpmsFieldLabel"/>
+							<Input value="{scrapGp>/vehicleNo}" placeholder="Enter Vehicle No" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+					</layout:Grid>
+				</Panel>
+			</VBox>
+		</content>
+		<footer>
+			<OverflowToolbar class="gpmsFooterBar">
+				<Button text="Submit" type="Accept" press=".onSubmit" class="gpmsSubmitBtn sapUiSmallMarginBegin"/>
+				<Button text="Back" type="Reject" press=".onNavBack" />
+			</OverflowToolbar>
+		</footer>
+	</Page>
+</mvc:View>

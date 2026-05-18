@@ -1,0 +1,131 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.ScrapRequestCreation"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:core="sap.ui.core"
+	xmlns:layout="sap.ui.layout"
+	xmlns:unified="sap.ui.unified"
+	height="100%">
+	<Page
+		id="scrapRequestCreationPage"
+		title="Scrap Request"
+		showNavButton="true"
+		navButtonPress=".onNavBack"
+		class="gpmsPage">
+		<content>
+			<VBox class="gpmsContentWrapper sapUiMediumMargin">
+				
+				<!-- Main Form -->
+				<Panel class="gpmsSection" expandable="false">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<Label text="Form" class="gpmsSectionBarLabel"/>
+						</Toolbar>
+					</headerToolbar>
+					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" hSpacing="1">
+						<VBox class="sapUiSmallMargin">
+							<Label text="Request date" class="gpmsFieldLabel"/>
+							<DatePicker
+								dateValue="{scrap>/requestDate}"
+								displayFormat="dd-MM-yyyy"
+								class="gpmsFieldInput"
+								width="100%"
+								editable="false"/>
+						</VBox>
+					</layout:Grid>
+				</Panel>
+
+				<!-- Table of Items -->
+				<Panel class="gpmsSection" expandable="false">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<Label text="Table of Items" class="gpmsSectionBarLabel"/>
+							<ToolbarSpacer/>
+							<Button text="Add Row" icon="sap-icon://add" press=".onAddItem" class="gpmsAddBtn"/>
+						</Toolbar>
+					</headerToolbar>
+					<Table items="{scrap>/items}" noDataText="No items added." class="gpmsItemTable">
+						<columns>
+							<Column width="3rem"><Text text="SNo" class="gpmsHeaderText"/></Column>
+							<Column width="15rem"><Text text="Type" class="gpmsHeaderText"/></Column>
+							<Column><Text text="Description" class="gpmsHeaderText"/></Column>
+							<Column width="10rem"><Text text="Qty" class="gpmsHeaderText"/></Column>
+							<Column width="10rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
+							<Column width="5rem" hAlign="Center"><Text text="Action" class="gpmsHeaderText"/></Column>
+						</columns>
+						<items>
+							<ColumnListItem class="gpmsItemRow">
+								<cells>
+									<Text text="{scrap>sno}" class="gpmsTableText"/>
+									<Select selectedKey="{scrap>type}" class="gpmsFieldInput" width="100%">
+										<core:Item key="" text="Select Type" />
+										<core:Item key="Metal" text="Metal" />
+										<core:Item key="Rubber" text="Rubber" />
+										<core:Item key="Oil" text="Oil" />
+										<core:Item key="Plastic" text="Plastic" />
+										<core:Item key="Copper" text="Copper" />
+										<core:Item key="Batteries" text="Batteries" />
+										<core:Item key="Spent Oil(Barrel Capacity)" text="Spent Oil(Barrel Capacity)" />
+									</Select>
+									<Input value="{scrap>description}" class="gpmsTableInput" placeholder="Enter description"/>
+									<Input value="{scrap>quantity}" type="Number" class="gpmsTableInput"/>
+									<Select selectedKey="{scrap>uom}" class="gpmsFieldInput" width="100%">
+										<core:Item key="KILOGRAM" text="KILOGRAM" />
+										<core:Item key="LITRE" text="LITRE" />
+										<core:Item key="METRIC TONS" text="METRIC TONS" />
+									</Select>
+									<HBox>
+										<Button icon="sap-icon://add" type="Transparent" press=".onAddItem" class="sapUiTinyMarginEnd" />
+										<Button icon="sap-icon://delete" type="Transparent" press=".onRemoveItem" />
+									</HBox>
+								</cells>
+							</ColumnListItem>
+						</items>
+					</Table>
+				</Panel>
+
+				<!-- Additional Details -->
+				<Panel class="gpmsSection" expandable="false">
+					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" hSpacing="1">
+						<VBox class="sapUiSmallMargin">
+							<Label text="Weighment slip Ticket No" class="gpmsFieldLabel"/>
+							<Input value="{scrap>/weighmentSlipNo}" placeholder="Weighment slip Ticket No" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Challan Date &amp; Time" class="gpmsFieldLabel"/>
+							<Input value="{scrap>/challanDateTime}" placeholder="Enter Challan Date &amp; Time" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vehicle Name &amp; Number" class="gpmsFieldLabel"/>
+							<Input value="{scrap>/vehicleDetails}" placeholder="Enter Vehicle Name &amp; Number" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Scrap Collect From Area" class="gpmsFieldLabel"/>
+							<Input value="{scrap>/collectArea}" placeholder="Enter Scrap Collect From Area" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Photo/File Attachment" class="gpmsFieldLabel"/>
+							<unified:FileUploader
+								id="fileUploader"
+								buttonText="Choose File"
+								change=".onFileChange"
+								class="gpmsFieldInput"
+								width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Remarks" class="gpmsFieldLabel"/>
+							<Input value="{scrap>/remarks}" placeholder="Enter remarks" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+					</layout:Grid>
+				</Panel>
+			</VBox>
+		</content>
+		<footer>
+			<OverflowToolbar class="gpmsFooterBar">
+				<Button text="Submit" type="Emphasized" press=".onSubmit" class="gpmsSubmitBtn sapUiSmallMarginBegin"/>
+			</OverflowToolbar>
+		</footer>
+	</Page>
+</mvc:View>

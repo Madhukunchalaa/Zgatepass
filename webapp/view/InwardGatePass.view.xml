@@ -191,6 +191,11 @@ xmlns:layout="sap.ui.layout"
 								</VBox>
 							</HBox>
 
+							<!-- Insurance Required Checkbox -->
+							<HBox class="sapUiSmallMarginTop" alignItems="Center">
+								<CheckBox id="idInsuranceRequired" text="Insurance Required" select=".onInsuranceCheck"/>
+							</HBox>
+
 							<!-- Row 5 - Status (Full Width) -->
 							<VBox class="sapUiSmallMarginTop">
 								<Label text="Status" class="gpmsFieldLabel"/>
@@ -230,7 +235,7 @@ xmlns:layout="sap.ui.layout"
 							</Table>
 						</VBox>
 
-						<HBox justifyContent="End" class="sapUiLargeMarginTop">
+						<HBox justifyContent="End" alignItems="Center" class="sapUiLargeMarginTop">
 							<Button text="PRINT GATE PASS" type="Emphasized" press=".onPrintGatePass" icon="sap-icon://print" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd" visible="{= ${inward>/DocOptionIndex} === 1 }"/>
 							<Button text="Generate DC" type="Emphasized" press=".onGenerateDC" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd" visible="{= ${inward>/DocOptionIndex} === 1 }"/>
 						</HBox>
@@ -249,7 +254,7 @@ xmlns:layout="sap.ui.layout"
 		<footer>
 			<Toolbar class="gpmsFooterBar">
 				<ToolbarSpacer/>
-				<Button text="SUBMIT INWARD GATE PASS" type="Accept" press=".onPostInward" icon="sap-icon://sys-add" class="gpmsSubmitBtn sapUiSmallMarginEnd" enabled="{= ${inward>/items}.length > 0 &amp;&amp; !${inward>/showLogistics} }"/>
+				<Button text="SUBMIT INWARD GATE PASS" type="Accept" press=".onPostInward" icon="sap-icon://sys-add" class="gpmsSubmitBtn sapUiSmallMarginEnd" enabled="{= ${inward>/items}.length > 0 }"/>
 			</Toolbar>
 		</footer>
 	</Page>

@@ -13,8 +13,61 @@ sap.ui.define([
 			this.getRouter().getRoute("OutGatePass").attachPatternMatched(this._onRouteMatched, this);
 		},
 
-		_onRouteMatched: function () {
+		_onRouteMatched: function (oEvent) {
 			this._resetModel();
+			var oArgs = oEvent.getParameter("arguments");
+			var sReqNo = oArgs.reqNo;
+			var sGPNo  = oArgs.gpNo;
+			if (sReqNo) {
+				this._loadByReqNo(sReqNo, sGPNo);
+			}
+		},
+
+		_loadByReqNo: function (sReqNo, sGPNo) {
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) {
+				return;
+			}
+
+			this.byId("requestSearch").setValue(sReqNo);
+			sap.ui.core.BusyIndicator.show(0);
+
+			oODataModel.read("/GateReqHdrSet", {
+				filters: [new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)],
+				urlParameters: { "$expand": "GateReqItmNav" },
+				success: function (oData) {
+					sap.ui.core.BusyIndicator.hide();
+					var oResult = oData.results && oData.results[0];
+					if (!oResult) {
+						sap.m.MessageBox.error("No data found for Request No: " + sReqNo);
+						return;
+					}
+					var sStatus = oResult.ApprovalReq.toUpperCase();
+					if (sStatus === "A") {
+						this._validateAndMapData(oResult);
+						// If a GP No was passed directly (navigated from Gate Pass List),
+						// force-set it and open logistics immediately
+						if (sGPNo) {
+							var oOutModel = this.getView().getModel("out");
+							oOutModel.setProperty("/GatePassNo", sGPNo);
+							oOutModel.setProperty("/showLogistics", true);
+						}
+					} else if (sStatus === "R" || sStatus === "REJECTED") {
+						sap.m.MessageBox.error("Request Number " + sReqNo + " has been Rejected and is now Closed.");
+						this._validateAndMapData(oResult);
+						var oOutModel = this.getView().getModel("out");
+						oOutModel.setProperty("/ApprovalStatus", "CLOSED");
+						oOutModel.setProperty("/ApprovalState", "Error");
+						oOutModel.setProperty("/ApprovalIcon", "sap-icon://decline");
+					} else {
+						this._showApprovalFlow(oResult);
+					}
+				}.bind(this),
+				error: function () {
+					sap.ui.core.BusyIndicator.hide();
+					sap.m.MessageBox.error("Error fetching request " + sReqNo);
+				}
+			});
 		},
 
 		onAddComment: function () {
@@ -85,9 +138,15 @@ sap.ui.define([
 				VendorGST: "",
 				VendorAddress: "",
 				UserRemarks: "",
+				HODRemarks: "",
+				StoreRemarks: "",
 				items: [],
 				FinalTotal: "0.00",
 				showLogistics: false,
+				showApprovalFlow: false,
+				HODApproved: false,
+				StoreApproved: false,
+				StoreActive: false,
 				DocOptionIndex: 0,
 				Status: "OPEN",
 				CommentsList: [],
@@ -106,8 +165,12 @@ sap.ui.define([
 				ExtendedReturnableDate: null,
 				Cocode: ""
 			};
-			var oModel = new JSONModel(oData);
-			this.getView().setModel(oModel, "out");
+			var oModel = this.getView().getModel("out");
+			if (oModel) {
+				oModel.setData(oData);
+			} else {
+				this.getView().setModel(new JSONModel(oData), "out");
+			}
 		},
 
 		onSearchRequest: function (oEvent) {
@@ -157,16 +220,16 @@ sap.ui.define([
 						if (sStatus === "A") {
 							console.log('approve ayindi')
 							this._validateAndMapData(oResult);
-						} else if(sStatus === "R") {
-							console.log('This Gate pass is number Regected')
-							sap.m.MessageBox.warning(
-								"Request Number " + sReqNo + " is Regected!"
-							);
+						} else if (sStatus === "R" || sStatus === "REJECTED") {
+							sap.m.MessageBox.error("Request Number " + sReqNo + " has been Rejected and is now Closed.");
+							this._validateAndMapData(oResult);
+							var oOutModel = this.getView().getModel("out");
+							oOutModel.setProperty("/ApprovalStatus", "CLOSED");
+							oOutModel.setProperty("/ApprovalState", "Error");
+							oOutModel.setProperty("/ApprovalIcon", "sap-icon://decline");
+						} else {
+							this._showApprovalFlow(oResult);
 						}
-						else if(sStatus === "P") {
-						console.log(sReqNo,"This is number is in pending")
-						sap.m.MessageBox.error("Request Number " + sReqNo + " is waiting for Approval.");
-					} 
 					}
 				}.bind(this),
 				error: function (oError) {
@@ -197,6 +260,20 @@ sap.ui.define([
 			}.bind(this), 100);
 		},
 
+		_showApprovalFlow: function (oResult) {
+			var oOutModel = this.getView().getModel("out");
+			var bHODApproved = !!oResult.HODRemarks;
+			var bStoreApproved = !!oResult.STORERemarks;
+			oOutModel.setProperty("/showApprovalFlow", true);
+			oOutModel.setProperty("/HODApproved", bHODApproved);
+			oOutModel.setProperty("/StoreApproved", bStoreApproved);
+			oOutModel.setProperty("/StoreActive", bHODApproved);
+			oOutModel.setProperty("/GatePassreqNo", oResult.GatePassReqNo || "");
+			oOutModel.setProperty("/Department", oResult.Department || "");
+			oOutModel.setProperty("/HODRemarks", oResult.HODRemarks || "");
+			oOutModel.setProperty("/StoreRemarks", oResult.STORERemarks || "");
+		},
+
 		_validateAndMapData: function (oData) {
 			var oOutModel = this.getView().getModel("out");
 
@@ -215,6 +292,8 @@ sap.ui.define([
 				sStatus = "APPROVED";
 			} else if (sRawStatus === "REJECTED" || sRawStatus === "R" || sRawStatus === "Rejected") {
 				sStatus = "REJECTED";
+			} else if (sRawStatus === "AM" || sRawStatus === "Amendment" || sRawStatus === "Amendment Required") {
+				sStatus = "AMENDMENT";
 			} else if (sRawStatus) {
 				sStatus = sRawStatus;
 			}
@@ -229,6 +308,9 @@ sap.ui.define([
 			} else if (sStatus === "REJECTED") {
 				sState = "Error";
 				sIcon = "sap-icon://sys-cancel-2";
+			} else if (sStatus === "AMENDMENT") {
+				sState = "Information";
+				sIcon = "sap-icon://edit";
 			}
 			oOutModel.setProperty("/ApprovalState", sState);
 			oOutModel.setProperty("/ApprovalIcon", sIcon);
@@ -242,7 +324,9 @@ sap.ui.define([
 			oOutModel.setProperty("/TransporterGST", oData.VendorGST || "");
 			oOutModel.setProperty("/VendorAddress", (oData.City || "") + ", " + (oData.ZipCode || ""));
 			oOutModel.setProperty("/VendorPerson", oData.VendorPerson);
-			oOutModel.setProperty("/UserRemarks", oData.Remarks);
+			oOutModel.setProperty("/UserRemarks", oData.Remarks || "");
+			oOutModel.setProperty("/HODRemarks", oData.HODRemarks || "");
+			oOutModel.setProperty("/StoreRemarks", oData.STORERemarks || "");
 			oOutModel.setProperty("/VehicleNo", oData.VehicleNo);
 			oOutModel.setProperty("/ModeOfTransport", oData.ModeOfDispatch);
 			oOutModel.setProperty("/Plant", oData.Plant || oData.Werks || "");
@@ -266,8 +350,10 @@ sap.ui.define([
 
 				return {
 					sno: index + 1,
-					materialName: it.Material || it.Matnr || "",
+					material: it.Material || it.Matnr || "",
+					materialName: it.MaterialDesc || it.MaterialName || it.Description || it.Maktx || it.HSNDesc || it.Material || it.Matnr || "",
 					hsnCode: it.HSNCode || it.Hsncode || "",
+					hsnDesc: it.HSNDesc || "",
 					sentQty: fQty,
 					recvdQty: 0,
 					balQty: fQty,
@@ -281,9 +367,33 @@ sap.ui.define([
 			// Recalc Total
 			var fTotal = aMappedItems.reduce(function (sum, it) { return sum + it.amount; }, 0);
 			oOutModel.setProperty("/FinalTotal", fTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }));
+
+			// Gate pass already exists — show logistics section immediately
+			if (oData.GatePassNo) {
+				oOutModel.setProperty("/showLogistics", true);
+			}
 		},
 
+		onItemUpdate: function (oEvent) {
+			var oCtx = oEvent.getSource().getBindingContext("out");
+			var oItem = oCtx.getObject();
+			var oOutModel = this.getView().getModel("out");
 
+			var fQty = parseFloat(oItem.sentQty || 0);
+			var fRate = parseFloat(oItem.rate || 0);
+			oItem.amount = parseFloat((fQty * fRate).toFixed(2));
+			oItem.balQty = fQty; // Assuming balance is reset on amendment resubmit
+
+			oOutModel.refresh(true);
+			this._recalculateFinalTotal();
+		},
+
+		_recalculateFinalTotal: function () {
+			var oOutModel = this.getView().getModel("out");
+			var aItems = oOutModel.getProperty("/items") || [];
+			var fTotal = aItems.reduce(function (sum, it) { return sum + parseFloat(it.amount || 0); }, 0);
+			oOutModel.setProperty("/FinalTotal", fTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }));
+		},
 
 		onNavHome: function () {
 			this.getRouter().navTo("home");
@@ -293,114 +403,226 @@ sap.ui.define([
 			var oOut = this.getView().getModel("out").getData();
 			const { jsPDF } = window.jspdf;
 			var doc = new jsPDF('p', 'mm', 'a4');
-			var margin = 10;
+			var margin = 15;
 			var pageWidth = doc.internal.pageSize.width;
+			var pageHeight = doc.internal.pageSize.height;
+			var contentWidth = pageWidth - margin * 2;
 			var sDate = new Date().toLocaleDateString('en-GB').split('/').join('-');
 
-			// --- 1. Header Section ---
+			// ── PAGE BORDER ──────────────────────────────────────────────────────
+			doc.setLineWidth(0.6);
+			doc.rect(8, 6, pageWidth - 16, pageHeight - 12);
+			doc.setLineWidth(0.2);
+			doc.rect(9.5, 7.5, pageWidth - 19, pageHeight - 15);
+
+			// ── HEADER ───────────────────────────────────────────────────────────
 			var sLogoUrl = sap.ui.require.toUrl("zgpms/meilpower/com/images/meil_logo.png");
 			try {
 				var sLogoBase64 = await this._getImageBase64(sLogoUrl);
-				doc.addImage(sLogoBase64, 'PNG', margin, 5, 25, 9);
+				doc.addImage(sLogoBase64, 'PNG', margin, 10, 30, 11);
 			} catch (e) {
-				console.error("Logo load failed", e);
+				doc.setFont("helvetica", "bold");
+				doc.setFontSize(18);
+				doc.setTextColor(180, 0, 0);
+				doc.text("M", margin + 5, 18);
+				doc.setTextColor(0, 0, 0);
 			}
-			doc.setFont("helvetica", "bold"); doc.setFontSize(14);
-			doc.text("MEIL Neyveli Energy Private Limited", pageWidth / 2, 10, { align: "center" });
-			doc.setFontSize(7); doc.setFont("helvetica", "normal");
-			doc.text("(Formerly TAGA Neyveli Power Company Private Limited)", pageWidth / 2, 13, { align: "center" });
-			doc.text("250MW LFPP, Uthangal, Neyveli, Tamilnadu - 607804, India.", pageWidth / 2, 16, { align: "center" });
-			doc.text("Tel : +91-4142-270300 | Fax : +91-4142-270401", pageWidth / 2, 19, { align: "center" });
-			doc.setFont("helvetica", "bold");
-			doc.text("GSTIN : 33AACCS2753B1ZV | CIN : U40109TN1993PTC026223", pageWidth / 2, 22, { align: "center" });
 
+			doc.setTextColor(0, 0, 0);
+			doc.setFont("helvetica", "bold");
+			doc.setFontSize(13);
+			doc.text("MEIL Neyveli Energy Private Limited", pageWidth / 2, 13, { align: "center" });
+			doc.setFont("helvetica", "normal");
+			doc.setFontSize(7.5);
+			doc.text("(Formerly TAQA Neyveli Power Company Private Limited)", pageWidth / 2, 17, { align: "center" });
+			doc.text("250MW LFPP, Uthangal, Neyveli, Tamilnadu - 607804, India.", pageWidth / 2, 20.5, { align: "center" });
+			doc.text("Tel : +91-4142-270300  |  Fax : +91-4142-270401", pageWidth / 2, 24, { align: "center" });
+			doc.setFont("helvetica", "bold");
+			doc.text("GSTIN : 33AACCS2753B1ZV  |  CIN : U40109TN1993PTC026223", pageWidth / 2, 27.5, { align: "center" });
+
+			// Thick separator below header
+			doc.setLineWidth(0.5);
+			doc.line(margin, 30.5, pageWidth - margin, 30.5);
+
+			// ── DOCUMENT TITLE ───────────────────────────────────────────────────
+			doc.setFont("helvetica", "bold");
 			doc.setFontSize(11);
-			doc.text("DELIVERY CHALLAN", pageWidth / 2, 30, { align: "center" });
-			doc.line(pageWidth / 2 - 20, 31, pageWidth / 2 + 20, 31);
+			doc.text("DELIVERY CHALLAN", pageWidth / 2, 37, { align: "center" });
+			var titleW = doc.getTextWidth("DELIVERY CHALLAN");
+			doc.setLineWidth(0.35);
+			doc.line(pageWidth / 2 - titleW / 2, 38.5, pageWidth / 2 + titleW / 2, 38.5);
 
-			// --- 2. Unified Grid Section ---
-			var hY = 35;
-			doc.setLineWidth(0.1);
-			doc.rect(margin, hY, pageWidth - margin * 2, 45); // Outer Box
-			doc.line(75, hY, 75, hY + 45); // Vertical 1
-			doc.line(135, hY, 135, hY + 45); // Vertical 2
+			// ── INFO GRID (3 columns) ─────────────────────────────────────────────
+			// Col1=To (62mm)  Col2=DC/Transport (65mm)  Col3=GP/Location (remaining)
+			var gridY = 41;
+			var gridH = 50;
+			var col1W = 62, col2W = 65, col3W = contentWidth - col1W - col2W;
+			var col1X = margin, col2X = margin + col1W, col3X = margin + col1W + col2W;
+			var pad = 3, lh = 5.5;
 
-			// Column 1: To Address
-			doc.setFontSize(8); doc.setFont("helvetica", "bold");
-			doc.text("To", margin + 2, hY + 5);
-			doc.text(oOut.VendorName || "", margin + 10, hY + 5);
-			doc.setFont("helvetica", "normal");
-			var splitToAddr = doc.splitTextToSize(oOut.VendorAddress || "", 55);
-			doc.text(splitToAddr, margin + 10, hY + 10);
+			doc.setLineWidth(0.3);
+			doc.rect(col1X, gridY, contentWidth, gridH);
+			doc.line(col2X, gridY, col2X, gridY + gridH);
+			doc.line(col3X, gridY, col3X, gridY + gridH);
+
+			// Col 1 — Consignee
+			doc.setFontSize(8.5);
 			doc.setFont("helvetica", "bold");
-			doc.text("GST No", margin + 2, hY + 40);
+			doc.text("To", col1X + pad, gridY + 8);
+			doc.text(oOut.VendorName || "", col1X + 10, gridY + 8);
 			doc.setFont("helvetica", "normal");
-			doc.text(oOut.VendorGST || "", margin + 12, hY + 40);
-
-			// Column 2: DC & Transport
-			var c2X = 77;
-			doc.setFont("helvetica", "bold"); doc.text("DC No:", c2X, hY + 5);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.ChallanNumber || "Draft", c2X + 28, hY + 5);
-			doc.setFont("helvetica", "bold"); doc.text("DC Date:", c2X, hY + 10);
-			doc.setFont("helvetica", "normal"); doc.text(sDate, c2X + 28, hY + 10);
-
-			doc.setFont("helvetica", "bold"); doc.text("Mode Of Transport:", c2X, hY + 18);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.ModeOfTransport || "By Road", c2X + 28, hY + 18);
-
+			doc.setFontSize(8);
+			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || "", col1W - 14);
+			doc.text(splitAddr, col1X + 10, gridY + 14);
+			doc.setLineWidth(0.2);
+			doc.line(col1X, gridY + gridH - 10, col2X, gridY + gridH - 10);
 			doc.setFont("helvetica", "bold");
-			doc.text("LR/Vehicle No/", c2X, hY + 26);
-			doc.text("Transporter Name:", c2X, hY + 30);
+			doc.setFontSize(8);
+			doc.text("GST No:", col1X + pad, gridY + gridH - 4);
 			doc.setFont("helvetica", "normal");
-			doc.text(oOut.VehicleNo || "", c2X + 28, hY + 26);
-			var splitTrans = doc.splitTextToSize(oOut.TransporterName || "Self", 40);
-			doc.text(splitTrans, c2X + 28, hY + 30);
+			doc.text(oOut.VendorGST || "", col1X + 22, gridY + gridH - 4);
 
-			// Column 3: GP & Location
-			var c3X = 137;
-			doc.setFont("helvetica", "bold"); doc.text("GP No", c3X, hY + 5);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassNo || "", c3X + 28, hY + 5);
-			doc.setFont("helvetica", "bold"); doc.text("GP Date:", c3X, hY + 10);
-			doc.setFont("helvetica", "normal"); doc.text(sDate, c3X + 28, hY + 10);
+			// Col 2 — DC & Transport
+			var c2 = col2X + pad, valOff2 = 30, y2 = gridY + 8;
+			doc.setLineWidth(0.3);
+			doc.setFontSize(8);
+			doc.setFont("helvetica", "bold"); doc.text("DC No:", c2, y2);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.ChallanNumber || "Draft", c2 + valOff2, y2);
+			y2 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("DC Date:", c2, y2);
+			doc.setFont("helvetica", "normal"); doc.text(sDate, c2 + valOff2, y2);
+			y2 += lh + 2;
+			doc.setFont("helvetica", "bold"); doc.text("Mode Of Transport:", c2, y2);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.ModeOfTransport || "By Road", c2 + valOff2, y2);
+			y2 += lh + 2;
+			doc.setFont("helvetica", "bold"); doc.text("LR/Vehicle No:", c2, y2);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", c2 + valOff2, y2);
+			y2 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("Transporter Name:", c2, y2);
+			doc.setFont("helvetica", "normal");
+			var splitTrans = doc.splitTextToSize(oOut.TransporterName || oOut.VendorName || "Self", col2W - valOff2 - pad);
+			doc.text(splitTrans, c2 + valOff2, y2);
 
-			doc.setFont("helvetica", "bold"); doc.text("Despatch From:", c3X, hY + 18);
-			doc.setFont("helvetica", "normal"); doc.text("Uthangal, Neyveli", c3X + 28, hY + 18);
-			doc.setFont("helvetica", "bold"); doc.text("Despatch To:", c3X, hY + 26);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.City || "Neyveli", c3X + 28, hY + 26);
-			doc.setFont("helvetica", "bold"); doc.text("EWBNo:", c3X, hY + 34);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.EWayBillNo || "", c3X + 28, hY + 34);
+			// Col 3 — GP & Location
+			var c3 = col3X + pad, valOff3 = 27, y3 = gridY + 8;
+			doc.setFontSize(8);
+			doc.setFont("helvetica", "bold"); doc.text("GP No:", c3, y3);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassNo || "", c3 + valOff3, y3);
+			y3 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("GP Date:", c3, y3);
+			doc.setFont("helvetica", "normal"); doc.text(sDate, c3 + valOff3, y3);
+			y3 += lh + 2;
+			doc.setFont("helvetica", "bold"); doc.text("Despatch From:", c3, y3);
+			doc.setFont("helvetica", "normal"); doc.text("Uthangal, Neyveli", c3 + valOff3, y3);
+			y3 += lh + 2;
+			doc.setFont("helvetica", "bold"); doc.text("Despatch To:", c3, y3);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.City || "Neyveli", c3 + valOff3, y3);
+			y3 += lh + 2;
+			doc.setFont("helvetica", "bold"); doc.text("EWB No:", c3, y3);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.EWayBillNo || "", c3 + valOff3, y3);
 
-			// --- 3. Items Table ---
+			// ── ITEMS TABLE ──────────────────────────────────────────────────────
 			var tableData = (oOut.items || []).map(function (item, index) {
-				return [index + 1, item.materialName, item.hsnCode, item.uom, item.sentQty, parseFloat(item.rate || 0).toFixed(2), parseFloat(item.amount || 0).toFixed(2)];
+				return [
+					index + 1,
+					item.materialName || "",
+					item.hsnCode || "",
+					item.uom || "",
+					parseFloat(item.sentQty || 0).toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }),
+					parseFloat(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+					parseFloat(item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+				];
 			});
 
 			doc.autoTable({
-				startY: hY + 48,
-				head: [['S.N o', 'DESCRIPTION', 'HSN Code', 'UOM', 'QTY', 'Rate', 'Amt(In Rs.)']],
+				startY: gridY + gridH + 1,
+				head: [['S.No', 'DESCRIPTION', 'HSN Code', 'UOM', 'QTY', 'Rate', 'Amt (In Rs.)']],
 				body: tableData,
 				theme: 'grid',
-				headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', lineWidth: 0.1, halign: 'center' },
-				styles: { fontSize: 8, cellPadding: 2, lineColor: [0, 0, 0], lineWidth: 0.1 },
-				columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 15, halign: 'center' }, 4: { cellWidth: 15, halign: 'center' }, 5: { cellWidth: 20, halign: 'right' }, 6: { cellWidth: 25, halign: 'right' } }
+				headStyles: {
+					fillColor: [235, 235, 235],
+					textColor: [0, 0, 0],
+					fontStyle: 'bold',
+					fontSize: 8,
+					halign: 'center',
+					valign: 'middle',
+					cellPadding: 3,
+					lineWidth: 0.3,
+					lineColor: [0, 0, 0]
+				},
+				bodyStyles: {
+					fontSize: 8,
+					cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
+					lineColor: [0, 0, 0],
+					lineWidth: 0.25,
+					valign: 'middle'
+				},
+				alternateRowStyles: { fillColor: [250, 250, 250] },
+				columnStyles: {
+					0: { cellWidth: 12, halign: 'center' },
+					1: { cellWidth: 'auto', halign: 'left' },
+					2: { cellWidth: 25, halign: 'center' },
+					3: { cellWidth: 16, halign: 'center' },
+					4: { cellWidth: 20, halign: 'right' },
+					5: { cellWidth: 22, halign: 'right' },
+					6: { cellWidth: 27, halign: 'right' }
+				},
+				margin: { left: margin, right: margin }
 			});
 
 			var finalY = doc.lastAutoTable.finalY;
 			var fTotal = oOut.FinalTotal ? oOut.FinalTotal.toString().replace(/,/g, '') : "0";
-			var totalAmt = parseFloat(fTotal);
+			var totalAmt = parseFloat(fTotal) || 0;
 
-			// Table Footer Row (In Words & Total)
-			doc.rect(margin, finalY, pageWidth - margin * 2, 8);
-			doc.setFontSize(8); doc.setFont("helvetica", "normal");
-			doc.text("In Words - Rupees " + this._numberToWords(Math.round(totalAmt)) + " Only.", margin + 2, finalY + 5);
-			doc.line(pageWidth - 60, finalY, pageWidth - 60, finalY + 8);
-			doc.setFont("helvetica", "bold"); doc.text("Total", pageWidth - 55, finalY + 5);
-			doc.text(totalAmt.toLocaleString(), pageWidth - margin - 2, finalY + 5, { align: "right" });
+			// ── IN WORDS + TOTAL ROW ─────────────────────────────────────────────
+			var footH = 9, totalColW = 49;
+			doc.setLineWidth(0.25);
+			doc.rect(margin, finalY, contentWidth, footH);
+			doc.line(pageWidth - margin - totalColW, finalY, pageWidth - margin - totalColW, finalY + footH);
+			doc.setFont("helvetica", "normal");
+			doc.setFontSize(8);
+			doc.text("In Words :  Rupees " + this._numberToWords(Math.round(totalAmt)) + " Only.", margin + 3, finalY + 5.5);
+			doc.setFont("helvetica", "bold");
+			doc.text("Total", pageWidth - margin - totalColW + 3, finalY + 5.5);
+			doc.text(
+				totalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+				pageWidth - margin - 3, finalY + 5.5, { align: "right" }
+			);
 
-			// Note Section
-			var y = finalY + 12;
-			doc.rect(margin, y, pageWidth - margin * 2, 10);
-			doc.setFont("helvetica", "bold"); doc.text("Note :", margin + 2, y + 6);
-			doc.setFont("helvetica", "normal"); doc.text("Empty cylinders return to the vendor and there is no sale in this transaction.", margin + 12, y + 6);
+			// ── NOTE SECTION ─────────────────────────────────────────────────────
+			var noteY = finalY + footH + 3;
+			var noteText = oOut.DCNotes || "Empty cylinders return to the vendor and there is no sale in this transaction.";
+			var splitNote = doc.splitTextToSize(noteText, contentWidth - 22);
+			var noteH = Math.max(10, splitNote.length * 5 + 6);
+			doc.setLineWidth(0.25);
+			doc.rect(margin, noteY, contentWidth, noteH);
+			doc.setFont("helvetica", "bold");
+			doc.setFontSize(8);
+			doc.text("Note :", margin + 3, noteY + 6);
+			doc.setFont("helvetica", "normal");
+			doc.text(splitNote, margin + 18, noteY + 6);
+
+			// ── DECLARATION ──────────────────────────────────────────────────────
+			var declY = noteY + noteH + 6;
+			doc.setFont("helvetica", "italic");
+			doc.setFontSize(7.5);
+			doc.text("We hereby certify that the above mentioned particulars are true and correct.", pageWidth / 2, declY, { align: "center" });
+
+			// ── SIGNATURE SECTION ────────────────────────────────────────────────
+			var sigY = declY + 22;
+			var sigLineW = 48;
+			doc.setLineWidth(0.3);
+			doc.line(margin, sigY, margin + sigLineW, sigY);
+			doc.line(pageWidth / 2 - sigLineW / 2, sigY, pageWidth / 2 + sigLineW / 2, sigY);
+			doc.line(pageWidth - margin - sigLineW, sigY, pageWidth - margin, sigY);
+			doc.setFont("helvetica", "bold");
+			doc.setFontSize(8);
+			doc.text("Prepared By", margin + sigLineW / 2, sigY + 5, { align: "center" });
+			doc.text("Store In-Charge", pageWidth / 2, sigY + 5, { align: "center" });
+			doc.text("Authorised Signatory", pageWidth - margin - sigLineW / 2, sigY + 5, { align: "center" });
+			doc.setFont("helvetica", "normal");
+			doc.setFontSize(7);
+			doc.text("For MEIL Neyveli Energy Private Limited", pageWidth / 2, sigY + 10, { align: "center" });
 
 			doc.save("DC_" + (oOut.GatePassNo || "Draft") + ".pdf");
 			MessageToast.show("Delivery Challan Downloaded");
@@ -515,133 +737,233 @@ sap.ui.define([
 			}
 
 			const { jsPDF } = window.jspdf;
-			var doc = new jsPDF('p', 'mm', 'a4');
-			var pageWidth = doc.internal.pageSize.width;
+			// Landscape A4
+			var doc = new jsPDF('l', 'mm', 'a4');
+			var pageWidth = doc.internal.pageSize.width;    // 297mm
+			var pageHeight = doc.internal.pageSize.height;  // 210mm
 			var margin = 12;
+			var contentWidth = pageWidth - margin * 2;       // 273mm
 			var sDate = new Date().toLocaleDateString('en-GB').split('/').join('-');
+			var fTotal = parseFloat(oOut.FinalTotal ? oOut.FinalTotal.toString().replace(/,/g, '') : "0") || 0;
+			var sType = oOut.GatePassType || "NRGP";
+			var sTypeLabel = sType === "RGP" ? "RETURNABLE GATE PASS" : "NON-RETURNABLE GATE PASS";
 
-			// --- Header Section ---
+			// ── PAGE BORDER ──────────────────────────────────────────────────────
+			doc.setLineWidth(0.6);
+			doc.rect(7, 5, pageWidth - 14, pageHeight - 10);
+			doc.setLineWidth(0.2);
+			doc.rect(8.5, 6.5, pageWidth - 17, pageHeight - 13);
+
+			// ── HEADER ───────────────────────────────────────────────────────────
 			var sLogoUrl = sap.ui.require.toUrl("zgpms/meilpower/com/images/meil_logo.png");
 			try {
 				var sLogoBase64 = await this._getImageBase64(sLogoUrl);
-				doc.addImage(sLogoBase64, 'PNG', margin, 10, 35, 12);
+				doc.addImage(sLogoBase64, 'PNG', margin, 9, 32, 12);
 			} catch (e) {
 				doc.setFont("helvetica", "bold");
-				doc.setFontSize(22);
-				doc.setTextColor(204, 32, 32);
-				doc.text("MEIL", margin, 20);
+				doc.setFontSize(18);
+				doc.setTextColor(180, 0, 0);
+				doc.text("MEIL", margin, 18);
+				doc.setTextColor(0, 0, 0);
 			}
-			
-			doc.setFontSize(8);
+
 			doc.setTextColor(0, 0, 0);
-
-			// Company Info
-			doc.setFontSize(16);
-			doc.text("MEIL Neyveli Energy Private Limited", pageWidth / 2 + 10, 18, { align: "center" });
-			doc.setFontSize(7);
-			doc.setFont("helvetica", "normal");
-			doc.text("(Formerly TAGA Neyveli Power Company Private Limited)", pageWidth / 2 + 10, 22, { align: "center" });
-			doc.text("250 MW LFPP, Uttangal, Neyveli, Tamilnadu - 607804, India", pageWidth / 2 + 10, 25, { align: "center" });
 			doc.setFont("helvetica", "bold");
-			doc.text("GSTIN : 33AACCS2753B1ZV | CIN : U40109TN1993PTC026223", pageWidth / 2 + 10, 28, { align: "center" });
-
-			// Title
-			doc.setFontSize(10);
-			doc.text("GATEPASS FOR NON RETURNABLE MATERIAL", pageWidth / 2, 38, { align: "center" });
-			doc.line(pageWidth / 2 - 40, 39, pageWidth / 2 + 40, 39);
-
-			// Ref & Date Row
-			var y = 48;
-			doc.setFontSize(9);
-			doc.text(oOut.GatePassNo || "", margin, y);
-			doc.text("GP Date:", 140, y);
+			doc.setFontSize(14);
+			doc.text("MEIL Neyveli Energy Private Limited", pageWidth / 2, 13, { align: "center" });
 			doc.setFont("helvetica", "normal");
-			doc.text(sDate, 165, y);
-
-			y += 5;
+			doc.setFontSize(7.5);
+			doc.text("(Formerly TAQA Neyveli Power Company Private Limited)", pageWidth / 2, 17, { align: "center" });
+			doc.text("250MW LFPP, Uthangal, Neyveli, Tamilnadu - 607804, India.", pageWidth / 2, 20.5, { align: "center" });
+			doc.text("Tel : +91-4142-270300  |  Fax : +91-4142-270401", pageWidth / 2, 24, { align: "center" });
 			doc.setFont("helvetica", "bold");
-			doc.text("Vendor GST:", 140, y);
-			doc.setFont("helvetica", "normal");
-			doc.text(oOut.VendorGST || "", 165, y);
+			doc.text("GSTIN : 33AACCS2753B1ZV  |  CIN : U40109TN1993PTC026223", pageWidth / 2, 27.5, { align: "center" });
 
-			y += 5;
-			doc.setFont("helvetica", "bold");
-			doc.text("DC No:", 140, y);
-			doc.setFont("helvetica", "normal");
-			doc.text(oOut.ChallanNumber || "N/A", 165, y);
-
-			// Vendor Info
-			y = 58;
+			// GP No + Date in top-right corner
 			doc.setFontSize(8.5);
-			doc.text("Please allow", margin, y);
 			doc.setFont("helvetica", "bold");
-			doc.text(oOut.VendorPerson || "Mr/Ms.", 35, y);
-			y += 4;
-			var vendorInfo = (oOut.VendorName || "") + ", " + (oOut.VendorAddress || "");
-			var splitVendor = doc.splitTextToSize(vendorInfo, 100);
-			doc.text(splitVendor, 35, y);
-
-			y += (splitVendor.length * 4) + 2;
+			doc.text("GP No : " + (oOut.GatePassNo || ""), pageWidth - margin, 12, { align: "right" });
 			doc.setFont("helvetica", "normal");
-			doc.text("To take out the following material", margin, y);
+			doc.text("Date : " + sDate, pageWidth - margin, 17, { align: "right" });
 
-			// --- Table ---
-			y += 4;
+			// Thick separator below header
+			doc.setLineWidth(0.5);
+			doc.line(margin, 30.5, pageWidth - margin, 30.5);
+
+			// ── DOCUMENT TITLE ───────────────────────────────────────────────────
+			doc.setFont("helvetica", "bold");
+			doc.setFontSize(11);
+			doc.text(sTypeLabel, pageWidth / 2, 37, { align: "center" });
+			var titleW = doc.getTextWidth(sTypeLabel);
+			doc.setLineWidth(0.35);
+			doc.line(pageWidth / 2 - titleW / 2, 38.5, pageWidth / 2 + titleW / 2, 38.5);
+
+			// ── INFO GRID ────────────────────────────────────────────────────────
+			// Left col = Party/Vendor info (148mm) | Right col = Doc details (rest)
+			var gridY = 41, gridH = 32;
+			var lColW = 148, rColW = contentWidth - lColW;
+			var lColX = margin, rColX = margin + lColW;
+			var pad = 3, rLH = 5.5;
+
+			doc.setLineWidth(0.3);
+			doc.rect(lColX, gridY, contentWidth, gridH);
+			doc.line(rColX, gridY, rColX, gridY + gridH);
+			// Horizontal divider inside left col after "Please allow" row
+			doc.setLineWidth(0.2);
+			doc.line(lColX, gridY + 9, rColX, gridY + 9);
+
+			// Left col top row — Please Allow
+			doc.setFontSize(8.5);
+			doc.setFont("helvetica", "normal");
+			doc.text("Please allow", lColX + pad, gridY + 6);
+			doc.setFont("helvetica", "bold");
+			doc.text(oOut.VendorPerson || "Mr./Ms.", lColX + 34, gridY + 6);
+
+			// Left col body — Vendor details
+			doc.setFontSize(8.5);
+			doc.setFont("helvetica", "bold");
+			doc.text(oOut.VendorName || "", lColX + pad, gridY + 14);
+			doc.setFont("helvetica", "normal");
+			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || "", lColW - pad * 2 - 2);
+			doc.text(splitAddr, lColX + pad, gridY + 19.5);
+			doc.setFont("helvetica", "italic");
+			doc.setFontSize(8);
+			doc.text("to take out the following material from MEIL premises.", lColX + pad, gridY + gridH - 3.5);
+
+			// Right col — Document details
+			var rc = rColX + pad, ry = gridY + 6;
+			var lblOff = 30;
+			doc.setFontSize(8.5);
+			doc.setFont("helvetica", "bold"); doc.text("Req. No:", rc, ry);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassreqNo || "", rc + lblOff, ry);
+			ry += rLH;
+			doc.setFont("helvetica", "bold"); doc.text("GP Type:", rc, ry);
+			doc.setFont("helvetica", "normal"); doc.text(sType, rc + lblOff, ry);
+			ry += rLH;
+			doc.setFont("helvetica", "bold"); doc.text("Department:", rc, ry);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", rc + lblOff, ry);
+			ry += rLH;
+			doc.setFont("helvetica", "bold"); doc.text("Vehicle No:", rc, ry);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", rc + lblOff, ry);
+			ry += rLH;
+			doc.setFont("helvetica", "bold"); doc.text("Vendor GST:", rc, ry);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.VendorGST || "", rc + lblOff, ry);
+
+			// ── ITEMS TABLE ──────────────────────────────────────────────────────
 			var tableData = (oOut.items || []).map(function (it, i) {
-				return [i + 1, it.materialName || "", it.sentQty, it.uom, it.amount];
+				return [
+					i + 1,
+					it.materialName || "",
+					it.hsnCode || "",
+					parseFloat(it.sentQty || 0).toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }),
+					it.uom || "",
+					parseFloat(it.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+					parseFloat(it.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+				];
 			});
-			while (tableData.length < 8) { tableData.push(["", "", "", "", ""]); }
+			while (tableData.length < 6) { tableData.push(["", "", "", "", "", "", ""]); }
 
 			doc.autoTable({
-				startY: y,
-				head: [['S.No', 'DESCRIPTION', 'Outward QTY', 'UOM', 'Material Value (Rs.)']],
+				startY: gridY + gridH + 1,
+				head: [['S.No', 'DESCRIPTION OF GOODS', 'HSN Code', 'Outward QTY', 'UOM', 'Rate (Rs.)', 'Value (Rs.)']],
 				body: tableData,
 				theme: 'grid',
-				styles: { fontSize: 8, cellPadding: 2, lineColor: [0, 0, 0], lineWidth: 0.1 },
-				headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', lineWidth: 0.1 },
-				columnStyles: { 0: { cellWidth: 15 }, 1: { cellWidth: 95 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20 }, 4: { cellWidth: 35, halign: 'right' } }
+				headStyles: {
+					fillColor: [235, 235, 235],
+					textColor: [0, 0, 0],
+					fontStyle: 'bold',
+					fontSize: 8.5,
+					halign: 'center',
+					valign: 'middle',
+					cellPadding: 3,
+					lineWidth: 0.3,
+					lineColor: [0, 0, 0]
+				},
+				bodyStyles: {
+					fontSize: 8.5,
+					cellPadding: { top: 3, bottom: 3, left: 2.5, right: 2.5 },
+					lineColor: [0, 0, 0],
+					lineWidth: 0.25,
+					valign: 'middle'
+				},
+				alternateRowStyles: { fillColor: [250, 250, 250] },
+				columnStyles: {
+					0: { cellWidth: 14, halign: 'center' },
+					1: { cellWidth: 'auto', halign: 'left' },
+					2: { cellWidth: 26, halign: 'center' },
+					3: { cellWidth: 30, halign: 'right' },
+					4: { cellWidth: 18, halign: 'center' },
+					5: { cellWidth: 30, halign: 'right' },
+					6: { cellWidth: 34, halign: 'right' }
+				},
+				margin: { left: margin, right: margin }
 			});
 
-			// --- Footer ---
-			y = doc.lastAutoTable.finalY;
-			doc.rect(margin, y, pageWidth - margin * 2, 8);
+			var finalY = doc.lastAutoTable.finalY;
+
+			// ── IN WORDS + TOTAL ROW ─────────────────────────────────────────────
+			var footH = 9, totalColW = 64;
+			doc.setLineWidth(0.25);
+			doc.rect(margin, finalY, contentWidth, footH);
+			doc.line(pageWidth - margin - totalColW, finalY, pageWidth - margin - totalColW, finalY + footH);
+			doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+			doc.text("In Words :  Rupees " + this._numberToWords(Math.round(fTotal)) + " Only.", margin + 3, finalY + 5.5);
 			doc.setFont("helvetica", "bold");
-			doc.text("Remarks", margin + 2, y + 5);
+			doc.text("Total Value (Rs.)", pageWidth - margin - totalColW + 3, finalY + 5.5);
+			doc.text(
+				fTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+				pageWidth - margin - 3, finalY + 5.5, { align: "right" }
+			);
+
+			// ── REMARKS ROW ──────────────────────────────────────────────────────
+			var remY = finalY + footH + 1, remH = 8;
+			doc.setLineWidth(0.25);
+			doc.rect(margin, remY, contentWidth, remH);
+			doc.line(margin + 28, remY, margin + 28, remY + remH);
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+			doc.text("Remarks:", margin + 3, remY + 5);
 			doc.setFont("helvetica", "normal");
-			doc.text(oOut.UserRemarks || "None", margin + 25, y + 5);
+			doc.text(doc.splitTextToSize(oOut.UserRemarks || "NIL", contentWidth - 33), margin + 31, remY + 5);
 
-			y += 12;
+			// ── META INFO ROW ─────────────────────────────────────────────────────
+			var metaY = remY + remH + 3;
 			doc.setFontSize(8);
-			doc.setFont("helvetica", "bold"); doc.text("Req No:", margin, y);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassreqNo || "", margin + 30, y);
-			doc.setFont("helvetica", "bold"); doc.text("Req User:", 75, y);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.Requestor || "System", 95, y);
-			doc.setFont("helvetica", "bold"); doc.text("Dept:", 140, y);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", 155, y);
+			// Row 1
+			doc.setFont("helvetica", "bold"); doc.text("Req. No:", margin, metaY);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassreqNo || "", margin + 18, metaY);
+			doc.setFont("helvetica", "bold"); doc.text("Requestor:", margin + 70, metaY);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.Requestor || "", margin + 90, metaY);
+			doc.setFont("helvetica", "bold"); doc.text("Department:", margin + 150, metaY);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", margin + 172, metaY);
+			// Row 2
+			metaY += 5;
+			doc.setFont("helvetica", "bold"); doc.text("Approved By:", margin, metaY);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.ApprovedBy || "Pending", margin + 24, metaY);
+			doc.setFont("helvetica", "bold"); doc.text("DC No:", margin + 70, metaY);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.ChallanNumber || "N/A", margin + 84, metaY);
+			doc.setFont("helvetica", "bold"); doc.text("Mode:", margin + 150, metaY);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.ModeOfTransport || "", margin + 162, metaY);
 
-			y += 5;
-			doc.setFont("helvetica", "bold"); doc.text("Approved By:", margin, y);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.ApprovedBy || "Pending", margin + 30, y);
-			doc.setFont("helvetica", "bold"); doc.text("Vehicle No:", 75, y);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", 95, y);
-			doc.setFont("helvetica", "bold"); doc.text("Total Value (Rs.):", 140, y);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.FinalTotal || "0.00", 168, y);
+			// ── SIGNATURE SECTION ────────────────────────────────────────────────
+			var sigY = metaY + 16;
+			var sigLineW = 52;
+			var sigGap = (contentWidth - sigLineW * 4) / 3;
+			var sigPositions = [margin, margin + sigLineW + sigGap, margin + (sigLineW + sigGap) * 2, margin + (sigLineW + sigGap) * 3];
+			var sigLabels = ["Requested By", "HOD Approval", "Store In-Charge", "Security / Gate"];
 
-			y += 5;
-			var fTotal = parseFloat(oOut.FinalTotal ? oOut.FinalTotal.toString().replace(/,/g, '') : "0");
-			doc.setFont("helvetica", "italic");
-			doc.text("(Rupees : " + this._numberToWords(Math.round(fTotal)) + " Only )", 140, y);
-
-			// --- Signatures ---
-			y += 25;
-			doc.setFont("helvetica", "bold");
-			doc.text("For MEIL Neyveli Energy Private Limited", margin, y);
-			y += 12;
-			doc.text("Authorised Signatory", margin, y);
-			doc.text("Receiver's Sign", pageWidth - margin - 25, y, { align: "right" });
+			doc.setLineWidth(0.3);
+			sigPositions.forEach(function (sx) {
+				doc.line(sx, sigY, sx + sigLineW, sigY);
+			});
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+			sigPositions.forEach(function (sx, i) {
+				doc.text(sigLabels[i], sx + sigLineW / 2, sigY + 5, { align: "center" });
+			});
+			doc.setFont("helvetica", "normal"); doc.setFontSize(7);
+			doc.text("For MEIL Neyveli Energy Private Limited", pageWidth / 2, sigY + 10, { align: "center" });
 
 			doc.save("GatePass_" + (oOut.GatePassNo || "Draft") + ".pdf");
-			MessageToast.show("Gate Pass Generated");
+			MessageToast.show("Gate Pass Printed");
 		},
 
 
@@ -666,8 +988,161 @@ sap.ui.define([
 			// Logic to show/hide document buttons handled via visibility bindings in XML
 		},
 
-		onSubmitOutgate: function () {
+		onInsuranceCheck: function (oEvent) {
+			var bSelected = oEvent.getParameter("selected");
+			var oOutModel = this.getView().getModel("out");
+			var oOutData = oOutModel ? oOutModel.getData() : {};
+
+			if (bSelected) {
+				if (!this._pInsuranceDialog) {
+					this._pInsuranceDialog = sap.ui.core.Fragment.load({
+						id: this.getView().getId(),
+						name: "zgpms.meilpower.com.view.fragments.InwardInsuranceDialog",
+						controller: this
+					}).then(function (oDialog) {
+						this.getView().addDependent(oDialog);
+						var oModel = new sap.ui.model.json.JSONModel({});
+						oDialog.setModel(oModel, "insurance");
+						return oDialog;
+					}.bind(this));
+				}
+				this._pInsuranceDialog.then(function (oDialog) {
+					var oInsModel = oDialog.getModel("insurance");
+					oInsModel.setData({
+						InvoiceNo: oOutData.GatePassreqNo || "",
+						InsuranceDate: new Date().toLocaleDateString("en-GB").split("/").join("-"),
+						ReceivedDate: new Date().toLocaleDateString("en-GB").split("/").join("-"),
+						Vendor: oOutData.VendorName || "",
+						VendorAddress: oOutData.VendorAddress || "",
+						ModeOfTransport: oOutData.ModeOfTransport || "Road",
+						VehicleNo: oOutData.VehicleNo || "",
+						InvoiceValue: oOutData.FinalTotal ? oOutData.FinalTotal.toString().replace(/,/g, "") : "",
+						RgpDescription: oOutData.UserRemarks || ""
+					});
+					oDialog.open();
+				});
+			}
+		},
+
+		onInsuranceSubmit: function () {
+			sap.m.MessageToast.show("Insurance details saved.");
+			this.byId("idInsuranceRequired").setSelected(true);
+			this._pInsuranceDialog.then(function (oDialog) {
+				oDialog.close();
+			});
+		},
+
+		onInsuranceCancel: function () {
+			this.byId("idInsuranceRequired").setSelected(false);
+			this._pInsuranceDialog.then(function (oDialog) {
+				oDialog.close();
+			});
+		},
+
+		_resubmitAmendmentRequest: function () {
 			var oOut = this.getView().getModel("out").getData();
+			var oODataModel = this.getModel();
+			if (!oODataModel) {
+				MessageBox.warning("Backend service not available.");
+				return;
+			}
+
+			// Format dates as YYYYMMDD for SAP OData compatibility
+			var fnFormatDate = function (oDate) {
+				if (!oDate) return "";
+				if (typeof oDate === "string" && oDate.length === 8 && !isNaN(oDate)) {
+					return oDate;
+				}
+				var d = new Date(oDate);
+				if (isNaN(d.getTime())) return "";
+				var y = d.getFullYear();
+				var m = String(d.getMonth() + 1).padStart(2, '0');
+				var day = String(d.getDate()).padStart(2, '0');
+				return y + m + day;
+			};
+
+			var sToday = new Date().toISOString().split('T')[0];
+			var sGpDateSAP = fnFormatDate(sToday);
+			
+			// Map returnable date if RGP
+			var sReturnableDateSAP = "";
+			if (oOut.GatePassType === "RGP") {
+				sReturnableDateSAP = oOut.ExtendedReturnableDate ? fnFormatDate(oOut.ExtendedReturnableDate) : sGpDateSAP;
+			}
+
+			var oPayload = {
+				GatePassReqNo: oOut.GatePassreqNo || "",
+				GatePassType: oOut.GatePassType || "RGP",
+				Cocode: oOut.Cocode || "",
+				Plant: oOut.Plant || "",
+				FiscalYear: oOut.FiscalYear || String(new Date().getFullYear()),
+				GpDate: sGpDateSAP,
+				Vendor: oOut.Vendor || "",
+				VendorName: oOut.VendorName || "",
+				VendorGST: oOut.VendorGST || "",
+				ZipCode: oOut.ZipCode || "",
+				City: oOut.City || "",
+				ApprovalReq: "X", // Resubmit for approval (routes to inbox)
+				Department: oOut.Department || "",
+				VehicleNo: oOut.VehicleNo || "",
+				ModeOfDispatch: oOut.ModeOfTransport || "",
+				Remarks: oOut.UserRemarks || "",
+				ReturnableDate: sReturnableDateSAP,
+
+				GateReqItmNav: (oOut.items || []).map(function (it, index) {
+					var fQty = parseFloat(it.sentQty || 0);
+					var fRate = parseFloat(it.rate || 0);
+					var fValue = fQty * fRate;
+
+					return {
+						GatePassType: oOut.GatePassType || "RGP",
+						ItemNo: String((index + 1) * 10).padStart(5, '0'),
+						Material: it.material || "",
+						MaterialDesc: it.materialName || "",
+						HSNCode: it.hsnCode || "",
+						HSNDesc: it.hsnDesc || "",
+						UOM: it.uom || "EA",
+						ItemNetPrice: String(fRate.toFixed(2)),
+						RequestedQuantity: String(fQty.toFixed(3)),
+						Totalvalue: String(fValue.toFixed(2)),
+						Remarks: it.remarks || ""
+					};
+				})
+			};
+
+			sap.ui.core.BusyIndicator.show(0);
+			oODataModel.create("/GatePassReqHdrSet", oPayload, {
+				success: function (oData) {
+					sap.ui.core.BusyIndicator.hide();
+					var sReqNo = oData.GatePassReqNo || oOut.GatePassreqNo;
+					MessageBox.success("Gate Pass Request " + sReqNo + " has been successfully re-submitted and sent for approval to HOD & Stores!", {
+						onClose: function () {
+							this._resetModel();
+							this.getRouter().navTo("home");
+						}.bind(this)
+					});
+				}.bind(this),
+				error: function (oError) {
+					sap.ui.core.BusyIndicator.hide();
+					var sMsg = "Error re-submitting Gate Pass Request.";
+					try {
+						var oResp = JSON.parse(oError.responseText);
+						sMsg = oResp.error.message.value;
+					} catch (e) { }
+					MessageBox.error(sMsg);
+				}
+			});
+		},
+
+		onSubmitOutgate: function () {
+			var oOutModel = this.getView().getModel("out");
+			var sApprovalStatus = oOutModel.getProperty("/ApprovalStatus") || "";
+			if (sApprovalStatus === "AMENDMENT") {
+				this._resubmitAmendmentRequest();
+				return;
+			}
+
+			var oOut = oOutModel.getData();
 
 			// Format today's date as YYYY-MM-DD
 			var sToday = new Date().toISOString().split('T')[0];
@@ -706,9 +1181,9 @@ sap.ui.define([
 						GatePassType: oOut.GatePassType || "RGP",
 						GatePassNo: oOut.GatePassNo || "",
 						ItemNo: String((index + 1) * 10).padStart(5, '0'),
-						Material: it.materialName,
+						Material: it.material || "",
 						HSNCode: it.hsnCode,
-						HSNDesc: it.materialDesc || "",
+						HSNDesc: it.hsnDesc || "",
 						UOM: it.uom,
 						ItemNetPrice: String(parseFloat(it.rate || 0).toFixed(2)),
 						SentQuantity: String(parseFloat(it.sentQty || 0).toFixed(3)),

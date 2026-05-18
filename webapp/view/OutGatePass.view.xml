@@ -43,6 +43,75 @@
 					</layout:Grid>
 				</Panel>
 
+				<!-- Approval Flow Panel (visible when request is pending) -->
+				<Panel visible="{out>/showApprovalFlow}" class="gpmsPanel sapUiSmallMarginBottom">
+					<headerToolbar>
+						<Toolbar height="3rem">
+							<core:Icon src="sap-icon://approvals" class="sapUiSmallMarginEnd"/>
+							<Title text="APPROVAL STATUS" level="H3"/>
+							<ToolbarSpacer/>
+							<Text text="Request No: {out>/GatePassreqNo}" class="gpmsFieldLabel sapUiSmallMarginEnd"/>
+							<ObjectStatus text="Awaiting Approval" state="Warning" icon="sap-icon://pending"/>
+						</Toolbar>
+					</headerToolbar>
+					<HBox justifyContent="Center" alignItems="Center" class="gpmsApprovalFlow">
+
+						<!-- HOD Step – Approved -->
+						<VBox alignItems="Center" class="gpmsApprovalStep gpmsStepApproved" visible="{out>/HODApproved}">
+							<core:Icon src="sap-icon://employee" class="gpmsStepMainIcon"/>
+							<Title text="HOD Approval" level="H5" class="gpmsStepTitle sapUiTinyMarginTop"/>
+							<HBox justifyContent="Center" alignItems="Center" class="sapUiTinyMarginTop">
+								<core:Icon src="sap-icon://accept" class="gpmsStepStatusIcon"/>
+								<Text text="Approved" class="gpmsStepStatusText sapUiTinyMarginBegin"/>
+							</HBox>
+						</VBox>
+
+						<!-- HOD Step – Pending -->
+						<VBox alignItems="Center" class="gpmsApprovalStep gpmsStepPending" visible="{= !${out>/HODApproved}}">
+							<core:Icon src="sap-icon://employee" class="gpmsStepMainIcon"/>
+							<Title text="HOD Approval" level="H5" class="gpmsStepTitle sapUiTinyMarginTop"/>
+							<HBox justifyContent="Center" alignItems="Center" class="sapUiTinyMarginTop">
+								<core:Icon src="sap-icon://pending" class="gpmsStepStatusIcon gpmsStepPulse"/>
+								<Text text="Pending" class="gpmsStepStatusText sapUiTinyMarginBegin"/>
+							</HBox>
+						</VBox>
+
+						<!-- Arrow connector -->
+						<core:Icon src="sap-icon://arrow-right" class="gpmsFlowArrow"/>
+
+						<!-- Store Step – Approved -->
+						<VBox alignItems="Center" class="gpmsApprovalStep gpmsStepApproved" visible="{out>/StoreApproved}">
+							<core:Icon src="sap-icon://home-share" class="gpmsStepMainIcon"/>
+							<Title text="Store Approval" level="H5" class="gpmsStepTitle sapUiTinyMarginTop"/>
+							<HBox justifyContent="Center" alignItems="Center" class="sapUiTinyMarginTop">
+								<core:Icon src="sap-icon://accept" class="gpmsStepStatusIcon"/>
+								<Text text="Approved" class="gpmsStepStatusText sapUiTinyMarginBegin"/>
+							</HBox>
+						</VBox>
+
+						<!-- Store Step – Active Pending (HOD done, Store pending) -->
+						<VBox alignItems="Center" class="gpmsApprovalStep gpmsStepPending" visible="{= ${out>/StoreActive} &amp;&amp; !${out>/StoreApproved}}">
+							<core:Icon src="sap-icon://home-share" class="gpmsStepMainIcon"/>
+							<Title text="Store Approval" level="H5" class="gpmsStepTitle sapUiTinyMarginTop"/>
+							<HBox justifyContent="Center" alignItems="Center" class="sapUiTinyMarginTop">
+								<core:Icon src="sap-icon://pending" class="gpmsStepStatusIcon gpmsStepPulse"/>
+								<Text text="Pending" class="gpmsStepStatusText sapUiTinyMarginBegin"/>
+							</HBox>
+						</VBox>
+
+						<!-- Store Step – Waiting (HOD not yet approved) -->
+						<VBox alignItems="Center" class="gpmsApprovalStep gpmsStepWaiting" visible="{= !${out>/StoreActive} &amp;&amp; !${out>/StoreApproved}}">
+							<core:Icon src="sap-icon://home-share" class="gpmsStepMainIcon"/>
+							<Title text="Store Approval" level="H5" class="gpmsStepTitle sapUiTinyMarginTop"/>
+							<HBox justifyContent="Center" alignItems="Center" class="sapUiTinyMarginTop">
+								<core:Icon src="sap-icon://lateness" class="gpmsStepStatusIcon"/>
+								<Text text="Waiting" class="gpmsStepStatusText sapUiTinyMarginBegin"/>
+							</HBox>
+						</VBox>
+
+					</HBox>
+				</Panel>
+
 				<!-- Header Info Section (Read Only) -->
 				<Panel headerText="HEADER DETAILS" expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginBottom">
 					<headerToolbar>
@@ -55,31 +124,31 @@
 
 						<VBox class="sapUiSmallMargin">
 							<Label text="Plant" class="gpmsFieldLabel"/>
-							<Input value="{out>/Plant}" editable="false" class="gpmsFieldInput"/>
+							<Input value="{out>/Plant}" editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }" class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="Company Code" class="gpmsFieldLabel"/>
-							<Input value="{out>/Cocode}" editable="false" class="gpmsFieldInput"/>
+							<Input value="{out>/Cocode}" editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }" class="gpmsFieldInput"/>
 						</VBox>
 
 						<VBox class="sapUiSmallMargin">
 							<Label text="Department" class="gpmsFieldLabel"/>
-							<Input value="{out>/Department}" editable="false" class="gpmsFieldInput"/>
+							<Input value="{out>/Department}" editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }" class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="Vendor" class="gpmsFieldLabel"/>
-							<Input value="{out>/VendorName}" editable="false" class="gpmsFieldInput"/>
+							<Input value="{out>/VendorName}" editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }" class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<layoutData>
 								<layout:GridData span="XL8 L8 M12 S12"/>
 							</layoutData>
 							<Label text="Vendor Address" class="gpmsFieldLabel"/>
-							<Input value="{out>/VendorAddress}" editable="false" class="gpmsFieldInput"/>
+							<Input value="{out>/VendorAddress}" editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }" class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="Vendor GST" class="gpmsFieldLabel"/>
-							<Input value="{out>/VendorGST}" editable="false" class="gpmsFieldInput"/>
+							<Input value="{out>/VendorGST}" editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }" class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="Vendor Person Name" class="gpmsFieldLabel"/>
@@ -105,7 +174,7 @@
 					<Table items="{out>/items}" class="gpmsItemTable">
 						<columns>
 							<Column width="3rem" hAlign="Center"><Text text="#" class="gpmsHeaderText"/></Column>
-							<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Material Code" class="gpmsHeaderText"/></Column>
+							<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Material Description" class="gpmsHeaderText"/></Column>
 							<Column width="8rem"><Text text="HSN Code" class="gpmsHeaderText"/></Column>
 							<Column width="6rem" hAlign="Right"><Text text="Quantity" class="gpmsHeaderText"/></Column>
 							<Column width="6rem" hAlign="Right" visible="{= ${out>/GatePassType} !== 'NRGP' }"><Text text="Sent" class="gpmsHeaderText"/></Column>
@@ -120,11 +189,17 @@
 									<Text text="{out>sno}"/>
 									<Text text="{out>materialName}"/>
 									<Text text="{out>hsnCode}"/>
-									<Input value="{path: 'out>sentQty', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" type="Text" textAlign="Right" valueLiveUpdate="true" editable="true" width="100%" liveChange=".onQuantityChange" class="gpmsTableInput"/>
-									<Input value="{path: 'out>recvdQty', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" type="Text" textAlign="Right" valueLiveUpdate="true" editable="true" width="100%" liveChange=".onQuantityChange" class="gpmsTableInput" visible="{= ${out>/GatePassType} !== 'NRGP' }"/>
+									<Input value="{path: 'out>sentQty', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}"
+										editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }"
+										textAlign="Right"
+										liveChange=".onItemUpdate"/>
+									<Text text="{path: 'out>recvdQty', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" textAlign="Right" visible="{= ${out>/GatePassType} !== 'NRGP' }"/>
 									<Text text="{path: 'out>balQty', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" class="gpmsBoldText" visible="{= ${out>/GatePassType} !== 'NRGP' }"/>
 									<Text text="{out>uom}"/>
-									<Text text="{out>rate}"/>
+									<Input value="{out>rate}"
+										editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }"
+										textAlign="Right"
+										liveChange=".onItemUpdate"/>
 									<Text text="{out>amount}"/>
 								</cells>
 							</ColumnListItem>
@@ -232,6 +307,11 @@
 								<TextArea value="{out>/DCNotes}" width="100%" rows="2" class="gpmsTextArea"/>
 							</VBox>
 
+							<!-- Insurance Required Checkbox -->
+							<HBox class="sapUiSmallMarginTop" alignItems="Center">
+								<CheckBox id="idInsuranceRequired" text="Insurance Required" select=".onInsuranceCheck"/>
+							</HBox>
+
 							<!-- Row 7 - Status (Full Width) -->
 							<VBox class="sapUiSmallMarginTop">
 								<Label text="Status" class="gpmsFieldLabel"/>
@@ -265,7 +345,7 @@
 							</Table>
 						</VBox>
 
-						<HBox justifyContent="End" class="sapUiLargeMarginTop">
+						<HBox justifyContent="End" alignItems="Center" class="sapUiLargeMarginTop">
 							<Button text="PRINT GATE PASS" type="Emphasized" press=".onPrintGatePass" icon="sap-icon://print" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd" visible="{= ${out>/DocOptionIndex} === 1 }"/>
 							<Button text="Generate DC" type="Emphasized" press=".onGenerateDC" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd" visible="{= ${out>/DocOptionIndex} === 1 }"/>
 							<!-- <Button text="Generate E-Way Bill" type="Emphasized" press=".onGenerateEWay" class="gpmsDocBtn ewayBtn sapUiSmallMarginEnd" visible="{= ${out>/DocOptionIndex} === 1 }"/> -->
@@ -287,7 +367,8 @@
 			<Toolbar class="gpmsFooterBar">
 				<ToolbarSpacer/>
 				<Button text="Reset Form" icon="sap-icon://refresh" press="onClear" class="gpmsClearBtn"/>
-				<Button text="GENERATE GATE PASS" icon="sap-icon://accept" type="Accept" press="onSubmitOutgate" class="gpmsSubmitBtn sapUiSmallMarginEnd" enabled="{= !${out>/GatePassNo} &amp;&amp; ${out>/ApprovalStatus} === 'APPROVED' }"/>
+				<Button text="RE-SUBMIT REQUEST" icon="sap-icon://reset" type="Emphasized" press="onSubmitOutgate" class="gpmsSubmitBtn sapUiSmallMarginEnd" visible="{= ${out>/ApprovalStatus} === 'AMENDMENT' }"/>
+				<Button text="GENERATE GATE PASS" icon="sap-icon://accept" type="Accept" press="onSubmitOutgate" class="gpmsSubmitBtn sapUiSmallMarginEnd" visible="{= ${out>/ApprovalStatus} === 'APPROVED' }" enabled="{= !${out>/GatePassNo} }"/>
 			</Toolbar>
 		</footer>
 	</Page>

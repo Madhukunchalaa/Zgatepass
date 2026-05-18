@@ -1,0 +1,79 @@
+<core:FragmentDefinition
+	xmlns="sap.m"
+	xmlns:core="sap.ui.core"
+	xmlns:layout="sap.ui.layout">
+	<Dialog title="Add Inward Insurance" contentWidth="900px" resizable="true" draggable="true" class="gpmsDialog">
+		<content>
+			<Panel class="gpmsPanel" width="100%">
+				<headerToolbar>
+					<Toolbar class="gpmsPrimaryToolbar" height="3rem">
+						<Title text="Form" class="gpmsPrimaryToolbarText" level="H3"/>
+					</Toolbar>
+				</headerToolbar>
+				<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" class="sapUiSmallMarginTop">
+					
+					<!-- Row 1: 3 columns -->
+					<VBox class="sapUiSmallMargin">
+						<layoutData><layout:GridData span="XL4 L4 M4 S12" /></layoutData>
+						<Label text="Invoice/RGP NO" class="gpmsFieldLabel"/>
+						<Input value="{insurance>/InvoiceNo}" class="gpmsFieldInput"/>
+					</VBox>
+					<VBox class="sapUiSmallMargin">
+						<layoutData><layout:GridData span="XL4 L4 M4 S12" /></layoutData>
+						<Label text="Insurance Date" class="gpmsFieldLabel"/>
+						<DatePicker value="{insurance>/InsuranceDate}" valueFormat="dd-MM-yyyy" displayFormat="dd-MM-yyyy" class="gpmsFieldInput"/>
+					</VBox>
+					<VBox class="sapUiSmallMargin">
+						<layoutData><layout:GridData span="XL4 L4 M4 S12" /></layoutData>
+						<Label text="Received date" class="gpmsFieldLabel"/>
+						<DatePicker value="{insurance>/ReceivedDate}" valueFormat="dd-MM-yyyy" displayFormat="dd-MM-yyyy" class="gpmsFieldInput"/>
+					</VBox>
+
+					<!-- Row 2 -->
+					<VBox class="sapUiSmallMargin">
+						<Label text="Vendor" class="gpmsFieldLabel"/>
+						<Select selectedKey="{insurance>/Vendor}" forceSelection="false" width="100%" class="gpmsFieldInput" items="{plants>/results}">
+							<core:Item key="{plants>Plant}" text="Select Vendor" />
+							<!-- Note: You can replace the items binding later when real Vendor data is available -->
+						</Select>
+					</VBox>
+					<VBox class="sapUiSmallMargin">
+						<Label text="Vendor Address" class="gpmsFieldLabel"/>
+						<Input value="{insurance>/VendorAddress}" placeholder="Vendor Address" editable="false" class="gpmsFieldInput"/>
+					</VBox>
+
+					<!-- Row 3 -->
+					<VBox class="sapUiSmallMargin">
+						<Label text="Inward Mode of Transport" class="gpmsFieldLabel"/>
+						<Select selectedKey="{insurance>/ModeOfTransport}" forceSelection="false" width="100%" class="gpmsFieldInput">
+							<core:Item key="" text="Select Mode of transport" />
+							<core:Item key="Road" text="Road" />
+							<core:Item key="Rail" text="Rail" />
+							<core:Item key="Air" text="Air" />
+							<core:Item key="Courier" text="Courier" />
+						</Select>
+					</VBox>
+					<VBox class="sapUiSmallMargin">
+						<Label text="Inward L.R/Vehicle No." class="gpmsFieldLabel"/>
+						<Input value="{insurance>/VehicleNo}" placeholder="Enter LR or Vehicle No" class="gpmsFieldInput"/>
+					</VBox>
+
+					<!-- Row 4 -->
+					<VBox class="sapUiSmallMargin">
+						<Label text="Invoice Value (in Rs)" class="gpmsFieldLabel"/>
+						<Input value="{insurance>/InvoiceValue}" placeholder="Invoice Value (in Rs)" type="Number" class="gpmsFieldInput"/>
+					</VBox>
+					<VBox class="sapUiSmallMargin">
+						<Label text="RGP Common Description" class="gpmsFieldLabel"/>
+						<Input value="{insurance>/RgpDescription}" placeholder="RGP Common Description" class="gpmsFieldInput"/>
+					</VBox>
+
+				</layout:Grid>
+			</Panel>
+		</content>
+		<buttons>
+			<Button text="Submit" type="Emphasized" press=".onInsuranceSubmit" />
+			<Button text="Cancel" type="Transparent" press=".onInsuranceCancel" />
+		</buttons>
+	</Dialog>
+</core:FragmentDefinition>

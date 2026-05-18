@@ -7,45 +7,82 @@ sap.ui.define([
 
 		onInit: function () {
 			this.getView().addStyleClass(this.getOwnerComponent().getContentDensityClass());
+			this.getRouter().getRoute("home").attachPatternMatched(this._onHomeRoute, this);
+			this.getRouter().attachRouteMatched(this._onRouteMatchedGlobally, this);
 		},
 
-		/**
-		 * Toggle the side navigation
-		 */
+		_onRouteMatchedGlobally: function (oEvent) {
+			var sRouteName = oEvent.getParameter("name");
+			var oSideNav = this.byId("idSideNav");
+			if (!oSideNav) return;
+
+			
+
+			// Map specific routes to their sidebar keys
+			var sKey = sRouteName;
+			if (sRouteName === "GatePassCreation") {
+				var oArgs = oEvent.getParameter("arguments");
+				if (oArgs && oArgs.type === "NRGP") sKey = "nrgp";
+				else if (oArgs && oArgs.type === "RGP") sKey = "rgp";
+			} else if (sRouteName === "Home") {
+				sKey = "home";
+			} else if (sRouteName === "ScrapRequestDetail") {
+				sKey = "ScrapRequestList";
+			} else if (sRouteName === "AshGatePassDetail") {
+				sKey = "AshGatePassList";
+			}
+
+			// Highlight the item
+			oSideNav.setSelectedKey(sKey);
+		},
+
+		_onHomeRoute: function () {
+			this.byId("idRootApp").to(this.getView().createId("idMainPage"));
+			this._updateUserInfo();
+		},
+
+		_updateUserInfo: function () {
+			var oUserModel = sap.ui.getCore().getModel("user");
+			if (!oUserModel) return;
+			var sFullName = oUserModel.getProperty("/fullName") || oUserModel.getProperty("/id") || "User";
+			var sInitials = sFullName.trim().split(/\s+/).map(function (p) { return p.charAt(0); }).join("").substring(0, 2).toUpperCase();
+			console.log("User is",sFullName)
+            
+			
+
+	       
+			this.byId("idWelcomeText").setText("Welcome, " + sFullName);
+			this.byId("idUserAvatar").setInitials(sInitials);
+			
+			
+
+
+
+		},
+		
+
+		onButtonLogoutPress: function () {
+			window.location.href = "/sap/public/bc/icf/logoff";
+		},
+
 		onSideNavButtonPress: function () {
-			var oToolPage = this.byId("toolPage");
-			var bSideExpanded = oToolPage.getSideExpanded();
-
-			this._setToggleButtonTooltip(bSideExpanded);
-
-			oToolPage.setSideExpanded(!bSideExpanded);
+			var oToolPage = this.byId("idToolPage");
+			oToolPage.setSideExpanded(!oToolPage.getSideExpanded());
 		},
 
-		/**
-		 * Handle navigation item selection
-		 * @param {sap.ui.base.Event} oEvent Selection event
-		 */
 		onItemSelect: function (oEvent) {
-			var sKey = oEvent.getParameter("item").getKey();
+			var oItem = oEvent.getParameter("item");
+			var sKey = oItem.getKey();
+			
 			if (sKey === "nrgp") {
 				this.getRouter().navTo("GatePassCreation", { type: "NRGP" });
 			} else if (sKey === "rgp") {
 				this.getRouter().navTo("GatePassCreation", { type: "RGP" });
+			} else if (sKey === "home") {
+				this.getRouter().navTo("home");
 			} else {
 				this.getRouter().navTo(sKey);
 			}
-		},
-
-		/**
-		 * Set tooltip for toggle button
-		 * @param {boolean} bSideExpanded 
-		 * @private
-		 */
-		_setToggleButtonTooltip: function (bSideExpanded) {
-			var oResourceBundle = this.getOwnerComponent().getModel("i18n").getResourceBundle();
-			var sTooltip = bSideExpanded ? "Expand Menu" : "Collapse Menu";
-			this.byId("toolPage").getSideExpanded() ? sTooltip = "Expand Menu" : sTooltip = "Collapse Menu";
-			// Tooltip logic can be refined later with i18n
 		}
 
 	});

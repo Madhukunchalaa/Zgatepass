@@ -1,0 +1,122 @@
+<core:FragmentDefinition
+	xmlns="sap.m"
+	xmlns:core="sap.ui.core"
+	xmlns:layout="sap.ui.layout">
+	<Dialog
+		id="pcpDialog"
+		title="Form"
+		contentWidth="1000px"
+		class="sapUiContentPadding">
+		
+		<content>
+			<VBox class="sapUiSmallMargin">
+				<layout:Grid defaultSpan="XL4 L4 M6 S12" vSpacing="0" hSpacing="1">
+					
+					<!-- Row 1 -->
+					<VBox class="sapUiSmallMargin">
+						<Label text="Entry Point" class="gpmsFieldLabel" />
+						<Select id="pcpEntryPoint" selectedKey="{pcpModel>/EntryPoint}" class="gpmsFieldInput" width="100%">
+							<core:Item key="PLANT" text="PLANT" />
+							<core:Item key="OFFICE" text="OFFICE" />
+						</Select>
+					</VBox>
+					<VBox class="sapUiSmallMargin">
+						<Label text="GE date" class="gpmsFieldLabel" />
+						<DatePicker
+							id="pcpGEDate"
+							value="{pcpModel>/GEDate}"
+							displayFormat="dd-MM-yyyy"
+							valueFormat="yyyy-MM-dd"
+							class="gpmsFieldInput"
+							width="100%"
+							editable="false" />
+					</VBox>
+					<VBox class="sapUiSmallMargin">
+						<Label text="GE NO" class="gpmsFieldLabel" required="true" />
+						<Input
+							id="pcpGENo"
+							value="{pcpModel>/GateEntryNo}"
+							placeholder="Enter Gate Entry No and press Enter"
+							submit=".onGateEntryNoChange"
+							change=".onGateEntryNoChange"
+							class="gpmsFieldInput gpmsPoHighlightedField"
+							width="100%" />
+					</VBox>
+
+					<!-- Row 2 -->
+					<VBox class="sapUiSmallMargin">
+						<Label text="PCP date" class="gpmsFieldLabel" required="true" />
+						<DatePicker
+							id="pcpDate"
+							value="{pcpModel>/PCPDate}"
+							displayFormat="dd-MM-yyyy"
+							valueFormat="yyyy-MM-dd"
+							class="gpmsFieldInput"
+							width="100%" />
+					</VBox>
+					<VBox class="sapUiSmallMargin">
+						<Label text="Vendor Name" class="gpmsFieldLabel" />
+						<Input id="pcpVendorName" value="{pcpModel>/VendorDesc}" class="gpmsFieldInput" editable="false" width="100%" />
+					</VBox>
+					<VBox class="sapUiSmallMargin">
+						<Label text="Department" class="gpmsFieldLabel" />
+						<Input id="pcpDepartment" value="{pcpModel>/Department}" class="gpmsFieldInput" editable="false" width="100%" />
+					</VBox>
+
+					<!-- Row 3 -->
+					<VBox class="sapUiSmallMargin">
+						<Label text="DC / Invoice No" class="gpmsFieldLabel" />
+						<Input id="pcpDCInvoiceNo" value="{pcpModel>/DCNumber}" class="gpmsFieldInput" width="100%" />
+					</VBox>
+					<VBox class="sapUiSmallMargin">
+						<Label text="DC / Invoice date" class="gpmsFieldLabel" />
+						<DatePicker
+							id="pcpDCInvoiceDate"
+							value="{pcpModel>/DCdate}"
+							displayFormat="dd-MM-yyyy"
+							valueFormat="yyyy-MM-dd"
+							class="gpmsFieldInput"
+							width="100%" />
+					</VBox>
+					<VBox class="sapUiSmallMargin">
+						<Label text="Item Description" class="gpmsFieldLabel" />
+						<Input id="pcpItemDesc" value="{pcpModel>/ItemDescription}" class="gpmsFieldInput" editable="false" width="100%" />
+					</VBox>
+
+					<!-- Row 4 -->
+					<VBox class="sapUiSmallMargin">
+						<Label text="Qty" class="gpmsFieldLabel" />
+						<Input id="pcpQty" value="{pcpModel>/RecievedQuantity}" class="gpmsFieldInput" editable="false" width="100%" type="Number" />
+					</VBox>
+					<VBox class="sapUiSmallMargin">
+						<Label text="Uom" class="gpmsFieldLabel" />
+						<Input id="pcpUom" value="{pcpModel>/UOM}" class="gpmsFieldInput" editable="false" width="100%" />
+					</VBox>
+					<VBox class="sapUiSmallMargin">
+						<Label text="Budget code" class="gpmsFieldLabel" />
+						<ComboBox id="pcpBudgetCode" selectedKey="{pcpModel>/BudgetCode}" class="gpmsFieldInput" width="100%">
+							<core:Item key="" text="Select Budget code" />
+							<core:Item key="MAINTENANCE" text="MAINTENANCE" />
+							<core:Item key="OPERATIONS" text="OPERATIONS" />
+							<core:Item key="IT" text="IT" />
+							<core:Item key="ADMIN" text="ADMIN" />
+						</ComboBox>
+					</VBox>
+
+					<!-- Row 5 -->
+					<VBox class="sapUiSmallMargin">
+						<Label text="Total Cost (in Rs)" class="gpmsFieldLabel" />
+						<Input id="pcpTotalCost" value="{pcpModel>/TotalCost}" type="Number" class="gpmsFieldInput" width="100%" placeholder="Max 5000" />
+					</VBox>
+
+				</layout:Grid>
+			</VBox>
+		</content>
+		
+		<buttons>
+			<Button id="btnSubmitPCP" text="Submit" type="Emphasized" press=".onSubmitPCP" />
+			<Button text="Print" press=".onPrintPCP" />
+			<Button text="Back" type="Reject" press=".onClosePCPDialog" />
+		</buttons>
+	</Dialog>
+</core:FragmentDefinition>

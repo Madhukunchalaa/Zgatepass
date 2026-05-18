@@ -5,44 +5,79 @@
 	xmlns:tnt="sap.tnt"
 	height="100%"
 	displayBlock="true">
-	<tnt:ToolPage id="toolPage">
-		<tnt:header>
-			<tnt:ToolHeader class="gpmsShellBar">
-				<Button
-					icon="sap-icon://menu2"
-					type="Transparent"
-					press=".onSideNavButtonPress">
-					<layoutData>
-						<OverflowToolbarLayoutData priority="NeverOverflow" />
-					</layoutData>
-				</Button>
-				<Image src="assets/img/logo.png" height="40px" class="sapUiTinyMarginBegin"/>
-				<ToolbarSpacer width="10px"/>
-				<Title text="Gate Pass Management System" level="H1" class="sapUiTinyMarginBegin gpmsShellBarTitle"/>
-				<ToolbarSpacer />
-				<Avatar initials="AD" displaySize="XS" class="sapUiTinyMarginEnd"/>
-			</tnt:ToolHeader>
-		</tnt:header>
-		<tnt:sideContent>
-			<tnt:SideNavigation selectedKey="home" itemSelect=".onItemSelect" class="gpmsSideNav">
-				<tnt:NavigationList>
-					<tnt:NavigationListItem text="Dashboard" icon="sap-icon://home" key="home" />
-					<tnt:NavigationListItem text="NRGP Request" icon="sap-icon://add-document" key="nrgp" />
-					<tnt:NavigationListItem text="RGP Request" icon="sap-icon://shipping-status" key="rgp" />
-					<tnt:NavigationListItem text="Out Gate Pass" icon="sap-icon://open-folder" key="OutGatePass" />
-					<tnt:NavigationListItem text="Inward Gate Pass" icon="sap-icon://down-back" key="InwardGatePass" />
-					<tnt:NavigationListItem text="Reports" icon="sap-icon://business-objects-experience" key="analytics" />
-					<tnt:NavigationListItem text="Gate Pass List" icon="sap-icon://list" key="GatePassList" />
-				</tnt:NavigationList>
-				<tnt:fixedItem>
-					<tnt:NavigationList>
-						<tnt:NavigationListItem text="Settings" icon="sap-icon://settings" key="settings" />
-					</tnt:NavigationList>
-				</tnt:fixedItem>
-			</tnt:SideNavigation>
-		</tnt:sideContent>
-		<tnt:mainContents>
-			<App id="idMainApp"/>
-		</tnt:mainContents>
-	</tnt:ToolPage>
+
+	<App id="idRootApp" initialPage="idLoginPage">
+		<pages>
+
+			<!-- ─── LOGIN PAGE ─── -->
+			<Page id="idLoginPage" showHeader="false" enableScrolling="false">
+				<NavContainer id="idLoginNavContainer"/>
+			</Page>
+
+			<!-- ─── MAIN APP PAGE ─── -->
+			<Page id="idMainPage" showHeader="false" enableScrolling="false">
+				<tnt:ToolPage id="idToolPage">
+					<tnt:header>
+						<tnt:ToolHeader class="gpmsShellBar">
+							<Button
+								icon="sap-icon://menu2"
+								type="Transparent"
+								press=".onSideNavButtonPress">
+								<layoutData>
+									<OverflowToolbarLayoutData priority="NeverOverflow"/>
+								</layoutData>
+							</Button>
+							<Image src="assets/img/logo.png" height="40px" class="sapUiTinyMarginBegin"/>
+							<ToolbarSpacer width="10px"/>
+							<Title text="Gate Pass Management System" level="H1" class="sapUiTinyMarginBegin gpmsShellBarTitle"/>
+							<ToolbarSpacer/>
+							<Text id="idWelcomeText" class="gpmsWelcomeText sapUiTinyMarginEnd"/>
+							<Avatar id="idUserAvatar" displaySize="XS" class="sapUiTinyMarginEnd"/>
+							<Button
+								icon="sap-icon://log"
+								type="Transparent"
+								tooltip="Logout"
+								press=".onButtonLogoutPress">
+								<layoutData>
+									<OverflowToolbarLayoutData priority="NeverOverflow"/>
+								</layoutData>
+							</Button>
+						</tnt:ToolHeader>
+					</tnt:header>
+					<tnt:sideContent>
+						<tnt:SideNavigation id="idSideNav" selectedKey="home" itemSelect=".onItemSelect" class="gpmsSideNav">
+							<tnt:NavigationList>
+								<tnt:NavigationListItem text="Dashboard"              icon="sap-icon://home"                        key="home"/>
+								<tnt:NavigationListItem text="NRGP Request"           icon="sap-icon://add-document"                key="nrgp"/>
+								<tnt:NavigationListItem text="RGP Request"            icon="sap-icon://shipping-status"             key="rgp"/>
+								<tnt:NavigationListItem text="Out Gate Pass"          icon="sap-icon://open-folder"                 key="OutGatePass"/>
+								<tnt:NavigationListItem text="Inward Gate Pass"       icon="sap-icon://down-back"                   key="InwardGatePass"/>
+								<tnt:NavigationListItem text="Gate Pass Request List" icon="sap-icon://list"                        key="GatePassList"/>
+								<tnt:NavigationListItem text="Gate Pass List"         icon="sap-icon://document-text"               key="NRGPList"/>
+								<tnt:NavigationListItem text="Gate Pass with PO/Petty Cash" icon="sap-icon://supplier"                    key="GatePassWithPO"/>
+								<tnt:NavigationListItem text="IRGP Workflow"          icon="sap-icon://process"                     key="IRGP"/>
+								<tnt:NavigationListItem text="Scrap Request"          icon="sap-icon://delete"                      key="ScrapRequestCreation"/>
+								<tnt:NavigationListItem text="Scrap Request List"     icon="sap-icon://list"                        key="ScrapRequestList"/>
+								<tnt:NavigationListItem text="Add Scrap Gatepass"     icon="sap-icon://sales-document"              key="ScrapGatepassCreation"/>
+								<tnt:NavigationListItem text="Ash GP Request"         icon="sap-icon://factory"                     key="AshGatePassCreation"/>
+								<tnt:NavigationListItem text="Ash GP List"            icon="sap-icon://list"                        key="AshGatePassList"/>
+								<tnt:NavigationListItem text="Add PCP"                icon="sap-icon://lead"                        key="PCPList"/>
+								<tnt:NavigationListItem text="Reports"                icon="sap-icon://business-objects-experience" key="analytics"/>
+							</tnt:NavigationList>
+							<tnt:fixedItem>
+								<tnt:NavigationList>
+									<tnt:NavigationListItem text="Settings" icon="sap-icon://settings" key="settings"/>
+								</tnt:NavigationList>
+							</tnt:fixedItem>
+						</tnt:SideNavigation>
+					</tnt:sideContent>
+					<tnt:mainContents>
+						<App id="idMainApp"/>
+					</tnt:mainContents>
+				</tnt:ToolPage>
+			</Page>
+
+		</pages>
+	</App>
+
 </mvc:View>
