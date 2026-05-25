@@ -14,6 +14,12 @@ sap.ui.define([
 
 		_onRouteMatched: function (oEvent) {
 			this._resetModel();
+			var oUserModel = sap.ui.getCore().getModel("user");
+			if (oUserModel && oUserModel.getProperty("/IsGatepassUserOnly")) {
+				MessageBox.error("You do not have authorization to access the Inward Gate Pass screen.");
+				this.getRouter().navTo("home");
+				return;
+			}
 			var sGPNo = oEvent.getParameter("arguments").gpNo;
 			if (sGPNo) {
 				this._loadByGPNo(sGPNo);

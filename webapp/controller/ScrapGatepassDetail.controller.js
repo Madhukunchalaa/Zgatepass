@@ -14,6 +14,12 @@ sap.ui.define([
 		},
 
 		_onRouteMatched: function (oEvent) {
+			var oUserModel = sap.ui.getCore().getModel("user");
+			if (oUserModel && oUserModel.getProperty("/IsGatepassUserOnly")) {
+				MessageBox.error("You do not have authorization to access the Scrap Gate Pass Detail screen.");
+				this.getRouter().navTo("home");
+				return;
+			}
 			var sGpNo = decodeURIComponent(oEvent.getParameter("arguments").gpNo || "");
 			this._loadDetail(sGpNo);
 		},

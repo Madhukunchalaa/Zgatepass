@@ -15,6 +15,12 @@ sap.ui.define([
 
 		_onRouteMatched: function (oEvent) {
 			this._resetModel();
+			var oUserModel = sap.ui.getCore().getModel("user");
+			if (oUserModel && oUserModel.getProperty("/IsGatepassUserOnly")) {
+				MessageBox.error("You do not have authorization to access the Out Gate Pass screen.");
+				this.getRouter().navTo("home");
+				return;
+			}
 			var oArgs = oEvent.getParameter("arguments");
 			var sReqNo = oArgs.reqNo;
 			var sGPNo  = oArgs.gpNo;
