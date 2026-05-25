@@ -29,6 +29,7 @@ sap.ui.define([
 			if (sSavedUser) {
 				try {
 					var oUserData = JSON.parse(sSavedUser);
+					oUserData.IsGatepassUserOnly = false; // Force false for now to remove all restrictions
 					oUserModel.setData(oUserData);
 				} catch (e) {
 					console.error("Error restoring user session:", e);

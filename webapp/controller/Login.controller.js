@@ -69,7 +69,7 @@ sap.ui.define([
                         oUserModel.setProperty("/Cocode", oResult.Cocode || "");
                         oUserModel.setProperty("/Department", oResult.Department || "");
                         oUserModel.setProperty("/Role", oResult.Role || "");
-                        oUserModel.setProperty("/IsGatepassUserOnly", oResult.Role === "ZM_2301_MM_GATEPASS_USER");
+                        oUserModel.setProperty("/IsGatepassUserOnly", false); // Temporarily removed restrictions for ZM_2301_MM_GATEPASS_USER
                         localStorage.setItem("gpms_user", JSON.stringify(oUserModel.getData()));
                     }
                     fnNavigate();
