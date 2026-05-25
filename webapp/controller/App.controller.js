@@ -69,17 +69,15 @@ sap.ui.define([
 			if (!oUserModel) return;
 			var sFullName = oUserModel.getProperty("/fullName") || oUserModel.getProperty("/id") || "User";
 			var sInitials = sFullName.trim().split(/\s+/).map(function (p) { return p.charAt(0); }).join("").substring(0, 2).toUpperCase();
-			console.log("User is",sFullName)
+			
+			console.log("=== Active User Profile ===");
+			console.log("Full Name:", sFullName);
+			console.log("Initials:", sInitials);
+			console.log("User Data Object:", oUserModel.getData());
+			console.log("===========================");
             
-		
-	       
 			this.byId("idWelcomeText").setText("Welcome, " + sFullName);
 			this.byId("idUserAvatar").setInitials(sInitials);
-			
-			
-
-
-
 		},
 		
 
