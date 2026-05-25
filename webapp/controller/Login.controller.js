@@ -19,6 +19,7 @@ sap.ui.define([
             oModel.attachRequestCompleted(function (oEvent) {
                 if (oEvent.getParameter("success")) {
                     var oUserData = oEvent.getSource().getData();
+                    oUserData.IsGatepassUserOnly = false;
                     sap.ui.getCore().setModel(new JSONModel(oUserData), "user");
                     var sUserId = oUserData.id || "";
                     this._loadUserDetails(sUserId);
@@ -60,6 +61,7 @@ sap.ui.define([
                         oUserModel.setProperty("/Cocode", oResult.Cocode || "");
                         oUserModel.setProperty("/Department", oResult.Department || "");
                         oUserModel.setProperty("/Role", oResult.Role || "");
+                        oUserModel.setProperty("/IsGatepassUserOnly", oResult.Role === "ZM_2301_MM_GATEPASS_USER");
                     }
                     fnNavigate();
                 },
