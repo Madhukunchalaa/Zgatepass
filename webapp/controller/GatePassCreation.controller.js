@@ -308,6 +308,7 @@ sap.ui.define([
 				vendorAddress: "",
 				vendorGST: "",
 				fileName: "",
+				attachments: [],
 				Department: "",
 				VehicleNo: "",
 				ModeOfDispatch: "",
@@ -483,10 +484,52 @@ sap.ui.define([
 		},
 
 		onFileChange: function (oEvent) {
-			var sFileName = oEvent.getParameter("newValue");
-			this.getView().getModel("gp").setProperty("/fileName", sFileName || "");
-			if (!sFileName) {
-				oEvent.getSource().clear();
+			var oModel = this.getView().getModel("gp");
+			var aAttachments = oModel.getProperty("/attachments") || [];
+			var aFiles = oEvent.getParameter("files");
+
+			if (aFiles && aFiles.length > 0) {
+				for (var i = 0; i < aFiles.length; i++) {
+					var oFile = aFiles[i];
+					
+					// Format file size
+					var sSize = "";
+					if (oFile.size < 1024) {
+						sSize = oFile.size + " Bytes";
+					} else if (oFile.size < 1048576) {
+						sSize = (oFile.size / 1024).toFixed(1) + " KB";
+					} else {
+						sSize = (oFile.size / 1048576).toFixed(1) + " MB";
+					}
+
+					// Avoid duplicates by name
+					var bExists = aAttachments.some(function (att) {
+						return att.name === oFile.name;
+					});
+
+					if (!bExists) {
+						aAttachments.push({
+							name: oFile.name,
+							size: sSize,
+							fileObj: oFile
+						});
+					}
+				}
+				oModel.setProperty("/attachments", aAttachments);
+			}
+
+			// Clear the file uploader input so the same files can be selected again
+			oEvent.getSource().clear();
+		},
+
+		onDeleteAttachment: function (oEvent) {
+			var oItem = oEvent.getSource().getBindingContext("gp").getObject();
+			var oModel = this.getView().getModel("gp");
+			var aAttachments = oModel.getProperty("/attachments") || [];
+			var iIndex = aAttachments.indexOf(oItem);
+			if (iIndex > -1) {
+				aAttachments.splice(iIndex, 1);
+				oModel.setProperty("/attachments", aAttachments);
 			}
 		},
 

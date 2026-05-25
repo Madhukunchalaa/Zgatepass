@@ -180,21 +180,44 @@
 					<headerToolbar>
 						<Toolbar class="gpmsSectionBar">
 							<core:Icon src="sap-icon://camera" class="gpmsSectionBarIcon"/>
-							<Label text="Photo Attachment" class="gpmsSectionBarLabel"/>
+							<Label text="Photo Attachments" class="gpmsSectionBarLabel"/>
 						</Toolbar>
 					</headerToolbar>
-					<HBox alignItems="Center" class="sapUiSmallMargin" wrap="Wrap">
-						<unified:FileUploader
-							id="photoUploader"
-							buttonText="Browse &amp; Upload"
-							class="gpmsFileUploader"
-							change=".onFileChange"
-							tooltip="Upload gate pass photo"/>
-						<HBox alignItems="Center" class="gpmsFileNameBox sapUiSmallMarginBegin" visible="{= !!${gp>/fileName}}">
-							<core:Icon src="sap-icon://accept" color="#1B6B3A" class="sapUiTinyMarginEnd"/>
-							<Text text="{gp>/fileName}" class="gpmsFileNameText"/>
+					<VBox class="sapUiSmallMargin">
+						<HBox alignItems="Center" class="sapUiSmallMarginBottom" wrap="Wrap">
+							<unified:FileUploader
+								id="photoUploader"
+								buttonText="Browse &amp; Upload Photo(s)"
+								class="gpmsFileUploader"
+								multiple="true"
+								change=".onFileChange"
+								tooltip="Upload one or more gate pass photos"/>
 						</HBox>
-					</HBox>
+						
+						<!-- List of Uploaded Photos -->
+						<List
+							id="attachmentsList"
+							noDataText="No photo attachments uploaded."
+							items="{gp>/attachments}"
+							class="gpmsAttachmentList">
+							<CustomListItem class="gpmsAttachmentListItem">
+								<HBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMarginBeginEnd sapUiTinyMarginTopBottom" width="100%">
+									<HBox alignItems="Center">
+										<core:Icon src="sap-icon://attachment-photo" class="gpmsAttachmentIcon sapUiSmallMarginEnd" color="#1A237E"/>
+										<VBox>
+											<Text text="{gp>name}" class="gpmsAttachmentNameText"/>
+											<Text text="{gp>size}" class="gpmsAttachmentSizeText" visible="{= !!${gp>size}}"/>
+										</VBox>
+									</HBox>
+									<Button
+										icon="sap-icon://delete"
+										type="Transparent"
+										press=".onDeleteAttachment"
+										class="gpmsDeleteBtn"/>
+								</HBox>
+							</CustomListItem>
+						</List>
+					</VBox>
 				</Panel>
 
 				<!-- ─── SECTION 4 · Table of Items ────────────── -->
