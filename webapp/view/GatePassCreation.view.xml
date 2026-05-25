@@ -201,7 +201,7 @@
 							items="{gp>/attachments}"
 							class="gpmsAttachmentList">
 							<CustomListItem class="gpmsAttachmentListItem">
-								<HBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMarginBeginEnd sapUiTinyMarginTopBottom" width="100%">
+								<HBox alignItems="Center" justifyContent="SpaceBetween" width="100%">
 									<HBox alignItems="Center">
 										<core:Icon src="sap-icon://attachment-photo" class="gpmsAttachmentIcon sapUiSmallMarginEnd" color="#1A237E"/>
 										<VBox>
