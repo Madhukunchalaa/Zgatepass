@@ -37,13 +37,14 @@
 								change=".onComboBoxPlantChange"
 								placeholder="Select or type Plant code..."
 								class="gpmsFieldInput"
-								width="100%">
+								width="100%"
+								editable="false">
 								<core:ListItem key="{plants>Plant}" text="{plants>Plant} - {plants>PlantName}"/>
 							</ComboBox>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="Company Code" class="gpmsFieldLabel"/>
-							<Input value="{gp>/Cocode}" editable="true" class="gpmsFieldInput" width="100%"/>
+							<Input value="{gp>/Cocode}" editable="false" class="gpmsFieldInput" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="GP Date" required="true" class="gpmsFieldLabel"/>
@@ -52,14 +53,15 @@
 								dateValue="{gp>/gpDate}"
 								displayFormat="dd-MM-yyyy"
 								class="gpmsFieldInput"
-								width="100%"/>
+								width="100%"
+								editable="false"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="GP Type" required="true" class="gpmsFieldLabel"/>
 							<Select
                              id="gpType"
                              selectedKey="{gp>/GatePassType}"
-                             enabled="{gp>/isTypeEditable}"
+                             enabled="false"
                              class="gpmsFieldInput"
                              width="100%">
     
@@ -80,6 +82,7 @@
 							<Select
 								id="department"
 								selectedKey="{gp>/Department}"
+								enabled="false"
 								class="gpmsFieldInput"
 								width="100%">
 								<core:Item key="" text="-- Select Department --"/>
