@@ -14,16 +14,24 @@ sap.ui.define([
         },
 
         _authenticate: function () {
-            var oModel = new JSONModel();
-            oModel.loadData("/sap/bc/ui2/start_up");
-            oModel.attachRequestCompleted(function (oEvent) {
-                if (oEvent.getParameter("success")) {
-                    var oUserData = oEvent.getSource().getData();
-                    oUserData.IsGatepassUserOnly = false;
-                    sap.ui.getCore().setModel(new JSONModel(oUserData), "user");
-                    var sUserId = oUserData.id || "";
-                    this._loadUserDetails(sUserId);
-                } else {
+			var oModel = new JSONModel();
+			oModel.loadData("/sap/bc/ui2/start_up");
+			oModel.attachRequestCompleted(function (oEvent) {
+				if (oEvent.getParameter("success")) {
+					var oUserData = oEvent.getSource().getData();
+					oUserData.IsGatepassUserOnly = false;
+					
+					var oUserModel = sap.ui.getCore().getModel("user");
+					if (!oUserModel) {
+						oUserModel = new JSONModel();
+						sap.ui.getCore().setModel(oUserModel, "user");
+						this.getOwnerComponent().setModel(oUserModel, "user");
+					}
+					oUserModel.setData(oUserData);
+					
+					var sUserId = oUserData.id || "";
+					this._loadUserDetails(sUserId);
+				} else {
                     MessageBox.error(
                         "Authentication failed. Please reload the page and try again.",
                         { title: "Sign In Failed" }

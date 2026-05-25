@@ -17,12 +17,19 @@ sap.ui.define([
 		init: function () {
 			UIComponent.prototype.init.apply(this, arguments);
 
+			// Initialize global user model
+			var oUserModel = new JSONModel({
+				IsGatepassUserOnly: false
+			});
+			sap.ui.getCore().setModel(oUserModel, "user");
+			this.setModel(oUserModel, "user");
+
 			// Restore user session from localStorage
 			var sSavedUser = localStorage.getItem("gpms_user");
 			if (sSavedUser) {
 				try {
 					var oUserData = JSON.parse(sSavedUser);
-					sap.ui.getCore().setModel(new JSONModel(oUserData), "user");
+					oUserModel.setData(oUserData);
 				} catch (e) {
 					console.error("Error restoring user session:", e);
 				}
