@@ -17,6 +17,17 @@ sap.ui.define([
 		init: function () {
 			UIComponent.prototype.init.apply(this, arguments);
 
+			// Restore user session from localStorage
+			var sSavedUser = localStorage.getItem("gpms_user");
+			if (sSavedUser) {
+				try {
+					var oUserData = JSON.parse(sSavedUser);
+					sap.ui.getCore().setModel(new JSONModel(oUserData), "user");
+				} catch (e) {
+					console.error("Error restoring user session:", e);
+				}
+			}
+
 			this.setModel(models.createDeviceModel(), "device");
 
 			// Pre-populate mock scrap requests and inventory if not present in localStorage

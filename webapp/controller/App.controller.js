@@ -13,10 +13,33 @@ sap.ui.define([
 
 		_onRouteMatchedGlobally: function (oEvent) {
 			var sRouteName = oEvent.getParameter("name");
+			
+			// 1. Handle root container page transition & authentication check
+			if (sRouteName !== "login") {
+				var oUserModel = sap.ui.getCore().getModel("user");
+				if (!oUserModel || !oUserModel.getProperty("/id")) {
+					// User not logged in, redirect to login
+					this.getRouter().navTo("login");
+					return;
+				}
+				
+				// Transition to main page
+				var oRootApp = this.byId("idRootApp");
+				if (oRootApp && oRootApp.getCurrentPage().getId() !== this.getView().createId("idMainPage")) {
+					oRootApp.to(this.getView().createId("idMainPage"));
+					this._updateUserInfo();
+				}
+			} else {
+				// Transition to login page
+				var oRootApp = this.byId("idRootApp");
+				if (oRootApp && oRootApp.getCurrentPage().getId() !== this.getView().createId("idLoginPage")) {
+					oRootApp.to(this.getView().createId("idLoginPage"));
+				}
+			}
+
+			// 2. Side nav selection mapping
 			var oSideNav = this.byId("idSideNav");
 			if (!oSideNav) return;
-
-			
 
 			// Map specific routes to their sidebar keys
 			var sKey = sRouteName;
@@ -61,6 +84,7 @@ sap.ui.define([
 		
 
 		onButtonLogoutPress: function () {
+			localStorage.removeItem("gpms_user");
 			window.location.href = "/sap/public/bc/icf/logoff";
 		},
 
