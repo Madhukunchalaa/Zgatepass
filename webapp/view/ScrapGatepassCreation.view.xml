@@ -32,15 +32,39 @@
 								width="100%"
 								editable="false"/>
 						</VBox>
-						<VBox class="sapUiSmallMargin"></VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Scrap Request No" class="gpmsFieldLabel"/>
+							<Input
+								id="idScrapRequestNoGp"
+								value="{scrapGp>/requestId}"
+								placeholder="Select Scrap Request No"
+								class="gpmsFieldInput"
+								showValueHelp="{= !${scrapGp>/isFromRequest} }"
+								valueHelpRequest=".onScrapRequestValueHelp"
+								change=".onScrapRequestChange"
+								editable="{= !${scrapGp>/isFromRequest} }"
+								width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Sale Order" class="gpmsFieldLabel"/>
+							<Input
+								id="idSaleOrderGp"
+								value="{scrapGp>/saleOrder}"
+								placeholder="Sale Order Number"
+								class="gpmsFieldInput gpmsFieldInputReadonly"
+								editable="false"
+								width="100%"/>
+						</VBox>
 
 						<VBox class="sapUiSmallMargin">
-							<Label text="Vendor" required="true" class="gpmsFieldLabel"/>
+							<Label text="Vendor" class="gpmsFieldLabel"/>
 							<ComboBox
+								id="vendorComboBox"
 								selectedKey="{scrapGp>/vendor}"
 								selectionChange=".onVendorSelect"
 								placeholder="Select Vendor"
 								class="gpmsFieldInput"
+								enabled="{= !${scrapGp>/requestId} }"
 								width="100%">
 								<core:Item key="V1" text="Sri Manikandan Traders" />
 								<core:Item key="V2" text="Metal Scrap Buyers Pvt Ltd" />
@@ -72,7 +96,7 @@
 						<Toolbar class="gpmsSectionBar">
 							<Label text="Table of Items" class="gpmsSectionBarLabel"/>
 							<ToolbarSpacer/>
-							<Button text="Add Row" icon="sap-icon://add" press=".onAddItem" class="gpmsAddBtn"/>
+							<Button text="Add Row" icon="sap-icon://add" press=".onAddItem" class="gpmsAddBtn" visible="{= !${scrapGp>/requestId} }"/>
 						</Toolbar>
 					</headerToolbar>
 					<Table items="{scrapGp>/items}" noDataText="No items added." class="gpmsItemTable">
@@ -83,13 +107,13 @@
 							<Column width="7rem"><Text text="Avail Qty" class="gpmsHeaderText"/></Column>
 							<Column width="7rem"><Text text="Sendout Qty" class="gpmsHeaderText"/></Column>
 							<Column width="8rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
-							<Column width="5rem" hAlign="Center"><Text text="Action" class="gpmsHeaderText"/></Column>
+							<Column width="5rem" hAlign="Center" visible="{= !${scrapGp>/requestId} }"><Text text="Action" class="gpmsHeaderText"/></Column>
 						</columns>
 						<items>
 							<ColumnListItem class="gpmsItemRow">
 								<cells>
 									<Text text="{scrapGp>sno}" class="gpmsTableText"/>
-									<Select selectedKey="{scrapGp>type}" change=".onMaterialTypeSelect" class="gpmsFieldInput" width="100%">
+									<Select selectedKey="{scrapGp>type}" change=".onMaterialTypeSelect" class="gpmsFieldInput" width="100%" enabled="{= !${scrapGp>/requestId} }">
 										<core:Item key="" text="Select Material" />
 										<core:Item key="Metal" text="Metal" />
 										<core:Item key="Rubber" text="Rubber" />
@@ -99,11 +123,11 @@
 										<core:Item key="Batteries" text="Batteries" />
 										<core:Item key="Spent Oil(Barrel Capacity)" text="Spent Oil(Barrel Capacity)" />
 									</Select>
-									<Input value="{scrapGp>description}" class="gpmsTableInput" placeholder="Enter description"/>
+									<Input value="{scrapGp>description}" class="gpmsTableInput" placeholder="Enter description" editable="{= !${scrapGp>/requestId} }"/>
 									<Input value="{scrapGp>availQty}" editable="false" class="gpmsTableInput gpmsFieldInputReadonly"/>
 									<Input value="{scrapGp>sendoutQty}" type="Number" class="gpmsTableInput"/>
 									<Input value="{scrapGp>uom}" editable="false" class="gpmsTableInput gpmsFieldInputReadonly"/>
-									<HBox>
+									<HBox visible="{= !${scrapGp>/requestId} }">
 										<Button icon="sap-icon://add" type="Transparent" press=".onAddItem" class="sapUiTinyMarginEnd" />
 										<Button icon="sap-icon://delete" type="Transparent" press=".onRemoveItem" />
 									</HBox>
@@ -113,7 +137,7 @@
 					</Table>
 				</Panel>
 
-				<!-- Remarks & Vehicle -->
+				<!-- Remarks, Vehicle & Weighment -->
 				<Panel class="gpmsSection" expandable="false">
 					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" hSpacing="1">
 						<VBox class="sapUiSmallMargin">
@@ -121,8 +145,21 @@
 							<TextArea value="{scrapGp>/remarks}" rows="3" placeholder="Enter remarks" class="gpmsFieldInput" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
-							<Label text="Vehicle No." required="true" class="gpmsFieldLabel"/>
+							<Label text="Vehicle No." class="gpmsFieldLabel"/>
 							<Input value="{scrapGp>/vehicleNo}" placeholder="Enter Vehicle No" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Weighment slip Ticket No" class="gpmsFieldLabel"/>
+							<Input value="{scrapGp>/weighmentSlipNo}" placeholder="Enter Weighment slip Ticket No" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Challan Date &amp; Time" class="gpmsFieldLabel"/>
+							<Input value="{scrapGp>/challanDateTime}" placeholder="Enter Challan Date &amp; Time" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Delivery Number" class="gpmsFieldLabel"/>
+							<Input value="{scrapGp>/deliveryNo}" placeholder="Enter Delivery Number" class="gpmsFieldInput" width="100%"/>
 						</VBox>
 					</layout:Grid>
 				</Panel>

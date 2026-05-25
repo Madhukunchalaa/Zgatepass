@@ -90,6 +90,10 @@ sap.ui.define([
 
 		onPressScrapGatepassCreation: function () {
 			this.getRouter().navTo("ScrapGatepassCreation");
+		},
+
+		onPressScrapGatepassList: function () {
+			this.getRouter().navTo("ScrapGatepassList");
 		}
 
 	});

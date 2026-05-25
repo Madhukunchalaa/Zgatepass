@@ -14,100 +14,93 @@ sap.ui.define([
 		},
 
 		_onRouteMatched: function (oEvent) {
-			var sRequestId = decodeURIComponent(oEvent.getParameter("arguments").gpNo);
-			this._loadDetail(sRequestId);
+			var sGPNo = decodeURIComponent(oEvent.getParameter("arguments").gpNo);
+			this._loadDetail(sGPNo);
 		},
 
-		_loadDetail: function (sRequestId) {
-			var aMockList = JSON.parse(localStorage.getItem("mockAshList") || "[]");
-			var oData = aMockList.find(function(item) {
-				return item.requestId === sRequestId;
-			});
+		_loadDetail: function (sGPNo) {
+			var oODataModel = this.getOwnerComponent().getModel();
+			var that = this;
 
-			if (!oData) {
-				MessageBox.error("Request not found!");
-				this.onNavBack();
+			var fnMockLoad = function() {
+				var aMockList = JSON.parse(localStorage.getItem("mockAshList") || "[]");
+				var oData = aMockList.find(function(item) {
+					return item.GatePassNo === sGPNo || item.requestId === sGPNo;
+				});
+
+				if (!oData) {
+					MessageBox.error("Ash Gate Pass not found!");
+					that.onNavBack();
+					return;
+				}
+
+				// Sum item values to get final total
+				var nTotal = 0;
+				if (oData.ASHItmNav) {
+					oData.ASHItmNav.forEach(function(item) {
+						nTotal += parseFloat(item.Totalvalue || 0);
+					});
+				}
+				oData.finalTotal = nTotal.toFixed(2);
+
+				var oModel = new JSONModel(oData);
+				that.getView().setModel(oModel, "ash");
+			};
+
+			if (!oODataModel) {
+				fnMockLoad();
 				return;
 			}
 
-			// Parse date back if needed
-			if (typeof oData.gpDate === "string") {
-				oData.gpDate = new Date(oData.gpDate);
-			}
+			sap.ui.core.BusyIndicator.show(0);
+			oODataModel.read("/AshHdrSet", {
+				filters: [
+					new sap.ui.model.Filter("GatePassNo", sap.ui.model.FilterOperator.EQ, sGPNo),
+					new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, "NRGP")
+				],
+				urlParameters: { "$expand": "ASHItmNav" },
+				success: function (oData) {
+					sap.ui.core.BusyIndicator.hide();
+					var aResults = oData.results || [];
+					var oItem = aResults.find(function (item) {
+						return item.GatePassNo === sGPNo;
+					});
+					if (oItem) {
+						var nTotal = 0;
+						var aItems = [];
+						if (oItem.ASHItmNav) {
+							if (Array.isArray(oItem.ASHItmNav)) {
+								aItems = oItem.ASHItmNav;
+							} else if (oItem.ASHItmNav.results && Array.isArray(oItem.ASHItmNav.results)) {
+								aItems = oItem.ASHItmNav.results;
+							}
+						}
+						aItems.forEach(function(item) {
+							nTotal += parseFloat(item.Totalvalue || 0);
+						});
+						oItem.ASHItmNav = aItems;
+						oItem.finalTotal = nTotal.toFixed(2);
 
-			var oModel = new JSONModel(oData);
-			this.getView().setModel(oModel, "ash");
+						var oModel = new JSONModel(oItem);
+						that.getView().setModel(oModel, "ash");
+					} else {
+						fnMockLoad();
+					}
+				},
+				error: function (oError) {
+					sap.ui.core.BusyIndicator.hide();
+					fnMockLoad();
+				}
+			});
 		},
 
 		onNavBack: function () {
 			this.getRouter().navTo("AshGatePassList");
 		},
 
-		onVendorSelect: function (oEvent) {
-			var oModel = this.getView().getModel("ash");
-			var sKey = oEvent.getParameter("selectedItem").getKey();
-			if (sKey === "V1") {
-				oModel.setProperty("/vendorAddress", "Ramco Cement Ltd, Alathiyur Works, P.A.C. Ramaswamy Raja Nagar, Alathiyur, Ariyalur District, India");
-				oModel.setProperty("/vendorGST", "33AABCM8375L2Z2");
-			} else if (sKey === "V2") {
-				oModel.setProperty("/vendorAddress", "123 Domestic Road, Chennai");
-				oModel.setProperty("/vendorGST", "33XXXXXXXXXXXXX");
-			}
-		},
-
-		onTransporterSelect: function (oEvent) {
-			var oModel = this.getView().getModel("ash");
-			var sKey = oEvent.getParameter("selectedItem").getKey();
-			if (sKey === "T1") {
-				oModel.setProperty("/TransporterGST", "33AEPP2875A2ZV");
-			} else if (sKey === "T2") {
-				oModel.setProperty("/TransporterGST", "33BBBBBBBBBBBB");
-			}
-		},
-
-		calculateTotal: function () {
-			var oModel = this.getView().getModel("ash");
-			var aItems = oModel.getProperty("/items");
-			
-			var nTotal = 0;
-			aItems.forEach(function(oItem, index) {
-				var qty = parseFloat(oItem.quantity) || 0;
-				var rate = parseFloat(oItem.rate) || 0;
-				var amount = qty * rate;
-				oModel.setProperty("/items/" + index + "/amount", amount.toFixed(2));
-				nTotal += amount;
-			});
-			
-			oModel.setProperty("/finalTotal", nTotal.toFixed(2));
-		},
-
-		onGenerateDC: function () {
-			var oModel = this.getView().getModel("ash");
-			oModel.setProperty("/dcGenerated", true);
-			oModel.setProperty("/DCNumber", "DC/2024-25/0015"); // Mock DC No
-			MessageToast.show("Delivery Challan Generated Successfully");
-		},
-
-		onComplete: function () {
-			var oModel = this.getView().getModel("ash");
-			var oData = oModel.getData();
-
-			// Save to local storage
-			var aMockList = JSON.parse(localStorage.getItem("mockAshList") || "[]");
-			var iIndex = aMockList.findIndex(function(item) {
-				return item.requestId === oData.requestId;
-			});
-
-			if (iIndex !== -1) {
-				aMockList[iIndex] = oData;
-				localStorage.setItem("mockAshList", JSON.stringify(aMockList));
-				MessageToast.show("Request Saved Successfully");
-				this.onNavBack();
-			}
-		},
-
 		onPrint: async function () {
 			var oModel = this.getView().getModel("ash");
+			if (!oModel) return;
 			var oData = oModel.getData();
 
 			const { jsPDF } = window.jspdf;
@@ -116,7 +109,7 @@ sap.ui.define([
 			var margin = 14;
 
 			// Header Logo
-			var sLogoUrl = sap.ui.require.toUrl("zgpms/meilpower/com/images/meil_logo.png");
+			var sLogoUrl = sap.ui.require.toUrl("zgpms/meilpower.com/images/meil_logo.png");
 			try {
 				var sLogoBase64 = await this._getImageBase64(sLogoUrl);
 				doc.addImage(sLogoBase64, 'PNG', margin, 10, 30, 11);
@@ -146,50 +139,66 @@ sap.ui.define([
 			var y = 46;
 			doc.setFontSize(9);
 			doc.setFont("helvetica", "bold");
-			doc.text(oData.requestId || "", margin, y);
+			doc.text("Gate Pass No: " + (oData.GatePassNo || ""), margin, y);
 			
 			doc.setFont("helvetica", "normal");
-			doc.text("Please allow", margin, y + 10);
+			doc.text("Please allow:", margin, y + 10);
 			doc.text("The Manager,", margin + 30, y + 6);
 			
-			// Vendor Address wrapping
-			var vendorDetails = (oData.vendorAddress || "");
-			var splitVendor = doc.splitTextToSize(vendorDetails, 120);
-			doc.text(splitVendor, margin + 30, y + 10);
+			// Customer Name & City wrapping
+			var custDetails = (oData.CustomerName || "") + "\n" + (oData.City || "") + " " + (oData.ZipCode || "");
+			var splitCust = doc.splitTextToSize(custDetails, 120);
+			doc.text(splitCust, margin + 30, y + 10);
 
 			// Right side details
 			var rightColX = 200;
 			doc.text("GP Date:", rightColX, y);
-			var gpDate = oData.gpDate ? new Date(oData.gpDate).toLocaleDateString('en-GB') : "";
-			doc.text(gpDate, rightColX + 20, y);
+			var gpDate = this.formatDate(oData.GPDate);
+			doc.text(gpDate, rightColX + 25, y);
 
-			doc.text("Vendor GST:", rightColX, y + 6);
-			doc.text(oData.vendorGST || "", rightColX + 20, y + 6);
+			doc.text("Customer GST:", rightColX, y + 6);
+			doc.text(oData.CustomerGst || "", rightColX + 25, y + 6);
 
-			doc.text("DC No:", rightColX, y + 12);
-			doc.text(oData.DCNumber || "", rightColX + 20, y + 12);
+			doc.text("Sales Doc:", rightColX, y + 12);
+			doc.text(oData.SalesDocument || "", rightColX + 25, y + 12);
 
 			y = y + 30;
 			doc.setTextColor(0, 102, 204); // blueish text
-			doc.text("To take out the following material", margin, y);
+			doc.text("To take out the following material:", margin, y);
 			doc.setTextColor(0, 0, 0);
 
 			// Table
 			y = y + 4;
-			var tableData = [
-				["1", oData.items[0].materialName || "Fly Ash", parseFloat(oData.items[0].quantity).toFixed(2), oData.items[0].uom, parseFloat(oData.items[0].amount).toFixed(2)],
-				["", "", "", "", ""],
-				["", "", "", "", ""]
-			];
+			var tableData = (oData.ASHItmNav || []).map(function(item, idx) {
+				return [
+					String(idx + 1),
+					item.Material || "",
+					item.MaterialDescription || "",
+					item.HSNCode || "",
+					parseFloat(item.RequestedQuantity || 0).toFixed(3),
+					item.UOM || "",
+					parseFloat(item.ItemNetPrice || 0).toFixed(2),
+					parseFloat(item.Totalvalue || 0).toFixed(2)
+				];
+			});
 
 			doc.autoTable({
 				startY: y,
-				head: [['S.No', 'DESCRIPTION', 'QTY', 'UOM', 'Material Value(Rs.)']],
+				head: [['S.No', 'Material Code', 'Material Description', 'HSN Code', 'Qty', 'UOM', 'Unit Price', 'Total Value(Rs.)']],
 				body: tableData,
 				theme: 'grid',
 				headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', lineWidth: 0.3, lineColor: [0, 0, 0] },
 				bodyStyles: { textColor: [0, 0, 0], lineWidth: 0.3, lineColor: [0, 0, 0], minCellHeight: 10 },
-				columnStyles: { 0: { cellWidth: 20 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 25 }, 3: { cellWidth: 35 }, 4: { cellWidth: 40 } },
+				columnStyles: {
+					0: { cellWidth: 15 },
+					1: { cellWidth: 35 },
+					2: { cellWidth: 80 },
+					3: { cellWidth: 25 },
+					4: { cellWidth: 25 },
+					5: { cellWidth: 20 },
+					6: { cellWidth: 30 },
+					7: { cellWidth: 39 }
+				},
 				margin: { left: margin, right: margin }
 			});
 
@@ -233,7 +242,7 @@ sap.ui.define([
 			doc.text("Authorised Signatory", margin, finalY);
 			doc.text("Receiver's Sign", pageWidth - margin, finalY, { align: "right" });
 
-			doc.save("AGP_" + (oData.requestId || "Draft") + ".pdf");
+			doc.save("AGP_" + (oData.GatePassNo || "Draft") + ".pdf");
 			sap.m.MessageToast.show("Gate Pass Downloaded");
 		},
 
@@ -263,6 +272,25 @@ sap.ui.define([
 			str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
 			str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
 			return str;
+		},
+
+		formatDate: function (vDate) {
+			if (!vDate) return "";
+			if (vDate instanceof Date) {
+				return vDate.toLocaleDateString('en-GB'); // dd/mm/yyyy
+			}
+			if (typeof vDate === "string") {
+				if (vDate.length === 8 && !vDate.includes("-")) {
+					return vDate.substr(6, 2) + "/" + vDate.substr(4, 2) + "/" + vDate.substr(0, 4);
+				}
+				if (vDate.includes("-")) {
+					var parts = vDate.split("-");
+					if (parts.length === 3) {
+						return parts[2] + "/" + parts[1] + "/" + parts[0];
+					}
+				}
+			}
+			return vDate;
 		}
 
 	});

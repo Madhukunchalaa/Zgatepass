@@ -192,6 +192,21 @@
 					"name": "ScrapGatepassCreation",
 					"pattern": "ScrapGatepassCreation",
 					"target": ["TargetScrapGatepassCreation"]
+				},
+				{
+					"name": "ScrapGatepassCreationWithReq",
+					"pattern": "ScrapGatepassCreation/:reqNo:",
+					"target": ["TargetScrapGatepassCreation"]
+				},
+				{
+					"name": "ScrapGatepassList",
+					"pattern": "ScrapGatepassList",
+					"target": ["TargetScrapGatepassList"]
+				},
+				{
+					"name": "ScrapGatepassDetail",
+					"pattern": "ScrapGatepassDetail/:gpNo:",
+					"target": ["TargetScrapGatepassDetail"]
 				}
 			],
 			"targets": {
@@ -294,6 +309,16 @@
 					"viewType": "XML",
 					"viewId": "ScrapGatepassCreation",
 					"viewName": "ScrapGatepassCreation"
+				},
+				"TargetScrapGatepassList": {
+					"viewType": "XML",
+					"viewId": "ScrapGatepassList",
+					"viewName": "ScrapGatepassList"
+				},
+				"TargetScrapGatepassDetail": {
+					"viewType": "XML",
+					"viewId": "ScrapGatepassDetail",
+					"viewName": "ScrapGatepassDetail"
 				}
 			}
 		}

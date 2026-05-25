@@ -1,0 +1,161 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.ScrapGatepassDetail"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:layout="sap.ui.layout"
+	xmlns:core="sap.ui.core"
+	height="100%">
+
+	<Page
+		title="Scrap Gate Pass Detail"
+		showNavButton="true"
+		navButtonPress=".onNavBack"
+		class="gpmsPage">
+
+		<content>
+			<VBox class="gpmsMainContainer">
+
+				<!-- Header Panel -->
+				<Panel expandable="false" class="gpmsPanel sapUiSmallMarginBottom">
+					<headerToolbar>
+						<Toolbar height="3rem">
+							<core:Icon src="sap-icon://document" class="sapUiSmallMarginEnd"/>
+							<Title text="SCRAP GATE PASS DETAILS" level="H3"/>
+							<ToolbarSpacer/>
+							<ObjectStatus
+								text="{= 'GP No: ' + ${scrapGpDetail>/gatePassNo}}"
+								state="Information"
+								icon="sap-icon://tag"
+								class="sapUiSmallMarginEnd"/>
+						</Toolbar>
+					</headerToolbar>
+					<layout:Grid defaultSpan="XL3 L3 M6 S12" vSpacing="0">
+						<VBox class="sapUiSmallMargin">
+							<Label text="Gate Pass No." class="gpmsFieldLabel"/>
+							<Input value="{scrapGpDetail>/gatePassNo}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Scrap Request No." class="gpmsFieldLabel"/>
+							<Input value="{scrapGpDetail>/requestId}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Sales Document" class="gpmsFieldLabel"/>
+							<Input value="{scrapGpDetail>/salesDocument}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Request Date" class="gpmsFieldLabel"/>
+							<Input value="{scrapGpDetail>/requestDateStr}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Customer No." class="gpmsFieldLabel"/>
+							<Input value="{scrapGpDetail>/customerNo}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Customer Name" class="gpmsFieldLabel"/>
+							<Input value="{scrapGpDetail>/customerName}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Customer GST" class="gpmsFieldLabel"/>
+							<Input value="{scrapGpDetail>/customerGst}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vehicle No." class="gpmsFieldLabel"/>
+							<Input value="{scrapGpDetail>/vehicleNo}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<layoutData>
+								<layout:GridData span="XL6 L6 M12 S12"/>
+							</layoutData>
+							<Label text="City / Postal Code" class="gpmsFieldLabel"/>
+							<Input value="{= ${scrapGpDetail>/city} + (${scrapGpDetail>/postalCode} ? ' - ' + ${scrapGpDetail>/postalCode} : '')}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<layoutData>
+								<layout:GridData span="XL6 L6 M12 S12"/>
+							</layoutData>
+							<Label text="Remarks" class="gpmsFieldLabel"/>
+							<Input value="{scrapGpDetail>/remarks}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Weighment slip Ticket No" class="gpmsFieldLabel"/>
+							<Input value="{scrapGpDetail>/weighmentSlipNo}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Challan Date &amp; Time" class="gpmsFieldLabel"/>
+							<Input value="{scrapGpDetail>/challanDateTime}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Delivery Number" class="gpmsFieldLabel"/>
+							<Input value="{scrapGpDetail>/deliveryNo}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+					</layout:Grid>
+				</Panel>
+
+				<!-- Items Table -->
+				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginBottom">
+					<headerToolbar>
+						<Toolbar height="3rem">
+							<core:Icon src="sap-icon://table-view" class="sapUiSmallMarginEnd"/>
+							<Title text="MATERIAL ITEMS" level="H3"/>
+						</Toolbar>
+					</headerToolbar>
+					<Table
+						items="{scrapGpDetail>/items}"
+						class="gpmsItemTable"
+						alternateRowColors="true"
+						noDataText="No items found">
+						<columns>
+							<Column width="3rem" hAlign="Center">
+								<Text text="#" class="gpmsHeaderText" wrapping="false"/>
+							</Column>
+							<Column width="7rem">
+								<Text text="Item No." class="gpmsHeaderText" wrapping="false"/>
+							</Column>
+							<Column width="12rem">
+								<Text text="Material" class="gpmsHeaderText" wrapping="false"/>
+							</Column>
+							<Column>
+								<Text text="Description" class="gpmsHeaderText" wrapping="false"/>
+							</Column>
+							<Column width="7rem" hAlign="Right">
+								<Text text="Order Qty" class="gpmsHeaderText" wrapping="false"/>
+							</Column>
+							<Column width="8rem" hAlign="Right">
+								<Text text="Sendout Qty" class="gpmsHeaderText" wrapping="false"/>
+							</Column>
+							<Column width="5rem">
+								<Text text="UOM" class="gpmsHeaderText" wrapping="false"/>
+							</Column>
+						</columns>
+						<items>
+							<ColumnListItem class="gpmsItemRow">
+								<cells>
+									<Text text="{scrapGpDetail>sno}" wrapping="false"/>
+									<Text text="{scrapGpDetail>itemNo}" wrapping="false"/>
+									<Text text="{scrapGpDetail>material}" wrapping="false"/>
+									<Text text="{scrapGpDetail>description}" wrapping="true"/>
+									<Text text="{scrapGpDetail>orderQty}" textAlign="Right" wrapping="false"/>
+									<Text text="{scrapGpDetail>sendoutQty}" textAlign="Right" wrapping="false" class="gpmsBoldText"/>
+									<Text text="{scrapGpDetail>uom}" wrapping="false"/>
+								</cells>
+							</ColumnListItem>
+						</items>
+					</Table>
+				</Panel>
+
+			</VBox>
+		</content>
+		<footer>
+			<OverflowToolbar class="gpmsFooterBar">
+				<Button
+					id="btnPrintScrapGP"
+					text="PRINT GATE PASS"
+					type="Emphasized"
+					icon="sap-icon://print"
+					press=".onPrint"
+					class="gpmsSubmitBtn sapUiSmallMarginBegin"/>
+				<Button text="Back" type="Default" press=".onNavBack"/>
+			</OverflowToolbar>
+		</footer>
+	</Page>
+</mvc:View>

@@ -18,10 +18,20 @@ sap.ui.define([
 		},
 
 		_loadList: function () {
-			// Fetch from mock local storage
-			var aMockList = JSON.parse(localStorage.getItem("mockAshList") || "[]");
-			var oModel = new JSONModel(aMockList);
-			this.getView().setModel(oModel, "ashList");
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) {
+				// Fallback to mock local storage
+				var aMockList = JSON.parse(localStorage.getItem("mockAshList") || "[]");
+				var oModel = new JSONModel(aMockList);
+				this.getView().setModel(oModel); // set as default model so binding without prefix works
+				
+				// Rebind items to JSON root
+				var oTable = this.getView().byId("ashListTable");
+				oTable.bindItems({
+					path: "/",
+					template: oTable.getBindingInfo("items").template
+				});
+			}
 		},
 
 		onNavBack: function () {
@@ -33,27 +43,65 @@ sap.ui.define([
 			var oTable = this.getView().byId("ashListTable");
 			var oBinding = oTable.getBinding("items");
 			
+			var aFilters = [];
+			
+			// Always apply GatePassType eq 'NRGP' filter when using OData
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (oODataModel && oBinding && oBinding.getModel() === oODataModel) {
+				aFilters.push(new Filter("GatePassType", FilterOperator.EQ, "NRGP"));
+			}
+
 			if (sQuery) {
-				var oFilter = new Filter("requestId", FilterOperator.Contains, sQuery);
-				oBinding.filter([oFilter]);
+				var oSearchFilter = new Filter({
+					filters: [
+						new Filter("GatePassNo", FilterOperator.Contains, sQuery),
+						new Filter("SalesDocument", FilterOperator.Contains, sQuery),
+						new Filter("CustomerName", FilterOperator.Contains, sQuery)
+					],
+					and: false
+				});
+				
+				if (aFilters.length > 0) {
+					aFilters.push(oSearchFilter);
+					oBinding.filter([new Filter({ filters: aFilters, and: true })]);
+				} else {
+					oBinding.filter([oSearchFilter]);
+				}
 			} else {
-				oBinding.filter([]);
+				oBinding.filter(aFilters);
 			}
 		},
 
 		onRowPress: function (oEvent) {
 			var oItem = oEvent.getSource();
 			if (oItem.getMetadata().getName() === "sap.m.Button") {
-				// if button pressed
 				oItem = oItem.getParent();
 			}
-			var oContext = oItem.getBindingContext("ashList");
-			var sRequestId = oContext.getProperty("requestId");
+			var oContext = oItem.getBindingContext();
+			var sGPNo = oContext.getProperty("GatePassNo") || oContext.getProperty("requestId") || "";
 			
-			// Nav to Detail view (mocking gpNo mapping to requestId)
 			this.getRouter().navTo("AshGatePassDetail", {
-				gpNo: encodeURIComponent(sRequestId)
+				gpNo: encodeURIComponent(sGPNo)
 			});
+		},
+
+		formatDate: function (vDate) {
+			if (!vDate) return "";
+			if (vDate instanceof Date) {
+				return vDate.toLocaleDateString('en-GB'); // dd/mm/yyyy
+			}
+			if (typeof vDate === "string") {
+				if (vDate.length === 8 && !vDate.includes("-")) {
+					return vDate.substr(6, 2) + "/" + vDate.substr(4, 2) + "/" + vDate.substr(0, 4);
+				}
+				if (vDate.includes("-")) {
+					var parts = vDate.split("-");
+					if (parts.length === 3) {
+						return parts[2] + "/" + parts[1] + "/" + parts[0];
+					}
+				}
+			}
+			return vDate;
 		}
 
 	});

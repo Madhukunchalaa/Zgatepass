@@ -19,6 +19,79 @@ sap.ui.define([
 
 			this.setModel(models.createDeviceModel(), "device");
 
+			// Pre-populate mock scrap requests and inventory if not present in localStorage
+			if (!localStorage.getItem("mockScrapRequests")) {
+				var aDefaultScrapRequests = [
+					{
+						requestDate: "2026-05-21T08:00:00.000Z",
+						weighmentSlipNo: "",
+						challanDateTime: "",
+						vehicleDetails: "TN-15-AB-1234",
+						collectArea: "Boiler Area",
+						remarks: "Scrap metal pipes from maintenance",
+						saleOrder: "310019793",
+						vendor: "V1",
+						vendorName: "Sri Manikandan Traders",
+						vendorAddress: "Sri Manikandan Traders, No.102, Vridhachalam Main Road,, Neyveli, India, 607802",
+						vendorGST: "33ABEFS1534J1ZB",
+						city: "Neyveli",
+						postalCode: "607802",
+						items: [
+							{
+								sno: "1",
+								type: "Metal",
+								description: "MS Pipes",
+								quantity: "150",
+								uom: "KG"
+							}
+						],
+						requestId: "REQ-1001",
+						status: "Approved",
+						requestDateStr: "21/05/2026"
+					},
+					{
+						requestDate: "2026-05-22T08:00:00.000Z",
+						weighmentSlipNo: "",
+						challanDateTime: "",
+						vehicleDetails: "TN-15-XY-5678",
+						collectArea: "Electrical Yard",
+						remarks: "Used lead batteries",
+						saleOrder: "310019793",
+						vendor: "V2",
+						vendorName: "Metal Scrap Buyers Pvt Ltd",
+						vendorAddress: "Metal Scrap Buyers Pvt Ltd, Chennai",
+						vendorGST: "33XXXXXXXXXXXXX",
+						city: "Chennai",
+						postalCode: "600001",
+						items: [
+							{
+								sno: "1",
+								type: "Batteries",
+								description: "Lead batteries",
+								quantity: "5",
+								uom: "MT"
+							}
+						],
+						requestId: "REQ-1002",
+						status: "Pending HOD",
+						requestDateStr: "22/05/2026"
+					}
+				];
+				localStorage.setItem("mockScrapRequests", JSON.stringify(aDefaultScrapRequests));
+			}
+
+			if (!localStorage.getItem("mockScrapInventory")) {
+				var oDefaultInventory = {
+					"Metal": { quantity: 150, uom: "KG" },
+					"Rubber": { quantity: 50, uom: "KG" },
+					"Oil": { quantity: 200, uom: "L" },
+					"Plastic": { quantity: 80, uom: "KG" },
+					"Copper": { quantity: 100, uom: "KG" },
+					"Batteries": { quantity: 5, uom: "MT" }
+				};
+				localStorage.setItem("mockScrapInventory", JSON.stringify(oDefaultInventory));
+			}
+
 			// Initialize global IRGP collection for mock multi-persona state tracking
 			var oIRGPGlobalData = {
 				documents: [

@@ -32,6 +32,18 @@
 								width="100%"
 								editable="false"/>
 						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Sale Order" class="gpmsFieldLabel"/>
+							<Input
+								id="idSaleOrder"
+								value="{scrap>/saleOrder}"
+								placeholder="Select Sale Order"
+								class="gpmsFieldInput"
+								showValueHelp="true"
+								valueHelpRequest=".onSaleOrderValueHelp"
+								change=".onSaleOrderChange"
+								width="100%"/>
+						</VBox>
 					</layout:Grid>
 				</Panel>
 
@@ -70,9 +82,9 @@
 									<Input value="{scrap>description}" class="gpmsTableInput" placeholder="Enter description"/>
 									<Input value="{scrap>quantity}" type="Number" class="gpmsTableInput"/>
 									<Select selectedKey="{scrap>uom}" class="gpmsFieldInput" width="100%">
-										<core:Item key="KILOGRAM" text="KILOGRAM" />
-										<core:Item key="LITRE" text="LITRE" />
-										<core:Item key="METRIC TONS" text="METRIC TONS" />
+										<core:Item key="KG" text="KG" />
+										<core:Item key="L" text="L" />
+										<core:Item key="MT" text="MT" />
 									</Select>
 									<HBox>
 										<Button icon="sap-icon://add" type="Transparent" press=".onAddItem" class="sapUiTinyMarginEnd" />
@@ -89,11 +101,11 @@
 					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" hSpacing="1">
 						<VBox class="sapUiSmallMargin">
 							<Label text="Weighment slip Ticket No" class="gpmsFieldLabel"/>
-							<Input value="{scrap>/weighmentSlipNo}" placeholder="Weighment slip Ticket No" class="gpmsFieldInput" width="100%"/>
+							<Input value="{scrap>/weighmentSlipNo}" placeholder="Weighment slip Ticket No" class="gpmsFieldInput gpmsFieldInputReadonly" editable="false" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="Challan Date &amp; Time" class="gpmsFieldLabel"/>
-							<Input value="{scrap>/challanDateTime}" placeholder="Enter Challan Date &amp; Time" class="gpmsFieldInput" width="100%"/>
+							<Input value="{scrap>/challanDateTime}" placeholder="Enter Challan Date &amp; Time" class="gpmsFieldInput gpmsFieldInputReadonly" editable="false" width="100%"/>
 						</VBox>
 
 						<VBox class="sapUiSmallMargin">

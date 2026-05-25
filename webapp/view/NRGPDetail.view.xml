@@ -255,8 +255,7 @@
 						<!-- Action Buttons -->
 						<HBox justifyContent="End" class="sapUiLargeMarginTop">
 							<Button text="PRINT GATE PASS" type="Emphasized" press=".onPRINTGATEPASSButtonPress"
-								icon="sap-icon://print" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd"
-								visible="{= ${nrgp>/DocOptionIndex} === 1}"/>
+								icon="sap-icon://print" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd"/>
 							<Button text="Generate DC" type="Emphasized" press=".onGenerateDCButtonPress"
 								class="gpmsDocBtn dcBtn sapUiSmallMarginEnd"
 								visible="{= ${nrgp>/DocOptionIndex} === 1}"/>

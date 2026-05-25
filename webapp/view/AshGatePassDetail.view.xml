@@ -15,51 +15,45 @@
 		<content>
 			<VBox class="gpmsContentWrapper sapUiMediumMargin">
 				
-				<MessageStrip text="{ash>/requestId} - Opened Successfully" type="Success" showIcon="true" class="sapUiSmallMarginBottom"/>
+				<MessageStrip text="Gate Pass Details Loaded" type="Success" showIcon="true" class="sapUiSmallMarginBottom"/>
 
 				<!-- Main Form -->
 				<Panel class="gpmsSection" expandable="false">
 					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" hSpacing="1">
 						<VBox class="sapUiSmallMargin">
-							<DatePicker
-								dateValue="{ash>/gpDate}"
-								displayFormat="dd-MM-yyyy"
-								class="gpmsFieldInput"
-								width="100%"
-								editable="false"/>
-						</VBox>
-						<VBox class="sapUiSmallMargin"></VBox>
-						
-						<VBox class="sapUiSmallMargin">
-							<Label text="GP Type" class="gpmsFieldLabel"/>
-							<Input value="Non-Returnable Gatepass (NRGP)" editable="false" class="gpmsFieldInput" width="100%"/>
-						</VBox>
-						<VBox class="sapUiSmallMargin"></VBox>
-						
-						<VBox class="sapUiSmallMargin">
-							<Label text="Vendor Type" class="gpmsFieldLabel"/>
-							<Input value="Ash Vendor" editable="false" class="gpmsFieldInput" width="100%"/>
+							<Label text="GP Date" class="gpmsFieldLabel"/>
+							<Input value="{path: 'ash>/GPDate', formatter: '.formatDate'}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
-							<Label text="Vendor" required="true" class="gpmsFieldLabel"/>
-							<ComboBox
-								selectedKey="{ash>/vendor}"
-								selectionChange=".onVendorSelect"
-								placeholder="Select Vendor"
-								class="gpmsFieldInput"
-								width="100%">
-								<core:Item key="V1" text="Ramco Cement Ltd" />
-								<core:Item key="V2" text="Domestic Vendor" />
-							</ComboBox>
+							<Label text="Gate Pass No" class="gpmsFieldLabel"/>
+							<Input value="{ash>/GatePassNo}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
 						</VBox>
 						
 						<VBox class="sapUiSmallMargin">
-							<Label text="Vendor Address" class="gpmsFieldLabel"/>
-							<Input value="{ash>/vendorAddress}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+							<Label text="Sales Document" class="gpmsFieldLabel"/>
+							<Input value="{ash>/SalesDocument}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
-							<Label text="Vendor's GST" class="gpmsFieldLabel"/>
-							<Input value="{ash>/vendorGST}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+							<Label text="Customer (Sold-to Party)" class="gpmsFieldLabel"/>
+							<Input value="{ash>/SoldToParty}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+						
+						<VBox class="sapUiSmallMargin">
+							<Label text="Customer Name" class="gpmsFieldLabel"/>
+							<Input value="{ash>/CustomerName}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Customer's GST" class="gpmsFieldLabel"/>
+							<Input value="{ash>/CustomerGst}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="City" class="gpmsFieldLabel"/>
+							<Input value="{ash>/City}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Zip Code" class="gpmsFieldLabel"/>
+							<Input value="{ash>/ZipCode}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
 						</VBox>
 					</layout:Grid>
 				</Panel>
@@ -71,26 +65,28 @@
 							<Label text="Table of Items" class="gpmsSectionBarLabel"/>
 						</Toolbar>
 					</headerToolbar>
-					<Table items="{ash>/items}" noDataText="No items added." class="gpmsItemTable">
+					<Table items="{ash>/ASHItmNav}" noDataText="No items found." class="gpmsItemTable">
 						<columns>
-							<Column width="3rem"><Text text="SNo" class="gpmsHeaderText"/></Column>
-							<Column><Text text="Brief Description of Material" class="gpmsHeaderText"/></Column>
-							<Column width="10rem"><Text text="HSN Code" class="gpmsHeaderText"/></Column>
-							<Column width="10rem"><Text text="Qty" class="gpmsHeaderText"/></Column>
-							<Column width="10rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
-							<Column width="10rem"><Text text="Rate(Rs.)" class="gpmsHeaderText"/></Column>
-							<Column width="10rem"><Text text="Amount" class="gpmsHeaderText"/></Column>
+							<Column width="3rem"><Text text="Item" class="gpmsHeaderText"/></Column>
+							<Column width="10rem"><Text text="Material Code" class="gpmsHeaderText"/></Column>
+							<Column><Text text="Material Description" class="gpmsHeaderText"/></Column>
+							<Column width="8rem"><Text text="HSN Code" class="gpmsHeaderText"/></Column>
+							<Column width="8rem"><Text text="Qty" class="gpmsHeaderText"/></Column>
+							<Column width="6rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
+							<Column width="8rem"><Text text="Rate" class="gpmsHeaderText"/></Column>
+							<Column width="9rem"><Text text="Total Value" class="gpmsHeaderText"/></Column>
 						</columns>
 						<items>
 							<ColumnListItem class="gpmsItemRow">
 								<cells>
-									<Text text="{ash>sno}" class="gpmsTableText"/>
-									<Input value="{ash>materialName}" editable="false" class="gpmsTableInput"/>
-									<Input value="{ash>hsnCode}" editable="false" class="gpmsTableInput"/>
-									<Input value="{ash>quantity}" type="Number" liveChange=".calculateTotal" class="gpmsTableInput"/>
-									<Input value="{ash>uom}" editable="false" class="gpmsTableInput"/>
-									<Input value="{ash>rate}" type="Number" liveChange=".calculateTotal" class="gpmsTableInput"/>
-									<Input value="{ash>amount}" editable="false" class="gpmsTableInput"/>
+									<Text text="{ash>ItemNo}" class="gpmsTableText"/>
+									<Text text="{ash>Material}" class="gpmsTableText"/>
+									<Text text="{ash>MaterialDescription}" class="gpmsTableText"/>
+									<Text text="{ash>HSNCode}" class="gpmsTableText"/>
+									<Text text="{ash>RequestedQuantity}" class="gpmsTableText"/>
+									<Text text="{ash>UOM}" class="gpmsTableText"/>
+									<Text text="{ash>ItemNetPrice}" class="gpmsTableText"/>
+									<Text text="{ash>Totalvalue}" class="gpmsTableText"/>
 								</cells>
 							</ColumnListItem>
 						</items>
@@ -101,8 +97,8 @@
 				<Panel class="gpmsSection" expandable="false">
 					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" hSpacing="1">
 						<VBox class="sapUiSmallMargin">
-							<Label text="User Remarks" class="gpmsFieldLabel"/>
-							<Input value="{ash>/Remarks}" class="gpmsFieldInput" width="100%"/>
+							<Label text="Remarks" class="gpmsFieldLabel"/>
+							<Input value="{ash>/Remarks}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="Final Total Rs." class="gpmsFieldLabel"/>
@@ -110,63 +106,35 @@
 						</VBox>
 
 						<VBox class="sapUiSmallMargin">
-							<Label text="Vehicle No." required="true" class="gpmsFieldLabel"/>
-							<Input value="{ash>/VehicleNo}" placeholder="Enter Vehicle No" class="gpmsFieldInput" width="100%"/>
-						</VBox>
-						<VBox class="sapUiSmallMargin"></VBox>
-
-						<VBox class="sapUiSmallMargin">
-							<Label text="Mode of transport" class="gpmsFieldLabel"/>
-							<Select selectedKey="{ash>/TransportMode}" class="gpmsFieldInput" width="100%">
-								<core:Item key="Road" text="By Road" />
-							</Select>
+							<Label text="Vehicle No." class="gpmsFieldLabel"/>
+							<Input value="{ash>/VehicleNo}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
-							<Label text="Transporter Name" required="true" class="gpmsFieldLabel"/>
-							<ComboBox
-								selectedKey="{ash>/TransporterName}"
-								selectionChange=".onTransporterSelect"
-								placeholder="Select Trans Name"
-								class="gpmsFieldInput"
-								width="100%">
-								<core:Item key="T1" text="SAKTHI TRANSPORTS" />
-								<core:Item key="T2" text="MEIL LOGISTICS" />
-							</ComboBox>
+							<Label text="Mode of Dispatch" class="gpmsFieldLabel"/>
+							<Input value="{ash>/ModeOfDispatch}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
 						</VBox>
 
+						<VBox class="sapUiSmallMargin">
+							<Label text="Transporter Name" class="gpmsFieldLabel"/>
+							<Input value="{ash>/TransporterName}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="Transporter GST" class="gpmsFieldLabel"/>
-							<Input value="{ash>/TransporterGST}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+							<Input value="{ash>/TransporterGst}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="DC Notes" class="gpmsFieldLabel"/>
-							<Input value="{ash>/DCNotes}" class="gpmsFieldInput" width="100%"/>
+							<Input value="{ash>/DCNotes}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
 						</VBox>
-
-						<VBox class="sapUiSmallMargin">
-							<Button text="Generate DC" type="Emphasized" press=".onGenerateDC" visible="{= ${ash>/status} === 'CLOSED' &amp;&amp; !${ash>/dcGenerated}}" class="gpmsSubmitBtn" />
-							<Text text="DC Generated: {ash>/DCNumber}" visible="{= !!${ash>/dcGenerated}}" class="sapUiTinyMarginTop"/>
-						</VBox>
-						<VBox class="sapUiSmallMargin"></VBox>
-
-						<VBox class="sapUiSmallMargin">
-							<Label text="Status" class="gpmsFieldLabel"/>
-							<Select selectedKey="{ash>/status}" class="gpmsFieldInput" width="100%" change=".onStatusChange">
-								<core:Item key="OPEN" text="OPEN" />
-								<core:Item key="CLOSED" text="CLOSED" />
-							</Select>
-						</VBox>
-
 					</layout:Grid>
 				</Panel>
 			</VBox>
 		</content>
 		<footer>
 			<OverflowToolbar class="gpmsFooterBar">
-				<Button text="Complete" type="Accept" press=".onComplete" class="sapUiSmallMarginBegin"/>
-				<Button text="Cancel" type="Reject" press=".onNavBack" />
-				<Button text="Back" type="Reject" press=".onNavBack" />
-				<Button text="Print" type="Emphasized" icon="sap-icon://print" press=".onPrint" visible="{= !!${ash>/dcGenerated}}" />
+				<ToolbarSpacer/>
+				<Button text="Back" type="Reject" press=".onNavBack"/>
+				<Button text="Print PDF" type="Emphasized" icon="sap-icon://print" press=".onPrint"/>
 			</OverflowToolbar>
 		</footer>
 	</Page>

@@ -1,0 +1,39 @@
+<core:FragmentDefinition
+	xmlns="sap.m"
+	xmlns:core="sap.ui.core">
+	<TableSelectDialog
+		id="saleOrderValueHelpDialog"
+		title="Select Sale Order"
+		noDataText="No Sale Orders Found"
+		search=".onSaleOrderValueHelpSearch"
+		confirm=".onSaleOrderValueHelpConfirm"
+		cancel=".onSaleOrderValueHelpCancel"
+		items="{path: 'sos>/results'}">
+		<columns>
+			<Column width="30%">
+				<header>
+					<Text text="Sale Order Number" />
+				</header>
+			</Column>
+			<Column width="30%">
+				<header>
+					<Text text="Buyer/Vendor" />
+				</header>
+			</Column>
+			<Column width="40%">
+				<header>
+					<Text text="Remarks / Description" />
+				</header>
+			</Column>
+		</columns>
+		<items>
+			<ColumnListItem type="Active">
+				<cells>
+					<Text text="{sos>saleOrder}" />
+					<Text text="{sos>vendorName}" />
+					<Text text="{sos>remarks}" />
+				</cells>
+			</ColumnListItem>
+		</items>
+	</TableSelectDialog>
+</core:FragmentDefinition>

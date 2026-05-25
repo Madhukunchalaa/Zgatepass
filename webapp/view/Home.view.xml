@@ -84,7 +84,7 @@
 					</GenericTile>
 
 					<!-- Ash Gate Pass Card -->
-					<GenericTile class="gpmsDashCard ashCard" press=".onPressAshGatePassCreation" header="ASH GP REQUEST" subheader="Ash Disposal Creation">
+					<GenericTile class="gpmsDashCard ashCard" press=".onPressAshGatePassCreation" header="ASH GP" subheader="Ash Disposal Creation">
 						<TileContent>
 							<core:Icon src="sap-icon://factory" class="gpmsCardIcon"/>
 						</TileContent>
@@ -115,6 +115,13 @@
 					<GenericTile class="gpmsDashCard" press=".onPressScrapGatepassCreation" header="ADD SCRAP GATEPASS" subheader="Scrap Sale &amp; Outward">
 						<TileContent>
 							<core:Icon src="sap-icon://sales-document" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- Scrap Gatepass List Card -->
+					<GenericTile class="gpmsDashCard scrapGpListCard" press=".onPressScrapGatepassList" header="SCRAP GATE PASS LIST" subheader="View Scrap Gate Passes">
+						<TileContent>
+							<core:Icon src="sap-icon://document-text" class="gpmsCardIcon"/>
 						</TileContent>
 					</GenericTile>
 				</HBox>

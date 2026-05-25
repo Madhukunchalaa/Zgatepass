@@ -1,0 +1,58 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.ScrapGatepassList"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:core="sap.ui.core"
+	height="100%">
+	<Page
+		title="Scrap Gate Pass List"
+		showNavButton="true"
+		navButtonPress=".onNavBack"
+		class="gpmsPage">
+		<content>
+			<VBox class="sapUiSmallMargin">
+				<Table
+					id="scrapGpTable"
+					items="{scrapGpList>/}"
+					noDataText="No Scrap Gate Passes found"
+					class="gpmsTable"
+					alternateRowColors="true">
+					<headerToolbar>
+						<OverflowToolbar>
+							<Title text="Scrap Gate Passes" level="H2"/>
+							<ToolbarSpacer/>
+							<SearchField
+								width="300px"
+								search=".onSearch"
+								placeholder="Search Gate Pass No..."
+								class="gpmsFieldInput"/>
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column><Text text="Gate Pass No" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Req No" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Date" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Customer" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Vehicle No" class="gpmsTableHeaderText"/></Column>
+						<Column hAlign="Center"><Text text="Action" class="gpmsTableHeaderText"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem type="Navigation" press=".onRowPress" class="gpmsTableRow">
+							<cells>
+								<Text text="{scrapGpList>gatePassNo}" class="gpmsTableText"/>
+								<Text text="{scrapGpList>requestId}" class="gpmsTableText"/>
+								<Text text="{scrapGpList>requestDateStr}" class="gpmsTableText"/>
+								<VBox>
+									<Text text="{scrapGpList>customerName}" class="gpmsTableText"/>
+									<Text text="{scrapGpList>customerGst}" class="gpmsLabel" wrapping="false"/>
+								</VBox>
+								<Text text="{scrapGpList>vehicleNo}" class="gpmsTableText"/>
+								<Button icon="sap-icon://navigation-right-arrow" type="Transparent" press=".onRowPress" tooltip="View Gate Pass"/>
+							</cells>
+						</ColumnListItem>
+					</items>
+				</Table>
+			</VBox>
+		</content>
+	</Page>
+</mvc:View>

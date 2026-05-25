@@ -346,7 +346,7 @@
 						</VBox>
 
 						<HBox justifyContent="End" alignItems="Center" class="sapUiLargeMarginTop">
-							<Button text="PRINT GATE PASS" type="Emphasized" press=".onPrintGatePass" icon="sap-icon://print" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd" visible="{= ${out>/DocOptionIndex} === 1 }"/>
+							<Button text="PRINT GATE PASS" type="Emphasized" press=".onPrintGatePass" icon="sap-icon://print" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd" visible="{= !!${out>/GatePassNo} }"/>
 							<Button text="Generate DC" type="Emphasized" press=".onGenerateDC" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd" visible="{= ${out>/DocOptionIndex} === 1 }"/>
 							<!-- <Button text="Generate E-Way Bill" type="Emphasized" press=".onGenerateEWay" class="gpmsDocBtn ewayBtn sapUiSmallMarginEnd" visible="{= ${out>/DocOptionIndex} === 1 }"/> -->
 							<Button text="SAVE" type="Accept" press=".onSaveLogistics" icon="sap-icon://save" class="gpmsSubmitBtn"/>
