@@ -30,12 +30,12 @@ sap.ui.define([
 				CustomerGst: "",
 				ZipCode: "",
 				City: "",
-				Remarks: "Scrap material dispatch",
+				Remarks: "",
 				VehicleNo: "",
 				ModeOfDispatch: "ROAD",
 				TransporterName: "",
 				TransporterGst: "",
-				DCNotes: "Dispatch against sales order",
+				DCNotes: "",
 				GatePassNo: "",
 				finalTotal: "0.00",
 				ASHItmNav: []
@@ -105,7 +105,7 @@ sap.ui.define([
 						vendorGST: item.CustomerGST || item.CustomerGst || item.Gst || item.Stcd3 || "",
 						city: item.City || "",
 						postalCode: item.PostalCode || "",
-						remarks: item.Remarks || item.Description || "Scrap material dispatch",
+						remarks: item.Remarks || item.Description || "",
 						items: aItemsMapped
 					};
 				});
@@ -233,7 +233,7 @@ sap.ui.define([
 									vendorGST: oItem.CustomerGST || oItem.CustomerGst || "",
 									city: oItem.City || "",
 									postalCode: oItem.PostalCode || "",
-									remarks: oItem.Remarks || "Scrap material dispatch",
+									remarks: oItem.Remarks || "",
 									items: aItemsMapped
 								};
 								that._fillFromSaleOrder(oMapped);
@@ -277,7 +277,7 @@ sap.ui.define([
 			oModel.setProperty("/CustomerGst", "");
 			oModel.setProperty("/City", "");
 			oModel.setProperty("/ZipCode", "");
-			oModel.setProperty("/Remarks", "Scrap material dispatch");
+			oModel.setProperty("/Remarks", "");
 			oModel.setProperty("/ASHItmNav", []);
 			oModel.setProperty("/finalTotal", "0.00");
 		},
@@ -429,7 +429,7 @@ sap.ui.define([
 					vendorGST: "33AAECA4133B1ZY",
 					city: "Chennai",
 					postalCode: "600107",
-					remarks: "Scrap material dispatch",
+					remarks: "",
 					items: [
 						{
 							SalesDocument: "310019794",
