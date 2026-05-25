@@ -82,8 +82,19 @@ sap.ui.define([
 		
 
 		onButtonLogoutPress: function () {
-			localStorage.removeItem("gpms_user");
-			window.location.href = "/sap/public/bc/icf/logoff";
+			// Clear all frontend storages to ensure fresh state for next user
+			localStorage.clear();
+			sessionStorage.clear();
+
+			// Clear all document cookies accessible via JS
+			document.cookie.split(";").forEach(function(c) {
+				document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+			});
+
+			// Perform SAP logout and redirect back to the app to force a fresh login prompt
+			var sLogoffUrl = "/sap/public/bc/icf/logoff";
+			var sRedirectUrl = window.location.origin + window.location.pathname;
+			window.location.replace(sLogoffUrl + "?redirectURL=" + encodeURIComponent(sRedirectUrl));
 		},
 
 		onSideNavButtonPress: function () {
