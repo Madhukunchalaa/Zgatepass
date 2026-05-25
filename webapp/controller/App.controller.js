@@ -91,10 +91,15 @@ sap.ui.define([
 				document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
 			});
 
-			// Perform SAP logout and redirect back to the app to force a fresh login prompt
-			var sLogoffUrl = "/sap/public/bc/icf/logoff";
-			var sRedirectUrl = window.location.origin + window.location.pathname;
-			window.location.replace(sLogoffUrl + "?redirectURL=" + encodeURIComponent(sRedirectUrl));
+			// Perform SAP logout via AJAX to avoid 403 Open Redirect block, then reload
+			$.ajax({
+				url: "/sap/public/bc/icf/logoff",
+				type: "GET",
+				complete: function() {
+					// After backend session is destroyed, redirect to home to prompt login
+					window.location.replace(window.location.origin + window.location.pathname);
+				}
+			});
 		},
 
 		onSideNavButtonPress: function () {
