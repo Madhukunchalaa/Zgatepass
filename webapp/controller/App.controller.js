@@ -91,13 +91,21 @@ sap.ui.define([
 				document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
 			});
 
-			// Perform SAP logout via AJAX to avoid 403 Open Redirect block, then reload
+			// Perform SAP logout via AJAX to clear backend session
 			$.ajax({
 				url: "/sap/public/bc/icf/logoff",
 				type: "GET",
 				complete: function() {
-					// After backend session is destroyed, redirect to home to prompt login
-					window.location.replace(window.location.origin + window.location.pathname);
+					// Force the browser to clear Basic Auth cache by making a request with invalid credentials
+					var oReq = new XMLHttpRequest();
+					oReq.open("GET", "/sap/bc/ui2/start_up", true, "logout", "logout");
+					oReq.send(null);
+					oReq.onreadystatechange = function() {
+						if (oReq.readyState === 4) {
+							// After auth cache is overwritten, redirect to prompt login
+							window.location.replace(window.location.origin + window.location.pathname);
+						}
+					};
 				}
 			});
 		},
