@@ -48,8 +48,7 @@ sap.ui.define([
 			var sInitials = sFullName.trim().split(/\s+/).map(function (p) { return p.charAt(0); }).join("").substring(0, 2).toUpperCase();
 			console.log("User is",sFullName)
             
-			
-
+		
 	       
 			this.byId("idWelcomeText").setText("Welcome, " + sFullName);
 			this.byId("idUserAvatar").setInitials(sInitials);

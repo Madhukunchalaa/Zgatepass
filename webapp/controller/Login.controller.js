@@ -46,12 +46,20 @@ sap.ui.define([
                 filters: [new Filter("User", FilterOperator.EQ, sUserId)],
                 success: function (oData) {
                     var oResult = (oData.results && oData.results[0]) || {};
-                    console.log("[ZUserdetSet] Plant:", oResult.Plant, "| Cocode:", oResult.Cocode, "| Department:", oResult.Department);
+                    console.log("=== User Authorization Details ===");
+                    console.log("User ID:", sUserId);
+                    console.log("Plant:", oResult.Plant);
+                    console.log("Company Code:", oResult.Cocode);
+                    console.log("Department:", oResult.Department);
+                    console.log("Role:", oResult.Role);
+                    console.log("=================================");
+
                     var oUserModel = sap.ui.getCore().getModel("user");
                     if (oUserModel) {
                         oUserModel.setProperty("/Plant", oResult.Plant || "");
                         oUserModel.setProperty("/Cocode", oResult.Cocode || "");
                         oUserModel.setProperty("/Department", oResult.Department || "");
+                        oUserModel.setProperty("/Role", oResult.Role || "");
                     }
                     fnNavigate();
                 },
