@@ -22,7 +22,7 @@
 					</GenericTile>
 
 					<!-- RGP Card -->
-					<GenericTile class="gpmsDashCard rgpCard" press=".onPressRGP" header="RGP REQUEST" subheader="Returnable Gate Pass">
+					<GenericTile class="gpmsDashCard rgpCard" press=".onPressRGP" header="RGP REQUEST" subheader="Returnable Gate Pass" visible="{= !${user>/IsGatepassUserOnly} }">
 						<TileContent>
 							<core:Icon src="sap-icon://shipping-status" class="gpmsCardIcon"/>
 						</TileContent>
@@ -84,28 +84,28 @@
 					</GenericTile>
 
 					<!-- Ash Gate Pass Card -->
-					<GenericTile class="gpmsDashCard ashCard" press=".onPressAshGatePassCreation" header="ASH GP" subheader="Ash Disposal Creation">
+					<GenericTile class="gpmsDashCard ashCard" press=".onPressAshGatePassCreation" header="ASH GP" subheader="Ash Disposal Creation" visible="{= !${user>/IsGatepassUserOnly} }">
 						<TileContent>
 							<core:Icon src="sap-icon://factory" class="gpmsCardIcon"/>
 						</TileContent>
 					</GenericTile>
 
 					<!-- Ash Gate Pass List Card -->
-					<GenericTile class="gpmsDashCard ashListCard" press=".onPressAshGatePassList" header="ASH GP LIST" subheader="Ash Requests &amp; Approvals">
+					<GenericTile class="gpmsDashCard ashListCard" press=".onPressAshGatePassList" header="ASH GP LIST" subheader="Ash Requests &amp; Approvals" visible="{= !${user>/IsGatepassUserOnly} }">
 						<TileContent>
 							<core:Icon src="sap-icon://list" class="gpmsCardIcon"/>
 						</TileContent>
 					</GenericTile>
 
 					<!-- Scrap Request Card -->
-					<GenericTile class="gpmsDashCard" press=".onPressScrapRequestCreation" header="SCRAP REQUEST" subheader="Scrap Collection Request">
+					<GenericTile class="gpmsDashCard" press=".onPressScrapRequestCreation" header="SCRAP REQUEST" subheader="Scrap Collection Request" visible="{= !${user>/IsGatepassUserOnly} }">
 						<TileContent>
 							<core:Icon src="sap-icon://delete" class="gpmsCardIcon"/>
 						</TileContent>
 					</GenericTile>
 
 					<!-- Scrap Request List Card -->
-					<GenericTile class="gpmsDashCard" press=".onPressScrapRequestList" header="SCRAP REQUEST LIST" subheader="Scrap Approvals">
+					<GenericTile class="gpmsDashCard" press=".onPressScrapRequestList" header="SCRAP REQUEST LIST" subheader="Scrap Approvals" visible="{= !${user>/IsGatepassUserOnly} }">
 						<TileContent>
 							<core:Icon src="sap-icon://list" class="gpmsCardIcon"/>
 						</TileContent>
