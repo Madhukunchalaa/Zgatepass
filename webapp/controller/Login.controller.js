@@ -65,11 +65,15 @@ sap.ui.define([
 
                     var oUserModel = sap.ui.getCore().getModel("user");
                     if (oUserModel) {
+                        var sRole = oResult.Role || "";
                         oUserModel.setProperty("/Plant", oResult.Plant || "");
                         oUserModel.setProperty("/Cocode", oResult.Cocode || "");
                         oUserModel.setProperty("/Department", oResult.Department || "");
-                        oUserModel.setProperty("/Role", oResult.Role || "");
-                        oUserModel.setProperty("/IsGatepassUserOnly", false); // Temporarily removed restrictions for ZM_2301_MM_GATEPASS_USER
+                        oUserModel.setProperty("/Role", sRole);
+                        
+                        var bIsRestrictedUser = (sRole === "ZM_2301_MM_GATEPASS_USER" || sRole === "Z_MM_GATEPASS_USER_FRONT_VIEW");
+                        oUserModel.setProperty("/IsGatepassUserOnly", bIsRestrictedUser); 
+
                         localStorage.setItem("gpms_user", JSON.stringify(oUserModel.getData()));
                     }
                     fnNavigate();
