@@ -502,6 +502,8 @@ sap.ui.define([
 				GateEntryNo: "",
 				GEDate: sGEDate,
 				Message: "",
+				PCPNo: oData.PCPNo || "",
+				BudgetCode: oData.BudgetCode || "",
 				GateInPoNav: aNavItems
 			};
 		},
@@ -630,12 +632,9 @@ sap.ui.define([
 				oODataModel.create(sEntitySet, oPayload, {
 					success: function (oResponse) {
 						sap.ui.core.BusyIndicator.hide();
-						var sMsg = (oResponse && oResponse.Message) ? oResponse.Message : "Gate Entry created successfully.";
-						MessageBox.success(sMsg, {
-							onClose: function () {
-								this._resetModel();
-							}.bind(this)
-						});
+						var sMsg = (oResponse && oResponse.Message) ? oResponse.Message : "Success";
+						MessageToast.show(sMsg);
+						this._resetModel();
 					}.bind(this),
 					error: function (oError) {
 						sap.ui.core.BusyIndicator.hide();

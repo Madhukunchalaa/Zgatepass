@@ -16,11 +16,12 @@ sap.ui.define([
 		_emptyModel: function () {
 			return {
 				tiles: {
-					total: 0, pending: 0, approved: 0, rejected: 0
+					total: 0, pending: 0, approved: 0, rejected: 0,
+					nrgpTotal: 0, nrgpPending: 0, nrgpApproved: 0, nrgpRejected: 0,
+					rgpTotal: 0,  rgpPending: 0,  rgpApproved: 0,  rgpRejected: 0
 				},
 				barData: [],
-				pieData: [],
-				typeSummaries: []
+				pieData: []
 			};
 		},
 
@@ -29,124 +30,73 @@ sap.ui.define([
 			if (!oODataModel) { return; }
 
 			var that = this;
-			var aResults = {
-				nrgp: [], rgp: [], outward: [], inpo: [], irgp: [], scrap: [], ash: []
-			};
+			var aAll = [];
 			var iDone = 0;
-			var iExpected = 7;
 
 			function onDone() {
 				iDone++;
-				if (iDone === iExpected) {
+				if (iDone === 2) {
 					sap.ui.core.BusyIndicator.hide();
-					that._processData(aResults);
+					that._processData(aAll);
 				}
 			}
 
 			sap.ui.core.BusyIndicator.show(0);
 
-			// 1. NRGP
 			oODataModel.read("/GateReqHdrSet", {
 				filters: [new Filter("GatePassType", FilterOperator.EQ, "NRGP"), new Filter("Status", FilterOperator.EQ, "All")],
-				success: function (oData) { aResults.nrgp = oData.results || []; onDone(); },
+				success: function (oData) { aAll = aAll.concat(oData.results || []); onDone(); },
 				error: function () { onDone(); }
 			});
 
-			// 2. RGP
 			oODataModel.read("/GateReqHdrSet", {
 				filters: [new Filter("GatePassType", FilterOperator.EQ, "RGP"), new Filter("Status", FilterOperator.EQ, "All")],
-				success: function (oData) { aResults.rgp = oData.results || []; onDone(); },
-				error: function () { onDone(); }
-			});
-
-			// 3. Outward Gate Pass
-			oODataModel.read("/OutGatePassSet", {
-				success: function (oData) { aResults.outward = oData.results || []; onDone(); },
-				error: function () { onDone(); }
-			});
-
-			// 4. Inward PO Gate Pass
-			oODataModel.read("/GateInPoHdrSet", {
-				success: function (oData) { aResults.inpo = oData.results || []; onDone(); },
-				error: function () { onDone(); }
-			});
-
-			// 5. Inward RGP
-			oODataModel.read("/IRGPHdrSet", {
-				success: function (oData) { aResults.irgp = oData.results || []; onDone(); },
-				error: function () { onDone(); }
-			});
-
-			// 6. Scrap Request
-			oODataModel.read("/ScrapReqHdrSet", {
-				success: function (oData) { aResults.scrap = oData.results || []; onDone(); },
-				error: function () { onDone(); }
-			});
-
-			// 7. Ash Gatepass
-			oODataModel.read("/AshHdrSet", {
-				success: function (oData) { aResults.ash = oData.results || []; onDone(); },
+				success: function (oData) { aAll = aAll.concat(oData.results || []); onDone(); },
 				error: function () { onDone(); }
 			});
 		},
 
-		_normalizeStatus: function(sStatus, sApprovalReq) {
-			if (!sStatus && !sApprovalReq) return "Approved"; // Assume finalized items with no status are approved
-			var s = String(sStatus || sApprovalReq || "").toLowerCase();
-			if (s.includes("pen") || s.includes("init") || s === "x") return "Pending";
-			if (s.includes("app") || s.includes("rel")) return "Approved";
-			if (s.includes("rej") || s.includes("can")) return "Rejected";
-			return "Approved";
-		},
-
-		_processData: function (aResults) {
-			var that = this;
-			var oStats = {
-				nrgp:    { name: "NRGP", total: 0, pending: 0, approved: 0, rejected: 0 },
-				rgp:     { name: "RGP", total: 0, pending: 0, approved: 0, rejected: 0 },
-				outward: { name: "Outward", total: 0, pending: 0, approved: 0, rejected: 0 },
-				inpo:    { name: "Inward PO", total: 0, pending: 0, approved: 0, rejected: 0 },
-				irgp:    { name: "Inward RGP", total: 0, pending: 0, approved: 0, rejected: 0 },
-				scrap:   { name: "Scrap Request", total: 0, pending: 0, approved: 0, rejected: 0 },
-				ash:     { name: "Ash Gatepass", total: 0, pending: 0, approved: 0, rejected: 0 }
+		_processData: function (aData) {
+			var c = {
+				nrgpPending: 0, nrgpApproved: 0, nrgpRejected: 0,
+				rgpPending:  0, rgpApproved:  0, rgpRejected:  0
 			};
 
-			var aGlobal = { total: 0, pending: 0, approved: 0, rejected: 0 };
-
-			function processList(aItems, sKey, sStatusField, sApprovalField) {
-				aItems.forEach(function(item) {
-					var sNorm = that._normalizeStatus(item[sStatusField], item[sApprovalField]);
-					oStats[sKey].total++;
-					aGlobal.total++;
-					if (sNorm === "Pending") { oStats[sKey].pending++; aGlobal.pending++; }
-					else if (sNorm === "Approved") { oStats[sKey].approved++; aGlobal.approved++; }
-					else { oStats[sKey].rejected++; aGlobal.rejected++; }
-				});
-			}
-
-			processList(aResults.nrgp, "nrgp", "Status");
-			processList(aResults.rgp, "rgp", "Status");
-			processList(aResults.outward, "outward", "GPStatus");
-			processList(aResults.inpo, "inpo", "InspectionStatus");
-			processList(aResults.irgp, "irgp", "Status");
-			processList(aResults.scrap, "scrap", "ApprovalReq"); // Just checking ApprovalReq
-			processList(aResults.ash, "ash", "Status"); // Ash doesn't have status, defaults to approved
+			aData.forEach(function (item) {
+				var t = item.GatePassType;
+				var s = item.Status;
+				if (t === "NRGP") {
+					if (s === "Pending")  { c.nrgpPending++;  }
+					else if (s === "Approved") { c.nrgpApproved++; }
+					else if (s === "Rejected") { c.nrgpRejected++; }
+				} else if (t === "RGP") {
+					if (s === "Pending")  { c.rgpPending++;  }
+					else if (s === "Approved") { c.rgpApproved++; }
+					else if (s === "Rejected") { c.rgpRejected++; }
+				}
+			});
 
 			var oModel = this.getView().getModel("analytics");
 			oModel.setData({
-				tiles: aGlobal,
+				tiles: {
+					total:       aData.length,
+					pending:     c.nrgpPending  + c.rgpPending,
+					approved:    c.nrgpApproved + c.rgpApproved,
+					rejected:    c.nrgpRejected + c.rgpRejected,
+					nrgpTotal:   c.nrgpPending  + c.nrgpApproved + c.nrgpRejected,
+					rgpTotal:    c.rgpPending   + c.rgpApproved  + c.rgpRejected,
+					nrgpPending:  c.nrgpPending,  nrgpApproved: c.nrgpApproved,  nrgpRejected: c.nrgpRejected,
+					rgpPending:   c.rgpPending,   rgpApproved:  c.rgpApproved,   rgpRejected:  c.rgpRejected
+				},
 				barData: [
-					{ status: "Pending",  nrgp: oStats.nrgp.pending, rgp: oStats.rgp.pending, outward: oStats.outward.pending, inpo: oStats.inpo.pending, irgp: oStats.irgp.pending, scrap: oStats.scrap.pending, ash: oStats.ash.pending },
-					{ status: "Approved", nrgp: oStats.nrgp.approved, rgp: oStats.rgp.approved, outward: oStats.outward.approved, inpo: oStats.inpo.approved, irgp: oStats.irgp.approved, scrap: oStats.scrap.approved, ash: oStats.ash.approved },
-					{ status: "Rejected", nrgp: oStats.nrgp.rejected, rgp: oStats.rgp.rejected, outward: oStats.outward.rejected, inpo: oStats.inpo.rejected, irgp: oStats.irgp.rejected, scrap: oStats.scrap.rejected, ash: oStats.ash.rejected }
+					{ status: "Pending",  nrgp: c.nrgpPending,  rgp: c.rgpPending  },
+					{ status: "Approved", nrgp: c.nrgpApproved, rgp: c.rgpApproved },
+					{ status: "Rejected", nrgp: c.nrgpRejected, rgp: c.rgpRejected }
 				],
 				pieData: [
-					{ status: "Pending",  count: aGlobal.pending },
-					{ status: "Approved", count: aGlobal.approved },
-					{ status: "Rejected", count: aGlobal.rejected }
-				],
-				typeSummaries: [
-					oStats.nrgp, oStats.rgp, oStats.outward, oStats.inpo, oStats.irgp, oStats.scrap, oStats.ash
+					{ status: "Pending",  count: c.nrgpPending  + c.rgpPending  },
+					{ status: "Approved", count: c.nrgpApproved + c.rgpApproved },
+					{ status: "Rejected", count: c.nrgpRejected + c.rgpRejected }
 				]
 			});
 
@@ -160,7 +110,7 @@ sap.ui.define([
 					title: { visible: false },
 					legend: { visible: true },
 					plotArea: {
-						colorPalette: ["#3498db", "#9b59b6", "#e67e22", "#16a085", "#f1c40f", "#e74c3c", "#34495e"],
+						colorPalette: ["#E67E22", "#6A1B9A"],
 						dataLabel: { visible: true, formatString: "0" }
 					},
 					categoryAxis: { title: { visible: false } },
