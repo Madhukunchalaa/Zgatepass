@@ -49,18 +49,18 @@
 							<tnt:NavigationList>
 								<tnt:NavigationListItem text="Dashboard"              icon="sap-icon://home"                        key="home"/>
 								<tnt:NavigationListItem text="NRGP Request"           icon="sap-icon://add-document"                key="nrgp"/>
-								<tnt:NavigationListItem text="RGP Request"            icon="sap-icon://shipping-status"             key="rgp"              visible="{= !${user>/IsGatepassUserOnly} }"/>
+								<tnt:NavigationListItem text="RGP Request"            icon="sap-icon://shipping-status"             key="rgp"/>
 								<tnt:NavigationListItem text="Out Gate Pass"          icon="sap-icon://open-folder"                 key="OutGatePass"      visible="{= !${user>/IsGatepassUserOnly} }"/>
 								<tnt:NavigationListItem text="Inward Gate Pass"       icon="sap-icon://down-back"                   key="InwardGatePass"   visible="{= !${user>/IsGatepassUserOnly} }"/>
 								<tnt:NavigationListItem text="Gate Pass Request List" icon="sap-icon://list"                        key="GatePassList"/>
-								<tnt:NavigationListItem text="Gate Pass List"         icon="sap-icon://document-text"               key="NRGPList"         visible="{= !${user>/IsGatepassUserOnly} }"/>
+								<tnt:NavigationListItem text="Gate Pass List"         icon="sap-icon://document-text"               key="NRGPList"/>
 								<tnt:NavigationListItem text="Gate Pass with PO/Petty Cash" icon="sap-icon://supplier"               key="GatePassWithPO"   visible="{= !${user>/IsGatepassUserOnly} }"/>
 								<tnt:NavigationListItem text="IRGP Workflow"          icon="sap-icon://process"                     key="IRGP"             visible="{= !${user>/IsGatepassUserOnly} }"/>
-								<tnt:NavigationListItem text="Scrap Request"          icon="sap-icon://delete"                      key="ScrapRequestCreation" visible="{= !${user>/IsGatepassUserOnly} }"/>
-								<tnt:NavigationListItem text="Scrap Request List"     icon="sap-icon://list"                        key="ScrapRequestList" visible="{= !${user>/IsGatepassUserOnly} }"/>
+								<tnt:NavigationListItem text="Scrap Request"          icon="sap-icon://delete"                      key="ScrapRequestCreation"/>
+								<tnt:NavigationListItem text="Scrap Request List"     icon="sap-icon://list"                        key="ScrapRequestList"/>
 								<tnt:NavigationListItem text="Add Scrap Gatepass"     icon="sap-icon://sales-document"              key="ScrapGatepassCreation" visible="{= !${user>/IsGatepassUserOnly} }"/>
-								<tnt:NavigationListItem text="Ash GP Request"         icon="sap-icon://factory"                     key="AshGatePassCreation" visible="{= !${user>/IsGatepassUserOnly} }"/>
-								<tnt:NavigationListItem text="Ash GP List"            icon="sap-icon://list"                        key="AshGatePassList"  visible="{= !${user>/IsGatepassUserOnly} }"/>
+								<tnt:NavigationListItem text="Ash GP Request"         icon="sap-icon://factory"                     key="AshGatePassCreation"/>
+								<tnt:NavigationListItem text="Ash GP List"            icon="sap-icon://list"                        key="AshGatePassList"/>
 								<tnt:NavigationListItem text="Add PCP"                icon="sap-icon://lead"                        key="PCPList"          visible="{= !${user>/IsGatepassUserOnly} }"/>
 								<tnt:NavigationListItem text="Reports"                icon="sap-icon://business-objects-experience" key="analytics"        visible="{= !${user>/IsGatepassUserOnly} }"/>
 							</tnt:NavigationList>
