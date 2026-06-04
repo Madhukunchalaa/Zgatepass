@@ -14,6 +14,12 @@ sap.ui.define([
 		},
 
 		_onRouteMatched: function () {
+			var oUserModel = sap.ui.getCore().getModel("user");
+			if (oUserModel && oUserModel.getProperty("/IsGatepassUserOnly")) {
+				sap.m.MessageBox.error("You do not have authorization to access the Gate Pass List screen.");
+				this.getRouter().navTo("home");
+				return;
+			}
 			this.getView().getModel("nrgpList").setProperty("/items", []);
 			this._loadData();
 		},
@@ -117,7 +123,7 @@ sap.ui.define([
 			if (sStatus === "CLOSED" || sStatus === "Approved" || sStatus === "APPROVED" || sStatus === "A") return "Success";
 			if (sStatus === "AWAITING FOR VENDOR ACKNOWLEDGEMENT" || sStatus === "Pending" || sStatus === "PENDING") return "Warning";
 			if (sStatus === "OPEN") return "Information";
-			if (sStatus === "Rejected" || sStatus === "REJECTED" || sStatus === "R") return "Error";
+			if (sStatus === "Rejected" || sStatus === "REJECTED" || sStatus === "R" || sStatus === "CANCELLED" || sStatus === "Cancelled") return "Error";
 			if (sStatus === "AM" || sStatus === "AMENDMENT") return "Error";
 			return "None";
 		},

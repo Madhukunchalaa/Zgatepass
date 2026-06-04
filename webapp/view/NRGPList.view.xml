@@ -24,6 +24,7 @@
                         <core:Item key="OPEN" text="OPEN" />
                         <core:Item key="AWAITING FOR VENDOR ACKNOWLEDGEMENT" text="Awaiting Acknowledgement" />
                         <core:Item key="CLOSED" text="CLOSED" />
+                        <core:Item key="CANCELLED" text="CANCELLED" />
                         <core:Item key="Pending" text="Pending" />
                         <core:Item key="Approved" text="Approved" />
                         <core:Item key="Rejected" text="Rejected" />

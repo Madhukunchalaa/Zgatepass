@@ -19,7 +19,9 @@ sap.ui.define([
 
 			// Initialize global user model
 			var oUserModel = new JSONModel({
-				IsGatepassUserOnly: false
+				IsGatepassUserOnly: false,
+				IsHodUser: false,
+				IsStoreUser: false
 			});
 			sap.ui.getCore().setModel(oUserModel, "user");
 			this.setModel(oUserModel, "user");
@@ -29,8 +31,12 @@ sap.ui.define([
 			if (sSavedUser) {
 				try {
 					var oUserData = JSON.parse(sSavedUser);
-					oUserData.IsGatepassUserOnly = false; // Force false for now to remove all restrictions
 					oUserModel.setData(oUserData);
+					
+					// Asynchronously refresh user details from backend to update roles
+					if (oUserData.id) {
+						this._refreshUserDetails(oUserData.id);
+					}
 				} catch (e) {
 					console.error("Error restoring user session:", e);
 				}
@@ -111,75 +117,42 @@ sap.ui.define([
 				localStorage.setItem("mockScrapInventory", JSON.stringify(oDefaultInventory));
 			}
 
-			// Initialize global IRGP collection for mock multi-persona state tracking
+			// Initialize global IRGP collection for multi-persona state tracking (start empty)
 			var oIRGPGlobalData = {
-				documents: [
-					{
-						IRGPNo: "IRGP2026-27-0068",
-						GEDate: "06-05-2026",
-						DueDate: "13-05-2026",
-						RevisedDueDate: "13-05-2026",
-						ReturnedDate: "01-01-1900",
-						Department: "MECHANICAL",
-						RequestUser: "Sathish Panchatsaram",
-						ReturnUser: "",
-						ContractName: "POWER MECH PROJECTS LTD - LHP & AHP",
-						ContractEmployeeName: "Sureshbabu",
-						RequestType: "HxGN EAM",
-						Remarks: "Material issue for Slag path work",
-						StatusCode: "PENDING_RESERVATION", // User needs to enter MRN number
-						items: [
-							{
-								SNo: 1,
-								ItemCode: "7843200012",
-								ItemDescription: "Alloy Steel Plate, Grade: 16MO3, ASTM",
-								SentQuantity: "314",
-								RecievedQuantity: "0",
-								BalanceQuantity: "314",
-								UOM: "Kilograms",
-								MRNumber: "",
-								Location: "NP1",
-								Mp2ItemCode: "",
-								DefaultBin: "PS - 08"
-							}
-						]
-					},
-					{
-						IRGPNo: "IRGP2026-27-0045",
-						GEDate: "04-05-2026",
-						DueDate: "11-05-2026",
-						RevisedDueDate: "11-05-2026",
-						ReturnedDate: "01-01-1900",
-						Department: "ELECTRICAL",
-						RequestUser: "Muthuraman A",
-						ReturnUser: "",
-						ContractName: "POWER MECH PROJECTS LTD - Pressure parts",
-						ContractEmployeeName: "SURESH",
-						RequestType: "HxGN EAM",
-						Remarks: "Emergency issue for cabling",
-						StatusCode: "PENDING_RECEIPT", // Ready for store to return counts
-						items: [
-							{
-								SNo: 1,
-								ItemCode: "6055850018",
-								ItemDescription: "Online AAQMS(Ambient Air Quality Monitoring S:",
-								SentQuantity: "2",
-								RecievedQuantity: "0",
-								BalanceQuantity: "2",
-								UOM: "Set",
-								MRNumber: "MR-88123",
-								Location: "NP1",
-								Mp2ItemCode: "",
-								DefaultBin: "-"
-							}
-						]
-					}
-				]
+				documents: []
 			};
 			var oIRGPGlobalModel = new JSONModel(oIRGPGlobalData);
 			this.setModel(oIRGPGlobalModel, "irgpGlobal");
 
 			this.getRouter().initialize();
+		},
+
+		_refreshUserDetails: function (sUserId) {
+			var oODataModel = this.getModel();
+			if (!oODataModel) {
+				return;
+			}
+			var oUserModel = this.getModel("user");
+			oODataModel.read("/ZUserdetSet", {
+				filters: [new sap.ui.model.Filter("User", sap.ui.model.FilterOperator.EQ, sUserId)],
+				success: function (oData) {
+					var oResult = (oData.results && oData.results[0]) || {};
+					if (oUserModel) {
+						var sRole = (oResult.Role || "").trim().toUpperCase();
+						oUserModel.setProperty("/Plant", oResult.Plant || "");
+						oUserModel.setProperty("/Cocode", oResult.Cocode || "");
+						oUserModel.setProperty("/Department", oResult.Department || "");
+						oUserModel.setProperty("/Role", sRole);
+						oUserModel.setProperty("/IsGatepassUserOnly", sRole === "Z_MM_GATEPASS_USER_FRONT_VIEW");
+						oUserModel.setProperty("/IsHodUser", sRole === "Z_MM_GATEPASS_HOD_FRONT_VIEW");
+						oUserModel.setProperty("/IsStoreUser", sRole === "Z_MM_GATEPASS_STORE_FRONT_VIEW");
+						localStorage.setItem("gpms_user", JSON.stringify(oUserModel.getData()));
+					}
+				}.bind(this),
+				error: function (oError) {
+					console.error("Error refreshing user details:", oError);
+				}
+			});
 		},
 
 		myNavBack: function () {

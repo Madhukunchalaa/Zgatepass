@@ -193,7 +193,7 @@ sap.ui.define([
 		},
 
 		onInit: function () {
-			this._resetModel();
+			this._resetModel(null);
 
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (oODataModel) {
@@ -213,18 +213,12 @@ sap.ui.define([
 			var oArgs = oEvent.getParameter("arguments");
 			var sType = oArgs ? oArgs.type : null;
 
-			this._resetModel();
+			// Pass type into _resetModel so GatePassType is set in the initial model,
+			// avoiding binding timing issues with disabled Select controls.
+			this._resetModel(sType);
 
 			var oModel = this.getView().getModel("gp");
 			if (oModel) {
-				if (sType) {
-					oModel.setProperty("/GatePassType", sType);
-					oModel.setProperty("/isTypeEditable", false);
-				} else {
-					oModel.setProperty("/GatePassType", "");
-					oModel.setProperty("/isTypeEditable", true);
-				}
-
 				// Pre-fill Plant, Company Code and Department from logged-in user profile
 				var oUserModel = sap.ui.getCore().getModel("user");
 				if (oUserModel) {
@@ -293,16 +287,16 @@ sap.ui.define([
 			});
 		},
 
-		_resetModel: function () {
+		_resetModel: function (sType) {
 			var oViewModel = new JSONModel({
 				GatePassReqNo: "",
-				GatePassType: "",
-				isTypeEditable: true,
+				GatePassType: sType || "",
+				isTypeEditable: !sType,
 				Cocode: "",
 				Plant: "",
 				FiscalYear: String(new Date().getFullYear()),
 				gpDate: new Date(),
-				returnableDate: new Date(),
+				returnableDate: null,
 				vendor: "",
 				vendorName: "",
 				vendorAddress: "",
@@ -485,37 +479,41 @@ sap.ui.define([
 
 		onFileChange: function (oEvent) {
 			var oModel = this.getView().getModel("gp");
-			var aAttachments = oModel.getProperty("/attachments") || [];
 			var aFiles = oEvent.getParameter("files");
 
 			if (aFiles && aFiles.length > 0) {
-				for (var i = 0; i < aFiles.length; i++) {
-					var oFile = aFiles[i];
-					
-					// Format file size
-					var sSize = "";
-					if (oFile.size < 1024) {
-						sSize = oFile.size + " Bytes";
-					} else if (oFile.size < 1048576) {
-						sSize = (oFile.size / 1024).toFixed(1) + " KB";
-					} else {
-						sSize = (oFile.size / 1048576).toFixed(1) + " MB";
-					}
-
-					// Avoid duplicates by name
-					var bExists = aAttachments.some(function (att) {
-						return att.name === oFile.name;
-					});
-
-					if (!bExists) {
-						aAttachments.push({
-							name: oFile.name,
-							size: sSize,
-							fileObj: oFile
+				var readAndAdd = function (oFile) {
+					var reader = new FileReader();
+					reader.onload = function (e) {
+						var sBase64 = e.target.result;
+						var sSize = "";
+						if (oFile.size < 1024) {
+							sSize = oFile.size + " Bytes";
+						} else if (oFile.size < 1048576) {
+							sSize = (oFile.size / 1024).toFixed(1) + " KB";
+						} else {
+							sSize = (oFile.size / 1048576).toFixed(1) + " MB";
+						}
+						
+						var aCurrent = oModel.getProperty("/attachments") || [];
+						var bExists = aCurrent.some(function (att) {
+							return att.name === oFile.name;
 						});
-					}
+						if (!bExists) {
+							aCurrent.push({
+								name: oFile.name,
+								size: sSize,
+								content: sBase64
+							});
+							oModel.setProperty("/attachments", aCurrent);
+						}
+					};
+					reader.readAsDataURL(oFile);
+				};
+
+				for (var i = 0; i < aFiles.length; i++) {
+					readAndAdd(aFiles[i]);
 				}
-				oModel.setProperty("/attachments", aAttachments);
 			}
 
 			// Clear the file uploader input so the same files can be selected again
@@ -625,6 +623,38 @@ sap.ui.define([
 					return;
 				}
 
+				// Validate items list
+				var aItems = oGp.items || [];
+				if (aItems.length === 0) {
+					MessageBox.error("Please add at least one item.");
+					return;
+				}
+
+				for (var i = 0; i < aItems.length; i++) {
+					var oItem = aItems[i];
+					if (!oItem.materialName || !oItem.materialName.trim()) {
+						MessageBox.error("Material Description is required at row " + (i + 1) + ".");
+						return;
+					}
+
+					var fQty = parseFloat(String(oItem.quantity || "").replace(/,/g, '')) || 0;
+					if (fQty <= 0) {
+						MessageBox.error("Quantity must be greater than 0 at row " + (i + 1) + ".");
+						return;
+					}
+
+					var fRate = parseFloat(String(oItem.rate || "").replace(/,/g, '')) || 0;
+					if (fRate <= 0) {
+						MessageBox.error("Rate must be greater than 0 at row " + (i + 1) + ".");
+						return;
+					}
+
+					if (!oItem.hsnCode || !oItem.hsnCode.trim()) {
+						MessageBox.error("HSN Code is mandatory at row " + (i + 1) + ".");
+						return;
+					}
+				}
+
 				var oVendorModel = this.getView().getModel("vendors");
 				var aVendorList = (oVendorModel && oVendorModel.getProperty("/results")) || [];
 				var oSelectedVendor = aVendorList.find(function (v) {
@@ -696,6 +726,12 @@ sap.ui.define([
 						sap.ui.core.BusyIndicator.hide();
 
 						var sReqNo = oData.GatePassReqNo || "";
+						if (sReqNo) {
+							var aCurrentAttachments = this.getView().getModel("gp").getProperty("/attachments") || [];
+							if (aCurrentAttachments.length > 0) {
+								localStorage.setItem("attachments_" + sReqNo, JSON.stringify(aCurrentAttachments));
+							}
+						}
 						var sMsg = oData.Message || "Gate Pass Request created successfully!";
 						var sDisplayMsg = sMsg;
 						if (sReqNo && sMsg.indexOf(sReqNo) === -1) {
@@ -719,7 +755,8 @@ sap.ui.define([
 										MessageToast.show("Request Number copied!");
 									});
 								}
-								this._resetModel();
+								var sCurrentType = this.getView().getModel("gp").getProperty("/GatePassType");
+								this._resetModel(sCurrentType);
 							}.bind(this)
 						});
 					}.bind(this),
@@ -742,7 +779,8 @@ sap.ui.define([
 		},
 
 		onClear: function () {
-			this._resetModel();
+			var sCurrentType = this.getView().getModel("gp").getProperty("/GatePassType");
+			this._resetModel(sCurrentType);
 		}
 	});
 });

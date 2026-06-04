@@ -130,6 +130,14 @@
 							<Label text="Company Code" class="gpmsFieldLabel"/>
 							<Input value="{out>/Cocode}" editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }" class="gpmsFieldInput"/>
 						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="GP Type" class="gpmsFieldLabel"/>
+							<Input value="{out>/GatePassType}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="GP Date" class="gpmsFieldLabel"/>
+							<Input value="{out>/GatePassDate}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly"/>
+						</VBox>
 
 						<VBox class="sapUiSmallMargin">
 							<Label text="Department" class="gpmsFieldLabel"/>
@@ -156,8 +164,12 @@
 						</VBox>
 
 						<VBox class="sapUiSmallMargin">
-							<Label text="Gate Entry No" class="gpmsFieldLabel"/>
-							<Input value="{out>/GateEntryNo}" placeholder="Enter Gate Entry No" class="gpmsFieldInput"/>
+							<Label text="Common Description" class="gpmsFieldLabel"/>
+							<Input value="{out>/CommonDesc}" placeholder="Click to enter Description..." showValueHelp="true" valueHelpOnly="true" valueHelpRequest=".onCommonDescEdit" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin" visible="{= ${out>/GatePassType} === 'RGP' }">
+							<Label text="Due Date" class="gpmsFieldLabel"/>
+							<DatePicker value="{out>/ReturnableDate}" displayFormat="dd-MM-yyyy" editable="false" class="gpmsFieldInput" width="100%"/>
 						</VBox>
 
 					</layout:Grid>
@@ -232,12 +244,41 @@
 					</layout:Grid>
 				</Panel>
 
+				<!-- Photo Attachments Panel -->
+				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginTop" headerText="PHOTO ATTACHMENTS" visible="{out>/showLogistics}">
+					<headerToolbar>
+						<Toolbar height="3rem">
+							<core:Icon src="sap-icon://camera" class="sapUiSmallMarginEnd"/>
+							<Title text="PHOTO ATTACHMENTS" level="H3"/>
+						</Toolbar>
+					</headerToolbar>
+					<VBox class="sapUiSmallMargin">
+						<List
+							id="idAttachmentsOutList"
+							noDataText="No photo attachments uploaded."
+							items="{out>/attachments}"
+							class="gpmsAttachmentList">
+							<CustomListItem class="gpmsAttachmentListItem">
+								<HBox alignItems="Center" justifyContent="SpaceBetween" width="100%">
+									<HBox alignItems="Center">
+										<core:Icon src="sap-icon://attachment-photo" class="gpmsAttachmentIcon sapUiSmallMarginEnd" color="#1A237E"/>
+										<VBox>
+											<Link text="{out>name}" press=".onAttachmentPress" class="gpmsAttachmentNameText"/>
+											<Text text="{out>size}" class="gpmsAttachmentSizeText" visible="{= !!${out>size}}"/>
+										</VBox>
+									</HBox>
+								</HBox>
+							</CustomListItem>
+						</List>
+					</VBox>
+				</Panel>
+
 				<!-- Logistics & Documents -->
 				<Panel headerText="LOGISTICS &amp; DOCUMENTS" expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginTop" visible="{out>/showLogistics}">
 					<VBox class="sapUiMediumMargin">
 						<RadioButtonGroup columns="2" selectedIndex="{out>/DocOptionIndex}" select=".onDocOptionChange">
-							<RadioButton text="Not Required" />
-							<RadioButton text="Required" />
+							<RadioButton text="DC Not Required" />
+							<RadioButton text="DC Required" />
 						</RadioButtonGroup>
 
 						<VBox class="sapUiSmallMarginTop">
@@ -249,7 +290,7 @@
 								</VBox>
 								<VBox width="45%">
 									<Label text="Transport By" class="gpmsFieldLabel"/>
-									<RadioButtonGroup columns="2" selectedIndex="{out>/TransportByIndex}" class="sapUiTinyMarginTop">
+									<RadioButtonGroup columns="2" selectedIndex="{out>/TransportByIndex}" select=".onTransportByChange" class="sapUiTinyMarginTop">
 										<RadioButton text="Self" />
 										<RadioButton text="Vendor" />
 									</RadioButtonGroup>
@@ -268,7 +309,7 @@
 								</VBox>
 								<VBox width="45%">
 									<Label text="Transporter Name" class="gpmsFieldLabel"/>
-									<Input value="{out>/TransporterName}" placeholder="Enter Transporter Name" class="gpmsFieldInput" width="100%"/>
+									<Input value="{out>/TransporterName}" placeholder="Enter Transporter Name" editable="{= ${out>/TransportByIndex} === 1 }" class="gpmsFieldInput" width="100%"/>
 								</VBox>
 							</HBox>
 
@@ -276,7 +317,7 @@
 							<HBox wrap="Wrap" class="sapUiSmallMarginTop">
 								<VBox width="50%" class="sapUiSmallMarginEnd">
 									<Label text="Transporter GST" class="gpmsFieldLabel"/>
-									<Input value="{out>/TransporterGST}" placeholder="Enter Transporter GST" class="gpmsFieldInput" width="100%"/>
+									<Input value="{out>/TransporterGST}" placeholder="Enter Transporter GST" editable="{= ${out>/TransportByIndex} === 1 }" class="gpmsFieldInput" width="100%"/>
 								</VBox>
 								<VBox width="45%">
 									<!-- Space reserved for future field or alignment -->
@@ -309,7 +350,7 @@
 
 							<!-- Insurance Required Checkbox -->
 							<HBox class="sapUiSmallMarginTop" alignItems="Center">
-								<CheckBox id="idInsuranceRequired" text="Insurance Required" select=".onInsuranceCheck"/>
+								<CheckBox id="idInsuranceRequiredCheckBox" text="Insurance Required" select=".onInsuranceRequiredCheckBoxSelect"/>
 							</HBox>
 
 							<!-- Row 7 - Status (Full Width) -->
@@ -318,8 +359,9 @@
 								<Select selectedKey="{out>/Status}" width="100%" class="gpmsFieldInput">
 									<core:Item key="" text="Select status"/>
 									<core:Item key="OPEN" text="OPEN"/>
-									<core:Item key="AWAITING FOR VENDOR ACKNOWLEDGEMENT" text="AWAITING FOR VENDOR ACKNOWLEDGEMENT"/>
+									<core:Item key="AWAITING FOR VENDOR ACKNOWLEDGEMENT" text="Awaiting for Return"/>
 									<core:Item key="CLOSED" text="CLOSED"/>
+									<core:Item key="CANCELLED" text="CANCELLED"/>
 								</Select>
 							</VBox>
 						</VBox>
@@ -347,7 +389,8 @@
 
 						<HBox justifyContent="End" alignItems="Center" class="sapUiLargeMarginTop">
 							<Button text="PRINT GATE PASS" type="Emphasized" press=".onPrintGatePass" icon="sap-icon://print" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd" visible="{= !!${out>/GatePassNo} }"/>
-							<Button text="Generate DC" type="Emphasized" press=".onGenerateDC" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd" visible="{= ${out>/DocOptionIndex} === 1 }"/>
+							<Button text="CANCEL GATE PASS" type="Reject" press=".onCancelGatePass" icon="sap-icon://cancel" class="gpmsDocBtn rejectBtn sapUiSmallMarginEnd" visible="{= !!${out>/GatePassNo} &amp;&amp; ${out>/Status} !== 'CANCELLED' }"/>
+							<Button text="Generate DC" type="Emphasized" press=".onGenerateDC" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd" visible="{= ${out>/DocOptionIndex} === 1 &amp;&amp; !!${out>/GatePassNo} }"/>
 							<!-- <Button text="Generate E-Way Bill" type="Emphasized" press=".onGenerateEWay" class="gpmsDocBtn ewayBtn sapUiSmallMarginEnd" visible="{= ${out>/DocOptionIndex} === 1 }"/> -->
 							<Button text="SAVE" type="Accept" press=".onSaveLogistics" icon="sap-icon://save" class="gpmsSubmitBtn"/>
 						</HBox>
@@ -368,7 +411,8 @@
 				<ToolbarSpacer/>
 				<Button text="Reset Form" icon="sap-icon://refresh" press="onClear" class="gpmsClearBtn"/>
 				<Button text="RE-SUBMIT REQUEST" icon="sap-icon://reset" type="Emphasized" press="onSubmitOutgate" class="gpmsSubmitBtn sapUiSmallMarginEnd" visible="{= ${out>/ApprovalStatus} === 'AMENDMENT' }"/>
-				<Button text="GENERATE GATE PASS" icon="sap-icon://accept" type="Accept" press="onSubmitOutgate" class="gpmsSubmitBtn sapUiSmallMarginEnd" visible="{= ${out>/ApprovalStatus} === 'APPROVED' }" enabled="{= !${out>/GatePassNo} }"/>
+				<Button text="GENERATE GATE PASS" icon="sap-icon://accept" type="Accept" press="onSubmitOutgate" class="gpmsSubmitBtn sapUiSmallMarginEnd" visible="{= ${out>/ApprovalStatus} === 'APPROVED' &amp;&amp; ${user>/IsStoreUser} &amp;&amp; !${out>/GatePassNo} &amp;&amp; !${out>/showLogistics} }"/>
+				<Button text="APPROVE IN MY INBOX" icon="sap-icon://approvals" type="Accept" press="onApproveInMyInbox" class="gpmsSubmitBtn sapUiSmallMarginEnd" visible="{= ${user>/IsHodUser} }"/>
 			</Toolbar>
 		</footer>
 	</Page>

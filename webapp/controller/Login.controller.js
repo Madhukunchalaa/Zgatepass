@@ -65,13 +65,14 @@ sap.ui.define([
 
                     var oUserModel = sap.ui.getCore().getModel("user");
                     if (oUserModel) {
-                        var sRole = oResult.Role || "";
+                        var sRole = (oResult.Role || "").trim().toUpperCase();
                         oUserModel.setProperty("/Plant", oResult.Plant || "");
                         oUserModel.setProperty("/Cocode", oResult.Cocode || "");
                         oUserModel.setProperty("/Department", oResult.Department || "");
                         oUserModel.setProperty("/Role", sRole);
-                        var bIsRestrictedUser = (sRole === "Z_MM_GATEPASS_USER_FRONT_VIEW");
-                        oUserModel.setProperty("/IsGatepassUserOnly", bIsRestrictedUser);
+                        oUserModel.setProperty("/IsGatepassUserOnly", sRole === "Z_MM_GATEPASS_USER_FRONT_VIEW");
+                        oUserModel.setProperty("/IsHodUser", sRole === "Z_MM_GATEPASS_HOD_FRONT_VIEW");
+                        oUserModel.setProperty("/IsStoreUser", sRole === "Z_MM_GATEPASS_STORE_FRONT_VIEW");
                         localStorage.setItem("gpms_user", JSON.stringify(oUserModel.getData()));
                     }
                     fnNavigate();

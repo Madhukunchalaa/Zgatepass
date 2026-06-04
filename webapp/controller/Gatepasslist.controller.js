@@ -53,6 +53,8 @@ sap.ui.define([
 						if (sRaw === "A" || sRaw === "APPROVED" || sRaw === "Approved") sStatus = "Approved";
 						else if (sRaw === "R" || sRaw === "REJECTED" || sRaw === "Rejected") sStatus = "Rejected";
 						else if (sRaw === "AM" || sRaw === "AMENDMENT" || sRaw === "Amendment") sStatus = "Amendment";
+						else if (sRaw === "CLOSED" || sRaw === "Closed" || sRaw === "C") sStatus = "Closed";
+						else if (sRaw === "CANCELLED" || sRaw === "Cancelled" || sRaw === "CAN") sStatus = "Cancelled";
 						
 						oItem.Status = sStatus;
 						return oItem;
@@ -73,6 +75,8 @@ sap.ui.define([
 						if (sRaw === "A" || sRaw === "APPROVED" || sRaw === "Approved") sStatus = "Approved";
 						else if (sRaw === "R" || sRaw === "REJECTED" || sRaw === "Rejected") sStatus = "Rejected";
 						else if (sRaw === "AM" || sRaw === "AMENDMENT" || sRaw === "Amendment") sStatus = "Amendment";
+						else if (sRaw === "CLOSED" || sRaw === "Closed" || sRaw === "C") sStatus = "Closed";
+						else if (sRaw === "CANCELLED" || sRaw === "Cancelled" || sRaw === "CAN") sStatus = "Cancelled";
 						
 						oItem.Status = sStatus;
 						return oItem;
@@ -158,6 +162,35 @@ sap.ui.define([
 			var oBinding = this.byId("idItemsGatePassTable").getBinding("items");
 			if (oBinding) {
 				this.byId("idItemCountText").setText(oBinding.getLength() + " Items");
+			}
+		},
+
+		onApproveButtonPress: function () {
+			window.open("https://10.5.18.54:44300/sap/bc/ui2/flp?sap-client=300&sap-language=EN", "_blank");
+		},
+
+		onObjectIdentifierReqNoTitlePress: function (oEvent) {
+			var oItem = oEvent.getSource().getBindingContext("gatePassList").getObject();
+			if (!oItem || oItem.GatePassType === "GP with PO") {
+				return;
+			}
+			
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var bIsStoreUser = oUserModel ? oUserModel.getProperty("/IsStoreUser") : false;
+			var sRole = oUserModel ? oUserModel.getProperty("/Role") : "";
+			var sStatus = oItem.Status || "";
+
+			var bApproved = sStatus === "Approved" || sStatus === "APPROVED" || sStatus === "A";
+			var bAmendment = sStatus === "Amendment" || sStatus === "AMENDMENT" || sStatus === "AM";
+
+			if (bAmendment) {
+				// Any user can open Amendment requests to edit and resubmit
+				this.getRouter().navTo("OutGatePass", { reqNo: oItem.GatePassReqNo, gpNo: oItem.GatePassNo || "-" });
+			} else if (bIsStoreUser && bApproved) {
+				// Only Store User can open Approved requests to generate gate pass
+				this.getRouter().navTo("OutGatePass", { reqNo: oItem.GatePassReqNo, gpNo: oItem.GatePassNo || "-" });
+			} else {
+				sap.m.MessageBox.warning("Access to Out Gate Pass creation is only allowed for Approved requests under the Store User (Z_MM_GATEPASS_STORE_FRONT_VIEW) role.\n\nYour current Role: " + (sRole || "No Role Assigned"));
 			}
 		},
 

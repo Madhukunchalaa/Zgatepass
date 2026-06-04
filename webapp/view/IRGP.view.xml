@@ -15,11 +15,12 @@
 					<!-- Hero Banner for List -->
 					<HBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMarginBottom">
 						<VBox>
-							<Title text="IRGP Workflow Dashboard" level="H2" class="gpmsHeroTitle"/>
+							<Title text="Internal Returnable Gate Passes" level="H2" class="gpmsHeroTitle"/>
 							<Text text="Track Internal Returnable Gate Passes across multi-persona store and user cycles" class="gpmsHeroSubTitle sapUiTinyMarginTop"/>
 						</VBox>
 						<HBox>
-							<Button text="Create New IRGP" icon="sap-icon://add" type="Emphasized" press="onPressCreateNewIRGP" class="sapUiSmallMarginEnd"/>
+							<Button text="Create New IRGP" icon="sap-icon://add" type="Emphasized" press="onPressCreateNewIRGP" class="sapUiSmallMarginEnd"
+							visible="{= !${user>/IsGatepassUserOnly} }"/>
 							<Button icon="sap-icon://home" press="onNavHome" type="Default" tooltip="Go to Dashboard"/>
 						</HBox>
 					</HBox>
@@ -27,10 +28,10 @@
 					<!-- Segmented IconTabBar to filter by Workflow Stage -->
 					<IconTabBar id="idIRGPIconTabBar" select="onFilterIRGPList" class="sapUiMediumMarginTop gpmsIconTabBar" expandable="false">
 						<items>
-							<IconTabFilter icon="sap-icon://circle-task-2" iconColor="Default" text="All Passes" key="ALL" />
-							<IconTabFilter icon="sap-icon://workflow-tasks" iconColor="Critical" text="Pending Reservation (User)" key="PENDING_RESERVATION" />
-							<IconTabFilter icon="sap-icon://shipping-status" iconColor="Negative" text="Pending Returns (Stores)" key="PENDING_RECEIPT" />
-							<IconTabFilter icon="sap-icon://accept" iconColor="Positive" text="Closed Passes" key="CLOSED" />
+							<IconTabFilter icon="sap-icon://circle-task-2" iconColor="Default"  text="All Passes"                    key="ALL"                visible="{= !${user>/IsGatepassUserOnly} }"/>
+							<IconTabFilter icon="sap-icon://workflow-tasks" iconColor="Critical" text="Pending Reservation"           key="PENDING_RESERVATION"/>
+							<IconTabFilter icon="sap-icon://task"           iconColor="Positive" text="Completed Reservation (Store)" key="PENDING_RECEIPT"    visible="{= !${user>/IsGatepassUserOnly} }"/>
+							<IconTabFilter icon="sap-icon://accept"         iconColor="Positive" text="Closed Passes"                 key="CLOSED"             visible="{= !${user>/IsGatepassUserOnly} }"/>
 						</items>
 						<content>
 							<!-- Gorgeous Fiori Table for IRGPs -->
@@ -69,20 +70,20 @@
 											
 											<!-- Gorgeous Workflow Status Mappings -->
 											<ObjectStatus
-												text="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' ? 'Pending Reservation' : ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' ? 'Pending Receipt (Stores)' : 'Closed &amp; Archived' }"
-												state="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' ? 'Warning' : ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' ? 'Error' : 'Success' }"
-												icon="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' ? 'sap-icon://workflow-tasks' : ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' ? 'sap-icon://shipping-status' : 'sap-icon://accept' }"/>
+												text="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' ? 'Pending Reservation' : ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' ? 'Completed Reservation' : 'Closed &amp; Archived' }"
+												state="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' ? 'Warning' : ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' ? 'Information' : 'Success' }"
+												icon="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' ? 'sap-icon://workflow-tasks' : ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' ? 'sap-icon://task' : 'sap-icon://accept' }"/>
 
 											<!-- Dynamic Actions matching stage -->
 											<HBox justifyContent="End" alignItems="Center">
 												<!-- Link MRN (User Mode) -->
-												<Button text="Link MRN" type="Emphasized" icon="sap-icon://edit" press="onActionLinkMRN" visible="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' }" class="gpmsActionBtn"/>
-												
-												<!-- Verify Returns (Store Mode) -->
-												<Button text="Verify Return" type="Emphasized" icon="sap-icon://shipping-status" press="onActionVerifyReturn" visible="{= ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' }" class="gpmsActionBtn"/>
-												
+												<Button text="Link MRN" type="Emphasized" icon="sap-icon://edit" press="onActionLinkMRN" visible="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' }"/>
+
+												<!-- Add Qty & Close (Store Mode) -->
+												<Button text="Add Qty &amp; Close" type="Emphasized" icon="sap-icon://task" press="onAddQtyAmpCloseButtonPress" visible="{= ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' }"/>
+
 												<!-- View details (Archived/Closed) -->
-												<Button text="View" type="Transparent" icon="sap-icon://show" press="onActionViewClosed" visible="{= ${irgpGlobal>StatusCode} === 'CLOSED' }" class="gpmsActionBtn"/>
+												<Button text="View" icon="sap-icon://show" press="onViewButtonPress" visible="{= ${irgpGlobal>StatusCode} === 'CLOSED' }"/>
 											</HBox>
 										</cells>
 									</ColumnListItem>
@@ -222,7 +223,7 @@
 									<layout:GridData span="XL6 L6 M6 S12"/>
 								</layoutData>
 								<Label text="Revised Due date" class="gpmsFieldLabel"/>
-								<DatePicker value="{irgp>/header/RevisedDueDate}" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+								<DatePicker value="{irgp>/header/RevisedDueDate}" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" editable="{irgp>/ui/revisedDueDateEditable}" class="{= ${irgp>/ui/revisedDueDateEditable} ? 'gpmsFieldInput' : 'gpmsFieldInput gpmsFieldInputReadonly' }" width="100%"/>
 							</VBox>
 
 							<!-- Returned date -->
@@ -316,6 +317,9 @@
 						<Toolbar class="gpmsSectionBar">
 							<core:Icon src="sap-icon://grid" class="gpmsSectionBarIcon"/>
 							<Label text="Table of Items" class="gpmsSectionBarLabel"/>
+							<ToolbarSpacer/>
+							<Button text="Add Row" icon="sap-icon://add" type="Emphasized" press="onAddRowButtonPress"
+								visible="{irgp>/ui/itemsEditable}" class="sapUiTinyMarginEnd"/>
 						</Toolbar>
 					</headerToolbar>
 					<content>
@@ -340,12 +344,11 @@
 								<t:Column width="160px">
 									<Label text="{= ${irgp>/ui/currentStep} === 'CREATE' ? 'Item Code/Tools' : 'Item Code' }" class="gpmsHeaderText"/>
 									<t:template>
-										<VBox>
-											<ComboBox value="{irgp>ItemCode}" visible="{irgp>/ui/itemsEditable}" class="gpmsTableInput" items="{irgp>/dropdowns/items}" width="100%">
-												<core:Item key="{irgp>key}" text="{irgp>text}"/>
-											</ComboBox>
-											<Input value="{irgp>ItemCode}" visible="{= !${irgp>/ui/itemsEditable} }" editable="false" class="gpmsTableInput gpmsFieldInputReadonly" width="100%"/>
-										</VBox>
+										<Input value="{irgp>ItemCode}"
+											editable="{irgp>/ui/itemsEditable}"
+											placeholder="e.g. MAT100001"
+											class="{= ${irgp>/ui/itemsEditable} ? 'gpmsTableInput' : 'gpmsTableInput gpmsFieldInputReadonly' }"
+											width="100%"/>
 									</t:template>
 								</t:Column>
 
@@ -373,11 +376,16 @@
 									</t:template>
 								</t:Column>
 
-								<!-- Recvd Qty (Detail/edit modes only) -->
+								<!-- Recvd Qty (editable by store in STORE_CLOSE step) -->
 								<t:Column width="110px" hAlign="Right" visible="{= ${irgp>/ui/currentStep} !== 'CREATE' }">
 									<Label text="Recvd Qty" class="gpmsHeaderText"/>
 									<t:template>
-										<Input value="{irgp>RecievedQuantity}" type="Number" editable="false" class="gpmsTableInput gpmsFieldInputReadonly" textAlign="Right"/>
+										<Input value="{irgp>RecievedQuantity}"
+											type="Number"
+											editable="{irgp>/ui/receivedQtyEditable}"
+											liveChange=".onRecievedQuantityInputLiveChange"
+											textAlign="Right"
+											class="{= ${irgp>/ui/receivedQtyEditable} ? 'gpmsTableInput' : 'gpmsTableInput gpmsFieldInputReadonly' }"/>
 									</t:template>
 								</t:Column>
 
@@ -470,10 +478,12 @@
 									<layout:GridData span="XL6 L6 M6 S12"/>
 								</layoutData>
 								<Label text="Status" class="gpmsFieldLabel"/>
-								<Select selectedKey="{irgp>/header/StatusCode}" enabled="false" class="gpmsFieldInput" width="100%">
-									<core:Item key="OPEN" text="OPEN"/>
-									<core:Item key="CLOSED" text="CLOSED"/>
-									<core:Item key="PENDING_RESERVATION" text="PENDING_RESERVATION"/>
+								<Select selectedKey="{irgp>/header/StatusCode}"
+									enabled="{irgp>/ui/storeStatusEditable}"
+									class="gpmsFieldInput" width="100%">
+									<core:Item key="PENDING_RESERVATION" text="Pending Reservation"/>
+									<core:Item key="PENDING_RECEIPT"     text="Completed Reservation"/>
+									<core:Item key="CLOSED"              text="Closed"/>
 								</Select>
 							</VBox>
 
@@ -484,7 +494,7 @@
 							
 							<Button text="Submit" type="Emphasized" press="onSubmit" visible="{irgp>/ui/submitVisible}" class="gpmsSubmitBtn sapUiTinyMarginEnd"/>
 							<Button text="Submit Reservation" type="Emphasized" press="onSubmitReservation" visible="{irgp>/ui/submitResVisible}" class="gpmsSubmitBtn sapUiTinyMarginEnd"/>
-							<Button text="Verify &amp; Close IRGP" type="Accept" press="onCloseIRGP" visible="{irgp>/ui/closeVisible}" class="gpmsSubmitBtn sapUiTinyMarginEnd"/>
+							<Button text="Save &amp; Close IRGP" type="Accept" press="onSaveAmpCloseIRGPButtonPress" visible="{irgp>/ui/closeVisible}" class="gpmsSubmitBtn sapUiTinyMarginEnd"/>
 							<Button text="Print Slip" type="Default" icon="sap-icon://print" press="onPrint" visible="{irgp>/ui/printVisible}" class="sapUiTinyMarginEnd"/>
 							<Button text="Back" type="Reject" press="onNavHome"/>
 

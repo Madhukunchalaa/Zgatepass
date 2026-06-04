@@ -689,6 +689,50 @@
     color: #4CAF50 !important; /* Bright Green on Hover */
 }
 
+/* ─── Document Action Buttons ────────────────────────────── */
+.gpmsDocBtn.sapMBtn .sapMBtnInner {
+    background: #ffffff !important;
+    border: 1px solid var(--border-m) !important;
+    border-radius: 6px !important;
+    color: var(--navy) !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    padding: 0 24px !important;
+    height: 44px !important;
+    line-height: 44px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+    transition: all 0.2s ease-in-out !important;
+    text-transform: uppercase !important;
+}
+
+.gpmsDocBtn.sapMBtn:hover .sapMBtnInner {
+    background: var(--navy-ghost) !important;
+    border-color: var(--navy) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(26,35,126,0.15) !important;
+}
+
+.gpmsDocBtn.sapMBtn .sapMBtnIcon {
+    color: var(--navy) !important;
+}
+
+/* Reject variant for Cancel Button */
+.gpmsDocBtn.rejectBtn.sapMBtn .sapMBtnInner {
+    border-color: rgba(204,32,32,0.3) !important;
+    color: var(--red) !important;
+    background: #ffffff !important;
+}
+
+.gpmsDocBtn.rejectBtn.sapMBtn:hover .sapMBtnInner {
+    background: var(--red-pale) !important;
+    border-color: var(--red) !important;
+    box-shadow: 0 4px 12px rgba(204,32,32,0.15) !important;
+}
+
+.gpmsDocBtn.rejectBtn.sapMBtn .sapMBtnIcon {
+    color: var(--red) !important;
+}
+
 /* ─── Analytics Dashboard ────────────────────────────────── */
 .gpmsAnalyticsPage {
     padding: 1.5rem 2rem 3rem !important;
@@ -1066,4 +1110,16 @@
     color: var(--text-muted) !important;
 }
 
+.approveBtn .sapMBtnInner {
+    background-color: #1A237E !important;
+    color: white !important;
+    font-weight: bold;
+    border: none !important;
+    border-radius: 10px !important;
+}
 
+
+
+.approveBtn .sapMBtnIcon {
+    color: white !important;
+}

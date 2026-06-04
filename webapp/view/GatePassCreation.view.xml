@@ -53,8 +53,7 @@
 								dateValue="{gp>/gpDate}"
 								displayFormat="dd-MM-yyyy"
 								class="gpmsFieldInput"
-								width="100%"
-								editable="false"/>
+								width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="GP Type" required="true" class="gpmsFieldLabel"/>
@@ -70,7 +69,7 @@
 </Select>
 						</VBox>
 						<VBox class="sapUiSmallMargin" visible="{= ${gp>/GatePassType} === 'RGP' }">
-							<Label text="Returnable Date" required="true" class="gpmsFieldLabel"/>
+							<Label text="Due Date" required="true" class="gpmsFieldLabel"/>
 							<DatePicker
 								dateValue="{gp>/returnableDate}"
 								displayFormat="dd-MM-yyyy"

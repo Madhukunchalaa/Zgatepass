@@ -175,6 +175,15 @@ sap.ui.define([
 			var sRequestId = oContext.getProperty("requestId");
 			var sStatus = oContext.getProperty("status");
 
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var bIsHod = oUserModel && oUserModel.getProperty("/IsHodUser");
+			if (bIsHod) {
+				this.getRouter().navTo("ScrapRequestDetail", {
+					gpNo: encodeURIComponent(sRequestId)
+				});
+				return;
+			}
+
 			if (sStatus === "Gate Pass Generated") {
 				MessageBox.error("Already gate pass created for this request number");
 				return;

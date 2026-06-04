@@ -1,28 +1,98 @@
 sap.ui.define([
 	"./BaseController",
 	"sap/ui/model/json/JSONModel",
-	"sap/m/MessageBox",
-	"sap/m/MessageToast",
 	"sap/ui/model/Filter",
 	"sap/ui/model/FilterOperator"
-], function (BaseController, JSONModel, MessageBox, MessageToast, Filter, FilterOperator) {
+], function (BaseController, JSONModel, Filter, FilterOperator) {
 	"use strict";
 
 	return BaseController.extend("zgpms.meilpower.com.controller.Home", {
 
 		onInit: function () {
+			this.getView().setModel(new JSONModel({
+				gatePassListCount: "-",
+				nrgpListCount: "-",
+				scrapGpListCount: "-",
+				ashGpListCount: "-"
+			}), "hodCounts");
+
+			this.getRouter().getRoute("home").attachPatternMatched(this._onRouteMatched, this);
+		},
+
+		_onRouteMatched: function () {
+			this._loadPendingCounts();
+		},
+
+		_loadPendingCounts: function () {
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) { return; }
+
+			var oCountsModel = this.getView().getModel("hodCounts");
+
+			// Gate Pass Request List — backend requires GatePassType filter; count pending client-side
+			var iReqPending = 0;
+			var iReqDone = 0;
+			["NRGP", "RGP", "PO"].forEach(function (sType) {
+				oODataModel.read("/GateReqHdrSet", {
+					filters: [
+						new Filter("GatePassType", FilterOperator.EQ, sType),
+						new Filter("Status", FilterOperator.EQ, "All")
+					],
+					success: function (oData) {
+						var aResults = oData.results || [];
+						iReqPending += aResults.filter(function (item) {
+							var s = item.ApprovalReq || item.Status || "";
+							return s !== "A" && s !== "APPROVED" && s !== "Approved" &&
+								   s !== "R" && s !== "REJECTED" && s !== "Rejected" &&
+								   s !== "AM" && s !== "AMENDMENT" && s !== "Amendment";
+						}).length;
+						iReqDone++;
+						if (iReqDone === 3) {
+							oCountsModel.setProperty("/gatePassListCount", iReqPending);
+						}
+					}
+				});
+			});
+
+			// Gate Pass List — sum NRGP + RGP + PO (backend requires GatePassType filter)
+			var iGPCount = 0;
+			var iGPDone = 0;
+			["NRGP", "RGP", "PO"].forEach(function (sType) {
+				oODataModel.read("/OutGatePassSet", {
+					filters: [new Filter("GatePassType", FilterOperator.EQ, sType)],
+					success: function (oData) {
+						iGPCount += (oData.results || []).length;
+						iGPDone++;
+						if (iGPDone === 3) {
+							oCountsModel.setProperty("/nrgpListCount", iGPCount);
+						}
+					}
+				});
+			});
+
+			// Scrap Gatepass List — total scrap gate passes
+			oODataModel.read("/ScrapPassHdrSet", {
+				filters: [new Filter("GatePassType", FilterOperator.EQ, "NRGP")],
+				success: function (oData) {
+					oCountsModel.setProperty("/scrapGpListCount", (oData.results || []).length);
+				}
+			});
+
+			// Ash GP List — total ash gate passes
+			oODataModel.read("/AshHdrSet", {
+				filters: [new Filter("GatePassType", FilterOperator.EQ, "NRGP")],
+				success: function (oData) {
+					oCountsModel.setProperty("/ashGpListCount", (oData.results || []).length);
+				}
+			});
 		},
 
 		onPressNRGP: function () {
-			this.getRouter().navTo("GatePassCreation", {
-				type: "NRGP"
-			});
+			this.getRouter().navTo("GatePassCreation", { type: "NRGP" });
 		},
 
 		onPressRGP: function () {
-			this.getRouter().navTo("GatePassCreation", {
-				type: "RGP"
-			});
+			this.getRouter().navTo("GatePassCreation", { type: "RGP" });
 		},
 
 		onPressInward: function () {
@@ -50,23 +120,12 @@ sap.ui.define([
 		},
 
 		onPressIRGP: function () {
-			this.getRouter().navTo("IRGP", {
-				step: "LIST",
-				gpNo: "ALL"
-			});
+			this.getRouter().navTo("IRGP", { step: "LIST", gpNo: "ALL" });
 		},
-
-		// ==========================================================
-		// ADD PCP FEATURE
-		// ==========================================================
 
 		onPressAddPCP: function () {
 			this.getRouter().navTo("PCPList");
 		},
-
-		// ==========================================================
-		// ASH GATE PASS
-		// ==========================================================
 
 		onPressAshGatePassCreation: function () {
 			this.getRouter().navTo("AshGatePassCreation");
@@ -75,10 +134,6 @@ sap.ui.define([
 		onPressAshGatePassList: function () {
 			this.getRouter().navTo("AshGatePassList");
 		},
-
-		// ==========================================================
-		// SCRAP MODULE
-		// ==========================================================
 
 		onPressScrapRequestCreation: function () {
 			this.getRouter().navTo("ScrapRequestCreation");

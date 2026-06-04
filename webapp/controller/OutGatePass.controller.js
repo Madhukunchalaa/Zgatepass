@@ -15,15 +15,17 @@ sap.ui.define([
 
 		_onRouteMatched: function (oEvent) {
 			this._resetModel();
+			var oArgs = oEvent.getParameter("arguments");
+			var sReqNo = oArgs.reqNo;
+			var sGPNo  = (oArgs.gpNo && oArgs.gpNo !== "-") ? oArgs.gpNo : "";
 			var oUserModel = sap.ui.getCore().getModel("user");
-			if (oUserModel && oUserModel.getProperty("/IsGatepassUserOnly")) {
+			var bGatepassUserOnly = oUserModel ? oUserModel.getProperty("/IsGatepassUserOnly") : false;
+			// Allow GatepassUserOnly role through only when coming from the list with a reqNo (Amendment edit)
+			if (bGatepassUserOnly && !sReqNo) {
 				MessageBox.error("You do not have authorization to access the Out Gate Pass screen.");
 				this.getRouter().navTo("home");
 				return;
 			}
-			var oArgs = oEvent.getParameter("arguments");
-			var sReqNo = oArgs.reqNo;
-			var sGPNo  = oArgs.gpNo;
 			if (sReqNo) {
 				this._loadByReqNo(sReqNo, sGPNo);
 			}
@@ -48,9 +50,20 @@ sap.ui.define([
 						sap.m.MessageBox.error("No data found for Request No: " + sReqNo);
 						return;
 					}
-					var sStatus = oResult.ApprovalReq.toUpperCase();
-					if (sStatus === "A") {
+					var sStatus = this._getNormalizedStatus(oResult);
+					if (sStatus === "APPROVED" || sStatus === "CLOSED" || sStatus === "CANCELLED") {
 						this._validateAndMapData(oResult);
+						if (sStatus === "CLOSED") {
+							var oOutModel = this.getView().getModel("out");
+							oOutModel.setProperty("/ApprovalStatus", "CLOSED");
+							oOutModel.setProperty("/ApprovalState", "Success");
+							oOutModel.setProperty("/ApprovalIcon", "sap-icon://sys-enter-2");
+						} else if (sStatus === "CANCELLED") {
+							var oOutModel = this.getView().getModel("out");
+							oOutModel.setProperty("/ApprovalStatus", "CANCELLED");
+							oOutModel.setProperty("/ApprovalState", "Error");
+							oOutModel.setProperty("/ApprovalIcon", "sap-icon://sys-cancel-2");
+						}
 						// If a GP No was passed directly (navigated from Gate Pass List),
 						// force-set it and open logistics immediately
 						if (sGPNo) {
@@ -58,11 +71,13 @@ sap.ui.define([
 							oOutModel.setProperty("/GatePassNo", sGPNo);
 							oOutModel.setProperty("/showLogistics", true);
 						}
-					} else if (sStatus === "R" || sStatus === "REJECTED") {
-						sap.m.MessageBox.error("Request Number " + sReqNo + " has been Rejected and is now Closed.");
+					} else if (sStatus === "AMENDMENT") {
+						this._validateAndMapData(oResult);
+					} else if (sStatus === "REJECTED") {
+						sap.m.MessageBox.error("Request Number " + sReqNo + " has been Rejected.");
 						this._validateAndMapData(oResult);
 						var oOutModel = this.getView().getModel("out");
-						oOutModel.setProperty("/ApprovalStatus", "CLOSED");
+						oOutModel.setProperty("/ApprovalStatus", "REJECTED");
 						oOutModel.setProperty("/ApprovalState", "Error");
 						oOutModel.setProperty("/ApprovalIcon", "sap-icon://decline");
 					} else {
@@ -138,6 +153,8 @@ sap.ui.define([
 			var oData = {
 				GatePassreqNo: "",
 				GatePassNo: "",
+				GatePassType: "",
+				GatePassDate: "",
 				Requestor: "",
 				Department: "",
 				VendorName: "",
@@ -166,7 +183,7 @@ sap.ui.define([
 				NoOfPackages: 0,
 				ChallanNumber: "",
 				ChallanDate: null,
-				GateEntryNo: "",
+				CommonDesc: "",
 				Plant: "",
 				ExtendedReturnableDate: null,
 				Cocode: ""
@@ -220,17 +237,27 @@ sap.ui.define([
 					var oResult = oData.results && oData.results[0];
 
 					if (oResult) {
-						var sStatus = oResult.ApprovalReq.toUpperCase();
+						var sStatus = this._getNormalizedStatus(oResult);
 						// console.log("oResult:", oResult);
 						// console.log("Approval Status:", sStatus);
-						if (sStatus === "A") {
-							console.log('approve ayindi')
+						if (sStatus === "APPROVED" || sStatus === "CLOSED" || sStatus === "CANCELLED") {
 							this._validateAndMapData(oResult);
-						} else if (sStatus === "R" || sStatus === "REJECTED") {
-							sap.m.MessageBox.error("Request Number " + sReqNo + " has been Rejected and is now Closed.");
+							if (sStatus === "CLOSED") {
+								var oOutModel = this.getView().getModel("out");
+								oOutModel.setProperty("/ApprovalStatus", "CLOSED");
+								oOutModel.setProperty("/ApprovalState", "Success");
+								oOutModel.setProperty("/ApprovalIcon", "sap-icon://sys-enter-2");
+							} else if (sStatus === "CANCELLED") {
+								var oOutModel = this.getView().getModel("out");
+								oOutModel.setProperty("/ApprovalStatus", "CANCELLED");
+								oOutModel.setProperty("/ApprovalState", "Error");
+								oOutModel.setProperty("/ApprovalIcon", "sap-icon://sys-cancel-2");
+							}
+						} else if (sStatus === "REJECTED") {
+							sap.m.MessageBox.error("Request Number " + sReqNo + " has been Rejected.");
 							this._validateAndMapData(oResult);
 							var oOutModel = this.getView().getModel("out");
-							oOutModel.setProperty("/ApprovalStatus", "CLOSED");
+							oOutModel.setProperty("/ApprovalStatus", "REJECTED");
 							oOutModel.setProperty("/ApprovalState", "Error");
 							oOutModel.setProperty("/ApprovalIcon", "sap-icon://decline");
 						} else {
@@ -266,6 +293,26 @@ sap.ui.define([
 			}.bind(this), 100);
 		},
 
+		_getNormalizedStatus: function (oData) {
+			if (!oData) {
+				return "PENDING";
+			}
+			var sRawStatus = oData.ApprovalReq || oData.Status || oData.ApprovalStatus || oData.Approvalstatus || oData.Zstatus || oData.Zgpstatus || oData.Stat || oData.ZGP_STATUS || oData.ZSTATUS || "";
+			sRawStatus = String(sRawStatus).toUpperCase().trim();
+			if (sRawStatus === "APPROVED" || sRawStatus === "A" || sRawStatus === "RELEASED") {
+				return "APPROVED";
+			} else if (sRawStatus === "REJECTED" || sRawStatus === "R") {
+				return "REJECTED";
+			} else if (sRawStatus === "CLOSED" || sRawStatus === "C") {
+				return "CLOSED";
+			} else if (sRawStatus === "CANCELLED" || sRawStatus === "CANCEL" || sRawStatus === "CAN") {
+				return "CANCELLED";
+			} else if (sRawStatus === "AM" || sRawStatus === "AMENDMENT" || sRawStatus === "AMENDMENT REQUIRED") {
+				return "AMENDMENT";
+			}
+			return "PENDING";
+		},
+
 		_showApprovalFlow: function (oResult) {
 			var oOutModel = this.getView().getModel("out");
 			var bHODApproved = !!oResult.HODRemarks;
@@ -283,6 +330,18 @@ sap.ui.define([
 		_validateAndMapData: function (oData) {
 			var oOutModel = this.getView().getModel("out");
 
+			var sReqNo = oData.GatePassReqNo || oData.GatePassreqNo || "";
+			var aAttachments = [];
+			if (sReqNo) {
+				var sStored = localStorage.getItem("attachments_" + sReqNo);
+				if (sStored) {
+					try {
+						aAttachments = JSON.parse(sStored);
+					} catch(e) {}
+				}
+			}
+			oOutModel.setProperty("/attachments", aAttachments);
+
 			// Auto-detect navigation property
 			var aItems = [];
 			if (oData.OutgateNav && oData.OutgateNav.results) {
@@ -292,17 +351,7 @@ sap.ui.define([
 			}
 			// Mapping from OutGatePassSet sample payload
 			oOutModel.setProperty("/GatePassreqNo", oData.GatePassReqNo || oData.GatePassreqNo);
-			var sRawStatus = oData.ApprovalReq || oData.ApprovalReq || oData.Status || oData.ApprovalStatus || oData.Approvalstatus || oData.Zstatus || oData.Zgpstatus || oData.Stat || oData.ZGP_STATUS || oData.ZSTATUS || "";
-			var sStatus = "PENDING";
-			if (sRawStatus === "APPROVED" || sRawStatus === "A" || sRawStatus === "Approved" || sRawStatus === "RELEASED") {
-				sStatus = "APPROVED";
-			} else if (sRawStatus === "REJECTED" || sRawStatus === "R" || sRawStatus === "Rejected") {
-				sStatus = "REJECTED";
-			} else if (sRawStatus === "AM" || sRawStatus === "Amendment" || sRawStatus === "Amendment Required") {
-				sStatus = "AMENDMENT";
-			} else if (sRawStatus) {
-				sStatus = sRawStatus;
-			}
+			var sStatus = this._getNormalizedStatus(oData);
 			oOutModel.setProperty("/ApprovalStatus", sStatus);
 
 			// Set state and icon based on status
@@ -322,12 +371,18 @@ sap.ui.define([
 			oOutModel.setProperty("/ApprovalIcon", sIcon);
 			oOutModel.setProperty("/GatePassNo", oData.GatePassNo || "");
 			oOutModel.setProperty("/GatePassType", oData.GatePassType || "");
+			oOutModel.setProperty("/GatePassDate", oData.GatePassDate || "");
+			oOutModel.setProperty("/ReturnableDate", oData.ReturnableDate || null);
 			oOutModel.setProperty("/Requestor", oData.Requestor || "");
 			oOutModel.setProperty("/Department", oData.Department);
+			oOutModel.setProperty("/Vendor", oData.Vendor || oData.Lifnr || "");
 			oOutModel.setProperty("/VendorName", oData.VendorName);
 			oOutModel.setProperty("/VendorGST", oData.VendorGST);
-			oOutModel.setProperty("/TransporterName", oData.VendorName || "");
-			oOutModel.setProperty("/TransporterGST", oData.VendorGST || "");
+			oOutModel.setProperty("/ZipCode", oData.ZipCode || oData.PostalCode || "");
+			oOutModel.setProperty("/City", oData.City || "");
+			oOutModel.setProperty("/FiscalYear", oData.FiscalYear || String(new Date().getFullYear()));
+			oOutModel.setProperty("/TransporterName", oData.TransporterName || "");
+			oOutModel.setProperty("/TransporterGST", oData.TransporterGST || "");
 			oOutModel.setProperty("/VendorAddress", (oData.City || "") + ", " + (oData.ZipCode || ""));
 			oOutModel.setProperty("/VendorPerson", oData.VendorPerson);
 			oOutModel.setProperty("/UserRemarks", oData.Remarks || "");
@@ -377,7 +432,83 @@ sap.ui.define([
 			// Gate pass already exists — show logistics section immediately
 			if (oData.GatePassNo) {
 				oOutModel.setProperty("/showLogistics", true);
+				oOutModel.setProperty("/ChallanNumber", oData.ChallanNumber || "");
+				oOutModel.setProperty("/ChallanDate", oData.ChallanDate || null);
+				oOutModel.setProperty("/EWayBillNo", oData.EWayBillNo || "");
+				oOutModel.setProperty("/EWayBillDate", oData.EWayBillDate || null);
+				oOutModel.setProperty("/DCNotes", oData.DCNotes || "");
+				oOutModel.setProperty("/DocOptionIndex", oData.ChallanNumber ? 1 : 0);
+				oOutModel.setProperty("/Status", oData.GPStatus || "OPEN");
+			} else {
+				// GateReqHdrSet didn't return a GatePassNo — check OutGatePassSet directly
+				var sReqNo = oData.GatePassReqNo || oData.GatePassreqNo || "";
+				var sGPType = oData.GatePassType || "";
+				if (sReqNo) {
+					this._checkExistingGatePass(sReqNo, sGPType);
+				}
 			}
+		},
+
+		_checkExistingGatePass: function (sReqNo, sGPType) {
+			var oODataModel = this.getOwnerComponent().getModel();
+			var oOutModel = this.getView().getModel("out");
+			if (!oODataModel) { return; }
+
+			var aFilters = [new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)];
+			if (sGPType) {
+				aFilters.push(new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, sGPType));
+			}
+
+			oODataModel.read("/OutGatePassSet", {
+				filters: aFilters,
+				urlParameters: { "$expand": "OutgateNav" },
+				success: function (oData) {
+					var oGP = oData.results && oData.results[0];
+					if (!oGP || !oGP.GatePassNo) { return; }
+
+					oOutModel.setProperty("/GatePassNo", oGP.GatePassNo);
+					oOutModel.setProperty("/GatePassType", oGP.GatePassType || oOutModel.getProperty("/GatePassType"));
+					oOutModel.setProperty("/GatePassDate", oGP.GatePassDate || "");
+					oOutModel.setProperty("/showLogistics", true);
+					oOutModel.setProperty("/ChallanNumber", oGP.ChallanNumber || "");
+					oOutModel.setProperty("/ChallanDate", oGP.ChallanDate || null);
+					oOutModel.setProperty("/EWayBillNo", oGP.EWayBillNo || "");
+					oOutModel.setProperty("/EWayBillDate", oGP.EWayBillDate || null);
+					oOutModel.setProperty("/DCNotes", oGP.DCNotes || "");
+					oOutModel.setProperty("/DocOptionIndex", oGP.ChallanNumber ? 1 : 0);
+					oOutModel.setProperty("/Status", oGP.GPStatus || "OPEN");
+					oOutModel.setProperty("/VehicleNo", oGP.VehicleNo || oOutModel.getProperty("/VehicleNo"));
+					oOutModel.setProperty("/ModeOfTransport", oGP.ModeOfDispatch || oOutModel.getProperty("/ModeOfTransport"));
+					oOutModel.setProperty("/TransporterName", oGP.TransporterName || oOutModel.getProperty("/TransporterName"));
+					oOutModel.setProperty("/TransporterGST", oGP.TransporterGST || oOutModel.getProperty("/TransporterGST"));
+					oOutModel.setProperty("/NoOfPackages", oGP.NoOfPacakages || 0);
+
+					// Remap items from gate pass navigation if present
+					var aRaw = (oGP.OutgateNav && oGP.OutgateNav.results) || [];
+					if (aRaw.length > 0) {
+						var aMapped = aRaw.map(function (it, i) {
+							var fQty = parseFloat(it.SentQuantity || it.Quantity || 0);
+							var fRate = parseFloat(it.ItemNetPrice || it.Rate || 0);
+							return {
+								sno: i + 1,
+								material: it.Material || "",
+								materialName: it.HSNDesc || it.MaterialDesc || it.Material || "",
+								hsnCode: it.HSNCode || "",
+								sentQty: fQty,
+								recvdQty: 0,
+								balQty: fQty,
+								uom: it.UOM || "EA",
+								rate: fRate,
+								amount: parseFloat((fQty * fRate).toFixed(2))
+							};
+						});
+						oOutModel.setProperty("/items", aMapped);
+						var fTotal = aMapped.reduce(function (s, it) { return s + it.amount; }, 0);
+						oOutModel.setProperty("/FinalTotal", fTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 }));
+					}
+				}.bind(this),
+				error: function () { /* silent — if lookup fails, leave form as-is */ }
+			});
 		},
 
 		onItemUpdate: function (oEvent) {
@@ -401,12 +532,93 @@ sap.ui.define([
 			oOutModel.setProperty("/FinalTotal", fTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }));
 		},
 
+		onCommonDescEdit: function (oEvent) {
+			var oSource = oEvent.getSource();
+			var oModel = this.getView().getModel("out");
+			var sInitialVal = oModel.getProperty("/CommonDesc") || "";
+
+			var oConfirmButton = new sap.m.Button({
+				text: "Confirm",
+				type: "Emphasized",
+				enabled: sInitialVal.length <= 500,
+				press: function () {
+					oModel.setProperty("/CommonDesc", oTextArea.getValue().trim());
+					oDialog.close();
+				}
+			});
+
+			var oTextArea = new sap.m.TextArea({
+				value: sInitialVal,
+				rows: 6,
+				maxLength: 500,
+				showExceededText: true,
+				width: "100%",
+				placeholder: "Enter common description...",
+				liveChange: function (oEvent) {
+					var sVal = oEvent.getParameter("value") || "";
+					var iLen = sVal.length;
+					if (iLen > 500) {
+						oConfirmButton.setEnabled(false);
+					} else {
+						oConfirmButton.setEnabled(true);
+					}
+				}
+			});
+
+			var oDialog = new sap.m.Dialog({
+				title: "Common Description",
+				contentWidth: "460px",
+				content: [
+					new sap.m.VBox({
+						class: "sapUiSmallMarginBeginEnd sapUiSmallMarginTopBottom",
+						items: [oTextArea]
+					})
+				],
+				beginButton: oConfirmButton,
+				endButton: new sap.m.Button({
+					text: "Cancel",
+					press: function () { oDialog.close(); }
+				}),
+				afterClose: function () { oDialog.destroy(); }
+			});
+
+			this.getView().addDependent(oDialog);
+			oDialog.open();
+		},
+
 		onNavHome: function () {
 			this.getRouter().navTo("home");
 		},
 
+		onAttachmentPress: function (oEvent) {
+			var oContext = oEvent.getSource().getBindingContext("out");
+			var oAttachment = oContext.getObject();
+			if (oAttachment && oAttachment.content) {
+				var newTab = window.open();
+				if (newTab) {
+					newTab.document.write('<iframe src="' + oAttachment.content + '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>');
+				} else {
+					var link = document.createElement('a');
+					link.href = oAttachment.content;
+					link.download = oAttachment.name;
+					link.click();
+				}
+			}
+		},
+
+		onApproveInMyInbox: function () {
+			window.open("https://10.5.18.54:44300/sap/bc/ui2/flp?sap-client=300&sap-language=EN", "_blank");
+		},
+
 		onGenerateDC: async function () {
-			var oOut = this.getView().getModel("out").getData();
+			var oOutModel = this.getView().getModel("out");
+			var oOut = oOutModel.getData();
+			if (!oOut.ChallanNumber && oOut.GatePassNo) {
+				var sYear = new Date().getFullYear();
+				var sGeneratedDC = "DC/" + sYear + "/" + oOut.GatePassNo;
+				oOutModel.setProperty("/ChallanNumber", sGeneratedDC);
+				oOut.ChallanNumber = sGeneratedDC;
+			}
 			const { jsPDF } = window.jspdf;
 			var doc = new jsPDF('p', 'mm', 'a4');
 			var margin = 15;
@@ -754,106 +966,19 @@ sap.ui.define([
 			var sType = oOut.GatePassType || "NRGP";
 			var sTypeLabel = sType === "RGP" ? "RETURNABLE GATE PASS" : "NON-RETURNABLE GATE PASS";
 
-			// ── PAGE BORDER ──────────────────────────────────────────────────────
-			doc.setLineWidth(0.6);
-			doc.rect(7, 5, pageWidth - 14, pageHeight - 10);
-			doc.setLineWidth(0.2);
-			doc.rect(8.5, 6.5, pageWidth - 17, pageHeight - 13);
-
-			// ── HEADER ───────────────────────────────────────────────────────────
 			var sLogoUrl = sap.ui.require.toUrl("zgpms/meilpower/com/images/meil_logo.png");
+			var sLogoBase64 = null;
 			try {
-				var sLogoBase64 = await this._getImageBase64(sLogoUrl);
-				doc.addImage(sLogoBase64, 'PNG', margin, 9, 32, 12);
-			} catch (e) {
-				doc.setFont("helvetica", "bold");
-				doc.setFontSize(18);
-				doc.setTextColor(180, 0, 0);
-				doc.text("MEIL", margin, 18);
-				doc.setTextColor(0, 0, 0);
-			}
+				sLogoBase64 = await this._getImageBase64(sLogoUrl);
+			} catch (e) { /* logo optional */ }
 
-			doc.setTextColor(0, 0, 0);
-			doc.setFont("helvetica", "bold");
-			doc.setFontSize(14);
-			doc.text("MEIL Neyveli Energy Private Limited", pageWidth / 2, 13, { align: "center" });
-			doc.setFont("helvetica", "normal");
-			doc.setFontSize(7.5);
-			doc.text("(Formerly TAQA Neyveli Power Company Private Limited)", pageWidth / 2, 17, { align: "center" });
-			doc.text("250MW LFPP, Uthangal, Neyveli, Tamilnadu - 607804, India.", pageWidth / 2, 20.5, { align: "center" });
-			doc.text("Tel : +91-4142-270300  |  Fax : +91-4142-270401", pageWidth / 2, 24, { align: "center" });
-			doc.setFont("helvetica", "bold");
-			doc.text("GSTIN : 33AACCS2753B1ZV  |  CIN : U40109TN1993PTC026223", pageWidth / 2, 27.5, { align: "center" });
-
-			// GP No + Date in top-right corner
-			doc.setFontSize(8.5);
-			doc.setFont("helvetica", "bold");
-			doc.text("GP No : " + (oOut.GatePassNo || ""), pageWidth - margin, 12, { align: "right" });
-			doc.setFont("helvetica", "normal");
-			doc.text("Date : " + sDate, pageWidth - margin, 17, { align: "right" });
-
-			// Thick separator below header
-			doc.setLineWidth(0.5);
-			doc.line(margin, 30.5, pageWidth - margin, 30.5);
-
-			// ── DOCUMENT TITLE ───────────────────────────────────────────────────
-			doc.setFont("helvetica", "bold");
-			doc.setFontSize(11);
-			doc.text(sTypeLabel, pageWidth / 2, 37, { align: "center" });
 			var titleW = doc.getTextWidth(sTypeLabel);
-			doc.setLineWidth(0.35);
-			doc.line(pageWidth / 2 - titleW / 2, 38.5, pageWidth / 2 + titleW / 2, 38.5);
-
-			// ── INFO GRID ────────────────────────────────────────────────────────
-			// Left col = Party/Vendor info (148mm) | Right col = Doc details (rest)
 			var gridY = 41, gridH = 32;
 			var lColW = 148, rColW = contentWidth - lColW;
 			var lColX = margin, rColX = margin + lColW;
 			var pad = 3, rLH = 5.5;
-
-			doc.setLineWidth(0.3);
-			doc.rect(lColX, gridY, contentWidth, gridH);
-			doc.line(rColX, gridY, rColX, gridY + gridH);
-			// Horizontal divider inside left col after "Please allow" row
-			doc.setLineWidth(0.2);
-			doc.line(lColX, gridY + 9, rColX, gridY + 9);
-
-			// Left col top row — Please Allow
-			doc.setFontSize(8.5);
-			doc.setFont("helvetica", "normal");
-			doc.text("Please allow", lColX + pad, gridY + 6);
-			doc.setFont("helvetica", "bold");
-			doc.text(oOut.VendorPerson || "Mr./Ms.", lColX + 34, gridY + 6);
-
-			// Left col body — Vendor details
-			doc.setFontSize(8.5);
-			doc.setFont("helvetica", "bold");
-			doc.text(oOut.VendorName || "", lColX + pad, gridY + 14);
-			doc.setFont("helvetica", "normal");
 			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || "", lColW - pad * 2 - 2);
-			doc.text(splitAddr, lColX + pad, gridY + 19.5);
-			doc.setFont("helvetica", "italic");
-			doc.setFontSize(8);
-			doc.text("to take out the following material from MEIL premises.", lColX + pad, gridY + gridH - 3.5);
-
-			// Right col — Document details
-			var rc = rColX + pad, ry = gridY + 6;
 			var lblOff = 30;
-			doc.setFontSize(8.5);
-			doc.setFont("helvetica", "bold"); doc.text("Req. No:", rc, ry);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassreqNo || "", rc + lblOff, ry);
-			ry += rLH;
-			doc.setFont("helvetica", "bold"); doc.text("GP Type:", rc, ry);
-			doc.setFont("helvetica", "normal"); doc.text(sType, rc + lblOff, ry);
-			ry += rLH;
-			doc.setFont("helvetica", "bold"); doc.text("Department:", rc, ry);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", rc + lblOff, ry);
-			ry += rLH;
-			doc.setFont("helvetica", "bold"); doc.text("Vehicle No:", rc, ry);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", rc + lblOff, ry);
-			ry += rLH;
-			doc.setFont("helvetica", "bold"); doc.text("Vendor GST:", rc, ry);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.VendorGST || "", rc + lblOff, ry);
 
 			// ── ITEMS TABLE ──────────────────────────────────────────────────────
 			var tableData = (oOut.items || []).map(function (it, i) {
@@ -870,7 +995,7 @@ sap.ui.define([
 			while (tableData.length < 6) { tableData.push(["", "", "", "", "", "", ""]); }
 
 			doc.autoTable({
-				startY: gridY + gridH + 1,
+				startY: 74,
 				head: [['S.No', 'DESCRIPTION OF GOODS', 'HSN Code', 'Outward QTY', 'UOM', 'Rate (Rs.)', 'Value (Rs.)']],
 				body: tableData,
 				theme: 'grid',
@@ -902,7 +1027,98 @@ sap.ui.define([
 					5: { cellWidth: 30, halign: 'right' },
 					6: { cellWidth: 34, halign: 'right' }
 				},
-				margin: { left: margin, right: margin }
+				margin: { top: 74, left: margin, right: margin, bottom: 60 },
+				didDrawPage: function (data) {
+					// Draw outer borders
+					doc.setLineWidth(0.6);
+					doc.rect(7, 5, pageWidth - 14, pageHeight - 10);
+					doc.setLineWidth(0.2);
+					doc.rect(8.5, 6.5, pageWidth - 17, pageHeight - 13);
+
+					// Logo
+					if (sLogoBase64) {
+						doc.addImage(sLogoBase64, 'PNG', margin, 9, 32, 12);
+					} else {
+						doc.setFont("helvetica", "bold");
+						doc.setFontSize(18);
+						doc.setTextColor(180, 0, 0);
+						doc.text("MEIL", margin, 18);
+						doc.setTextColor(0, 0, 0);
+					}
+
+					// Company Info
+					doc.setTextColor(0, 0, 0);
+					doc.setFont("helvetica", "bold");
+					doc.setFontSize(14);
+					doc.text("MEIL Neyveli Energy Private Limited", pageWidth / 2, 13, { align: "center" });
+					doc.setFont("helvetica", "normal");
+					doc.setFontSize(7.5);
+					doc.text("(Formerly TAQA Neyveli Power Company Private Limited)", pageWidth / 2, 17, { align: "center" });
+					doc.text("250MW LFPP, Uthangal, Neyveli, Tamilnadu - 607804, India.", pageWidth / 2, 20.5, { align: "center" });
+					doc.text("Tel : +91-4142-270300  |  Fax : +91-4142-270401", pageWidth / 2, 24, { align: "center" });
+					doc.setFont("helvetica", "bold");
+					doc.text("GSTIN : 33AACCS2753B1ZV  |  CIN : U40109TN1993PTC026223", pageWidth / 2, 27.5, { align: "center" });
+
+					// GP No & Date
+					doc.setFontSize(8.5);
+					doc.setFont("helvetica", "bold");
+					doc.text("GP No : " + (oOut.GatePassNo || ""), pageWidth - margin, 12, { align: "right" });
+					doc.setFont("helvetica", "normal");
+					doc.text("Date : " + sDate, pageWidth - margin, 17, { align: "right" });
+
+					// Separator
+					doc.setLineWidth(0.5);
+					doc.line(margin, 30.5, pageWidth - margin, 30.5);
+
+					// Title
+					doc.setFont("helvetica", "bold");
+					doc.setFontSize(11);
+					doc.text(sTypeLabel, pageWidth / 2, 37, { align: "center" });
+					doc.setLineWidth(0.35);
+					doc.line(pageWidth / 2 - titleW / 2, 38.5, pageWidth / 2 + titleW / 2, 38.5);
+
+					// Info Grid Box
+					doc.setLineWidth(0.3);
+					doc.rect(lColX, gridY, contentWidth, gridH);
+					doc.line(rColX, gridY, rColX, gridY + gridH);
+					doc.setLineWidth(0.2);
+					doc.line(lColX, gridY + 9, rColX, gridY + 9);
+
+					// Left Column Info
+					doc.setFontSize(8.5);
+					doc.setFont("helvetica", "normal");
+					doc.text("Please allow", lColX + pad, gridY + 6);
+					doc.setFont("helvetica", "bold");
+					doc.text(oOut.VendorPerson || "Mr./Ms.", lColX + 34, gridY + 6);
+					doc.text(oOut.VendorName || "", lColX + pad, gridY + 14);
+					doc.setFont("helvetica", "normal");
+					doc.text(splitAddr, lColX + pad, gridY + 19.5);
+					doc.setFont("helvetica", "italic");
+					doc.setFontSize(8);
+					doc.text("to take out the following material from MEIL premises.", lColX + pad, gridY + gridH - 3.5);
+
+					// Right Column Info
+					var rc = rColX + pad, ry = gridY + 6;
+					doc.setFontSize(8.5);
+					doc.setFont("helvetica", "bold"); doc.text("Req. No:", rc, ry);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassreqNo || "", rc + lblOff, ry);
+					ry += rLH;
+					doc.setFont("helvetica", "bold"); doc.text("GP Type:", rc, ry);
+					doc.setFont("helvetica", "normal"); doc.text(sType, rc + lblOff, ry);
+					ry += rLH;
+					doc.setFont("helvetica", "bold"); doc.text("Department:", rc, ry);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", rc + lblOff, ry);
+					ry += rLH;
+					doc.setFont("helvetica", "bold"); doc.text("Vehicle No:", rc, ry);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", rc + lblOff, ry);
+					ry += rLH;
+					doc.setFont("helvetica", "bold"); doc.text("Vendor GST:", rc, ry);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.VendorGST || "", rc + lblOff, ry);
+
+					// Page Number
+					doc.setFont("helvetica", "normal"); doc.setFontSize(7.5);
+					doc.text("Page " + data.pageNumber, pageWidth - margin, pageHeight - 7, { align: "right" });
+				}
 			});
 
 			var finalY = doc.lastAutoTable.finalY;
@@ -990,11 +1206,26 @@ sap.ui.define([
 			return str;
 		},
 
+		onTransportByChange: function (oEvent) {
+			var iIndex = oEvent.getParameter("selectedIndex");
+			var oOutModel = this.getView().getModel("out");
+			if (iIndex === 0) {
+				// Self — auto-fill company name and GST
+				oOutModel.setProperty("/TransporterName", "MEIL Neyveli Energy Private Limited");
+				oOutModel.setProperty("/TransporterGST", "33AACCS2753B1ZV");
+			} else {
+				// Vendor — clear for manual entry
+				oOutModel.setProperty("/TransporterName", "");
+				oOutModel.setProperty("/TransporterGST", "");
+			}
+			oOutModel.setProperty("/TransportByIndex", iIndex);
+		},
+
 		onDocOptionChange: function () {
 			// Logic to show/hide document buttons handled via visibility bindings in XML
 		},
 
-		onInsuranceCheck: function (oEvent) {
+		onInsuranceRequiredCheckBoxSelect: function (oEvent) {
 			var bSelected = oEvent.getParameter("selected");
 			var oOutModel = this.getView().getModel("out");
 			var oOutData = oOutModel ? oOutModel.getData() : {};
@@ -1032,14 +1263,14 @@ sap.ui.define([
 
 		onInsuranceSubmit: function () {
 			sap.m.MessageToast.show("Insurance details saved.");
-			this.byId("idInsuranceRequired").setSelected(true);
+			this.byId("idInsuranceRequiredCheckBox").setSelected(true);
 			this._pInsuranceDialog.then(function (oDialog) {
 				oDialog.close();
 			});
 		},
 
 		onInsuranceCancel: function () {
-			this.byId("idInsuranceRequired").setSelected(false);
+			this.byId("idInsuranceRequiredCheckBox").setSelected(false);
 			this._pInsuranceDialog.then(function (oDialog) {
 				oDialog.close();
 			});
@@ -1077,7 +1308,6 @@ sap.ui.define([
 			}
 
 			var oPayload = {
-				GatePassReqNo: oOut.GatePassreqNo || "",
 				GatePassType: oOut.GatePassType || "RGP",
 				Cocode: oOut.Cocode || "",
 				Plant: oOut.Plant || "",
@@ -1088,14 +1318,14 @@ sap.ui.define([
 				VendorGST: oOut.VendorGST || "",
 				ZipCode: oOut.ZipCode || "",
 				City: oOut.City || "",
-				ApprovalReq: "X", // Resubmit for approval (routes to inbox)
+				ApprovalReq: "X",
 				Department: oOut.Department || "",
 				VehicleNo: oOut.VehicleNo || "",
 				ModeOfDispatch: oOut.ModeOfTransport || "",
 				Remarks: oOut.UserRemarks || "",
 				ReturnableDate: sReturnableDateSAP,
 
-				GateReqItmNav: (oOut.items || []).map(function (it, index) {
+				GateReqItemNav: (oOut.items || []).map(function (it, index) {
 					var fQty = parseFloat(it.sentQty || 0);
 					var fRate = parseFloat(it.rate || 0);
 					var fValue = fQty * fRate;
@@ -1108,9 +1338,9 @@ sap.ui.define([
 						HSNCode: it.hsnCode || "",
 						HSNDesc: it.hsnDesc || "",
 						UOM: it.uom || "EA",
-						ItemNetPrice: String(fRate.toFixed(2)),
-						RequestedQuantity: String(fQty.toFixed(3)),
-						Totalvalue: String(fValue.toFixed(2)),
+						ItemNetPrice: fRate.toFixed(2),
+						RequestedQuantity: fQty.toFixed(3),
+						Totalvalue: fValue.toFixed(2),
 						Remarks: it.remarks || ""
 					};
 				})
@@ -1133,7 +1363,7 @@ sap.ui.define([
 					var sMsg = "Error re-submitting Gate Pass Request.";
 					try {
 						var oResp = JSON.parse(oError.responseText);
-						sMsg = oResp.error.message.value;
+						sMsg = (oResp.error && oResp.error.message && oResp.error.message.value) || sMsg;
 					} catch (e) { }
 					MessageBox.error(sMsg);
 				}
@@ -1143,19 +1373,36 @@ sap.ui.define([
 		onSubmitOutgate: function () {
 			var oOutModel = this.getView().getModel("out");
 			var sApprovalStatus = oOutModel.getProperty("/ApprovalStatus") || "";
+
+			// Amendment resubmission is allowed for any user role
 			if (sApprovalStatus === "AMENDMENT") {
 				this._resubmitAmendmentRequest();
 				return;
 			}
 
+			// Gate pass generation is restricted to Store users only
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var bIsStoreUser = oUserModel ? oUserModel.getProperty("/IsStoreUser") : false;
+			if (!bIsStoreUser) {
+				sap.m.MessageBox.error("Only Store users (Z_MM_GATEPASS_STORE_FRONT_VIEW) are authorized to generate a Gate Pass.");
+				return;
+			}
+
 			var oOut = oOutModel.getData();
+
+			var fnFormatDate = function (oDate) {
+				if (!oDate) return "";
+				if (typeof oDate === "string" && oDate.length === 8 && !isNaN(oDate)) { return oDate; }
+				var d = new Date(oDate);
+				if (isNaN(d.getTime())) return "";
+				return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+			};
 
 			// Format today's date as YYYY-MM-DD
 			var sToday = new Date().toISOString().split('T')[0];
 
 			// Format Challan Date if exists, else today
-			var sChallanDate = oOut.ChallanDate ?
-				new Date(oOut.ChallanDate).toISOString().split('T')[0] : sToday;
+			var sChallanDate = fnFormatDate(oOut.ChallanDate) || fnFormatDate(sToday);
 
 			var oPayload = {
 				GatePassreqNo: oOut.GatePassreqNo || "",
@@ -1172,7 +1419,7 @@ sap.ui.define([
 				GatePassDate: sToday,
 				PurchasingDoc: oOut.PurchasingDoc || "",
 				ChallanDate: sChallanDate,
-				GateEntryNo: oOut.GateEntryNo || "",
+				CommonDesc: oOut.CommonDesc || "",
 				NoOfPacakages: parseInt(oOut.NoOfPackages || 0),
 				Department: oOut.Department,
 				ChallanNumber: oOut.ChallanNumber || "",
@@ -1180,6 +1427,11 @@ sap.ui.define([
 				ModeOfDispatch: oOut.ModeOfTransport,
 				Remarks: oOut.UserRemarks,
 				GPStatus: oOut.Status || "",
+				// TransporterName: oOut.TransporterName || "",
+				// TransporterGST: oOut.TransporterGST || "",
+				// EWayBillNo: oOut.EWayBillNo || "",
+				// EWayBillDate: oOut.EWayBillDate ? new Date(oOut.EWayBillDate).toISOString().split("T")[0] : null,
+				// DCNotes: oOut.DCNotes || "",
 				Message: "",
 
 				"OutgateNav": (oOut.items || []).map(function (it, index) {
@@ -1255,6 +1507,14 @@ sap.ui.define([
 				return;
 			}
 
+			var fnFormatDate = function (oDate) {
+				if (!oDate) return "";
+				if (typeof oDate === "string" && oDate.length === 8 && !isNaN(oDate)) { return oDate; }
+				var d = new Date(oDate);
+				if (isNaN(d.getTime())) return "";
+				return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+			};
+
 			sap.ui.core.BusyIndicator.show(0);
 
 			// We use the same payload structure as generation but for update/save
@@ -1265,6 +1525,15 @@ sap.ui.define([
 				ModeOfDispatch: oOut.ModeOfTransport,
 				Remarks: oOut.UserRemarks,
 				GPStatus: oOut.Status || "", // OPEN, CLOSE, ASSIGN
+				// TransporterName: oOut.TransporterName || "",
+				// TransporterGST: oOut.TransporterGST || "",
+				// EWayBillNo: oOut.EWayBillNo || "",
+				// EWayBillDate: fnFormatDate(oOut.EWayBillDate),
+				// DCNotes: oOut.DCNotes || "",
+				Plant: oOut.Plant || "",
+				GatePassType: oOut.GatePassType || "RGP",
+				ChallanNumber: oOut.ChallanNumber || "",
+				ChallanDate: fnFormatDate(oOut.ChallanDate) || fnFormatDate(new Date()),
 				// ... other fields as needed by backend
 				"OutgateNav": (oOut.items || []).map(function (it, index) {
 					return {
@@ -1296,6 +1565,25 @@ sap.ui.define([
 					} catch (e) { }
 					MessageBox.error(sMsg);
 				}
+			});
+		},
+
+		onCancelGatePass: function () {
+			var oOutModel = this.getView().getModel("out");
+			var sGPNo = oOutModel.getProperty("/GatePassNo");
+			if (!sGPNo) {
+				MessageBox.warning("No Gate Pass has been generated yet.");
+				return;
+			}
+
+			MessageBox.confirm("Are you sure you want to cancel Gate Pass " + sGPNo + "?", {
+				actions: [MessageBox.Action.YES, MessageBox.Action.NO],
+				onClose: function (sAction) {
+					if (sAction === MessageBox.Action.YES) {
+						oOutModel.setProperty("/Status", "CANCELLED");
+						this.onSaveLogistics();
+					}
+				}.bind(this)
 			});
 		},
 
