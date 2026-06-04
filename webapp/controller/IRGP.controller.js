@@ -175,15 +175,15 @@ sap.ui.define([
 
 			var oPayload = {
 				GatePassNo:      "",
-				RequestDate:     oHeader.GEDate || new Date().toISOString().split("T")[0],
-				DueDate:         oHeader.DueDate,
+				RequestDate:     this._toSAPDate(oHeader.GEDate || new Date().toISOString().split("T")[0]),
+				DueDate:         this._toSAPDate(oHeader.DueDate),
 				Department:      oHeader.Department,
 				RequestedUser:   oHeader.RequestUser  || "",
 				ContractName:    oHeader.ContractName,
 				TAQAEmployee:    oHeader.ContractEmployeeName,
 				RequestType:     oHeader.RequestType  || "IRGP",
 				Remarks:         oHeader.Remarks       || "",
-				RevisedDueDate:  oHeader.RevisedDueDate || oHeader.DueDate,
+				RevisedDueDate:  this._toSAPDate(oHeader.RevisedDueDate || oHeader.DueDate),
 				ReturnedDate:    "",
 				ReturnUser:      "",
 				MRNumber:        "",
@@ -248,16 +248,16 @@ sap.ui.define([
 
 			var oPayload = {
 				GatePassNo:      oHeader.IRGPNo,
-				RequestDate:     oHeader.GEDate || new Date().toISOString().split("T")[0],
-				DueDate:         oHeader.DueDate,
+				RequestDate:     this._toSAPDate(oHeader.GEDate || new Date().toISOString().split("T")[0]),
+				DueDate:         this._toSAPDate(oHeader.DueDate),
 				Department:      oHeader.Department,
 				RequestedUser:   oHeader.RequestUser || "",
 				ContractName:    oHeader.ContractName,
 				TAQAEmployee:    oHeader.ContractEmployeeName,
 				RequestType:     oHeader.RequestType || "IRGP",
 				Remarks:         oHeader.Remarks || "",
-				RevisedDueDate:  oHeader.RevisedDueDate || oHeader.DueDate,
-				ReturnedDate:    oHeader.ReturnedDate || "",
+				RevisedDueDate:  this._toSAPDate(oHeader.RevisedDueDate || oHeader.DueDate),
+				ReturnedDate:    this._toSAPDate(oHeader.ReturnedDate || ""),
 				ReturnUser:      oHeader.ReturnUser || "",
 				Status:          "Reservation Linked",
 				MRNumber:        aItems.length === 1 ? aItems[0].MRNumber : aItems.map(function (it) { return it.MRNumber; }).join(","),
@@ -343,7 +343,7 @@ sap.ui.define([
 					var oPayload = {
 						GatePassNo:   oHeader.IRGPNo,
 						Status:       sODataStatus,
-						ReturnedDate: sReturnedDate,
+						ReturnedDate: this._toSAPDate(sReturnedDate),
 						ReturnUser:   oHeader.ReturnUser || "",
 						IRGPItmNav:   aItems.map(function (it) {
 							return {
@@ -410,6 +410,12 @@ sap.ui.define([
 				}
 			}
 			return "";
+		},
+
+		// Format "YYYY-MM-DD" to "YYYYMMDD" for backend SAP payloads
+		_toSAPDate: function (sDate) {
+			if (!sDate) { return ""; }
+			return sDate.replace(/-/g, "");
 		},
 
 		_mapODataToDoc: function (oData) {
