@@ -437,11 +437,12 @@ sap.ui.define([
 			// If backend failed to update the status but saved the MR Number, 
 			// dynamically derive the correct status.
 			if (sMappedStatus === "PENDING_RESERVATION") {
+				var that = this;
 				var bHasMRN = aRaw.some(function(it) {
-					return it.MRNumber && it.MRNumber.trim() !== "";
+					return that._sanitizeMRN(it.MRNumber) !== "";
 				});
 				// Also check header MRNumber just in case
-				if (bHasMRN || (oData.MRNumber && oData.MRNumber.trim() !== "")) {
+				if (bHasMRN || this._sanitizeMRN(oData.MRNumber) !== "") {
 					sMappedStatus = "PENDING_RECEIPT";
 				}
 			}
