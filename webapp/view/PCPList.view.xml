@@ -33,7 +33,7 @@
 					<items>
 						<ColumnListItem class="gpmsTableRow">
 							<cells>
-								<Text text="{pcpList>GateEntryNo}" class="gpmsTableText"/>
+								<Text text="{pcpList>PCPNo}" class="gpmsTableText"/>
 								<Text text="{pcpList>PCPDate}" class="gpmsTableText"/>
 								<Text text="{pcpList>EntryPoint}" class="gpmsTableText"/>
 								<Text text="{pcpList>GateEntryNo}" class="gpmsTableText"/>

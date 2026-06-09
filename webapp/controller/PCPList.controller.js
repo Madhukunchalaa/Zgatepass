@@ -44,10 +44,13 @@ sap.ui.define([
 						oItem.PCPDate = that._formatSAPDateToDisplay(oItem.PCPDate);
 						oItem.GEDate = that._formatSAPDateToDisplay(oItem.GEDate);
 
-						// Get first item desc
+						// Get first item desc and PCPNo
 						oItem.FirstItemDesc = "";
 						if (oItem.PCPItmNav && oItem.PCPItmNav.results && oItem.PCPItmNav.results.length > 0) {
 							oItem.FirstItemDesc = oItem.PCPItmNav.results[0].ItemDescription || "";
+							oItem.PCPNo = oItem.PCPItmNav.results[0].PCPNo || oItem.PurchaseOrder || oItem.GateEntryNo || "";
+						} else {
+							oItem.PCPNo = oItem.PurchaseOrder || oItem.GateEntryNo || "";
 						}
 					});
 
