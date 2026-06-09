@@ -38,20 +38,20 @@
 							growingThreshold="50"
 							class="sapUiSizeCompact gpmsItemTable">
 							<columns>
+								<Column><Text text="PO Number" class="gpmsHeaderText"/></Column>
 								<Column><Text text="Plant" class="gpmsHeaderText"/></Column>
 								<Column><Text text="Vendor" class="gpmsHeaderText"/></Column>
 								<Column><Text text="Vendor Name" class="gpmsHeaderText"/></Column>
-								<Column><Text text="Department" class="gpmsHeaderText"/></Column>
 								<Column><Text text="GE Date" class="gpmsHeaderText"/></Column>
 								<Column hAlign="Center"><Text text="Actions" class="gpmsHeaderText"/></Column>
 							</columns>
 							<items>
 								<ColumnListItem>
 									<cells>
+										<ObjectIdentifier title="{poModel>PurchaseOrder}"/>
 										<Text text="{poModel>Plant}"/>
 										<Text text="{poModel>Vendor}"/>
 										<Text text="{poModel>VendorDesc}"/>
-										<Text text="{poModel>Department}"/>
 										<Text text="{poModel>GEDateFormatted}"/>
 										<Button text="View Items" icon="sap-icon://sys-enter-2" press="onViewItems" type="Emphasized"/>
 									</cells>
