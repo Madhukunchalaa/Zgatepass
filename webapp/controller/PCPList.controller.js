@@ -29,6 +29,7 @@ sap.ui.define([
 
 			sap.ui.core.BusyIndicator.show(0);
 			// Fetch PCPs
+			var that = this;
 			oODataModel.read("/PCPHdrSet", {
 				filters: [new Filter("SourceType", FilterOperator.EQ, "PCP")],
 				urlParameters: {
@@ -40,14 +41,8 @@ sap.ui.define([
 
 					// Format data for the view
 					aResults.forEach(function (oItem) {
-						if (oItem.PCPDate) {
-							var pd = new Date(oItem.PCPDate);
-							if (!isNaN(pd.getTime())) oItem.PCPDate = pd.getDate().toString().padStart(2, "0") + "-" + (pd.getMonth() + 1).toString().padStart(2, "0") + "-" + pd.getFullYear();
-						}
-						if (oItem.GEDate) {
-							var gd = new Date(oItem.GEDate);
-							if (!isNaN(gd.getTime())) oItem.GEDate = gd.getDate().toString().padStart(2, "0") + "-" + (gd.getMonth() + 1).toString().padStart(2, "0") + "-" + gd.getFullYear();
-						}
+						oItem.PCPDate = that._formatSAPDateToDisplay(oItem.PCPDate);
+						oItem.GEDate = that._formatSAPDateToDisplay(oItem.GEDate);
 
 						// Get first item desc
 						oItem.FirstItemDesc = "";
@@ -83,6 +78,96 @@ sap.ui.define([
 			} else {
 				oBinding.filter([]);
 			}
+		},
+
+		_formatSAPDateToDisplay: function (vDate) {
+			if (!vDate) { return ""; }
+			var dDate;
+			if (vDate instanceof Date) {
+				dDate = vDate;
+			} else if (typeof vDate === "string") {
+				var oTsMatch = vDate.match(/\/Date\((\d+)[^)]*\)\//);
+				if (oTsMatch) {
+					dDate = new Date(parseInt(oTsMatch[1], 10));
+				} else if (/^\d{8}$/.test(vDate)) {
+					if (/^0+$/.test(vDate)) { return ""; }
+					dDate = new Date(vDate.substring(0, 4) + "-" + vDate.substring(4, 6) + "-" + vDate.substring(6, 8));
+				} else {
+					dDate = new Date(vDate);
+				}
+			}
+			if (dDate && !isNaN(dDate.getTime())) {
+				return String(dDate.getDate()).padStart(2, "0") + "-" +
+					String(dDate.getMonth() + 1).padStart(2, "0") + "-" +
+					dDate.getFullYear();
+			}
+			return vDate;
+		},
+
+		onSort: function () {
+			if (!this._oSortDialog) {
+				var sapM = sap.ui.require("sap/m/ViewSettingsDialog");
+				var sapItem = sap.ui.require("sap/m/ViewSettingsItem");
+				this._oSortDialog = new sapM({
+					confirm: function (oEvent) {
+						var oSortItem = oEvent.getParameter("sortItem");
+						var bDescending = oEvent.getParameter("sortDescending");
+						var aSorters = [];
+						if (oSortItem) {
+							var sPath = oSortItem.getKey();
+							// Dates from string need custom sort or we just sort by string since it's DD-MM-YYYY (bad for string sort)
+							// Actually we should sort on a raw date, but UI has string. We'll sort by the displayed string for now.
+							aSorters.push(new sap.ui.model.Sorter(sPath, bDescending));
+						}
+						var oTable = this.getView().byId("pcpTable");
+						oTable.getBinding("items").sort(aSorters);
+					}.bind(this)
+				});
+				this._oSortDialog.addSortItem(new sapItem({ key: "GateEntryNo", text: "Gate Entry No", selected: true }));
+				this._oSortDialog.addSortItem(new sapItem({ key: "PCPDate", text: "PCP Date" }));
+				this._oSortDialog.addSortItem(new sapItem({ key: "GEDate", text: "GE Date" }));
+				this.getView().addDependent(this._oSortDialog);
+			}
+			this._oSortDialog.open();
+		},
+
+		onFilter: function () {
+			if (!this._oFilterDialog) {
+				var sapM = sap.ui.require("sap/m/ViewSettingsDialog");
+				var sapFilter = sap.ui.require("sap/m/ViewSettingsFilterItem");
+				var sapItem = sap.ui.require("sap/m/ViewSettingsItem");
+				this._oFilterDialog = new sapM({
+					confirm: function (oEvent) {
+						var aFilterItems = oEvent.getParameter("filterItems");
+						var aFilters = [];
+						aFilterItems.forEach(function(oItem) {
+							var sPath = oItem.getParent().getKey();
+							var sValue = oItem.getKey();
+							aFilters.push(new Filter(sPath, FilterOperator.EQ, sValue));
+						});
+						var oTable = this.getView().byId("pcpTable");
+						// Combine with search filter if exists
+						var oBinding = oTable.getBinding("items");
+						oBinding.filter(aFilters);
+					}.bind(this)
+				});
+				var oDateFilter = new sapFilter({ key: "PCPDate", text: "PCP Date", multiSelect: true });
+				// Will dynamically populate filter items before opening
+				this._oFilterDialog.addFilterItem(oDateFilter);
+				this.getView().addDependent(this._oFilterDialog);
+			}
+			
+			// Dynamically populate distinct dates for filter
+			var aData = this.getView().getModel("pcpList").getData();
+			var aUniqueDates = [...new Set(aData.map(item => item.PCPDate))].filter(Boolean);
+			var oDateFilter = this._oFilterDialog.getFilterItems()[0];
+			oDateFilter.removeAllItems();
+			var sapItem = sap.ui.require("sap/m/ViewSettingsItem");
+			aUniqueDates.forEach(function(date) {
+				oDateFilter.addItem(new sapItem({ key: date, text: date }));
+			});
+
+			this._oFilterDialog.open();
 		},
 
 		// ==========================================================

@@ -22,33 +22,8 @@ sap.ui.define([
 			var oODataModel = this.getOwnerComponent().getModel();
 			var that = this;
 
-			var fnMockLoad = function() {
-				var aMockList = JSON.parse(localStorage.getItem("mockAshList") || "[]");
-				var oData = aMockList.find(function(item) {
-					return item.GatePassNo === sGPNo || item.requestId === sGPNo;
-				});
-
-				if (!oData) {
-					MessageBox.error("Ash Gate Pass not found!");
-					that.onNavBack();
-					return;
-				}
-
-				// Sum item values to get final total
-				var nTotal = 0;
-				if (oData.ASHItmNav) {
-					oData.ASHItmNav.forEach(function(item) {
-						nTotal += parseFloat(item.Totalvalue || 0);
-					});
-				}
-				oData.finalTotal = nTotal.toFixed(2);
-
-				var oModel = new JSONModel(oData);
-				that.getView().setModel(oModel, "ash");
-			};
-
 			if (!oODataModel) {
-				fnMockLoad();
+				MessageBox.error("SAP system is not connected. Please contact your administrator.");
 				return;
 			}
 
@@ -84,12 +59,14 @@ sap.ui.define([
 						var oModel = new JSONModel(oItem);
 						that.getView().setModel(oModel, "ash");
 					} else {
-						fnMockLoad();
+						MessageBox.error("Ash Gate Pass not found.");
+						that.onNavBack();
 					}
 				},
 				error: function (oError) {
 					sap.ui.core.BusyIndicator.hide();
-					fnMockLoad();
+					MessageBox.error("Failed to load Ash Gate Pass details. Please try again.");
+					that.onNavBack();
 				}
 			});
 		},
@@ -125,7 +102,7 @@ sap.ui.define([
 			doc.setFontSize(8);
 			doc.text("(Formerly TAQA Neyveli Power Company Private Limited)", pageWidth / 2, 19, { align: "center" });
 			doc.text("250MW LFPP, Uthangal, Neyveli, Tamilnadu - 607804, India.", pageWidth / 2, 23, { align: "center" });
-			doc.text("GSTIN : 33AACCS2753B1ZV | CIN : U40109TN1993PTCO26223", pageWidth / 2, 27, { align: "center" });
+			doc.text("GSTIN : 33AACCS2753B1ZV | CIN : U40109TN1993PTC026223", pageWidth / 2, 27, { align: "center" });
 
 			// Title
 			doc.setFontSize(11);
@@ -213,14 +190,14 @@ sap.ui.define([
 			// Footer details
 			finalY += 14;
 			doc.text("Req User:", margin, finalY);
-			doc.text("Senthilmurugan R", margin + 30, finalY); // Mock user
+			doc.text(oData.RequestedBy || "", margin + 30, finalY);
 
 			doc.text("Dept:", margin + 80, finalY);
-			doc.text("OPERATION", margin + 110, finalY);
+			doc.text(oData.Department || "", margin + 110, finalY);
 
 			finalY += 8;
 			doc.text("Approved By:", margin, finalY);
-			doc.text("Selvakumar M", margin + 30, finalY);
+			doc.text(oData.ApprovedBy || "", margin + 30, finalY);
 
 			doc.text("Vehicle No:", margin + 80, finalY);
 			doc.setFont("helvetica", "bold");

@@ -14,6 +14,8 @@
 							<Title text="PCP List" level="H2"/>
 							<ToolbarSpacer />
 							<SearchField width="300px" search=".onSearch" placeholder="Search..." class="gpmsFieldInput"/>
+							<Button icon="sap-icon://sort" tooltip="Sort" press=".onSort" type="Transparent"/>
+							<Button icon="sap-icon://filter" tooltip="Filter" press=".onFilter" type="Transparent"/>
 							<Button text="Add PCP" icon="sap-icon://add" type="Emphasized" press=".onAddPCP" />
 						</OverflowToolbar>
 					</headerToolbar>

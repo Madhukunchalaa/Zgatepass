@@ -94,9 +94,9 @@
 									<Text text="{ash>Material}" class="gpmsTableText"/>
 									<Text text="{ash>MaterialDescription}" class="gpmsTableText"/>
 									<Input value="{ash>HSNCode}" class="gpmsTableInput"/>
-									<Input value="{ash>RequestedQuantity}" type="Number" liveChange=".calculateTotal" class="gpmsTableInput"/>
+									<Input value="{ash>RequestedQuantity}" type="Text" liveChange=".calculateTotal" class="gpmsTableInput"/>
 									<Text text="{ash>UOM}" class="gpmsTableText"/>
-									<Input value="{ash>ItemNetPrice}" type="Number" liveChange=".calculateTotal" class="gpmsTableInput"/>
+									<Input value="{ash>ItemNetPrice}" type="Text" liveChange=".calculateTotal" class="gpmsTableInput"/>
 									<Text text="{ash>Totalvalue}" class="gpmsTableText"/>
 								</cells>
 							</ColumnListItem>

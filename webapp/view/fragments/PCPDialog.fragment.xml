@@ -86,7 +86,7 @@
 					<!-- Row 4 -->
 					<VBox class="sapUiSmallMargin">
 						<Label text="Qty" class="gpmsFieldLabel" />
-						<Input id="pcpQty" value="{pcpModel>/RecievedQuantity}" class="gpmsFieldInput" editable="false" width="100%" type="Number" />
+						<Input id="pcpQty" value="{pcpModel>/RecievedQuantity}" class="gpmsFieldInput" editable="false" width="100%" type="Text" />
 					</VBox>
 					<VBox class="sapUiSmallMargin">
 						<Label text="Uom" class="gpmsFieldLabel" />
@@ -106,7 +106,7 @@
 					<!-- Row 5 -->
 					<VBox class="sapUiSmallMargin">
 						<Label text="Total Cost (in Rs)" class="gpmsFieldLabel" />
-						<Input id="pcpTotalCost" value="{pcpModel>/TotalCost}" type="Number" class="gpmsFieldInput" width="100%" placeholder="Max 5000" />
+						<Input id="pcpTotalCost" value="{pcpModel>/TotalCost}" type="Text" class="gpmsFieldInput" width="100%" placeholder="Max 5000" />
 					</VBox>
 
 				</layout:Grid>

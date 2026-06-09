@@ -63,9 +63,25 @@ sap.ui.define([
 				urlParameters: { "$expand": "IRGPItmNav" },
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
+
+					var oGlobalModel = this.getOwnerComponent().getModel("irgpGlobal");
+					var aOldDocs = oGlobalModel ? (oGlobalModel.getProperty("/documents") || []) : [];
+
 					// Map all records and filter out any corrupted ones with empty Gate Pass No
 					var aAll = (oData.results || [])
 						.map(this._mapODataToDoc.bind(this))
+						.map(function (d) {
+							// If backend commit is lagging and returns PENDING_RESERVATION, but we already
+							// successfully linked the MRN locally (PENDING_RECEIPT), keep the local status
+							var oOld = aOldDocs.find(function (old) { return old.IRGPNo === d.IRGPNo; });
+							if (oOld && oOld.StatusCode === "PENDING_RECEIPT" && d.StatusCode === "PENDING_RESERVATION") {
+								d.StatusCode = "PENDING_RECEIPT";
+							}
+							if (oOld && oOld.StatusCode === "CLOSED" && d.StatusCode !== "CLOSED") {
+								d.StatusCode = "CLOSED";
+							}
+							return d;
+						})
 						.filter(function (d) { return d.IRGPNo && d.IRGPNo.trim() !== ""; });
 
 					// User role sees only Pending Reservation items;
@@ -74,7 +90,6 @@ sap.ui.define([
 						? aAll.filter(function (d) { return d.StatusCode === "PENDING_RESERVATION"; })
 						: aAll;
 
-					var oGlobalModel = this.getOwnerComponent().getModel("irgpGlobal");
 					if (oGlobalModel) {
 						oGlobalModel.setProperty("/documents", aDocs);
 					}
@@ -187,7 +202,7 @@ sap.ui.define([
 				ReturnedDate:    "",
 				ReturnUser:      "",
 				MRNumber:        "",
-				Status:          "Open",
+				Status:          oHeader.RequestType === "Tools" ? "Reservation Linked" : "Open",
 				Message:         "",
 				IRGPItmNav: aItems.map(function (it, i) {
 					return {
@@ -292,7 +307,12 @@ sap.ui.define([
 					MessageBox.success(sMsg, {
 						onClose: function () {
 							oModel.setProperty("/ui/hasPendingChanges", false);
-							this._getRouter().navTo("IRGP", { step: "LIST", gpNo: "ALL" });
+							sap.ui.core.BusyIndicator.show(0);
+							// Wait 1.5 seconds for SAP ABAP BAPI_TRANSACTION_COMMIT to finish in background
+							setTimeout(function() {
+								sap.ui.core.BusyIndicator.hide();
+								this._getRouter().navTo("IRGP", { step: "LIST", gpNo: "ALL" });
+							}.bind(this), 1500);
 						}.bind(this)
 					});
 				}.bind(this),
@@ -443,6 +463,10 @@ sap.ui.define([
 				});
 				// Also check header MRNumber just in case
 				if (bHasMRN || this._sanitizeMRN(oData.MRNumber) !== "") {
+					sMappedStatus = "PENDING_RECEIPT";
+				}
+				// Tools request type skips MRN linking entirely
+				if (oData.RequestType === "Tools") {
 					sMappedStatus = "PENDING_RECEIPT";
 				}
 			}
@@ -714,11 +738,197 @@ sap.ui.define([
 		},
 
 		// =========================================================================
-		// Print & Reset
-		// =========================================================================
+		onPrint: async function () {
+			var oIRGP = this.getView().getModel("irgp").getData();
+			if (!oIRGP.header.IRGPNo || oIRGP.header.IRGPNo === "Draft (Auto-Generated)") {
+				MessageBox.warning("Please submit/save the IRGP first before printing.");
+				return;
+			}
 
-		onPrint: function () {
-			MessageBox.information("Triggering print preview for Gate Pass Slip...");
+			const { jsPDF } = window.jspdf;
+			// Landscape A4
+			var doc = new jsPDF('l', 'mm', 'a4');
+			var pageWidth = doc.internal.pageSize.width;    // 297mm
+			var pageHeight = doc.internal.pageSize.height;  // 210mm
+			var margin = 12;
+			var contentWidth = pageWidth - margin * 2;       // 273mm
+
+			var sLogoUrl = sap.ui.require.toUrl("zgpms/meilpower/com/images/meil_logo.png");
+			var sLogoBase64 = null;
+			try {
+				sLogoBase64 = await this._getImageBase64(sLogoUrl);
+			} catch (e) { /* logo optional */ }
+
+			var sTypeLabel = "INWARD RETURNABLE GATE PASS";
+
+			// Build items table data
+			var tableData = (oIRGP.items || []).map(function (it, i) {
+				return [
+					i + 1,
+					it.ItemCode || "",
+					it.ItemDescription || "",
+					parseFloat(it.SentQuantity || 0).toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }),
+					parseFloat(it.RecvdQuantity || 0).toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }),
+					parseFloat(it.BalanceQuantity || 0).toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }),
+					it.UOM || "",
+					it.MRNumber || ""
+				];
+			});
+			while (tableData.length < 5) { tableData.push(["", "", "", "", "", "", "", ""]); }
+
+			doc.autoTable({
+				startY: 65,
+				head: [['S.No', 'Item Code', 'Description', 'Sent Qty', 'Recvd Qty', 'Bal Qty', 'UOM', 'MR Number']],
+				body: tableData,
+				theme: 'grid',
+				headStyles: {
+					fillColor: [235, 235, 235],
+					textColor: [0, 0, 0],
+					fontStyle: 'bold',
+					fontSize: 8.5,
+					halign: 'center',
+					valign: 'middle',
+					cellPadding: 3,
+					lineWidth: 0.3,
+					lineColor: [0, 0, 0]
+				},
+				bodyStyles: {
+					fontSize: 8.5,
+					cellPadding: { top: 3, bottom: 3, left: 2, right: 2 },
+					lineColor: [0, 0, 0],
+					lineWidth: 0.25,
+					valign: 'middle'
+				},
+				alternateRowStyles: { fillColor: [250, 250, 250] },
+				columnStyles: {
+					0: { cellWidth: 12, halign: 'center' },
+					1: { cellWidth: 26, halign: 'center' },
+					2: { cellWidth: 'auto', halign: 'left' },
+					3: { cellWidth: 24, halign: 'right' },
+					4: { cellWidth: 24, halign: 'right' },
+					5: { cellWidth: 24, halign: 'right' },
+					6: { cellWidth: 18, halign: 'center' },
+					7: { cellWidth: 30, halign: 'center' }
+				},
+				margin: { top: 65, left: margin, right: margin, bottom: 40 },
+				didDrawPage: function (data) {
+					// Draw outer borders
+					doc.setLineWidth(0.6);
+					doc.rect(7, 5, pageWidth - 14, pageHeight - 10);
+					doc.setLineWidth(0.2);
+					doc.rect(8.5, 6.5, pageWidth - 17, pageHeight - 13);
+
+					// Logo
+					if (sLogoBase64) {
+						doc.addImage(sLogoBase64, 'PNG', margin, 9, 32, 12);
+					} else {
+						doc.setFont("helvetica", "bold");
+						doc.setFontSize(18);
+						doc.setTextColor(180, 0, 0);
+						doc.text("MEIL", margin, 18);
+						doc.setTextColor(0, 0, 0);
+					}
+
+					// Company Info
+					doc.setTextColor(0, 0, 0);
+					doc.setFont("helvetica", "bold");
+					doc.setFontSize(14);
+					doc.text("MEIL Neyveli Energy Private Limited", pageWidth / 2, 13, { align: "center" });
+					doc.setFont("helvetica", "normal");
+					doc.setFontSize(7.5);
+					doc.text("(Formerly TAQA Neyveli Power Company Private Limited)", pageWidth / 2, 17, { align: "center" });
+					doc.text("250MW LFPP, Uthangal, Neyveli, Tamilnadu - 607804, India.", pageWidth / 2, 20.5, { align: "center" });
+					doc.text("Tel : +91-4142-270300  |  Fax : +91-4142-270401", pageWidth / 2, 24, { align: "center" });
+					doc.setFont("helvetica", "bold");
+
+					// Title Background & Text
+					var sTitleY = 27;
+					doc.setFillColor(230, 230, 230);
+					doc.rect(margin, sTitleY, contentWidth, 7, 'F');
+					doc.rect(margin, sTitleY, contentWidth, 7, 'S'); // border
+					doc.setFontSize(11);
+					doc.text(sTypeLabel, pageWidth / 2, sTitleY + 5, { align: "center" });
+
+					// IRGP Header Data Box
+					var gridY = 36, gridH = 26;
+					var pad = 3, rLH = 5.5;
+					doc.rect(margin, gridY, contentWidth, gridH);
+					
+					var midX = margin + (contentWidth / 2);
+					doc.line(midX, gridY, midX, gridY + gridH); // center divider
+
+					doc.setFontSize(9);
+					// Left side
+					doc.text("IRGP No", margin + pad, gridY + rLH);
+					doc.text(": " + (oIRGP.header.IRGPNo || ""), margin + pad + 30, gridY + rLH);
+
+					doc.text("Date", margin + pad, gridY + rLH * 2);
+					doc.text(": " + (oIRGP.header.GEDate || ""), margin + pad + 30, gridY + rLH * 2);
+
+					doc.text("Department", margin + pad, gridY + rLH * 3);
+					doc.text(": " + (oIRGP.header.Department || ""), margin + pad + 30, gridY + rLH * 3);
+
+					doc.text("Req Type", margin + pad, gridY + rLH * 4);
+					doc.text(": " + (oIRGP.header.RequestType || ""), margin + pad + 30, gridY + rLH * 4);
+
+					// Right side
+					doc.text("Vendor Name", midX + pad, gridY + rLH);
+					doc.text(": " + (oIRGP.header.VendorName || ""), midX + pad + 30, gridY + rLH);
+
+					doc.text("Contract Name", midX + pad, gridY + rLH * 2);
+					doc.text(": " + (oIRGP.header.ContractName || ""), midX + pad + 30, gridY + rLH * 2);
+
+					doc.text("Emp Name", midX + pad, gridY + rLH * 3);
+					doc.text(": " + (oIRGP.header.ContractEmployeeName || ""), midX + pad + 30, gridY + rLH * 3);
+				}
+			});
+
+			// Footer remarks
+			var finalY = doc.lastAutoTable.finalY;
+			doc.setFont("helvetica", "normal");
+			doc.setFontSize(9);
+			
+			// Box for remarks
+			doc.rect(margin, finalY + 4, contentWidth, 12);
+			doc.text("Remarks:", margin + 2, finalY + 8);
+			var remarksStr = doc.splitTextToSize((oIRGP.header.Remarks || "N/A"), contentWidth - 20);
+			doc.text(remarksStr, margin + 18, finalY + 8);
+
+			var sigY = finalY + 30;
+			doc.setFont("helvetica", "bold");
+			doc.text("Requested By", margin + 20, sigY, { align: "center" });
+			doc.text("HOD", margin + 100, sigY, { align: "center" });
+			doc.text("Stores", margin + 180, sigY, { align: "center" });
+			doc.text("Authorized Signatory", pageWidth - margin - 35, sigY, { align: "center" });
+
+			doc.setFontSize(8);
+			doc.setFont("helvetica", "normal");
+			doc.text("This is a computer generated document, signature is not mandatory.", pageWidth / 2, pageHeight - 15, { align: "center" });
+
+			// Instead of doc.save, show print preview dialog
+			doc.autoPrint();
+			var blobUrl = doc.output('bloburl');
+			window.open(blobUrl, '_blank');
+			sap.m.MessageToast.show("Print Preview Opened");
+		},
+
+		_getImageBase64: function (url) {
+			return new Promise(function (resolve, reject) {
+				var img = new Image();
+				img.crossOrigin = "Anonymous";
+				img.onload = function () {
+					var canvas = document.createElement('canvas');
+					canvas.width = img.width;
+					canvas.height = img.height;
+					var ctx = canvas.getContext('2d');
+					ctx.drawImage(img, 0, 0);
+					resolve(canvas.toDataURL('image/png'));
+				};
+				img.onerror = function (err) {
+					reject(err);
+				};
+				img.src = url;
+			});
 		},
 
 		onReset: function () {
@@ -832,10 +1042,43 @@ sap.ui.define([
 					{ key: "STORES",          text: "STORES" }
 				],
 				uoms: [
-					{ key: "Set", text: "Set" },
-					{ key: "KG",  text: "Kilograms" },
-					{ key: "EA",  text: "EA" },
-					{ key: "NOS", text: "NOS" }
+					{ key: "AMP", text: "Amps" },
+					{ key: "BAG", text: "Bag" },
+					{ key: "BBL", text: "Barrel" },
+					{ key: "BOT", text: "Bottle" },
+					{ key: "BOX", text: "Box" },
+					{ key: "BDL", text: "Bundle" },
+					{ key: "CAN", text: "Can" },
+					{ key: "CTN", text: "Carton" },
+					{ key: "CTG", text: "Cartridge" },
+					{ key: "COI", text: "Coil" },
+					{ key: "CFT", text: "Cubic Feet" },
+					{ key: "M3",  text: "Cubic Meter" },
+					{ key: "CYL", text: "Cylinder" },
+					{ key: "DRM", text: "Drum" },
+					{ key: "FT",  text: "Feet" },
+					{ key: "KG",  text: "Kilogram" },
+					{ key: "LEN", text: "Length" },
+					{ key: "L",   text: "Litre" },
+					{ key: "LOD", text: "Load" },
+					{ key: "LOT", text: "Lot" },
+					{ key: "M",   text: "Meters" },
+					{ key: "MT",  text: "Metric Tons" },
+					{ key: "MON", text: "Month" },
+					{ key: "NOS", text: "Number" },
+					{ key: "PAR", text: "Pair" },
+					{ key: "ROL", text: "Roll" },
+					{ key: "SET", text: "Set" },
+					{ key: "SHT", text: "Sheet" },
+					{ key: "SFT", text: "Square Feet" },
+					{ key: "M2",  text: "Square Meter" },
+					{ key: "EA",  text: "Item" },
+					{ key: "PCK", text: "Pack" },
+					{ key: "DAY", text: "Days" },
+					{ key: "PKT", text: "Pocket" },
+					{ key: "REA", text: "Ream" },
+					{ key: "TON", text: "Tons" },
+					{ key: "UN",  text: "Unit" }
 				]
 			};
 		}

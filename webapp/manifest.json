@@ -103,10 +103,15 @@
 					"target": "TargetGatePassCreation"
 				},
 				{
-  "name": "GatePassList",
-  "pattern": "GatePassList",
-  "target": "TargetGatePassList"
-},
+					"name": "GatePassList",
+					"pattern": "GatePassList",
+					"target": "TargetGatePassList"
+				},
+				{
+					"name": "POList",
+					"pattern": "POList",
+					"target": "TargetPOList"
+				},
 				{
 					"name": "OutGatePass",
 					"pattern": "OutGatePass/:reqNo:/:gpNo:",
@@ -207,6 +212,16 @@
 					"name": "ScrapGatepassDetail",
 					"pattern": "ScrapGatepassDetail/:gpNo:",
 					"target": ["TargetScrapGatepassDetail"]
+				},
+				{
+					"name": "HODRequestDetail",
+					"pattern": "HODRequestDetail/:reqNo:/:gpType:",
+					"target": ["TargetHODRequestDetail"]
+				},
+				{
+					"name": "StoreRequestDetail",
+					"pattern": "StoreRequestDetail/:reqNo:/:gpType:",
+					"target": ["TargetStoreRequestDetail"]
 				}
 			],
 			"targets": {
@@ -226,10 +241,15 @@
 					"viewLevel": 2
 				},
 				"TargetGatePassList": {
-  "viewType": "XML",
-  "viewId": "GatePassList",
-  "viewName": "GatePassList"
-},
+					"viewType": "XML",
+					"viewId": "GatePassList",
+					"viewName": "GatePassList"
+				},
+				"TargetPOList": {
+					"viewType": "XML",
+					"viewId": "POList",
+					"viewName": "POList"
+				},
 				"TargetOutGatePass": {
 					"viewType": "XML",
 					"viewId": "OutGatePass",
@@ -319,6 +339,16 @@
 					"viewType": "XML",
 					"viewId": "ScrapGatepassDetail",
 					"viewName": "ScrapGatepassDetail"
+				},
+				"TargetHODRequestDetail": {
+					"viewType": "XML",
+					"viewId": "HODRequestDetail",
+					"viewName": "HODRequestDetail"
+				},
+				"TargetStoreRequestDetail": {
+					"viewType": "XML",
+					"viewId": "StoreRequestDetail",
+					"viewName": "StoreRequestDetail"
 				}
 			}
 		}

@@ -119,6 +119,10 @@ sap.ui.define([
 			this.getRouter().navTo("GatePassWithPO");
 		},
 
+		onPressPOList: function () {
+			this.getRouter().navTo("POList");
+		},
+
 		onPressIRGP: function () {
 			this.getRouter().navTo("IRGP", { step: "LIST", gpNo: "ALL" });
 		},

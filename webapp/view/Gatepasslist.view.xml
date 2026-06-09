@@ -17,6 +17,7 @@
                         <core:Item key="" text="All Status" />
                         <core:Item key="Approved" text="Approved" />
                         <core:Item key="Pending" text="Pending" />
+                        <core:Item key="Store Approval Pending" text="Store Approval Pending" />
                         <core:Item key="Rejected" text="Rejected" />
                         <core:Item key="Closed" text="Closed" />
                         <core:Item key="Cancelled" text="Cancelled" />
@@ -77,26 +78,28 @@
                 </columns>
 
                 <items>
-                    <ColumnListItem>
+                    <ColumnListItem
+                        type="{= ${user>/IsHodUser} &amp;&amp; ${gatePassList>GatePassType} !== 'GP with PO' ? 'Navigation' : 'Inactive'}"
+                        press=".onColumnListItemPress">
                         <cells>
                             <ObjectIdentifier
                                 title="{gatePassList>GatePassReqNo}"
-                                titleActive="{= ${gatePassList>Status} === 'Approved' || ${gatePassList>Status} === 'Amendment' || ${gatePassList>Status} === 'AMENDMENT' }"
+                                titleActive="{= ${user>/IsStoreUser} || ${gatePassList>Status} === 'Approved' || ${gatePassList>Status} === 'Amendment' || ${gatePassList>Status} === 'AMENDMENT' }"
                                 titlePress=".onObjectIdentifierReqNoTitlePress" />
                             <Text text="{gatePassList>GatePassType}" />
-                             <ObjectStatus
-                                 text="{gatePassList>Status}"
-                                 state="{= (${gatePassList>Status} === 'Approved' || ${gatePassList>Status} === 'Closed' || ${gatePassList>Status} === 'CLOSED') ? 'Success' : (${gatePassList>Status} === 'Rejected' || ${gatePassList>Status} === 'REJECTED' || ${gatePassList>Status} === 'Cancelled' || ${gatePassList>Status} === 'CANCELLED') ? 'Error' : 'Warning'}" />
+                            <ObjectStatus
+                                text="{gatePassList>Status}"
+                                state="{= (${gatePassList>Status} === 'Approved' || ${gatePassList>Status} === 'Closed' || ${gatePassList>Status} === 'CLOSED') ? 'Success' : (${gatePassList>Status} === 'Rejected' || ${gatePassList>Status} === 'REJECTED' || ${gatePassList>Status} === 'Cancelled' || ${gatePassList>Status} === 'CANCELLED') ? 'Error' : 'Warning'}" />
                             <Text text="{gatePassList>Plant}" />
                             <Text text="{gatePassList>VendorName}" />
                             <Text text="{gatePassList>Department}" />
-                          <Button
-    text="Approve"
-    icon="sap-icon://approvals"
-    type="Accept"
-    class="approveBtn"
-     visible="{= ${gatePassList>Status} === 'Pending' &amp;&amp; !${user>/IsGatepassUserOnly} }"
-     press=".onApproveButtonPress" />
+                            <Button
+                                text="Approve"
+                                icon="sap-icon://approvals"
+                                type="Accept"
+                                class="approveBtn"
+                                visible="{= (${gatePassList>Status} === 'Store Approval Pending') &amp;&amp; !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }"
+                                press=".onApproveButtonPress" />
                         </cells>
                     </ColumnListItem>
                 </items>

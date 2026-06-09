@@ -46,17 +46,10 @@ sap.ui.define([
 			// 1. Fetch NRGP requests
 			oODataModel.read("/GateReqHdrSet", {
 				filters: [new Filter("GatePassType", FilterOperator.EQ, "NRGP"), new Filter("Status", FilterOperator.EQ, "All")],
+				urlParameters: { "$expand": "GateReqItmNav" },
 				success: function (oData) {
-					var aMapped = (oData.results || []).map(function(oItem) {
-						var sRaw = oItem.ApprovalReq || oItem.Status || "";
-						var sStatus = oItem.Status || "Pending";
-						if (sRaw === "A" || sRaw === "APPROVED" || sRaw === "Approved") sStatus = "Approved";
-						else if (sRaw === "R" || sRaw === "REJECTED" || sRaw === "Rejected") sStatus = "Rejected";
-						else if (sRaw === "AM" || sRaw === "AMENDMENT" || sRaw === "Amendment") sStatus = "Amendment";
-						else if (sRaw === "CLOSED" || sRaw === "Closed" || sRaw === "C") sStatus = "Closed";
-						else if (sRaw === "CANCELLED" || sRaw === "Cancelled" || sRaw === "CAN") sStatus = "Cancelled";
-						
-						oItem.Status = sStatus;
+					var aMapped = (oData.results || []).map(function (oItem) {
+						oItem.Status = that._deriveStatus(oItem);
 						return oItem;
 					});
 					aAllResults = aAllResults.concat(aMapped);
@@ -68,17 +61,10 @@ sap.ui.define([
 			// 2. Fetch RGP requests
 			oODataModel.read("/GateReqHdrSet", {
 				filters: [new Filter("GatePassType", FilterOperator.EQ, "RGP"), new Filter("Status", FilterOperator.EQ, "All")],
+				urlParameters: { "$expand": "GateReqItmNav" },
 				success: function (oData) {
-					var aMapped = (oData.results || []).map(function(oItem) {
-						var sRaw = oItem.ApprovalReq || oItem.Status || "";
-						var sStatus = oItem.Status || "Pending";
-						if (sRaw === "A" || sRaw === "APPROVED" || sRaw === "Approved") sStatus = "Approved";
-						else if (sRaw === "R" || sRaw === "REJECTED" || sRaw === "Rejected") sStatus = "Rejected";
-						else if (sRaw === "AM" || sRaw === "AMENDMENT" || sRaw === "Amendment") sStatus = "Amendment";
-						else if (sRaw === "CLOSED" || sRaw === "Closed" || sRaw === "C") sStatus = "Closed";
-						else if (sRaw === "CANCELLED" || sRaw === "Cancelled" || sRaw === "CAN") sStatus = "Cancelled";
-						
-						oItem.Status = sStatus;
+					var aMapped = (oData.results || []).map(function (oItem) {
+						oItem.Status = that._deriveStatus(oItem);
 						return oItem;
 					});
 					aAllResults = aAllResults.concat(aMapped);
@@ -165,8 +151,22 @@ sap.ui.define([
 			}
 		},
 
-		onApproveButtonPress: function () {
-			window.open("https://10.5.18.54:44300/sap/bc/ui2/flp?sap-client=300&sap-language=EN", "_blank");
+		onApproveButtonPress: function (oEvent) {
+			var oItem = oEvent.getSource().getBindingContext("gatePassList").getObject();
+			if (!oItem) { return; }
+
+			// Cache row for StoreRequestDetail
+			var oTemp = this.getOwnerComponent().getModel("storeTemp");
+			if (!oTemp) {
+				oTemp = new sap.ui.model.json.JSONModel();
+				this.getOwnerComponent().setModel(oTemp, "storeTemp");
+			}
+			oTemp.setData(JSON.parse(JSON.stringify(oItem)));
+
+			this.getRouter().navTo("StoreRequestDetail", {
+				reqNo:  encodeURIComponent(oItem.GatePassReqNo || ""),
+				gpType: encodeURIComponent(oItem.GatePassType  || "NRGP")
+			});
 		},
 
 		onObjectIdentifierReqNoTitlePress: function (oEvent) {
@@ -186,9 +186,23 @@ sap.ui.define([
 			if (bAmendment) {
 				// Any user can open Amendment requests to edit and resubmit
 				this.getRouter().navTo("OutGatePass", { reqNo: oItem.GatePassReqNo, gpNo: oItem.GatePassNo || "-" });
-			} else if (bIsStoreUser && bApproved) {
-				// Only Store User can open Approved requests to generate gate pass
-				this.getRouter().navTo("OutGatePass", { reqNo: oItem.GatePassReqNo, gpNo: oItem.GatePassNo || "-" });
+			} else if (bIsStoreUser) {
+				if (bApproved) {
+					// Store User can directly open requests
+					this.getRouter().navTo("OutGatePass", { reqNo: oItem.GatePassReqNo, gpNo: oItem.GatePassNo || "-" });
+				} else {
+					// Route to StoreRequestDetail so they can Approve or Reject first
+					var oTemp = this.getOwnerComponent().getModel("storeTemp");
+					if (!oTemp) {
+						oTemp = new sap.ui.model.json.JSONModel();
+						this.getOwnerComponent().setModel(oTemp, "storeTemp");
+					}
+					oTemp.setData(JSON.parse(JSON.stringify(oItem)));
+					this.getRouter().navTo("StoreRequestDetail", {
+						reqNo:  encodeURIComponent(oItem.GatePassReqNo || ""),
+						gpType: encodeURIComponent(oItem.GatePassType  || "NRGP")
+					});
+				}
 			} else {
 				sap.m.MessageBox.warning("Access to Out Gate Pass creation is only allowed for Approved requests under the Store User (Z_MM_GATEPASS_STORE_FRONT_VIEW) role.\n\nYour current Role: " + (sRole || "No Role Assigned"));
 			}
@@ -196,6 +210,39 @@ sap.ui.define([
 
 		onColumnListItemPress: function (oEvent) {
 			var oItem = oEvent.getSource().getBindingContext("gatePassList").getObject();
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var bIsStoreUser = oUserModel ? oUserModel.getProperty("/IsStoreUser") : false;
+			var bIsHodUser = oUserModel ? oUserModel.getProperty("/IsHodUser") : false;
+			var sRole = oUserModel ? oUserModel.getProperty("/Role") : "";
+			var sStatus = oItem.Status || "";
+
+			var bApproved = sStatus === "Approved" || sStatus === "APPROVED" || sStatus === "A";
+			var bAmendment = sStatus === "Amendment" || sStatus === "AMENDMENT" || sStatus === "AM";
+
+			// For fully approved requests, any user clicking the row goes directly to generate gate pass
+			if (bApproved) {
+				this.getRouter().navTo("OutGatePass", { reqNo: oItem.GatePassReqNo, gpNo: oItem.GatePassNo || "-" });
+				return;
+			}
+
+			if (bIsHodUser) {
+				// Cache the full row object so HODRequestDetail can display immediately
+				var oTemp = this.getOwnerComponent().getModel("hodTemp");
+				if (!oTemp) {
+					oTemp = new sap.ui.model.json.JSONModel();
+					this.getOwnerComponent().setModel(oTemp, "hodTemp");
+				}
+				oTemp.setData(JSON.parse(JSON.stringify(oItem)));
+
+				// HOD: navigate to read-only detail with Approve/Reject/Amendment actions
+				this.getRouter().navTo("HODRequestDetail", {
+					reqNo:  encodeURIComponent(oItem.GatePassReqNo || ""),
+					gpType: encodeURIComponent(oItem.GatePassType  || "NRGP")
+				});
+				return;
+			}
+
+			// Non-HOD legacy behaviour
 			if (oItem.GatePassType === "GP with PO") {
 				sap.m.MessageBox.information(
 					"Gate Pass No: " + oItem.GatePassNo + "\n" +
@@ -214,11 +261,31 @@ sap.ui.define([
 			this.getRouter().navTo("OutGatePass", { reqNo: oItem.GatePassReqNo });
 		},
 
+		_deriveStatus: function (oItem) {
+			var s1 = oItem.Approval1;
+			if (!s1 || s1 === "null" || s1 === "undefined") s1 = "";
+			s1 = String(s1).trim().toUpperCase();
+
+			var s2 = oItem.Approval2;
+			if (!s2 || s2 === "null" || s2 === "undefined") s2 = "";
+			s2 = String(s2).trim().toUpperCase();
+
+			var sStatus = oItem.Status;
+			if (!sStatus || sStatus === "null" || sStatus === "undefined") sStatus = "";
+			sStatus = String(sStatus).trim().toUpperCase();
+
+			if (s1 === "R"  || s2 === "R")  return "Rejected";
+			if (s1 === "AM" || s2 === "AM") return "Amendment";
+			if (s1 && s2) return "Approved";
+			if (s1 && !s2) return "Store Approval Pending";
+			if (sStatus === "CAN" || sStatus === "CANCELLED") return "Cancelled";
+			if (sStatus === "C"   || sStatus === "CLOSED")    return "Closed";
+			// Fallback if none of the above matched
+			return "Pending";
+		},
+
 		_computePendingAt: function (oItem) {
-			if (oItem.GatePassType === "GP with PO") return "";
-			if (oItem.Status !== "Pending") return "";
-			if (!oItem.HODRemarks) return "HOD";
-			if (!oItem.STORERemarks) return "Store";
+			if (oItem.Status === "Pending") return "HOD";
 			return "";
 		}
 

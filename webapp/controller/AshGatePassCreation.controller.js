@@ -83,17 +83,19 @@ sap.ui.define([
 					}
 
 					var aItemsMapped = aItemsRaw.map(function (subItem, idx) {
+						var fPrice = parseFloat(subItem.ItemNetPrice || subItem.Netpr || subItem.Price || 0);
+						var fQty = parseFloat(subItem.OrderQuantity || 0);
 						return {
 							SalesDocument: subItem.SalesDocument || item.SalesDocument || "",
 							GatePasstype: "NRGP",
 							ItemNo: subItem.ItemNo || String((idx + 1) * 10).padStart(6, '0'),
 							Material: subItem.Material || "",
 							MaterialDescription: subItem.MaterialDesc || subItem.Arktx || subItem.Description || "",
-							HSNCode: subItem.HSNCode || "84821000",
-							RequestedQuantity: String(subItem.OrderQuantity || "0.000"),
+							HSNCode: subItem.HSNCode || "",
+							RequestedQuantity: String(fQty.toFixed(3)),
 							UOM: subItem.UOM || subItem.Uom || "MT",
-							ItemNetPrice: "1000",
-							Totalvalue: String((parseFloat(subItem.OrderQuantity || 0) * 1000).toFixed(2)),
+							ItemNetPrice: fPrice.toFixed(2),
+							Totalvalue: (fQty * fPrice).toFixed(2),
 							GatePassNo: ""
 						};
 					});
@@ -115,9 +117,7 @@ sap.ui.define([
 			};
 
 			if (!oODataModel) {
-				var aMockSO = this._getMockSaleOrders();
-				this.getView().setModel(new JSONModel({ results: aMockSO }), "sos");
-				fnOpenDialog();
+				MessageBox.error("SAP system is not connected. Please contact your administrator.");
 				return;
 			}
 
@@ -130,17 +130,14 @@ sap.ui.define([
 					if (oData && oData.results && oData.results.length > 0) {
 						fnProcessResults(oData.results);
 					} else {
-						var aMockSO = that._getMockSaleOrders();
-						that.getView().setModel(new JSONModel({ results: aMockSO }), "sos");
+						that.getView().setModel(new JSONModel({ results: [] }), "sos");
+						MessageToast.show("No Sale Orders found.");
 						fnOpenDialog();
 					}
 				},
 				error: function (oError) {
 					sap.ui.core.BusyIndicator.hide();
-					MessageToast.show("Error loading Sale Orders. Using mock fallback.");
-					var aMockSO = that._getMockSaleOrders();
-					that.getView().setModel(new JSONModel({ results: aMockSO }), "sos");
-					fnOpenDialog();
+					MessageBox.error("Failed to load Sale Orders. Please try again.");
 				}
 			});
 		},
@@ -178,7 +175,7 @@ sap.ui.define([
 			}
 
 			var oSosModel = this.getView().getModel("sos");
-			var aSaleOrders = oSosModel ? oSosModel.getProperty("/results") : this._getMockSaleOrders();
+			var aSaleOrders = oSosModel ? oSosModel.getProperty("/results") : [];
 
 			var oSelectedSO = aSaleOrders.find(function (so) {
 				return so.saleOrder === sValue;
@@ -186,73 +183,76 @@ sap.ui.define([
 
 			if (oSelectedSO) {
 				this._fillFromSaleOrder(oSelectedSO);
-			} else {
-				// Query single SO from OData
-				var oODataModel = this.getOwnerComponent().getModel();
-				var that = this;
-				if (oODataModel) {
-					sap.ui.core.BusyIndicator.show(0);
-					oODataModel.read("/ZsaleOrdersSet", {
-						filters: [
-							new Filter("SalesDocType", FilterOperator.EQ, "ZASH"),
-							new Filter("SalesDocument", FilterOperator.EQ, sValue)
-						],
-						urlParameters: { "$expand": "SaleodrItmNav" },
-						success: function (oData) {
-							sap.ui.core.BusyIndicator.hide();
-							var oItem = oData && oData.results && oData.results[0];
-							if (oItem) {
-								var aItemsRaw = [];
-								if (oItem.SaleodrItmNav) {
-									if (Array.isArray(oItem.SaleodrItmNav)) {
-										aItemsRaw = oItem.SaleodrItmNav;
-									} else if (oItem.SaleodrItmNav.results && Array.isArray(oItem.SaleodrItmNav.results)) {
-										aItemsRaw = oItem.SaleodrItmNav.results;
-									}
-								}
-								var aItemsMapped = aItemsRaw.map(function (subItem, idx) {
-									return {
-										SalesDocument: subItem.SalesDocument || oItem.SalesDocument || "",
-										GatePasstype: "NRGP",
-										ItemNo: subItem.ItemNo || String((idx + 1) * 10).padStart(6, '0'),
-										Material: subItem.Material || "",
-										MaterialDescription: subItem.MaterialDesc || subItem.Arktx || subItem.Description || "",
-										HSNCode: subItem.HSNCode || "84821000",
-										RequestedQuantity: String(subItem.OrderQuantity || "0.000"),
-										UOM: subItem.UOM || subItem.Uom || "MT",
-										ItemNetPrice: "1000",
-										Totalvalue: String((parseFloat(subItem.OrderQuantity || 0) * 1000).toFixed(2)),
-										GatePassNo: ""
-									};
-								});
-
-								var oMapped = {
-									saleOrder: oItem.SalesDocument || "",
-									vendor: oItem.SoldToParty || "",
-									vendorName: oItem.CustomerName || "",
-									vendorGST: oItem.CustomerGST || oItem.CustomerGst || "",
-									city: oItem.City || "",
-									postalCode: oItem.PostalCode || "",
-									remarks: oItem.Remarks || "",
-									items: aItemsMapped
-								};
-								that._fillFromSaleOrder(oMapped);
-							} else {
-								MessageToast.show("Invalid Sales Document.");
-								that._clearForm();
-							}
-						},
-						error: function () {
-							sap.ui.core.BusyIndicator.hide();
-							MessageToast.show("Invalid Sales Document.");
-							that._clearForm();
-						}
-					});
-				} else {
-					MessageToast.show("Invalid Sales Document.");
-					this._clearForm();
-				}
+				return;
 			}
+
+			var oODataModel = this.getOwnerComponent().getModel();
+			var that = this;
+
+			if (!oODataModel) {
+				MessageBox.error("SAP system is not connected. Please contact your administrator.");
+				this._clearForm();
+				return;
+			}
+
+			sap.ui.core.BusyIndicator.show(0);
+			oODataModel.read("/ZsaleOrdersSet", {
+				filters: [
+					new Filter("SalesDocType", FilterOperator.EQ, "ZASH"),
+					new Filter("SalesDocument", FilterOperator.EQ, sValue)
+				],
+				urlParameters: { "$expand": "SaleodrItmNav" },
+				success: function (oData) {
+					sap.ui.core.BusyIndicator.hide();
+					var oItem = oData && oData.results && oData.results[0];
+					if (oItem) {
+						var aItemsRaw = [];
+						if (oItem.SaleodrItmNav) {
+							if (Array.isArray(oItem.SaleodrItmNav)) {
+								aItemsRaw = oItem.SaleodrItmNav;
+							} else if (oItem.SaleodrItmNav.results && Array.isArray(oItem.SaleodrItmNav.results)) {
+								aItemsRaw = oItem.SaleodrItmNav.results;
+							}
+						}
+						var aItemsMapped = aItemsRaw.map(function (subItem, idx) {
+							var fPrice = parseFloat(subItem.ItemNetPrice || subItem.Netpr || subItem.Price || 0);
+							var fQty = parseFloat(subItem.OrderQuantity || 0);
+							return {
+								SalesDocument: subItem.SalesDocument || oItem.SalesDocument || "",
+								GatePasstype: "NRGP",
+								ItemNo: subItem.ItemNo || String((idx + 1) * 10).padStart(6, '0'),
+								Material: subItem.Material || "",
+								MaterialDescription: subItem.MaterialDesc || subItem.Arktx || subItem.Description || "",
+								HSNCode: subItem.HSNCode || "",
+								RequestedQuantity: String(fQty.toFixed(3)),
+								UOM: subItem.UOM || subItem.Uom || "MT",
+								ItemNetPrice: fPrice.toFixed(2),
+								Totalvalue: (fQty * fPrice).toFixed(2),
+								GatePassNo: ""
+							};
+						});
+
+						that._fillFromSaleOrder({
+							saleOrder: oItem.SalesDocument || "",
+							vendor: oItem.SoldToParty || "",
+							vendorName: oItem.CustomerName || "",
+							vendorGST: oItem.CustomerGST || oItem.CustomerGst || "",
+							city: oItem.City || "",
+							postalCode: oItem.PostalCode || "",
+							remarks: oItem.Remarks || "",
+							items: aItemsMapped
+						});
+					} else {
+						MessageToast.show("Invalid Sales Document.");
+						that._clearForm();
+					}
+				},
+				error: function () {
+					sap.ui.core.BusyIndicator.hide();
+					MessageToast.show("Invalid Sales Document.");
+					that._clearForm();
+				}
+			});
 		},
 
 		_fillFromSaleOrder: function (oSelectedSO) {
@@ -358,56 +358,37 @@ sap.ui.define([
 				})
 			};
 
-			var fnMockSuccess = function() {
-				var sGPNo = "GP-ASH-" + Math.floor(Math.random() * 90000 + 10000);
-				oPayload.GatePassNo = sGPNo;
-
-				// Save to mock local storage for fallback listing
-				var aMockList = JSON.parse(localStorage.getItem("mockAshList") || "[]");
-				aMockList.push(oPayload);
-				localStorage.setItem("mockAshList", JSON.stringify(aMockList));
-
-				MessageBox.success("Gate Pass " + sGPNo + " generated successfully.", {
-					onClose: function () {
-						that.getRouter().navTo("AshGatePassList");
-					}
-				});
-			};
-
-			if (oODataModel) {
-				sap.ui.core.BusyIndicator.show(0);
-				oODataModel.create("/AshHdrSet", oPayload, {
-					success: function (oResponse) {
-						sap.ui.core.BusyIndicator.hide();
-						var sGPNo = oResponse.GatePassNo || "";
-						var sMsg = oResponse.Message || "Gate Pass created successfully.";
-						var sDisplayMsg = sMsg;
-						if (sGPNo && sMsg.indexOf(sGPNo) === -1) {
-							sDisplayMsg += "\nGate Pass Number: " + sGPNo;
-						}
-						MessageBox.success(sDisplayMsg, {
-							onClose: function () {
-								that.getRouter().navTo("AshGatePassList");
-							}
-						});
-					},
-					error: function (oError) {
-						sap.ui.core.BusyIndicator.hide();
-						var sErrMsg = "Failed to create Ash Gate Pass.";
-						try {
-							var oErrBody = JSON.parse(oError.responseText);
-							sErrMsg = (oErrBody.error && oErrBody.error.message && oErrBody.error.message.value) ? oErrBody.error.message.value : sErrMsg;
-						} catch (e) {}
-						MessageBox.error(sErrMsg);
-					}
-				});
-			} else {
-				sap.ui.core.BusyIndicator.show(0);
-				setTimeout(function() {
-					sap.ui.core.BusyIndicator.hide();
-					fnMockSuccess();
-				}, 1000);
+			if (!oODataModel) {
+				MessageBox.error("SAP system is not connected. Please contact your administrator.");
+				return;
 			}
+
+			sap.ui.core.BusyIndicator.show(0);
+			oODataModel.create("/AshHdrSet", oPayload, {
+				success: function (oResponse) {
+					sap.ui.core.BusyIndicator.hide();
+					var sGPNo = oResponse.GatePassNo || "";
+					var sMsg = oResponse.Message || "Gate Pass created successfully.";
+					var sDisplayMsg = sMsg;
+					if (sGPNo && sMsg.indexOf(sGPNo) === -1) {
+						sDisplayMsg += "\nGate Pass Number: " + sGPNo;
+					}
+					MessageBox.success(sDisplayMsg, {
+						onClose: function () {
+							that.getRouter().navTo("AshGatePassList");
+						}
+					});
+				},
+				error: function (oError) {
+					sap.ui.core.BusyIndicator.hide();
+					var sErrMsg = "Failed to create Ash Gate Pass.";
+					try {
+						var oErrBody = JSON.parse(oError.responseText);
+						sErrMsg = (oErrBody.error && oErrBody.error.message && oErrBody.error.message.value) ? oErrBody.error.message.value : sErrMsg;
+					} catch (e) {}
+					MessageBox.error(sErrMsg);
+				}
+			});
 		},
 
 		_formatDateToYYYYMMDD: function (d) {
@@ -419,59 +400,6 @@ sap.ui.define([
 			var day = String(oDate.getDate()).padStart(2, "0");
 			return y + m + day;
 		},
-
-		_getMockSaleOrders: function () {
-			return [
-				{
-					saleOrder: "310019794",
-					vendor: "0010005905",
-					vendorName: "ASHTECH INDIA PVT LTD.",
-					vendorGST: "33AAECA4133B1ZY",
-					city: "Chennai",
-					postalCode: "600107",
-					remarks: "",
-					items: [
-						{
-							SalesDocument: "310019794",
-							GatePasstype: "NRGP",
-							ItemNo: "000010",
-							Material: "000000509001010046",
-							MaterialDescription: "SCRAP,MIX,MS",
-							HSNCode: "84821000",
-							RequestedQuantity: "10.000",
-							UOM: "MT",
-							ItemNetPrice: "1000",
-							Totalvalue: "10000.00",
-							GatePassNo: ""
-						}
-					]
-				},
-				{
-					saleOrder: "310019795",
-					vendor: "0010005906",
-					vendorName: "RAMCO CEMENTS LTD.",
-					vendorGST: "33AABCR8375L2Z2",
-					city: "Ariyalur",
-					postalCode: "621729",
-					remarks: "Fly Ash disposal",
-					items: [
-						{
-							SalesDocument: "310019795",
-							GatePasstype: "NRGP",
-							ItemNo: "000010",
-							Material: "000000509001010047",
-							MaterialDescription: "FLY ASH",
-							HSNCode: "26219000",
-							RequestedQuantity: "15.500",
-							UOM: "MT",
-							ItemNetPrice: "1200",
-							Totalvalue: "18600.00",
-							GatePassNo: ""
-						}
-					]
-				}
-			];
-		}
 
 	});
 });

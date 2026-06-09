@@ -1,0 +1,69 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.POList"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns="sap.m"
+	xmlns:layout="sap.ui.layout"
+	xmlns:core="sap.ui.core"
+	height="100%">
+	<Page title="Purchase Order List" class="gpmsPage" showHeader="false">
+		<content>
+			<VBox class="gpmsContentWrapper sapUiMediumMargin">
+				
+				<!-- Header -->
+				<HBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMarginBottom">
+					<VBox>
+						<Title text="Purchase Orders" level="H2" class="gpmsHeroTitle"/>
+						<Text text="View available Purchase Orders for Gate Entry" class="gpmsHeroSubTitle sapUiTinyMarginTop"/>
+					</VBox>
+					<Button icon="sap-icon://home" press="onNavHome" type="Default" tooltip="Go to Dashboard"/>
+				</HBox>
+
+				<!-- PO Table -->
+				<Panel class="gpmsSection" expandable="false">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<core:Icon src="sap-icon://list" class="gpmsSectionBarIcon"/>
+							<Title text="PO List" level="H3" class="gpmsSectionBarLabel"/>
+							<ToolbarSpacer/>
+							<SearchField placeholder="Search PO..." liveChange="onSearch" width="300px"/>
+						</Toolbar>
+					</headerToolbar>
+					<content>
+						<Table
+							id="idPOListTable"
+							items="{poModel>/results}"
+							noDataText="No Purchase Orders found"
+							alternateRowColors="true"
+							growing="true"
+							growingThreshold="50"
+							class="sapUiSizeCompact gpmsItemTable">
+							<columns>
+								<Column><Text text="PO Number" class="gpmsHeaderText"/></Column>
+								<Column><Text text="Plant" class="gpmsHeaderText"/></Column>
+								<Column><Text text="Vendor" class="gpmsHeaderText"/></Column>
+								<Column><Text text="Vendor Name" class="gpmsHeaderText"/></Column>
+								<Column><Text text="Department" class="gpmsHeaderText"/></Column>
+								<Column><Text text="GE Date" class="gpmsHeaderText"/></Column>
+								<Column hAlign="Center"><Text text="Actions" class="gpmsHeaderText"/></Column>
+							</columns>
+							<items>
+								<ColumnListItem>
+									<cells>
+										<ObjectIdentifier title="{poModel>PurchaseOrder}"/>
+										<Text text="{poModel>Plant}"/>
+										<Text text="{poModel>Vendor}"/>
+										<Text text="{poModel>VendorDesc}"/>
+										<Text text="{poModel>Department}"/>
+										<Text text="{poModel>GEDateFormatted}"/>
+										<Button text="View Items" icon="sap-icon://sys-enter-2" press="onViewItems" type="Emphasized"/>
+									</cells>
+								</ColumnListItem>
+							</items>
+						</Table>
+					</content>
+				</Panel>
+
+			</VBox>
+		</content>
+	</Page>
+</mvc:View>

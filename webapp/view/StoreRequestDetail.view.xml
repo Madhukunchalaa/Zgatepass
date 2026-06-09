@@ -1,0 +1,189 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.StoreRequestDetail"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:core="sap.ui.core"
+	xmlns:layout="sap.ui.layout"
+	height="100%">
+
+	<Page id="storeRequestDetailPage" title="Gate Pass Request Detail"
+		showNavButton="true" navButtonPress=".onNavBack" class="gpmsPage">
+
+		<content>
+			<VBox class="gpmsContentWrapper sapUiMediumMargin">
+
+				<!-- Status Banner -->
+				<MessageStrip
+					text="{= 'Request No: ' + ${store>/GatePassReqNo} + '  |  Status: ' + ${store>/Status}}"
+					type="{= ${store>/Status} === 'Approved' ? 'Success' : (${store>/Status} === 'Rejected' || ${store>/Status} === 'Cancelled') ? 'Error' : 'Warning'}"
+					showIcon="true" class="sapUiSmallMarginBottom"/>
+
+				<!-- Request Details Panel -->
+				<Panel class="gpmsSection" expandable="false">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<core:Icon src="sap-icon://document-text" class="gpmsSectionBarIcon"/>
+							<Label text="Request Details" class="gpmsSectionBarLabel"/>
+							<ToolbarSpacer/>
+							<ObjectStatus text="{store>/GatePassType}" state="Information" icon="sap-icon://tag"/>
+						</Toolbar>
+					</headerToolbar>
+					<layout:Grid defaultSpan="XL3 L3 M6 S12" vSpacing="0">
+						<VBox class="sapUiSmallMargin">
+							<Label text="Request No." class="gpmsFieldLabel"/>
+							<Input value="{store>/GatePassReqNo}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Gate Pass Type" class="gpmsFieldLabel"/>
+							<Input value="{store>/GatePassType}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Request Date" class="gpmsFieldLabel"/>
+							<Input value="{store>/GpDate}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Plant" class="gpmsFieldLabel"/>
+							<Input value="{store>/Plant}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Department" class="gpmsFieldLabel"/>
+							<Input value="{store>/Department}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Fiscal Year" class="gpmsFieldLabel"/>
+							<Input value="{store>/FiscalYear}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vendor Name" class="gpmsFieldLabel"/>
+							<Input value="{store>/VendorName}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vendor GST" class="gpmsFieldLabel"/>
+							<Input value="{store>/VendorGST}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="City / Address" class="gpmsFieldLabel"/>
+							<Input value="{store>/VendorAddress}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vehicle No." class="gpmsFieldLabel"/>
+							<Input value="{store>/VehicleNo}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Mode of Dispatch" class="gpmsFieldLabel"/>
+							<Input value="{store>/ModeOfDispatch}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Remarks" class="gpmsFieldLabel"/>
+							<Input value="{store>/Remarks}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+					</layout:Grid>
+				</Panel>
+
+				<!-- HOD Decision Panel (read-only) -->
+				<Panel class="gpmsSection" expandable="false" visible="{= !!${store>/HODRemarks}}">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<core:Icon src="sap-icon://approvals" class="gpmsSectionBarIcon"/>
+							<Label text="HOD Decision" class="gpmsSectionBarLabel"/>
+						</Toolbar>
+					</headerToolbar>
+					<VBox class="sapUiSmallMargin">
+						<Label text="HOD Remarks" class="gpmsFieldLabel"/>
+						<Input value="{store>/HODRemarks}" editable="false" class="gpmsFieldInput"/>
+					</VBox>
+				</Panel>
+
+				<!-- Attachment Panel -->
+				<Panel class="gpmsSection" expandable="false" visible="{= !!${store>/Base64Img1}}">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<core:Icon src="sap-icon://attachment" class="gpmsSectionBarIcon"/>
+							<Label text="Attached Image" class="gpmsSectionBarLabel"/>
+						</Toolbar>
+					</headerToolbar>
+					<VBox class="sapUiSmallMargin" alignItems="Center">
+						<Image src="{store>/Base64Img1}" press=".onImagePress" activeSrc="{store>/Base64Img1}"
+							width="250px" class="sapUiSmallMarginBottom" densityAware="false"/>
+					</VBox>
+				</Panel>
+
+				<!-- Items Table -->
+				<Panel class="gpmsSection" expandable="false">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<core:Icon src="sap-icon://grid" class="gpmsSectionBarIcon"/>
+							<Label text="Table of Items" class="gpmsSectionBarLabel"/>
+						</Toolbar>
+					</headerToolbar>
+					<Table items="{store>/items}" noDataText="No items found." class="gpmsItemTable" alternateRowColors="true">
+						<columns>
+							<Column width="3rem" hAlign="Center"><Text text="#" class="gpmsHeaderText"/></Column>
+							<Column><Text text="Material Description" class="gpmsHeaderText"/></Column>
+							<Column width="8rem"><Text text="HSN Code" class="gpmsHeaderText"/></Column>
+							<Column width="5rem" hAlign="Center"><Text text="UOM" class="gpmsHeaderText"/></Column>
+							<Column width="9rem" hAlign="Right"><Text text="Quantity" class="gpmsHeaderText"/></Column>
+							<Column width="9rem" hAlign="Right"><Text text="Rate (Rs.)" class="gpmsHeaderText"/></Column>
+							<Column width="10rem" hAlign="Right"><Text text="Amount (Rs.)" class="gpmsHeaderText"/></Column>
+						</columns>
+						<items>
+							<ColumnListItem>
+								<cells>
+									<Text text="{store>sno}"/>
+									<Text text="{store>materialName}" wrapping="true"/>
+									<Text text="{store>hsnCode}"/>
+									<Text text="{store>uom}" textAlign="Center"/>
+									<Text text="{path: 'store>quantity', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" textAlign="Right"/>
+									<Text text="{path: 'store>rate', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}" textAlign="Right"/>
+									<Text text="{path: 'store>amount', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}" textAlign="Right" class="gpmsBoldText"/>
+								</cells>
+							</ColumnListItem>
+						</items>
+					</Table>
+					<HBox justifyContent="End" class="sapUiSmallMarginTop sapUiSmallMarginEnd sapUiSmallMarginBottom">
+						<VBox alignItems="End">
+							<Label text="TOTAL AMOUNT (RS.)" class="gpmsTotalLabel"/>
+							<Text text="{store>/totalAmount}" class="gpmsTotalAmount"/>
+						</VBox>
+					</HBox>
+				</Panel>
+
+				<!-- Store Decision Panel -->
+				<Panel class="gpmsSection" expandable="false">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<core:Icon src="sap-icon://approvals" class="gpmsSectionBarIcon"/>
+							<Label text="Store Remarks" class="gpmsSectionBarLabel"/>
+						</Toolbar>
+					</headerToolbar>
+					<VBox class="sapUiSmallMargin">
+						<Label text="Enter your remarks before approving / rejecting / sending for amendment" class="gpmsFieldLabel"/>
+						<TextArea
+							value="{store>/STORERemarks}"
+							placeholder="Enter Store remarks here (up to 250 characters)..."
+							rows="4"
+							width="100%"
+							maxLength="250"
+							showExceededText="true"
+							class="gpmsFieldInput gpmsTextAreaBig"/>
+					</VBox>
+				</Panel>
+
+			</VBox>
+		</content>
+
+		<footer>
+			<OverflowToolbar class="gpmsFooterBar">
+				<Button text="Approve" type="Accept" icon="sap-icon://accept" press=".onApprove"
+					visible="{= ${store>/Status} === 'Store Approval Pending' || ${store>/Status} === 'Pending' || ${store>/Status} === 'OPEN'}" class="sapUiSmallMarginBegin"/>
+				<Button text="Reject" type="Reject" icon="sap-icon://decline" press=".onReject"
+					visible="{= ${store>/Status} === 'Store Approval Pending' || ${store>/Status} === 'Pending' || ${store>/Status} === 'OPEN'}"/>
+				<Button text="Amendment" type="Emphasized" icon="sap-icon://edit" press=".onAmend"
+					visible="{= ${store>/Status} === 'Store Approval Pending' || ${store>/Status} === 'Pending' || ${store>/Status} === 'OPEN'}"/>
+				<ToolbarSpacer/>
+				<Button text="Back" icon="sap-icon://nav-back" press=".onNavBack"/>
+			</OverflowToolbar>
+		</footer>
+
+	</Page>
+</mvc:View>

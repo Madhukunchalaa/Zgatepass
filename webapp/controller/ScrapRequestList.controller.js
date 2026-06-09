@@ -21,17 +21,10 @@ sap.ui.define([
 		_loadList: function () {
 			var oODataModel = this.getOwnerComponent().getModel();
 			var that = this;
-			
-			// Load local overrides
-			var aLocalRequests = JSON.parse(localStorage.getItem("mockScrapRequests") || "[]");
-
-			var fnFallback = function () {
-				var oModel = new JSONModel(aLocalRequests);
-				that.getView().setModel(oModel, "scrapList");
-			};
 
 			if (!oODataModel) {
-				fnFallback();
+				MessageBox.error("SAP system is not connected. Please contact your administrator.");
+				that.getView().setModel(new JSONModel([]), "scrapList");
 				return;
 			}
 
@@ -43,11 +36,6 @@ sap.ui.define([
 					sap.ui.core.BusyIndicator.hide();
 					var aODataList = (oData.results || []).map(function (oItem) {
 						var sRequestId = oItem.GatePassReqNo || oItem.RequestId || "";
-						
-						// Find if there is a local override for this request
-						var oLocalOverride = aLocalRequests.find(function (req) {
-							return req.requestId === sRequestId;
-						});
 
 						// Format date
 						var sDateStr = that._formatRequestDate(oItem.RequestDate || oItem.ReqDate);
@@ -73,8 +61,6 @@ sap.ui.define([
 									uom: sUom
 								};
 							});
-						} else if (oLocalOverride && oLocalOverride.items) {
-							aItems = oLocalOverride.items;
 						}
 
 						var sStatus = "Pending";
@@ -90,26 +76,16 @@ sap.ui.define([
 
 						return {
 							requestId: sRequestId,
-							requestDate: oItem.RequestDate || (oLocalOverride ? oLocalOverride.requestDate : null),
-							requestDateStr: sDateStr || (oLocalOverride ? oLocalOverride.requestDateStr : ""),
-							vehicleDetails: (oLocalOverride && oLocalOverride.vehicleDetails) ? oLocalOverride.vehicleDetails : (oItem.VehicleNo || oItem.VehicleDetails || ""),
-							collectArea: (oLocalOverride && oLocalOverride.collectArea) ? oLocalOverride.collectArea : (oItem.CollectArea || ""),
-							remarks: (oLocalOverride && oLocalOverride.remarks) ? oLocalOverride.remarks : (oItem.Remarks || ""),
-							status: (oLocalOverride && oLocalOverride.status) ? oLocalOverride.status : sStatus,
-							weighmentSlipNo: (oLocalOverride && oLocalOverride.weighmentSlipNo) ? oLocalOverride.weighmentSlipNo : (oItem.WeighmentSlipNo || ""),
-							challanDateTime: (oLocalOverride && oLocalOverride.challanDateTime) ? oLocalOverride.challanDateTime : (oItem.ChallanDateTime || ""),
+							requestDate: oItem.RequestDate || null,
+							requestDateStr: sDateStr,
+							vehicleDetails: oItem.VehicleNo || oItem.VehicleDetails || "",
+							collectArea: oItem.CollectArea || "",
+							remarks: oItem.Remarks || "",
+							status: sStatus,
+							weighmentSlipNo: oItem.WeighmentSlipNo || "",
+							challanDateTime: oItem.ChallanDateTime || "",
 							items: aItems
 						};
-					});
-
-					// Append local-only requests (e.g. newly created requests not yet in OData)
-					aLocalRequests.forEach(function (oLocal) {
-						var bExists = aODataList.some(function (oOData) {
-							return oOData.requestId === oLocal.requestId;
-						});
-						if (!bExists) {
-							aODataList.push(oLocal);
-						}
 					});
 
 					var oModel = new JSONModel(aODataList);
@@ -117,7 +93,8 @@ sap.ui.define([
 				},
 				error: function (oError) {
 					sap.ui.core.BusyIndicator.hide();
-					fnFallback();
+					MessageBox.error("Failed to load Scrap Request list. Please try again.");
+					that.getView().setModel(new JSONModel([]), "scrapList");
 				}
 			});
 		},

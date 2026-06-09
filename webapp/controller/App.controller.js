@@ -22,7 +22,24 @@ sap.ui.define([
 					this.getRouter().navTo("login");
 					return;
 				}
-				
+
+				// Role-based route guard
+				var bIsGatepassUserOnly = oUserModel.getProperty("/IsGatepassUserOnly");
+				var bIsHodUser = oUserModel.getProperty("/IsHodUser");
+				if (bIsGatepassUserOnly) {
+					var aUserOnlyAllowed = ["home", "GatePassList", "GatePassCreation", "IRGP", "ScrapRequestCreation", "ScrapRequestList", "AshGatePassCreation", "AshGatePassList"];
+					if (aUserOnlyAllowed.indexOf(sRouteName) === -1) {
+						this.getRouter().navTo("home");
+						return;
+					}
+				} else if (bIsHodUser) {
+					var aHodAllowed = ["home", "GatePassList", "NRGPList", "ScrapRequestList", "ScrapRequestDetail", "ScrapGatepassList", "AshGatePassList", "AshGatePassDetail", "HODRequestDetail"];
+					if (aHodAllowed.indexOf(sRouteName) === -1) {
+						this.getRouter().navTo("home");
+						return;
+					}
+				}
+
 				// Transition to main page
 				var oRootApp = this.byId("idRootApp");
 				if (oRootApp && oRootApp.getCurrentPage().getId() !== this.getView().createId("idMainPage")) {
@@ -70,12 +87,6 @@ sap.ui.define([
 			var sFullName = oUserModel.getProperty("/fullName") || oUserModel.getProperty("/id") || "User";
 			var sInitials = sFullName.trim().split(/\s+/).map(function (p) { return p.charAt(0); }).join("").substring(0, 2).toUpperCase();
 			
-			console.log("=== Active User Profile ===");
-			console.log("Full Name:", sFullName);
-			console.log("Initials:", sInitials);
-			console.log("User Data Object:", oUserModel.getData());
-			console.log("===========================");
-            
 			this.byId("idWelcomeText").setText("Welcome, " + sFullName);
 			this.byId("idUserAvatar").setInitials(sInitials);
 		},

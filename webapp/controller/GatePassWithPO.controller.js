@@ -502,8 +502,6 @@ sap.ui.define([
 				GateEntryNo: "",
 				GEDate: sGEDate,
 				Message: "",
-				PCPNo: oData.PCPNo || "",
-				BudgetCode: oData.BudgetCode || "",
 				GateInPoNav: aNavItems
 			};
 		},
@@ -567,7 +565,6 @@ sap.ui.define([
 				}
 
 				return {
-					PCPNo: oData.PCPNo || "",
 					SourceType: "PettyCash",
 					ItemNo: sItemNo,
 					ItemDescription: oItem.ItemDescription || "",
@@ -579,7 +576,6 @@ sap.ui.define([
 			});
 
 			return {
-				PCPNo: oData.PCPNo || "",
 				GEDate: sGEDateSAP,
 				Plant: sPlant,
 				Vendor: oData.Vendor || "",
@@ -611,7 +607,6 @@ sap.ui.define([
 			}
 
 			var oPayload = this._preparePCPPayload(oData);
-			console.log("PETTY CASH POST PAYLOAD:", JSON.stringify(oPayload, null, 2));
 			this._executeODataCreate("/PCPHdrSet", oPayload);
 		},
 

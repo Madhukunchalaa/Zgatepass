@@ -77,7 +77,7 @@
 											<!-- Dynamic Actions matching stage -->
 											<HBox justifyContent="End" alignItems="Center">
 												<!-- Link MRN (User Mode) -->
-												<Button text="Link MRN" type="Emphasized" icon="sap-icon://edit" press="onActionLinkMRN" visible="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' }"/>
+												<Button text="Link MRN" type="Emphasized" icon="sap-icon://edit" press="onActionLinkMRN" visible="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' &amp;&amp; !${user>/IsStoreUser} }"/>
 
 												<!-- Add Qty & Close (Store Mode) -->
 												<Button text="Add Qty &amp; Close" type="Emphasized" icon="sap-icon://task" press="onAddQtyAmpCloseButtonPress" visible="{= ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' }"/>
@@ -182,8 +182,7 @@
 								<Label text="Request Type" class="gpmsFieldLabel"/>
 								<Select selectedKey="{irgp>/header/RequestType}" enabled="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%">
 									<core:Item key="HxGN EAM" text="HxGN EAM"/>
-									<core:Item key="Emergency" text="Emergency Maintenance"/>
-									<core:Item key="PlantShutdown" text="Plant Shutdown"/>
+									<core:Item key="Tools" text="Tools"/>
 								</Select>
 							</VBox>
 						</layout:Grid>
@@ -303,8 +302,7 @@
 								<Label text="Request Type" class="gpmsFieldLabel"/>
 								<Select selectedKey="{irgp>/header/RequestType}" enabled="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%">
 									<core:Item key="HxGN EAM" text="HxGN EAM"/>
-									<core:Item key="Emergency" text="Emergency Maintenance"/>
-									<core:Item key="PlantShutdown" text="Plant Shutdown"/>
+									<core:Item key="Tools" text="Tools"/>
 								</Select>
 							</VBox>
 						</layout:Grid>
@@ -364,7 +362,7 @@
 								<t:Column width="110px" hAlign="Right" visible="{= ${irgp>/ui/currentStep} === 'CREATE' }">
 									<Label text="Quantity" class="gpmsHeaderText"/>
 									<t:template>
-										<Input value="{irgp>SentQuantity}" type="Number" editable="{irgp>/ui/itemsEditable}" class="gpmsTableInput" textAlign="Right"/>
+										<Input value="{irgp>SentQuantity}" type="Text" editable="{irgp>/ui/itemsEditable}" class="gpmsTableInput" textAlign="Right"/>
 									</t:template>
 								</t:Column>
 
@@ -372,7 +370,7 @@
 								<t:Column width="110px" hAlign="Right" visible="{= ${irgp>/ui/currentStep} !== 'CREATE' }">
 									<Label text="Sent Qty" class="gpmsHeaderText"/>
 									<t:template>
-										<Input value="{irgp>SentQuantity}" type="Number" editable="false" class="gpmsTableInput gpmsFieldInputReadonly" textAlign="Right"/>
+										<Input value="{irgp>SentQuantity}" type="Text" editable="false" class="gpmsTableInput gpmsFieldInputReadonly" textAlign="Right"/>
 									</t:template>
 								</t:Column>
 
@@ -381,7 +379,7 @@
 									<Label text="Recvd Qty" class="gpmsHeaderText"/>
 									<t:template>
 										<Input value="{irgp>RecievedQuantity}"
-											type="Number"
+											type="Text"
 											editable="{irgp>/ui/receivedQtyEditable}"
 											liveChange=".onRecievedQuantityInputLiveChange"
 											textAlign="Right"
@@ -393,7 +391,7 @@
 								<t:Column width="110px" hAlign="Right" visible="{= ${irgp>/ui/currentStep} !== 'CREATE' }">
 									<Label text="Bal Qty" class="gpmsHeaderText"/>
 									<t:template>
-										<Input value="{irgp>BalanceQuantity}" type="Number" editable="false" class="gpmsTableInput gpmsFieldInputReadonly" textAlign="Right"/>
+										<Input value="{irgp>BalanceQuantity}" type="Text" editable="false" class="gpmsTableInput gpmsFieldInputReadonly" textAlign="Right"/>
 									</t:template>
 								</t:Column>
 
@@ -402,7 +400,7 @@
 									<Label text="UOM" class="gpmsHeaderText"/>
 									<t:template>
 										<VBox>
-											<ComboBox value="{irgp>UOM}" visible="{irgp>/ui/itemsEditable}" class="gpmsTableInput" items="{irgp>/dropdowns/uoms}" width="100%">
+											<ComboBox selectedKey="{irgp>UOM}" visible="{irgp>/ui/itemsEditable}" class="gpmsTableInput" items="{irgp>/dropdowns/uoms}" width="100%">
 												<core:Item key="{irgp>key}" text="{irgp>text}"/>
 											</ComboBox>
 											<Input value="{irgp>UOM}" visible="{= !${irgp>/ui/itemsEditable} }" editable="false" class="gpmsTableInput gpmsFieldInputReadonly" width="100%"/>
@@ -410,11 +408,10 @@
 									</t:template>
 								</t:Column>
 
-								<!-- MR Number (Detail/edit modes only) -->
 								<t:Column width="160px" visible="{= ${irgp>/ui/currentStep} !== 'CREATE' }">
 									<Label text="MRNumber" class="gpmsHeaderText"/>
 									<t:template>
-										<Input value="{irgp>MRNumber}" editable="{irgp>/ui/mrNumberEditable}" placeholder="Enter MR Number" class="gpmsTableInput"/>
+										<Input value="{irgp>MRNumber}" editable="{irgp>/ui/mrNumberEditable}" placeholder="Enter MR Number" maxLength="10" class="gpmsTableInput"/>
 									</t:template>
 								</t:Column>
 

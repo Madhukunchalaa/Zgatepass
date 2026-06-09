@@ -297,19 +297,27 @@ sap.ui.define([
 			if (!oData) {
 				return "PENDING";
 			}
-			var sRawStatus = oData.ApprovalReq || oData.Status || oData.ApprovalStatus || oData.Approvalstatus || oData.Zstatus || oData.Zgpstatus || oData.Stat || oData.ZGP_STATUS || oData.ZSTATUS || "";
-			sRawStatus = String(sRawStatus).toUpperCase().trim();
-			if (sRawStatus === "APPROVED" || sRawStatus === "A" || sRawStatus === "RELEASED") {
-				return "APPROVED";
-			} else if (sRawStatus === "REJECTED" || sRawStatus === "R") {
-				return "REJECTED";
-			} else if (sRawStatus === "CLOSED" || sRawStatus === "C") {
-				return "CLOSED";
-			} else if (sRawStatus === "CANCELLED" || sRawStatus === "CANCEL" || sRawStatus === "CAN") {
-				return "CANCELLED";
-			} else if (sRawStatus === "AM" || sRawStatus === "AMENDMENT" || sRawStatus === "AMENDMENT REQUIRED") {
-				return "AMENDMENT";
-			}
+			
+			var s1 = oData.Approval1;
+			if (!s1 || s1 === "null" || s1 === "undefined") s1 = "";
+			s1 = String(s1).trim().toUpperCase();
+
+			var s2 = oData.Approval2;
+			if (!s2 || s2 === "null" || s2 === "undefined") s2 = "";
+			s2 = String(s2).trim().toUpperCase();
+
+			var sStatus = oData.Status;
+			if (!sStatus || sStatus === "null" || sStatus === "undefined") sStatus = "";
+			sStatus = String(sStatus).trim().toUpperCase();
+
+			if (s1 === "R"  || s2 === "R")  return "REJECTED";
+			if (s1 === "AM" || s2 === "AM") return "AMENDMENT";
+			if (s1 && s2) return "APPROVED";
+			if (s1 && !s2) return "STORE APPROVAL PENDING"; // Though the OutGatePass UI will handle this as pending usually
+			
+			if (sStatus === "CANCELLED" || sStatus === "CANCEL" || sStatus === "CAN") return "CANCELLED";
+			if (sStatus === "CLOSED"    || sStatus === "C") return "CLOSED";
+
 			return "PENDING";
 		},
 
@@ -351,6 +359,8 @@ sap.ui.define([
 			}
 			// Mapping from OutGatePassSet sample payload
 			oOutModel.setProperty("/GatePassreqNo", oData.GatePassReqNo || oData.GatePassreqNo);
+			oOutModel.setProperty("/Base64Img1", oData.Base64Img1 || "");
+			
 			var sStatus = this._getNormalizedStatus(oData);
 			oOutModel.setProperty("/ApprovalStatus", sStatus);
 
@@ -381,8 +391,8 @@ sap.ui.define([
 			oOutModel.setProperty("/ZipCode", oData.ZipCode || oData.PostalCode || "");
 			oOutModel.setProperty("/City", oData.City || "");
 			oOutModel.setProperty("/FiscalYear", oData.FiscalYear || String(new Date().getFullYear()));
-			oOutModel.setProperty("/TransporterName", oData.TransporterName || "");
-			oOutModel.setProperty("/TransporterGST", oData.TransporterGST || "");
+			oOutModel.setProperty("/TransporterName", oData.TransporterName || oData.VendorName || "");
+			oOutModel.setProperty("/TransporterGST", oData.TransporterGST || oData.VendorGST || "");
 			oOutModel.setProperty("/VendorAddress", (oData.City || "") + ", " + (oData.ZipCode || ""));
 			oOutModel.setProperty("/VendorPerson", oData.VendorPerson);
 			oOutModel.setProperty("/UserRemarks", oData.Remarks || "");
@@ -1214,9 +1224,9 @@ sap.ui.define([
 				oOutModel.setProperty("/TransporterName", "MEIL Neyveli Energy Private Limited");
 				oOutModel.setProperty("/TransporterGST", "33AACCS2753B1ZV");
 			} else {
-				// Vendor — clear for manual entry
-				oOutModel.setProperty("/TransporterName", "");
-				oOutModel.setProperty("/TransporterGST", "");
+				// Vendor - auto fetch vendor name and GST
+				oOutModel.setProperty("/TransporterName", oOutModel.getProperty("/VendorName") || "");
+				oOutModel.setProperty("/TransporterGST", oOutModel.getProperty("/VendorGST") || "");
 			}
 			oOutModel.setProperty("/TransportByIndex", iIndex);
 		},
@@ -1456,8 +1466,7 @@ sap.ui.define([
 
 			var oODataModel = this.getModel();
 			if (!oODataModel) {
-				MessageBox.warning("Backend service not available. Check console for payload.");
-				console.log("Submit Payload:", oPayload);
+				MessageBox.error("SAP system is not connected. Please contact your administrator.");
 				return;
 			}
 
@@ -1465,6 +1474,13 @@ sap.ui.define([
 			oODataModel.create("/OutGatePassSet", oPayload, {
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
+					
+					// Backend might return 201 Created but actually fail/reject with a Message
+					if (!oData.GatePassNo && oData.Message) {
+						MessageBox.error(oData.Message);
+						return;
+					}
+
 					var sGPNo = oData.GatePassNo || "Generated";
 
 					// Update model with generated GP No and show logistics

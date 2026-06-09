@@ -1,0 +1,29 @@
+<core:FragmentDefinition
+	xmlns="sap.m"
+	xmlns:core="sap.ui.core">
+	<Dialog title="PO Items - {poModel>PurchaseOrder}" contentWidth="800px" resizable="true" draggable="true">
+		<content>
+			<Table items="{poModel>GateInPoNav/results}" class="sapUiSizeCompact gpmsItemTable" alternateRowColors="true">
+				<columns>
+					<Column width="5rem"><Text text="Item No" class="gpmsHeaderText"/></Column>
+					<Column><Text text="Description" class="gpmsHeaderText"/></Column>
+					<Column width="6rem" hAlign="Right"><Text text="Quantity" class="gpmsHeaderText"/></Column>
+					<Column width="6rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
+				</columns>
+				<items>
+					<ColumnListItem>
+						<cells>
+							<Text text="{poModel>ItemNo}"/>
+							<Text text="{poModel>ItemDescription}"/>
+							<Text text="{poModel>POQuantity}"/>
+							<Text text="{poModel>UOM}"/>
+						</cells>
+					</ColumnListItem>
+				</items>
+			</Table>
+		</content>
+		<buttons>
+			<Button text="Close" press="onCloseItemsDialog" type="Default" />
+		</buttons>
+	</Dialog>
+</core:FragmentDefinition>

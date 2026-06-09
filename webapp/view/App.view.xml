@@ -59,7 +59,7 @@
 								<tnt:NavigationListItem text="Scrap Request"          icon="sap-icon://delete"                      key="ScrapRequestCreation"  visible="{= !${user>/IsHodUser} }"/>
 								<tnt:NavigationListItem text="Scrap Request List"     icon="sap-icon://list"                        key="ScrapRequestList"/>
 								<tnt:NavigationListItem text="Add Scrap Gatepass"     icon="sap-icon://sales-document"              key="ScrapGatepassCreation" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }"/>
-								<tnt:NavigationListItem text="Scrap Gatepass List"   icon="sap-icon://sales-order"                 key="ScrapGatepassList"/>
+								<tnt:NavigationListItem text="Scrap Gatepass List"   icon="sap-icon://sales-order"                 key="ScrapGatepassList"     visible="{= !${user>/IsGatepassUserOnly} }"/>
 								<tnt:NavigationListItem text="Ash GP Request"         icon="sap-icon://factory"                     key="AshGatePassCreation"   visible="{= !${user>/IsHodUser} }"/>
 								<tnt:NavigationListItem text="Ash GP List"            icon="sap-icon://list"                        key="AshGatePassList"/>
 								<tnt:NavigationListItem text="Add PCP"                icon="sap-icon://lead"                        key="PCPList"               visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }"/>

@@ -279,11 +279,50 @@
 										class="gpmsTableInput"
 										placeholder="HSN code or desc..."/>
 
-									<Input value="{gp>quantity}" type="Number" textAlign="Right" liveChange=".onQtyRateChange" class="gpmsTableInput"/>
+									<Input value="{gp>quantity}" textAlign="Right" liveChange=".onQtyRateChange" class="gpmsTableInput"/>
 
-									<Input value="{gp>uom}" class="gpmsTableInput" textAlign="Center" placeholder="UOM..."/>
+									<Select selectedKey="{gp>uom}" class="gpmsTableInput" width="100%">
+										<core:Item key="" text="-- Select --"/>
+										<core:Item key="AMP" text="Amps"/>
+										<core:Item key="BAG" text="Bag"/>
+										<core:Item key="BBL" text="Barrel"/>
+										<core:Item key="BOT" text="Bottle"/>
+										<core:Item key="BOX" text="Box"/>
+										<core:Item key="BDL" text="Bundle"/>
+										<core:Item key="CAN" text="Can"/>
+										<core:Item key="CTN" text="Carton"/>
+										<core:Item key="CTG" text="Cartridge"/>
+										<core:Item key="COI" text="Coil"/>
+										<core:Item key="CFT" text="Cubic Feet"/>
+										<core:Item key="M3"  text="Cubic Meter"/>
+										<core:Item key="CYL" text="Cylinder"/>
+										<core:Item key="DRM" text="Drum"/>
+										<core:Item key="FT"  text="Feet"/>
+										<core:Item key="KG"  text="Kilogram"/>
+										<core:Item key="LEN" text="Length"/>
+										<core:Item key="L"   text="Litre"/>
+										<core:Item key="LOD" text="Load"/>
+										<core:Item key="LOT" text="Lot"/>
+										<core:Item key="M"   text="Meters"/>
+										<core:Item key="MT"  text="Metric Tons"/>
+										<core:Item key="MON" text="Month"/>
+										<core:Item key="NOS" text="Number"/>
+										<core:Item key="PAR" text="Pair"/>
+										<core:Item key="ROL" text="Roll"/>
+										<core:Item key="SET" text="Set"/>
+										<core:Item key="SHT" text="Sheet"/>
+										<core:Item key="SFT" text="Square Feet"/>
+										<core:Item key="M2"  text="Square Meter"/>
+										<core:Item key="EA"  text="Item"/>
+										<core:Item key="PCK" text="Pack"/>
+										<core:Item key="DAY" text="Days"/>
+										<core:Item key="PKT" text="Pocket"/>
+										<core:Item key="REA" text="Ream"/>
+										<core:Item key="TON" text="Tons"/>
+										<core:Item key="UN"  text="Unit"/>
+									</Select>
 
-									<Input value="{gp>rate}" type="Number" textAlign="Right" liveChange=".onQtyRateChange" class="gpmsTableInput"/>
+									<Input value="{gp>rate}" textAlign="Right" liveChange=".onQtyRateChange" class="gpmsTableInput"/>
 
 									<Text text="{gp>amount}" class="gpmsAmountText" width="100%"/>
 

@@ -70,7 +70,14 @@
 						</TileContent>
 					</GenericTile>
 
-					<!-- IRGP Card — visible to store users AND Z_MM_GATEPASS_USER_FRONT_VIEW role -->
+					<!-- PO List Card -->
+					<GenericTile class="gpmsDashCard poListCard" press=".onPressPOList" header="PO LIST" subheader="View Purchase Orders" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }">
+						<TileContent>
+							<core:Icon src="sap-icon://list" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- IRGP Card -->
 					<GenericTile class="gpmsDashCard irgpCard" press=".onPressIRGP" header="IRGP WORKFLOW" subheader="Internal Returnable GP" visible="{= !${user>/IsHodUser} }">
 						<TileContent>
 							<core:Icon src="sap-icon://process" class="gpmsCardIcon"/>

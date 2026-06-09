@@ -23,25 +23,10 @@ sap.ui.define([
 		_loadDetail: function (sRequestId) {
 			var oODataModel = this.getOwnerComponent().getModel();
 			var that = this;
-			
-			// Load local overrides
-			var aLocalRequests = JSON.parse(localStorage.getItem("mockScrapRequests") || "[]");
-			var oLocalData = aLocalRequests.find(function (item) {
-				return item.requestId === sRequestId;
-			});
-
-			var fnFallback = function () {
-				if (!oLocalData) {
-					MessageBox.error("Request not found!");
-					that.onNavBack();
-					return;
-				}
-				var oModel = new JSONModel(oLocalData);
-				that.getView().setModel(oModel, "scrap");
-			};
 
 			if (!oODataModel) {
-				fnFallback();
+				MessageBox.error("SAP system is not connected. Please contact your administrator.");
+				that.onNavBack();
 				return;
 			}
 
@@ -53,7 +38,8 @@ sap.ui.define([
 					sap.ui.core.BusyIndicator.hide();
 					var oItem = oData.results && oData.results[0];
 					if (!oItem) {
-						fnFallback();
+						MessageBox.error("Request not found.");
+						that.onNavBack();
 						return;
 					}
 
@@ -81,8 +67,6 @@ sap.ui.define([
 								uom: sUom
 							};
 						});
-					} else if (oLocalData && oLocalData.items) {
-						aItems = oLocalData.items;
 					}
 
 					var sStatus = "Pending";
@@ -98,14 +82,14 @@ sap.ui.define([
 
 					var oMappedData = {
 						requestId: sRequestId,
-						requestDate: oItem.RequestDate || (oLocalData ? oLocalData.requestDate : null),
-						requestDateStr: sDateStr || (oLocalData ? oLocalData.requestDateStr : ""),
-						vehicleDetails: (oLocalData && oLocalData.vehicleDetails) ? oLocalData.vehicleDetails : (oItem.VehicleNo || oItem.VehicleDetails || ""),
-						collectArea: (oLocalData && oLocalData.collectArea) ? oLocalData.collectArea : (oItem.CollectArea || ""),
-						remarks: (oLocalData && oLocalData.remarks) ? oLocalData.remarks : (oItem.Remarks || ""),
-						status: (oLocalData && oLocalData.status) ? oLocalData.status : sStatus,
-						weighmentSlipNo: (oLocalData && oLocalData.weighmentSlipNo) ? oLocalData.weighmentSlipNo : (oItem.WeighmentSlipNo || ""),
-						challanDateTime: (oLocalData && oLocalData.challanDateTime) ? oLocalData.challanDateTime : (oItem.ChallanDateTime || ""),
+						requestDate: oItem.RequestDate || null,
+						requestDateStr: sDateStr,
+						vehicleDetails: oItem.VehicleNo || oItem.VehicleDetails || "",
+						collectArea: oItem.CollectArea || "",
+						remarks: oItem.Remarks || "",
+						status: sStatus,
+						weighmentSlipNo: oItem.WeighmentSlipNo || "",
+						challanDateTime: oItem.ChallanDateTime || "",
 						items: aItems
 					};
 
@@ -114,7 +98,8 @@ sap.ui.define([
 				},
 				error: function (oError) {
 					sap.ui.core.BusyIndicator.hide();
-					fnFallback();
+					MessageBox.error("Failed to load request details. Please try again.");
+					that.onNavBack();
 				}
 			});
 		},
@@ -155,8 +140,7 @@ sap.ui.define([
 				title: "Confirm Approval",
 				onClose: function (oAction) {
 					if (oAction === MessageBox.Action.OK) {
-						this._updateStatus("Approved");
-						this._addToInventory();
+						this._updateStatus("A", "Approved");
 					}
 				}.bind(this)
 			});
@@ -167,7 +151,7 @@ sap.ui.define([
 				title: "Confirm Rejection",
 				onClose: function (oAction) {
 					if (oAction === MessageBox.Action.OK) {
-						this._updateStatus("Rejected");
+						this._updateStatus("R", "Rejected");
 					}
 				}.bind(this)
 			});
@@ -178,62 +162,37 @@ sap.ui.define([
 				title: "Confirm Amendment",
 				onClose: function (oAction) {
 					if (oAction === MessageBox.Action.OK) {
-						this._updateStatus("Pending Amendment");
+						this._updateStatus("P", "Pending Amendment");
 					}
 				}.bind(this)
 			});
 		},
 
-		_updateStatus: function (sNewStatus) {
-			var oModel = this.getView().getModel("scrap");
-			var sRequestId = oModel.getProperty("/requestId");
-			
-			var aMockList = JSON.parse(localStorage.getItem("mockScrapRequests") || "[]");
-			var oItem = aMockList.find(function(item) { return item.requestId === sRequestId; });
-			if (!oItem) {
-				oItem = {
-					requestId: sRequestId,
-					requestDate: oModel.getProperty("/requestDate"),
-					requestDateStr: oModel.getProperty("/requestDateStr"),
-					vehicleDetails: oModel.getProperty("/vehicleDetails"),
-					collectArea: oModel.getProperty("/collectArea"),
-					remarks: oModel.getProperty("/remarks"),
-					weighmentSlipNo: oModel.getProperty("/weighmentSlipNo"),
-					challanDateTime: oModel.getProperty("/challanDateTime"),
-					items: oModel.getProperty("/items"),
-					status: sNewStatus
-				};
-				aMockList.push(oItem);
-			} else {
-				oItem.status = sNewStatus;
-			}
-			localStorage.setItem("mockScrapRequests", JSON.stringify(aMockList));
-			
-			oModel.setProperty("/status", sNewStatus);
-			MessageToast.show("Status updated to " + sNewStatus);
-		},
+		_updateStatus: function (sApprovalCode, sDisplayStatus) {
+			var oODataModel = this.getOwnerComponent().getModel();
+			var oViewModel = this.getView().getModel("scrap");
+			var sRequestId = oViewModel.getProperty("/requestId");
+			var that = this;
 
-		_addToInventory: function () {
-			var oModel = this.getView().getModel("scrap");
-			var aItems = oModel.getProperty("/items");
-			
-			var oInventory = JSON.parse(localStorage.getItem("mockScrapInventory") || "{}");
-			
-			aItems.forEach(function(item) {
-				var qty = parseFloat(item.quantity) || 0;
-				if (qty > 0 && item.type) {
-					if (!oInventory[item.type]) {
-						oInventory[item.type] = {
-							quantity: 0,
-							uom: item.uom
-						};
-					}
-					oInventory[item.type].quantity += qty;
+			if (!oODataModel) {
+				MessageBox.error("SAP system is not connected. Please contact your administrator.");
+				return;
+			}
+
+			sap.ui.core.BusyIndicator.show(0);
+			oODataModel.update("/ScrapReqHdrSet(GatePassReqNo='" + sRequestId + "')", {
+				ApprovalReq: sApprovalCode
+			}, {
+				success: function () {
+					sap.ui.core.BusyIndicator.hide();
+					oViewModel.setProperty("/status", sDisplayStatus);
+					MessageToast.show("Status updated to " + sDisplayStatus);
+				},
+				error: function (oError) {
+					sap.ui.core.BusyIndicator.hide();
+					MessageBox.error("Failed to update status. Please try again.");
 				}
 			});
-			
-			localStorage.setItem("mockScrapInventory", JSON.stringify(oInventory));
-			MessageToast.show("Inventory Updated with new Scrap material");
 		}
 
 	});

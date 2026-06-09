@@ -133,134 +133,37 @@ sap.ui.define([
 
 			var oODataModel = this.getOwnerComponent().getModel();
 
-			var fnMockFallback = function () {
-				// Generate mock Request ID
-				var sRequestId = "REQ-" + Math.floor(Math.random() * 9000 + 1000);
-				
-				// Save to local storage mock
-				var aMockList = JSON.parse(localStorage.getItem("mockScrapRequests") || "[]");
-				oData.requestId = sRequestId;
-				oData.status = "Pending HOD";
-				oData.requestDateStr = oData.requestDate.toLocaleDateString("en-GB");
-				aMockList.push(oData);
-				localStorage.setItem("mockScrapRequests", JSON.stringify(aMockList));
-				
-				MessageBox.success("Scrap Request " + sRequestId + " created successfully.", {
-					onClose: function () {
-						this.onNavBack();
-					}.bind(this)
-				});
-			}.bind(this);
-
-			if (oODataModel) {
-				sap.ui.core.BusyIndicator.show(0);
-				oODataModel.create("/ScrapReqHdrSet", oPayload, {
-					success: function (oResponse) {
-						sap.ui.core.BusyIndicator.hide();
-						
-						var sReqNo = oResponse.GatePassReqNo || "";
-						var sMsg = oResponse.Message || "Scrap Request created successfully.";
-						var sDisplayMsg = sMsg;
-						if (sReqNo && sMsg.indexOf(sReqNo) === -1) {
-							sDisplayMsg += "\nRequest Number: " + sReqNo;
-						}
-
-						// Save to local storage mock
-						var aMockList = JSON.parse(localStorage.getItem("mockScrapRequests") || "[]");
-						oData.requestId = sReqNo;
-						oData.status = "Pending HOD";
-						oData.requestDateStr = new Date().toLocaleDateString("en-GB");
-						aMockList.push(oData);
-						localStorage.setItem("mockScrapRequests", JSON.stringify(aMockList));
-
-						MessageBox.success(sDisplayMsg, {
-							onClose: function () {
-								this.onNavBack();
-							}.bind(this)
-						});
-					}.bind(this),
-					error: function (oError) {
-						sap.ui.core.BusyIndicator.hide();
-						var sErrMsg = "Failed to create Scrap Request.";
-						try {
-							var oErrBody = JSON.parse(oError.responseText);
-							sErrMsg = (oErrBody.error && oErrBody.error.message && oErrBody.error.message.value) ? oErrBody.error.message.value : sErrMsg;
-						} catch (e) {}
-						MessageBox.error(sErrMsg);
-					}
-				});
-			} else {
-				sap.ui.core.BusyIndicator.show(0);
-				setTimeout(function() {
-					sap.ui.core.BusyIndicator.hide();
-					fnMockFallback();
-				}.bind(this), 1000);
+			if (!oODataModel) {
+				MessageBox.error("SAP system is not connected. Please contact your administrator.");
+				return;
 			}
-		},
 
-		_getMockSaleOrders: function () {
-			return [
-				{
-					saleOrder: "SO-9001",
-					vehicleDetails: "AP-16-TJ-9876",
-					collectArea: "Boiler Area",
-					remarks: "MS Scrap plates from unit 2",
-					vendor: "V1",
-					vendorName: "Sri Manikandan Traders",
-					vendorAddress: "Sri Manikandan Traders, No.102, Vridhachalam Main Road,, Neyveli, India, 607802",
-					vendorGST: "33ABEFS1534J1ZB",
-					items: [
-						{
-							sno: "1",
-							type: "Metal",
-							description: "MS Plates Scrap",
-							quantity: "500",
-							availQty: "500",
-							uom: "KG"
-						}
-					]
-				},
-				{
-					saleOrder: "SO-9002",
-					vehicleDetails: "TS-09-UD-5432",
-					collectArea: "Transformer Yard",
-					remarks: "Used copper wire cables",
-					vendor: "V2",
-					vendorName: "Metal Scrap Buyers Pvt Ltd",
-					vendorAddress: "Metal Scrap Buyers Pvt Ltd, Chennai",
-					vendorGST: "33XXXXXXXXXXXXX",
-					items: [
-						{
-							sno: "1",
-							type: "Copper",
-							description: "Copper Wire Scrap",
-							quantity: "250",
-							availQty: "250",
-							uom: "KG"
-						}
-					]
-				},
-				{
-					saleOrder: "SO-9003",
-					vehicleDetails: "KA-03-ME-4321",
-					collectArea: "Store Room 3",
-					remarks: "Old lead acid batteries",
-					vendor: "V2",
-					vendorName: "Metal Scrap Buyers Pvt Ltd",
-					vendorAddress: "Metal Scrap Buyers Pvt Ltd, Chennai",
-					vendorGST: "33XXXXXXXXXXXXX",
-					items: [
-						{
-							sno: "1",
-							type: "Batteries",
-							description: "Lead Batteries",
-							quantity: "12",
-							availQty: "12",
-							uom: "MT"
-						}
-					]
+			sap.ui.core.BusyIndicator.show(0);
+			oODataModel.create("/ScrapReqHdrSet", oPayload, {
+				success: function (oResponse) {
+					sap.ui.core.BusyIndicator.hide();
+					var sReqNo = oResponse.GatePassReqNo || "";
+					var sMsg = oResponse.Message || "Scrap Request created successfully.";
+					var sDisplayMsg = sMsg;
+					if (sReqNo && sMsg.indexOf(sReqNo) === -1) {
+						sDisplayMsg += "\nRequest Number: " + sReqNo;
+					}
+					MessageBox.success(sDisplayMsg, {
+						onClose: function () {
+							this.onNavBack();
+						}.bind(this)
+					});
+				}.bind(this),
+				error: function (oError) {
+					sap.ui.core.BusyIndicator.hide();
+					var sErrMsg = "Failed to create Scrap Request.";
+					try {
+						var oErrBody = JSON.parse(oError.responseText);
+						sErrMsg = (oErrBody.error && oErrBody.error.message && oErrBody.error.message.value) ? oErrBody.error.message.value : sErrMsg;
+					} catch (e) {}
+					MessageBox.error(sErrMsg);
 				}
-			];
+			});
 		},
 
 		onSaleOrderValueHelp: function () {
@@ -348,9 +251,7 @@ sap.ui.define([
 			};
 
 			if (!oODataModel) {
-				var aMockSO = this._getMockSaleOrders();
-				this.getView().setModel(new JSONModel({ results: aMockSO }), "sos");
-				fnOpenDialog();
+				MessageBox.error("SAP system is not connected. Please contact your administrator.");
 				return;
 			}
 
@@ -363,17 +264,14 @@ sap.ui.define([
 					if (oData && oData.results && oData.results.length > 0) {
 						fnProcessResults(oData.results);
 					} else {
-						var aMockSO = that._getMockSaleOrders();
-						that.getView().setModel(new JSONModel({ results: aMockSO }), "sos");
+						that.getView().setModel(new JSONModel({ results: [] }), "sos");
+						MessageToast.show("No Sale Orders found.");
 						fnOpenDialog();
 					}
 				},
 				error: function (oError) {
 					sap.ui.core.BusyIndicator.hide();
-					MessageToast.show("Error loading Sale Orders. Using mock fallback.");
-					var aMockSO = that._getMockSaleOrders();
-					that.getView().setModel(new JSONModel({ results: aMockSO }), "sos");
-					fnOpenDialog();
+					MessageBox.error("Failed to load Sale Orders. Please try again.");
 				}
 			});
 		},
@@ -424,7 +322,7 @@ sap.ui.define([
 			}
 
 			var oSosModel = this.getView().getModel("sos");
-			var aSaleOrders = oSosModel ? oSosModel.getProperty("/results") : this._getMockSaleOrders();
+			var aSaleOrders = oSosModel ? oSosModel.getProperty("/results") : [];
 
 			var oSelectedSO = aSaleOrders.find(function (so) {
 				return so.saleOrder === sValue;

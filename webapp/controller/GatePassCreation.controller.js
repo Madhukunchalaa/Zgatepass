@@ -503,7 +503,8 @@ sap.ui.define([
 							aCurrent.push({
 								name: oFile.name,
 								size: sSize,
-								content: sBase64
+								content: sBase64,
+								type: oFile.type || (oFile.name.split(".").pop().toLowerCase())
 							});
 							oModel.setProperty("/attachments", aCurrent);
 						}
@@ -674,6 +675,12 @@ sap.ui.define([
 					return y + m + day;
 				};
 
+				var sRawImage = (oGp.attachments && oGp.attachments.length > 0) ? oGp.attachments[0].content : "";
+				var iComma = sRawImage.indexOf("base64,");
+				if (iComma !== -1) {
+					sRawImage = sRawImage.substring(iComma + 7);
+				}
+
 				var oPayload = {
 					GatePassType: oGp.GatePassType,
 					Cocode: oGp.Cocode,
@@ -691,6 +698,7 @@ sap.ui.define([
 					ModeOfDispatch: oGp.ModeOfDispatch || "",
 					Remarks: oGp.Remarks || "",
 					ReturnableDate: fnFormatDate(oGp.returnableDate),
+					Base64Img1: sRawImage,
 
 					GateReqItemNav: (oGp.items || []).map(function (it, index) {
 						var fQty = parseFloat(String(it.quantity).replace(/,/g, '')) || 0;
@@ -712,6 +720,22 @@ sap.ui.define([
 						};
 					})
 				};
+
+				// Only include file metadata fields when a file is actually uploaded
+				if (oGp.attachments && oGp.attachments.length > 0) {
+					var sAttachName = oGp.attachments[0].name || "";
+					var iDot = sAttachName.lastIndexOf(".");
+					oPayload.Fname = iDot !== -1 ? sAttachName.substring(0, iDot) : sAttachName;
+					oPayload.Ftype = iDot !== -1 ? sAttachName.substring(iDot + 1).toUpperCase() : "";
+				}
+
+				// --- DEBUGGING ---
+				// Log the exact Base64 string being uploaded to the backend for comparison
+				console.log("=== BASE64 UPLOAD PAYLOAD ===");
+				console.log("String Length: " + (oPayload.Base64Img1 ? oPayload.Base64Img1.length : 0));
+				console.log("Base64 Value:");
+				console.log(oPayload.Base64Img1);
+				console.log("===============================");
 
 				var oODataModel = this.getOwnerComponent().getModel();
 				if (!oODataModel) {

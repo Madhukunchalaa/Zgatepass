@@ -214,10 +214,8 @@
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.5)), url('../assets/img/power_plant.png') no-repeat center center !important;
+    background: linear-gradient(rgba(0, 0, 30, 0.45), rgba(0, 0, 30, 0.35)), url('../assets/img/power_plant.png') no-repeat center center !important;
     background-size: cover !important;
-    filter: blur(8px) !important;
-    transform: scale(1.1) !important; /* Prevents blurry edges */
     z-index: 0 !important;
 }
 
@@ -232,18 +230,20 @@
 }
 
 .gpmsHeroTitle.sapMTitle {
-    color: var(--navy) !important;
+    color: var(--red) !important;
     font-size: 2.2rem !important;
     font-weight: 800 !important;
     letter-spacing: 1px !important;
     margin-bottom: 0.5rem !important;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7) !important;
 }
 
 .gpmsHeroSubTitle.sapMText {
-    color: var(--text-muted) !important;
+    color: #ffffff !important;
     font-size: 1rem !important;
     letter-spacing: 1px !important;
     text-transform: uppercase !important;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7) !important;
 }
 
 .gpmsDashboardCardsContainer {
@@ -252,7 +252,7 @@
 
 .gpmsDashCard.sapMGT {
     background: #ffffff !important;
-    border: 1px solid var(--border) !important;
+    border: 1.5px solid var(--red) !important;
     border-radius: 10px !important;
     width: 220px !important;
     height: 160px !important;
@@ -263,12 +263,12 @@
 
 .gpmsDashCard.sapMGT:hover {
     transform: translateY(-5px) !important;
-    border-color: var(--navy) !important;
-    box-shadow: 0 8px 24px rgba(26,35,126,0.1) !important;
+    border-color: var(--red-d) !important;
+    box-shadow: 0 8px 24px rgba(204,32,32,0.2) !important;
 }
 
 .gpmsDashCard .sapMGTTitle {
-    color: #e91029 !important;
+    color: var(--navy) !important;
     font-weight: 800 !important;
     font-size: 1.1rem !important;
 }
@@ -282,7 +282,7 @@
 
 .gpmsCardIcon.sapUiIcon {
     font-size: 2.2rem !important;
-    color: var(--navy) !important;
+    color: var(--red) !important;
     margin-top: 10px !important;
 }
 

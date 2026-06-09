@@ -54,7 +54,7 @@
 					<!-- Row 4 -->
 					<VBox class="sapUiSmallMargin">
 						<Label text="Invoice Value (in Rs)" class="gpmsFieldLabel"/>
-						<Input value="{insurance>/InvoiceValue}" placeholder="Invoice Value (in Rs)" type="Number" class="gpmsFieldInput"/>
+						<Input value="{insurance>/InvoiceValue}" placeholder="Invoice Value (in Rs)" type="Text" class="gpmsFieldInput"/>
 					</VBox>
 					<VBox class="sapUiSmallMargin">
 						<Label text="RGP Common Description" class="gpmsFieldLabel"/>

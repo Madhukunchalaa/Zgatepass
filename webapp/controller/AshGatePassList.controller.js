@@ -20,17 +20,7 @@ sap.ui.define([
 		_loadList: function () {
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (!oODataModel) {
-				// Fallback to mock local storage
-				var aMockList = JSON.parse(localStorage.getItem("mockAshList") || "[]");
-				var oModel = new JSONModel(aMockList);
-				this.getView().setModel(oModel); // set as default model so binding without prefix works
-				
-				// Rebind items to JSON root
-				var oTable = this.getView().byId("ashListTable");
-				oTable.bindItems({
-					path: "/",
-					template: oTable.getBindingInfo("items").template
-				});
+				sap.m.MessageBox.error("SAP system is not connected. Please contact your administrator.");
 			}
 		},
 

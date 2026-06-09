@@ -50,9 +50,11 @@
 							<Input
 								id="idSaleOrderGp"
 								value="{scrapGp>/saleOrder}"
-								placeholder="Sale Order Number"
-								class="gpmsFieldInput gpmsFieldInputReadonly"
-								editable="false"
+								placeholder="Select Sale Order"
+								class="gpmsFieldInput"
+								showValueHelp="true"
+								valueHelpRequest=".onSaleOrderValueHelp"
+								change=".onSaleOrderChange"
 								width="100%"/>
 						</VBox>
 
@@ -125,7 +127,7 @@
 									</Select>
 									<Input value="{scrapGp>description}" class="gpmsTableInput" placeholder="Enter description" editable="{= !${scrapGp>/requestId} }"/>
 									<Input value="{scrapGp>availQty}" editable="false" class="gpmsTableInput gpmsFieldInputReadonly"/>
-									<Input value="{scrapGp>sendoutQty}" type="Number" class="gpmsTableInput"/>
+									<Input value="{scrapGp>sendoutQty}" type="Text" class="gpmsTableInput"/>
 									<Input value="{scrapGp>uom}" editable="false" class="gpmsTableInput gpmsFieldInputReadonly"/>
 									<HBox visible="{= !${scrapGp>/requestId} }">
 										<Button icon="sap-icon://add" type="Transparent" press=".onAddItem" class="sapUiTinyMarginEnd" />

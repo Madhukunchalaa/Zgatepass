@@ -28,12 +28,13 @@ sap.ui.define([
 			var oODataModel = this.getOwnerComponent().getModel();
 			var that = this;
 
-			var fnFallback = function () {
-				that.getView().setModel(new JSONModel({ gatePassNo: sGpNo, items: [] }), "scrapGpDetail");
-			};
-
-			if (!oODataModel || !sGpNo) {
-				fnFallback();
+			if (!oODataModel) {
+				MessageBox.error("SAP system is not connected. Please contact your administrator.");
+				return;
+			}
+			if (!sGpNo) {
+				MessageBox.error("Gate Pass number is missing.");
+				this.onNavBack();
 				return;
 			}
 
@@ -51,7 +52,8 @@ sap.ui.define([
 					});
 					if (!oItem) {
 						sap.ui.core.BusyIndicator.hide();
-						fnFallback();
+						MessageBox.error("Gate Pass not found.");
+						that.onNavBack();
 						return;
 					}
 
@@ -83,7 +85,8 @@ sap.ui.define([
 				},
 				error: function () {
 					sap.ui.core.BusyIndicator.hide();
-					fnFallback();
+					MessageBox.error("Failed to load Gate Pass details. Please try again.");
+					that.onNavBack();
 				}
 			});
 		},
@@ -119,10 +122,7 @@ sap.ui.define([
 				});
 			}
 
-			var oGpDetails = JSON.parse(localStorage.getItem("mockScrapGpDetails") || "{}");
-			var sGatePassNoKey = oItem.GatePassNo || "";
-			var sLocalDeliveryNo = (oGpDetails[sGatePassNoKey] && oGpDetails[sGatePassNoKey].deliveryNo) || "";
-			var sDeliveryNo = oItem.DCNumber || oItem.deliveryNo || sLocalDeliveryNo || "";
+			var sDeliveryNo = oItem.DCNumber || oItem.deliveryNo || "";
 
 			var sWBTicket = oItem.WBTicketNo || oItem.WeighmentTicket || oItem.weighmentSlipNo || "";
 			var sDCDateRaw = oItem.DCDate || oItem.ChallanDate || oItem.challanDateTime || "";

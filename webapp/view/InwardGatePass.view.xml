@@ -115,7 +115,7 @@ xmlns:layout="sap.ui.layout"
 									<Input
 										value="{inward>recvdQty}"
 										liveChange=".onQtyChange"
-										type="Number"
+										type="Text"
 										textAlign="Right"
 										class="gpmsTableInput"/>
 									<ObjectNumber
