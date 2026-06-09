@@ -81,15 +81,24 @@
 							<Label text="Remarks" class="gpmsFieldLabel"/>
 							<Input value="{scrap>/remarks}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
 						</VBox>
+						
+						<VBox class="sapUiSmallMargin">
+							<Label text="HOD Remarks" class="gpmsFieldLabel"/>
+							<Input value="{scrap>/HODRemarks}" editable="{= ${user>/IsHodUser} &amp;&amp; ${scrap>/status} === 'Pending'}" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin" visible="{= ${scrap>/status} === 'Store Approval Pending' || ${scrap>/status} === 'Approved'}">
+							<Label text="Store Remarks" class="gpmsFieldLabel"/>
+							<Input value="{scrap>/StoreRemarks}" editable="{= ${user>/IsStoreUser} &amp;&amp; ${scrap>/status} === 'Store Approval Pending'}" class="gpmsFieldInput" width="100%"/>
+						</VBox>
 					</layout:Grid>
 				</Panel>
 			</VBox>
 		</content>
 		<footer>
 			<OverflowToolbar class="gpmsFooterBar">
-				<Button text="Approve" type="Accept" press=".onApprove" visible="{= ${scrap>/status} !== 'Approved'}" class="sapUiSmallMarginBegin"/>
-				<Button text="Reject" type="Reject" press=".onReject" visible="{= ${scrap>/status} !== 'Approved'}"/>
-				<Button text="Amend" type="Emphasized" press=".onAmend" visible="{= ${scrap>/status} !== 'Approved'}"/>
+				<Button text="Approve" type="Accept" press=".onApprove" visible="{= (${user>/IsHodUser} &amp;&amp; ${scrap>/status} === 'Pending') || (${user>/IsStoreUser} &amp;&amp; ${scrap>/status} === 'Store Approval Pending')}" class="sapUiSmallMarginBegin"/>
+				<Button text="Reject" type="Reject" press=".onReject" visible="{= (${user>/IsHodUser} &amp;&amp; ${scrap>/status} === 'Pending') || (${user>/IsStoreUser} &amp;&amp; ${scrap>/status} === 'Store Approval Pending')}"/>
+				<Button text="Amend" type="Emphasized" press=".onAmend" visible="{= (${user>/IsHodUser} &amp;&amp; ${scrap>/status} === 'Pending') || (${user>/IsStoreUser} &amp;&amp; ${scrap>/status} === 'Store Approval Pending')}"/>
 				<ToolbarSpacer/>
 				<Button text="Back" press=".onNavBack" />
 			</OverflowToolbar>

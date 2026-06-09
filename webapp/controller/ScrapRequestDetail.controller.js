@@ -69,16 +69,7 @@ sap.ui.define([
 						});
 					}
 
-					var sStatus = "Pending";
-					if (oItem.ApprovalReq === "A") {
-						sStatus = "Approved";
-					} else if (oItem.ApprovalReq === "P") {
-						sStatus = "Pending";
-					} else if (oItem.ApprovalReq === "R") {
-						sStatus = "Rejected";
-					} else if (oItem.Status || oItem.ReqStatus) {
-						sStatus = oItem.Status || oItem.ReqStatus;
-					}
+					var sStatus = that._deriveStatus(oItem);
 
 					var oMappedData = {
 						requestId: sRequestId,
@@ -87,6 +78,8 @@ sap.ui.define([
 						vehicleDetails: oItem.VehicleNo || oItem.VehicleDetails || "",
 						collectArea: oItem.CollectArea || "",
 						remarks: oItem.Remarks || "",
+						HODRemarks: oItem.HODRemarks || "",
+						StoreRemarks: oItem.STORERemarks || oItem.StoreRemarks || "",
 						status: sStatus,
 						weighmentSlipNo: oItem.WeighmentSlipNo || "",
 						challanDateTime: oItem.ChallanDateTime || "",
@@ -102,6 +95,44 @@ sap.ui.define([
 					that.onNavBack();
 				}
 			});
+		},
+
+		_deriveStatus: function (oItem) {
+			var s1 = oItem.Approval1;
+			if (!s1 || s1 === "null" || s1 === "undefined") s1 = "";
+			s1 = String(s1).trim().toUpperCase();
+
+			var s2 = oItem.Approval2;
+			if (!s2 || s2 === "null" || s2 === "undefined") s2 = "";
+			s2 = String(s2).trim().toUpperCase();
+
+			var sStatus = oItem.Status || oItem.ReqStatus;
+			if (!sStatus || sStatus === "null" || sStatus === "undefined") sStatus = "";
+			sStatus = String(sStatus).trim().toUpperCase();
+
+			if (s1 === "R"  || s2 === "R")  return "Rejected";
+			if (s1 === "AM" || s2 === "AM") return "Amendment";
+			if (s2) return "Approved";
+			
+			var sStoreRemarks = oItem.STORERemarks;
+			if (sStoreRemarks && String(sStoreRemarks).trim() !== "" && String(sStoreRemarks) !== "null") {
+				return "Approved";
+			}
+
+			if (s1 && !s2) return "Store Approval Pending";
+			
+			if (oItem.ApprovalReq === "A") return "Approved";
+			if (oItem.ApprovalReq === "R") return "Rejected";
+			if (oItem.ApprovalReq === "P") return "Pending";
+			
+			if (sStatus === "STORE APPROVAL PENDING") return "Store Approval Pending";
+			if (sStatus === "APPROVED") return "Approved";
+			if (sStatus === "REJECTED") return "Rejected";
+			if (sStatus === "AMENDMENT") return "Amendment";
+			if (sStatus === "CAN" || sStatus === "CANCELLED") return "Cancelled";
+			if (sStatus === "C"   || sStatus === "CLOSED")    return "Closed";
+			
+			return "Pending";
 		},
 
 		_formatRequestDate: function (vDate) {
@@ -130,45 +161,59 @@ sap.ui.define([
 			return String(vDate);
 		},
 
-
 		onNavBack: function () {
 			this.getRouter().navTo("ScrapRequestList");
 		},
 
 		onApprove: function () {
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var bIsHod = oUserModel && oUserModel.getProperty("/IsHodUser");
+			
+			var sApprovalCode = bIsHod ? "A1" : "A2";
+			var sDisplayStatus = bIsHod ? "Store Approval Pending" : "Approved";
+			var sRemarks = this.getView().getModel("scrap").getProperty(bIsHod ? "/HODRemarks" : "/StoreRemarks") || "";
+
 			MessageBox.confirm("Are you sure you want to Approve this request?", {
 				title: "Confirm Approval",
 				onClose: function (oAction) {
 					if (oAction === MessageBox.Action.OK) {
-						this._updateStatus("A", "Approved");
+						this._updateStatus(sApprovalCode, sDisplayStatus, sRemarks, bIsHod ? "HOD" : "Store");
 					}
 				}.bind(this)
 			});
 		},
 
 		onReject: function () {
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var bIsHod = oUserModel && oUserModel.getProperty("/IsHodUser");
+			var sRemarks = this.getView().getModel("scrap").getProperty(bIsHod ? "/HODRemarks" : "/StoreRemarks") || "";
+
 			MessageBox.confirm("Are you sure you want to Reject this request?", {
 				title: "Confirm Rejection",
 				onClose: function (oAction) {
 					if (oAction === MessageBox.Action.OK) {
-						this._updateStatus("R", "Rejected");
+						this._updateStatus("R", "Rejected", sRemarks, bIsHod ? "HOD" : "Store");
 					}
 				}.bind(this)
 			});
 		},
 
 		onAmend: function () {
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var bIsHod = oUserModel && oUserModel.getProperty("/IsHodUser");
+			var sRemarks = this.getView().getModel("scrap").getProperty(bIsHod ? "/HODRemarks" : "/StoreRemarks") || "";
+
 			MessageBox.confirm("Send back for amendment?", {
 				title: "Confirm Amendment",
 				onClose: function (oAction) {
 					if (oAction === MessageBox.Action.OK) {
-						this._updateStatus("P", "Pending Amendment");
+						this._updateStatus("AM", "Amendment", sRemarks, bIsHod ? "HOD" : "Store");
 					}
 				}.bind(this)
 			});
 		},
 
-		_updateStatus: function (sApprovalCode, sDisplayStatus) {
+		_updateStatus: function (sApprovalCode, sDisplayStatus, sRemarks, sRole) {
 			var oODataModel = this.getOwnerComponent().getModel();
 			var oViewModel = this.getView().getModel("scrap");
 			var sRequestId = oViewModel.getProperty("/requestId");
@@ -180,17 +225,37 @@ sap.ui.define([
 			}
 
 			sap.ui.core.BusyIndicator.show(0);
-			oODataModel.update("/ScrapReqHdrSet(GatePassReqNo='" + sRequestId + "')", {
-				ApprovalReq: sApprovalCode
-			}, {
+			
+			var oPayload = {
+				ApprovalReq: sApprovalCode === "AM" ? "AM" : "A"
+			};
+			if (sRole === "HOD") {
+				oPayload.Approval1 = sApprovalCode;
+				oPayload.HODRemarks = sRemarks;
+			} else {
+				oPayload.Approval2 = sApprovalCode;
+				oPayload.STORERemarks = sRemarks;
+			}
+
+			oODataModel.update("/ScrapReqHdrSet(GatePassReqNo='" + sRequestId + "')", oPayload, {
 				success: function () {
 					sap.ui.core.BusyIndicator.hide();
 					oViewModel.setProperty("/status", sDisplayStatus);
 					MessageToast.show("Status updated to " + sDisplayStatus);
+					setTimeout(function() {
+						that.onNavBack();
+					}, 1500);
 				},
 				error: function (oError) {
 					sap.ui.core.BusyIndicator.hide();
-					MessageBox.error("Failed to update status. Please try again.");
+					var sMsg = "Failed to update status. Please try again.";
+					try {
+						var oBody = JSON.parse(oError.responseText);
+						if (oBody.error && oBody.error.message && oBody.error.message.value) {
+							sMsg = oBody.error.message.value;
+						}
+					} catch(e) {}
+					MessageBox.error(sMsg);
 				}
 			});
 		}

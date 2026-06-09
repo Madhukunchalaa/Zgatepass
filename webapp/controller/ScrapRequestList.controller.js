@@ -63,16 +63,7 @@ sap.ui.define([
 							});
 						}
 
-						var sStatus = "Pending";
-						if (oItem.ApprovalReq === "A") {
-							sStatus = "Approved";
-						} else if (oItem.ApprovalReq === "P") {
-							sStatus = "Pending";
-						} else if (oItem.ApprovalReq === "R") {
-							sStatus = "Rejected";
-						} else if (oItem.Status || oItem.ReqStatus) {
-							sStatus = oItem.Status || oItem.ReqStatus;
-						}
+						var sStatus = that._deriveStatus(oItem);
 
 						return {
 							requestId: sRequestId,
@@ -84,7 +75,9 @@ sap.ui.define([
 							status: sStatus,
 							weighmentSlipNo: oItem.WeighmentSlipNo || "",
 							challanDateTime: oItem.ChallanDateTime || "",
-							items: aItems
+							items: aItems,
+							Approval1: oItem.Approval1 || "",
+							Approval2: oItem.Approval2 || ""
 						};
 					});
 
@@ -97,6 +90,47 @@ sap.ui.define([
 					that.getView().setModel(new JSONModel([]), "scrapList");
 				}
 			});
+		},
+
+		_deriveStatus: function (oItem) {
+			var s1 = oItem.Approval1;
+			if (!s1 || s1 === "null" || s1 === "undefined") s1 = "";
+			s1 = String(s1).trim().toUpperCase();
+
+			var s2 = oItem.Approval2;
+			if (!s2 || s2 === "null" || s2 === "undefined") s2 = "";
+			s2 = String(s2).trim().toUpperCase();
+
+			var sStatus = oItem.Status || oItem.ReqStatus;
+			if (!sStatus || sStatus === "null" || sStatus === "undefined") sStatus = "";
+			sStatus = String(sStatus).trim().toUpperCase();
+
+			// 1. Primary logic based on Approval fields
+			if (s1 === "R"  || s2 === "R")  return "Rejected";
+			if (s1 === "AM" || s2 === "AM") return "Amendment";
+			if (s2) return "Approved"; // If Store approved, it is fully approved
+			
+			// If backend GET_ENTITYSET forgot Approval2 but returned STORERemarks, we can assume Store acted
+			var sStoreRemarks = oItem.STORERemarks;
+			if (sStoreRemarks && String(sStoreRemarks).trim() !== "" && String(sStoreRemarks) !== "null") {
+				return "Approved";
+			}
+
+			if (s1 && !s2) return "Store Approval Pending";
+			
+			// 2. Fallback to Status/ApprovalReq fields
+			if (oItem.ApprovalReq === "A") return "Approved";
+			if (oItem.ApprovalReq === "R") return "Rejected";
+			if (oItem.ApprovalReq === "P") return "Pending";
+			
+			if (sStatus === "STORE APPROVAL PENDING") return "Store Approval Pending";
+			if (sStatus === "APPROVED") return "Approved";
+			if (sStatus === "REJECTED") return "Rejected";
+			if (sStatus === "AMENDMENT") return "Amendment";
+			if (sStatus === "CAN" || sStatus === "CANCELLED") return "Cancelled";
+			if (sStatus === "C"   || sStatus === "CLOSED")    return "Closed";
+			
+			return "Pending";
 		},
 
 		_formatRequestDate: function (vDate) {
@@ -154,6 +188,10 @@ sap.ui.define([
 
 			var oUserModel = sap.ui.getCore().getModel("user");
 			var bIsHod = oUserModel && oUserModel.getProperty("/IsHodUser");
+			var bIsStoreUser = oUserModel && oUserModel.getProperty("/IsStoreUser");
+			
+			var bApproved = sStatus === "Approved" || sStatus === "APPROVED" || sStatus === "A";
+
 			if (bIsHod) {
 				this.getRouter().navTo("ScrapRequestDetail", {
 					gpNo: encodeURIComponent(sRequestId)
@@ -161,7 +199,20 @@ sap.ui.define([
 				return;
 			}
 
-			if (sStatus === "Gate Pass Generated") {
+			if (bIsStoreUser) {
+				if (bApproved) {
+					this.getRouter().navTo("ScrapGatepassCreationWithReq", {
+						reqNo: encodeURIComponent(sRequestId)
+					});
+				} else {
+					this.getRouter().navTo("ScrapRequestDetail", {
+						gpNo: encodeURIComponent(sRequestId)
+					});
+				}
+				return;
+			}
+
+			if (bApproved) {
 				MessageBox.error("Already gate pass created for this request number");
 				return;
 			}
