@@ -244,34 +244,6 @@
 					</layout:Grid>
 				</Panel>
 
-				<!-- Photo Attachments Panel -->
-				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginTop" headerText="PHOTO ATTACHMENTS" visible="{out>/showLogistics}">
-					<headerToolbar>
-						<Toolbar height="3rem">
-							<core:Icon src="sap-icon://camera" class="sapUiSmallMarginEnd"/>
-							<Title text="PHOTO ATTACHMENTS" level="H3"/>
-						</Toolbar>
-					</headerToolbar>
-					<VBox class="sapUiSmallMargin">
-						<List
-							id="idAttachmentsOutList"
-							noDataText="No photo attachments uploaded."
-							items="{out>/attachments}"
-							class="gpmsAttachmentList">
-							<CustomListItem class="gpmsAttachmentListItem">
-								<HBox alignItems="Center" justifyContent="SpaceBetween" width="100%">
-									<HBox alignItems="Center">
-										<core:Icon src="sap-icon://attachment-photo" class="gpmsAttachmentIcon sapUiSmallMarginEnd" color="#1A237E"/>
-										<VBox>
-											<Link text="{out>name}" press=".onAttachmentPress" class="gpmsAttachmentNameText"/>
-											<Text text="{out>size}" class="gpmsAttachmentSizeText" visible="{= !!${out>size}}"/>
-										</VBox>
-									</HBox>
-								</HBox>
-							</CustomListItem>
-						</List>
-					</VBox>
-				</Panel>
 
 				<!-- Logistics & Documents -->
 				<Panel headerText="LOGISTICS &amp; DOCUMENTS" expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginTop" visible="{out>/showLogistics}">
