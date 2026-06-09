@@ -107,17 +107,17 @@
 
 						<VBox class="sapUiSmallMargin">
 							<Label text="PCP No" class="gpmsFieldLabel"/>
-							<Input id="idPCPNo" value="{gpo>/PCPNo}" placeholder="Enter PCP No" class="gpmsFieldInput gpmsPoHighlightedField" editable="{= ${gpo>/SourceType} !== 'PO' }"/>
+							<Input id="idPCPNo" value="{gpo>/PCPNo}" placeholder="Enter PCP No" class="gpmsFieldInput gpmsPoHighlightedField" editable="{= ${gpo>/SourceType} === 'PettyCash' }"/>
 						</VBox>
  
 						<VBox class="sapUiSmallMargin">
 							<Label text="Budget Code" class="gpmsFieldLabel"/>
-							<Input id="idBudgetCode" value="{gpo>/BudgetCode}" placeholder="Enter Budget Code" class="gpmsFieldInput gpmsPoHighlightedField" editable="{= ${gpo>/SourceType} !== 'PO' }"/>
+							<Input id="idBudgetCode" value="{gpo>/BudgetCode}" placeholder="Enter Budget Code" class="gpmsFieldInput gpmsPoHighlightedField" editable="{= ${gpo>/SourceType} === 'PettyCash' }"/>
 						</VBox>
  
 						<VBox class="sapUiSmallMargin">
 							<Label text="Total Cost (Rs.)" class="gpmsFieldLabel"/>
-							<Input id="idTotalCost" value="{gpo>/TotalCost}" placeholder="Enter Total Cost" type="Text" class="gpmsFieldInput" editable="{= ${gpo>/SourceType} !== 'PO' }"/>
+							<Input id="idTotalCost" value="{gpo>/TotalCost}" placeholder="Enter Total Cost" type="Text" class="gpmsFieldInput" editable="{= ${gpo>/SourceType} === 'PettyCash' }"/>
 						</VBox>
  
 						<VBox class="sapUiSmallMargin">
