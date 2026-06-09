@@ -209,33 +209,39 @@ sap.ui.define([
 
 		_fetchPODetails: function (sPO, sPlant) {
 			var oODataModel = this.getOwnerComponent().getModel();
-			var sPath = "/GateInPoHdrSet(PurchaseOrder='" + sPO + "',Plant='" + sPlant + "')";
+			var sPath = "/GateInPoHdrSet";
+			var aFilters = [
+				new Filter("PurchaseOrder", FilterOperator.EQ, sPO),
+				new Filter("Plant", FilterOperator.EQ, sPlant)
+			];
 
 			sap.ui.core.BusyIndicator.show(0);
 			oODataModel.read(sPath, {
+				filters: aFilters,
 				urlParameters: {
 					"$expand": "GateInPoNav"
 				},
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
-					if (oData) {
+					var oResultData = (oData && oData.results && oData.results.length > 0) ? oData.results[0] : null;
+					if (oResultData) {
 						var oModel = this.getView().getModel("gpo");
-						if (oData.Vendor) { oModel.setProperty("/Vendor", oData.Vendor); }
-						if (oData.VendorDesc) { oModel.setProperty("/VendorDesc", oData.VendorDesc); }
-						if (oData.Department) { oModel.setProperty("/Department", oData.Department); }
+						if (oResultData.Vendor) { oModel.setProperty("/Vendor", oResultData.Vendor); }
+						if (oResultData.VendorDesc) { oModel.setProperty("/VendorDesc", oResultData.VendorDesc); }
+						if (oResultData.Department) { oModel.setProperty("/Department", oResultData.Department); }
 						oModel.setProperty("/SourceType", "PO"); // Force source type to PO
-						if (oData.DCNumber) { oModel.setProperty("/DCNumber", oData.DCNumber); }
-						if (oData.RRNo) { oModel.setProperty("/RRNo", oData.RRNo); }
-						if (oData.GatePassNo) { oModel.setProperty("/GatePassNo", oData.GatePassNo); }
-						if (oData.GateEntryNo) { oModel.setProperty("/GateEntryNo", oData.GateEntryNo); }
+						if (oResultData.DCNumber) { oModel.setProperty("/DCNumber", oResultData.DCNumber); }
+						if (oResultData.RRNo) { oModel.setProperty("/RRNo", oResultData.RRNo); }
+						if (oResultData.GatePassNo) { oModel.setProperty("/GatePassNo", oResultData.GatePassNo); }
+						if (oResultData.GateEntryNo) { oModel.setProperty("/GateEntryNo", oResultData.GateEntryNo); }
 
-						if (oData.InspectionStatus) {
-							oModel.setProperty("/InspectionStatus", oData.InspectionStatus);
+						if (oResultData.InspectionStatus) {
+							oModel.setProperty("/InspectionStatus", oResultData.InspectionStatus);
 						}
 
-						if (oData.Inspectiondate) {
+						if (oResultData.Inspectiondate) {
 							// Check if the date is valid before setting, else leave it empty
-							var parsedDate = new Date(oData.Inspectiondate);
+							var parsedDate = new Date(oResultData.Inspectiondate);
 							if (!isNaN(parsedDate.getTime())) {
 								var sYear = parsedDate.getFullYear();
 								var sMonth = String(parsedDate.getMonth() + 1).padStart(2, "0");
@@ -246,8 +252,8 @@ sap.ui.define([
 
 						// Auto-fill the items table
 						var aItems = [];
-						if (oData.GateInPoNav && oData.GateInPoNav.results) {
-							aItems = oData.GateInPoNav.results.map(function (item, idx) {
+						if (oResultData.GateInPoNav && oResultData.GateInPoNav.results) {
+							aItems = oResultData.GateInPoNav.results.map(function (item, idx) {
 								var sItemNo = item.ItemNo || item.Itemno || item.PurchaseOrderItem || item.POItem || "";
 								if (!sItemNo) {
 									sItemNo = String((idx + 1) * 10);
@@ -269,6 +275,8 @@ sap.ui.define([
 						}
 						oModel.setProperty("/GateInPoNav", aItems);
 						MessageToast.show("PO details loaded successfully.");
+					} else {
+						MessageToast.show("No PO details found for " + sPO);
 					}
 				}.bind(this),
 				error: function (oError) {
