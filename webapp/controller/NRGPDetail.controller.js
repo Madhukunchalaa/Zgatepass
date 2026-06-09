@@ -292,7 +292,6 @@ sap.ui.define([
 				GatePassDate: sToday,
 				PurchasingDoc: oData.PurchasingDoc || "",
 				ChallanDate: sChallanDate,
-				GateEntryNo: oData.GateEntryNo || "",
 				NoOfPacakages: parseInt(oData.NoOfPacakages || 0),
 				Department: oData.Department || "",
 				ChallanNumber: oData.ChallanNumber || "",
