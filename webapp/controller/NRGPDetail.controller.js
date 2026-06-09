@@ -130,7 +130,13 @@ sap.ui.define([
 
 			var sReqNo = oData.GatePassReqNo || oData.GatePassreqNo || "";
 			var aAttachments = [];
-			if (sReqNo) {
+
+			if (oData.Base64Img1) aAttachments.push({ name: "Attachment_1.jpg", content: oData.Base64Img1 });
+			if (oData.Base64Img2) aAttachments.push({ name: "Attachment_2.jpg", content: oData.Base64Img2 });
+			if (oData.Base64Img3) aAttachments.push({ name: "Attachment_3.jpg", content: oData.Base64Img3 });
+			if (oData.Base64Img4) aAttachments.push({ name: "Attachment_4.jpg", content: oData.Base64Img4 });
+
+			if (aAttachments.length === 0 && sReqNo) {
 				var sStored = localStorage.getItem("attachments_" + sReqNo);
 				if (sStored) {
 					try {
