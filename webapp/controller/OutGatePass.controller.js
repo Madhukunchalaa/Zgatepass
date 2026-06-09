@@ -347,7 +347,23 @@ sap.ui.define([
 
 			var sReqNo = oData.GatePassReqNo || oData.GatePassreqNo || "";
 			var aAttachments = [];
-			if (sReqNo) {
+
+			// 1. Extract from payload if available
+			if (oData.Base64Img1) {
+				aAttachments.push({ name: "Attachment_1.jpg", content: oData.Base64Img1 });
+			}
+			if (oData.Base64Img2) {
+				aAttachments.push({ name: "Attachment_2.jpg", content: oData.Base64Img2 });
+			}
+			if (oData.Base64Img3) {
+				aAttachments.push({ name: "Attachment_3.jpg", content: oData.Base64Img3 });
+			}
+			if (oData.Base64Img4) {
+				aAttachments.push({ name: "Attachment_4.jpg", content: oData.Base64Img4 });
+			}
+
+			// 2. Fallback to localStorage for local drafts
+			if (aAttachments.length === 0 && sReqNo) {
 				var sStored = localStorage.getItem("attachments_" + sReqNo);
 				if (sStored) {
 					try {
@@ -523,6 +539,17 @@ sap.ui.define([
 						var fTotal = aMapped.reduce(function (s, it) { return s + it.amount; }, 0);
 						oOutModel.setProperty("/FinalTotal", fTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 }));
 					}
+
+					// Extract attachments from gate pass if they weren't in the request
+					var aAttachments = oOutModel.getProperty("/attachments") || [];
+					if (aAttachments.length === 0) {
+						if (oGP.Base64Img1) aAttachments.push({ name: "Attachment_1.jpg", content: oGP.Base64Img1 });
+						if (oGP.Base64Img2) aAttachments.push({ name: "Attachment_2.jpg", content: oGP.Base64Img2 });
+						if (oGP.Base64Img3) aAttachments.push({ name: "Attachment_3.jpg", content: oGP.Base64Img3 });
+						if (oGP.Base64Img4) aAttachments.push({ name: "Attachment_4.jpg", content: oGP.Base64Img4 });
+						oOutModel.setProperty("/attachments", aAttachments);
+					}
+
 				}.bind(this),
 				error: function () { /* silent — if lookup fails, leave form as-is */ }
 			});
