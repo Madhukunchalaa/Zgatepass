@@ -282,19 +282,36 @@ sap.ui.define([
 			oModel.setProperty("/finalTotal", "0.00");
 		},
 
-		calculateTotal: function () {
+		calculateTotal: function (oEvent) {
 			var oModel = this.getView().getModel("ash");
+
+			// If triggered by a liveChange event, write the current typed value
+			// into the model immediately (before two-way binding flushes on blur)
+			if (oEvent && oEvent.getSource) {
+				var oInput = oEvent.getSource();
+				var sLiveValue = oEvent.getParameter("value") || "";
+				var oCtx = oInput.getBindingContext("ash");
+				if (oCtx) {
+					var sPath = oCtx.getPath();
+					// Determine which field changed: ItemNetPrice or RequestedQuantity
+					if (oInput.getBinding("value") && oInput.getBinding("value").getPath() === "ItemNetPrice") {
+						oModel.setProperty(sPath + "/ItemNetPrice", sLiveValue);
+					} else {
+						oModel.setProperty(sPath + "/RequestedQuantity", sLiveValue);
+					}
+				}
+			}
+
 			var aItems = oModel.getProperty("/ASHItmNav") || [];
-			
 			var nTotal = 0;
 			aItems.forEach(function(oItem, index) {
-				var qty = parseFloat(oItem.RequestedQuantity) || 0;
-				var rate = parseFloat(oItem.ItemNetPrice) || 0;
+				var qty  = parseFloat(oItem.RequestedQuantity) || 0;
+				var rate = parseFloat(oItem.ItemNetPrice)      || 0;
 				var amount = qty * rate;
 				oModel.setProperty("/ASHItmNav/" + index + "/Totalvalue", amount.toFixed(2));
 				nTotal += amount;
 			});
-			
+
 			oModel.setProperty("/finalTotal", nTotal.toFixed(2));
 		},
 
