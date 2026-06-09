@@ -173,12 +173,20 @@ sap.ui.define([
 			if (!sStatus || sStatus === "null" || sStatus === "undefined") sStatus = "";
 			sStatus = String(sStatus).trim().toUpperCase();
 
+			// 1. Primary logic based on Approval fields
 			if (s1 === "R"  || s2 === "R")  return "Rejected";
 			if (s1 === "AM" || s2 === "AM") return "Amendment";
-			if (s1 && s2) return "Approved";
+			if (s2) return "Approved"; // If Store approved, it is fully approved
 			if (s1 && !s2) return "Store Approval Pending";
+			
+			// 2. Fallback to Status field if backend list doesn't return Approval1/Approval2
+			if (sStatus === "STORE APPROVAL PENDING") return "Store Approval Pending";
+			if (sStatus === "APPROVED") return "Approved";
+			if (sStatus === "REJECTED") return "Rejected";
+			if (sStatus === "AMENDMENT") return "Amendment";
 			if (sStatus === "CAN" || sStatus === "CANCELLED") return "Cancelled";
 			if (sStatus === "C"   || sStatus === "CLOSED")    return "Closed";
+			
 			return "Pending";
 		},
 

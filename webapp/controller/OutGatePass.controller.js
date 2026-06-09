@@ -312,7 +312,7 @@ sap.ui.define([
 
 			if (s1 === "R"  || s2 === "R")  return "REJECTED";
 			if (s1 === "AM" || s2 === "AM") return "AMENDMENT";
-			if (s1 && s2) return "APPROVED";
+			if (s2) return "APPROVED"; // If Store approved, it is fully approved
 			if (s1 && !s2) return "STORE APPROVAL PENDING"; // Though the OutGatePass UI will handle this as pending usually
 			
 			if (sStatus === "CANCELLED" || sStatus === "CANCEL" || sStatus === "CAN") return "CANCELLED";
@@ -323,12 +323,19 @@ sap.ui.define([
 
 		_showApprovalFlow: function (oResult) {
 			var oOutModel = this.getView().getModel("out");
-			var bHODApproved = !!oResult.HODRemarks;
-			var bStoreApproved = !!oResult.STORERemarks;
+			
+			var s2 = oResult.Approval2;
+			if (!s2 || s2 === "null" || s2 === "undefined") s2 = "";
+			var bStoreApproved = !!s2;
+
+			var s1 = oResult.Approval1;
+			if (!s1 || s1 === "null" || s1 === "undefined") s1 = "";
+			var bHODApproved = !!s1 || bStoreApproved;
+			
 			oOutModel.setProperty("/showApprovalFlow", true);
 			oOutModel.setProperty("/HODApproved", bHODApproved);
 			oOutModel.setProperty("/StoreApproved", bStoreApproved);
-			oOutModel.setProperty("/StoreActive", bHODApproved);
+			oOutModel.setProperty("/StoreActive", bHODApproved || bStoreApproved);
 			oOutModel.setProperty("/GatePassreqNo", oResult.GatePassReqNo || "");
 			oOutModel.setProperty("/Department", oResult.Department || "");
 			oOutModel.setProperty("/HODRemarks", oResult.HODRemarks || "");
