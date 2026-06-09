@@ -13,6 +13,7 @@ sap.ui.define([
 		onInit: function () {
 			this._resetModel();
 			this.getRouter().getRoute("GatePassWithPO").attachPatternMatched(this._onRouteMatched, this);
+			this.getRouter().getRoute("GatePassWithPODetail").attachPatternMatched(this._onRouteMatchedDetail, this);
 		},
 
 		_onRouteMatched: function () {
@@ -31,6 +32,22 @@ sap.ui.define([
 					}
 					if (sDept) { oModel.setProperty("/Department", sDept); }
 				}
+			}
+		},
+
+		_onRouteMatchedDetail: function (oEvent) {
+			this._onRouteMatched();
+			var sPoNumber = oEvent.getParameter("arguments").poNumber;
+			var sPlant = oEvent.getParameter("arguments").plant;
+			
+			var oModel = this.getView().getModel("gpo");
+			if (oModel) {
+				oModel.setProperty("/SourceType", "PO");
+				oModel.setProperty("/PurchaseOrder", sPoNumber);
+				oModel.setProperty("/Plant", sPlant);
+				
+				// Manually trigger the PO change logic to fetch details
+				this._fetchPODetails(sPoNumber, sPlant);
 			}
 		},
 
@@ -187,8 +204,11 @@ sap.ui.define([
 				return;
 			}
 
+			this._fetchPODetails(sPO, sPlant);
+		},
+
+		_fetchPODetails: function (sPO, sPlant) {
 			var oODataModel = this.getOwnerComponent().getModel();
-			// Example: /GateInPoHdrSet(PurchaseOrder='4000003222',Plant='2301')
 			var sPath = "/GateInPoHdrSet(PurchaseOrder='" + sPO + "',Plant='" + sPlant + "')";
 
 			sap.ui.core.BusyIndicator.show(0);
@@ -199,12 +219,15 @@ sap.ui.define([
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
 					if (oData) {
+						var oModel = this.getView().getModel("gpo");
 						if (oData.Vendor) { oModel.setProperty("/Vendor", oData.Vendor); }
 						if (oData.VendorDesc) { oModel.setProperty("/VendorDesc", oData.VendorDesc); }
 						if (oData.Department) { oModel.setProperty("/Department", oData.Department); }
 						oModel.setProperty("/SourceType", "PO"); // Force source type to PO
 						if (oData.DCNumber) { oModel.setProperty("/DCNumber", oData.DCNumber); }
 						if (oData.RRNo) { oModel.setProperty("/RRNo", oData.RRNo); }
+						if (oData.GatePassNo) { oModel.setProperty("/GatePassNo", oData.GatePassNo); }
+						if (oData.GateEntryNo) { oModel.setProperty("/GateEntryNo", oData.GateEntryNo); }
 
 						if (oData.InspectionStatus) {
 							oModel.setProperty("/InspectionStatus", oData.InspectionStatus);
@@ -245,7 +268,7 @@ sap.ui.define([
 							});
 						}
 						oModel.setProperty("/GateInPoNav", aItems);
-						MessageToast.show("PO details auto-filled successfully.");
+						MessageToast.show("PO details loaded successfully.");
 					}
 				}.bind(this),
 				error: function (oError) {

@@ -38,7 +38,6 @@
 							growingThreshold="50"
 							class="sapUiSizeCompact gpmsItemTable">
 							<columns>
-								<Column><Text text="PO Number" class="gpmsHeaderText"/></Column>
 								<Column><Text text="Plant" class="gpmsHeaderText"/></Column>
 								<Column><Text text="Vendor" class="gpmsHeaderText"/></Column>
 								<Column><Text text="Vendor Name" class="gpmsHeaderText"/></Column>
@@ -49,7 +48,6 @@
 							<items>
 								<ColumnListItem>
 									<cells>
-										<ObjectIdentifier title="{poModel>PurchaseOrder}"/>
 										<Text text="{poModel>Plant}"/>
 										<Text text="{poModel>Vendor}"/>
 										<Text text="{poModel>VendorDesc}"/>

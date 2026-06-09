@@ -75,22 +75,12 @@ sap.ui.define([
 		onViewItems: function (oEvent) {
 			var oButton = oEvent.getSource();
 			var oContext = oButton.getBindingContext("poModel");
-			var oView = this.getView();
+			var sPoNumber = oContext.getProperty("PurchaseOrder");
+			var sPlant = oContext.getProperty("Plant") || "2301";
 
-			if (!this._pItemsDialog) {
-				this._pItemsDialog = Fragment.load({
-					id: oView.getId(),
-					name: "zgpms.meilpower.com.view.fragments.POItemsDialog",
-					controller: this
-				}).then(function (oDialog) {
-					oView.addDependent(oDialog);
-					return oDialog;
-				});
-			}
-
-			this._pItemsDialog.then(function(oDialog) {
-				oDialog.setBindingContext(oContext, "poModel");
-				oDialog.open();
+			this.getRouter().navTo("GatePassWithPODetail", {
+				poNumber: sPoNumber,
+				plant: sPlant
 			});
 		},
 

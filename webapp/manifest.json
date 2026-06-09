@@ -154,6 +154,11 @@
 					"target": ["TargetGatePassWithPO"]
 				},
 				{
+					"name": "GatePassWithPODetail",
+					"pattern": "GatePassWithPO/{poNumber}/{plant}",
+					"target": ["TargetGatePassWithPO"]
+				},
+				{
 					"name": "IRGP",
 					"pattern": "IRGP/:step:/:gpNo:",
 					"target": ["TargetIRGP"]
