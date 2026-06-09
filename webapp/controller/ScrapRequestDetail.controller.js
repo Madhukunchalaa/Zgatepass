@@ -225,9 +225,9 @@ sap.ui.define([
 			}
 
 			sap.ui.core.BusyIndicator.show(0);
-			
+
 			var oPayload = {
-				ApprovalReq: sApprovalCode === "AM" ? "AM" : "A"
+				ApprovalReq: sApprovalCode === "AM" ? "AM" : (sApprovalCode === "R" ? "R" : "A")
 			};
 			if (sRole === "HOD") {
 				oPayload.Approval1 = sApprovalCode;
@@ -237,26 +237,49 @@ sap.ui.define([
 				oPayload.STORERemarks = sRemarks;
 			}
 
-			oODataModel.update("/ScrapReqHdrSet(GatePassReqNo='" + sRequestId + "')", oPayload, {
-				success: function () {
-					sap.ui.core.BusyIndicator.hide();
-					oViewModel.setProperty("/status", sDisplayStatus);
-					MessageToast.show("Status updated to " + sDisplayStatus);
-					setTimeout(function() {
-						that.onNavBack();
-					}, 1500);
-				},
-				error: function (oError) {
-					sap.ui.core.BusyIndicator.hide();
-					var sMsg = "Failed to update status. Please try again.";
-					try {
-						var oBody = JSON.parse(oError.responseText);
-						if (oBody.error && oBody.error.message && oBody.error.message.value) {
-							sMsg = oBody.error.message.value;
+			// Refresh CSRF token before update, then perform MERGE (not full PUT)
+			oODataModel.refreshSecurityToken(function () {
+				oODataModel.update("/ScrapReqHdrSet(GatePassReqNo='" + sRequestId + "')", oPayload, {
+					merge: true,
+					success: function () {
+						sap.ui.core.BusyIndicator.hide();
+						oViewModel.setProperty("/status", sDisplayStatus);
+						MessageToast.show("Status updated to " + sDisplayStatus);
+						setTimeout(function() {
+							that.onNavBack();
+						}, 1500);
+					},
+					error: function (oError) {
+						sap.ui.core.BusyIndicator.hide();
+						var sMsg = "Failed to update status.";
+						try {
+							// Try JSON error body
+							var oBody = JSON.parse(oError.responseText);
+							if (oBody.error && oBody.error.message && oBody.error.message.value) {
+								sMsg = oBody.error.message.value;
+							}
+						} catch (e) {
+							// Try XML error body
+							try {
+								var sRaw = oError.responseText || "";
+								var oMatch = sRaw.match(/<message[^>]*>([^<]+)<\/message>/i);
+								if (oMatch && oMatch[1]) {
+									sMsg = oMatch[1];
+								}
+							} catch (e2) {}
 						}
-					} catch(e) {}
-					MessageBox.error(sMsg);
-				}
+						// Log full details for debugging
+						jQuery.sap.log.error("ScrapApproval UPDATE failed", JSON.stringify({
+							status: oError.statusCode || oError.status,
+							text: oError.statusText,
+							responseText: oError.responseText ? oError.responseText.substring(0, 500) : ""
+						}));
+						MessageBox.error(sMsg + "\n\nRequest: " + sRequestId + "\nRole: " + sRole);
+					}
+				});
+			}, function (oTokenError) {
+				sap.ui.core.BusyIndicator.hide();
+				MessageBox.error("Failed to refresh security token. Please reload the page.");
 			});
 		}
 
