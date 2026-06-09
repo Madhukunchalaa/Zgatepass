@@ -696,8 +696,19 @@ sap.ui.define([
 								sDetailedError = "\n\nDetails: " + oError.message;
 							}
 						}
+
+						// Handle standard SAP Gateway "success-error" where entity isn't returned
+						var bIsSuccessError = (sErrMsg && sErrMsg.indexOf("Service provider did not return any business data") !== -1) ||
+											  (sDetailedError && sDetailedError.indexOf("Service provider did not return any business data") !== -1);
+
+						if (bIsSuccessError) {
+							MessageToast.show("Gate Entry processed successfully.");
+							this._resetModel();
+							return;
+						}
+
 						MessageBox.error(sErrMsg + sDetailedError);
-					}
+					}.bind(this)
 				});
 			} catch (oSyncError) {
 				sap.ui.core.BusyIndicator.hide();
