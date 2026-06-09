@@ -31,7 +31,7 @@ sap.ui.define([
 			// Fetch PCPs
 			var that = this;
 			oODataModel.read("/PCPHdrSet", {
-				filters: [new Filter("SourceType", FilterOperator.EQ, "PCP")],
+				filters: [new Filter("SourceType", FilterOperator.EQ, "PettyCash")],
 				urlParameters: {
 					"$expand": "PCPItmNav"
 				},
