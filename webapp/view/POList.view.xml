@@ -39,6 +39,7 @@
 							class="sapUiSizeCompact gpmsItemTable">
 							<columns>
 								<Column><Text text="PO Number" class="gpmsHeaderText"/></Column>
+								<Column><Text text="Gate Pass No" class="gpmsHeaderText"/></Column>
 								<Column><Text text="Plant" class="gpmsHeaderText"/></Column>
 								<Column><Text text="Vendor" class="gpmsHeaderText"/></Column>
 								<Column><Text text="Vendor Name" class="gpmsHeaderText"/></Column>
@@ -49,6 +50,7 @@
 								<ColumnListItem>
 									<cells>
 										<ObjectIdentifier title="{poModel>PurchaseOrder}"/>
+										<Text text="{poModel>GatePassNo}"/>
 										<Text text="{poModel>Plant}"/>
 										<Text text="{poModel>Vendor}"/>
 										<Text text="{poModel>VendorDesc}"/>
