@@ -1046,10 +1046,32 @@
     height: 40px !important;
 }
 
-.dcBtn.sapMBtn:hover .sapMBtnInner,
-.ewayBtn.sapMBtn:hover .sapMBtnInner {
-    filter: brightness(1.2) !important;
+.dcBtn.sapMBtn:hover .sapMBtnInner {
+    background: linear-gradient(135deg, #0393D5 0%, #0277BD 100%) !important;
+    color: #ffffff !important;
+    filter: none !important;
     box-shadow: var(--shadow-lg) !important;
+}
+
+.ewayBtn.sapMBtn:hover .sapMBtnInner {
+    background: linear-gradient(135deg, #4555C0 0%, #283593 100%) !important;
+    color: #ffffff !important;
+    filter: none !important;
+    box-shadow: var(--shadow-lg) !important;
+}
+
+.dcBtn.sapMBtn .sapMBtnIcon,
+.dcBtn.sapMBtn .sapMBtnText,
+.dcBtn.sapMBtn:hover .sapMBtnIcon,
+.dcBtn.sapMBtn:hover .sapMBtnText {
+    color: #ffffff !important;
+}
+
+.ewayBtn.sapMBtn .sapMBtnIcon,
+.ewayBtn.sapMBtn .sapMBtnText,
+.ewayBtn.sapMBtn:hover .sapMBtnIcon,
+.ewayBtn.sapMBtn:hover .sapMBtnText {
+    color: #ffffff !important;
 }
 
 /* Fix for GatePassWithPO form layout alignment and spacing */

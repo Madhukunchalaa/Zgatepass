@@ -321,6 +321,20 @@ sap.ui.define([
 						oPcpModel.setProperty("/DCNumber", oResult.DCNumber || "");
 						oPcpModel.setProperty("/Plant", oResult.Plant || "");
 						oPcpModel.setProperty("/SourceType", oResult.SourceType || "");
+						if (oResult.GEDate) {
+							var gd;
+							var oTsMatch = typeof oResult.GEDate === "string" && oResult.GEDate.match(/\/Date\((\d+)[^)]*\)\//);
+							if (oTsMatch) {
+								gd = new Date(parseInt(oTsMatch[1], 10));
+							} else if (typeof oResult.GEDate === "string" && /^\d{8}$/.test(oResult.GEDate)) {
+								gd = new Date(oResult.GEDate.substring(0, 4) + "-" + oResult.GEDate.substring(4, 6) + "-" + oResult.GEDate.substring(6, 8));
+							} else {
+								gd = new Date(oResult.GEDate);
+							}
+							if (gd && !isNaN(gd.getTime())) {
+								oPcpModel.setProperty("/GEDate", gd.getFullYear() + "-" + String(gd.getMonth() + 1).padStart(2, "0") + "-" + String(gd.getDate()).padStart(2, "0"));
+							}
+						}
 						if (oResult.DCdate) {
 							var pd = new Date(oResult.DCdate);
 							if (!isNaN(pd.getTime())) oPcpModel.setProperty("/DCdate", pd.getFullYear() + "-" + String(pd.getMonth() + 1).padStart(2, "0") + "-" + String(pd.getDate()).padStart(2, "0"));

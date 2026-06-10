@@ -150,6 +150,12 @@ sap.ui.define([
 					sFullyReceivedMsg = item.Message || "All items for Gate Pass " + (oData.GatePassNo || "") + " have already been received.";
 				}
 
+				// Derive rate from ItemNetPrice; fall back to Totalvalue / SentQty if price is missing
+				var fRateRaw = parseFloat(item.ItemNetPrice || 0);
+				if (fRateRaw === 0 && fSent > 0) {
+					fRateRaw = parseFloat(item.Totalvalue || 0) / fSent;
+				}
+
 				return {
 					// display fields
 					material:     item.Material || "",
@@ -161,7 +167,7 @@ sap.ui.define([
 					uom:          item.UOM || item.Uom || "EA",
 					// raw fields needed for POST
 					_itemNo:        item.ItemNo || "",
-					_itemNetPrice:  item.ItemNetPrice || "0.00",
+					_itemNetPrice:  String(fRateRaw.toFixed(2)),
 					_totalValue:    item.Totalvalue || "0.00",
 					_gatePassReqNo: item.GatePassReqNo || "",
 					_itemRemarks:   item.Remarks || ""
@@ -214,9 +220,12 @@ sap.ui.define([
 		_calculateFinalTotal: function () {
 			var oModel = this.getView().getModel("inward");
 			var aItems = oModel.getProperty("/items") || [];
+			var bAnyReceived = aItems.some(function (item) { return parseFloat(item.recvdQty || 0) > 0; });
 			var fTotal = aItems.reduce(function (sum, item) {
-				var fQty = parseFloat(item.recvdQty || 0);
 				var fRate = parseFloat(item._itemNetPrice || 0);
+				// Before user enters any received qty, show full gate pass value (sentQty * rate)
+				// Once user starts entering, show received value (recvdQty * rate)
+				var fQty = bAnyReceived ? parseFloat(item.recvdQty || 0) : parseFloat(item.sentQty || 0);
 				return sum + (fQty * fRate);
 			}, 0);
 			oModel.setProperty("/FinalTotal", fTotal.toLocaleString('en-IN', {

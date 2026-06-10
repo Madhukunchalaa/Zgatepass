@@ -44,6 +44,11 @@ sap.ui.define([
 
 			function mapItems(oData) {
 				return (oData.results || []).map(function (oItem) {
+					var sRawStatus = oItem.GPStatus || "";
+					var sDisplayStatus = sRawStatus;
+					if (oItem.GatePassType === "RGP" && sRawStatus === "AWAITING FOR VENDOR ACKNOWLEDGEMENT") {
+						sDisplayStatus = "Awaiting for Return";
+					}
 					return {
 						GatePassNo: oItem.GatePassNo,
 						GatePassreqNo: oItem.GatePassReqNo || oItem.GatePassreqNo || "",
@@ -54,8 +59,9 @@ sap.ui.define([
 						VendorGST: oItem.VendorGST,
 						City: oItem.City,
 						VehicleNo: oItem.VehicleNo,
-						GPStatus: oItem.GPStatus || "",
-						StatusState: that._getStatusState(oItem.GPStatus),
+						GPStatus: sRawStatus,
+						GPStatusText: sDisplayStatus,
+						StatusState: that._getStatusState(sRawStatus),
 						NoOfItems: (oItem.OutgateNav && oItem.OutgateNav.results) ? oItem.OutgateNav.results.length : 0
 					};
 				});

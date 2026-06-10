@@ -99,7 +99,12 @@
 				},
 				{
 					"name": "GatePassCreation",
-					"pattern": "GatePassCreation/:type:",
+					"pattern": "GatePassCreation/:type:/:reqNo:",
+					"target": "TargetGatePassCreation"
+				},
+				{
+					"name": "GatePassAmendment",
+					"pattern": "GatePassAmendment/:type:/:reqNo:",
 					"target": "TargetGatePassCreation"
 				},
 				{

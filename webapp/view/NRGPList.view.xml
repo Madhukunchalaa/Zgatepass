@@ -102,7 +102,7 @@
                             <Text text="{nrgpList>VehicleNo}" wrapping="false"/>
                             <ObjectNumber number="{nrgpList>NoOfItems}" emphasized="false"/>
                             <ObjectStatus
-                                text="{= ${nrgpList>GPStatus} ? ${nrgpList>GPStatus} : 'Not Set'}"
+                                text="{= ${nrgpList>GPStatusText} ? ${nrgpList>GPStatusText} : 'Not Set'}"
                                 state="{nrgpList>StatusState}"/>
                         </cells>
                     </ColumnListItem>

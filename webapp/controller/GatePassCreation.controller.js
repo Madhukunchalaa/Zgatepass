@@ -194,6 +194,7 @@ sap.ui.define([
 
 		onInit: function () {
 			this._resetModel(null);
+			this._sAmendReqNo = null; // track amendment request number
 
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (oODataModel) {
@@ -207,15 +208,19 @@ sap.ui.define([
 			}
 
 			this.getRouter().getRoute("GatePassCreation").attachPatternMatched(this._onRouteMatched, this);
+			this.getRouter().getRoute("GatePassAmendment").attachPatternMatched(this._onRouteMatched, this);
 		},
 
 		_onRouteMatched: function (oEvent) {
 			var oArgs = oEvent.getParameter("arguments");
-			var sType = oArgs ? oArgs.type : null;
+			var sType  = oArgs ? (oArgs.type  || null) : null;
+			var sReqNo = oArgs ? (oArgs.reqNo || null) : null;
+			if (sReqNo) { sReqNo = decodeURIComponent(sReqNo); }
+			if (sType)  { sType  = decodeURIComponent(sType); }
 
-			// Pass type into _resetModel so GatePassType is set in the initial model,
-			// avoiding binding timing issues with disabled Select controls.
+			// Pass type into _resetModel so GatePassType is set in the initial model
 			this._resetModel(sType);
+			this._sAmendReqNo = sReqNo || null;
 
 			var oModel = this.getView().getModel("gp");
 			if (oModel) {
@@ -228,7 +233,6 @@ sap.ui.define([
 
 					if (sCocode) { oModel.setProperty("/Cocode", sCocode); }
 					if (sDept) {
-						// Match case-insensitively against the Select's item keys
 						var oDeptSelect = this.byId("department");
 						var sMatchedDept = sDept;
 						if (oDeptSelect) {
@@ -246,6 +250,95 @@ sap.ui.define([
 					}
 				}
 			}
+
+			// If this is an amendment, load the original request data to pre-fill all fields
+			if (sReqNo && sType) {
+				this._loadAmendmentData(sReqNo, sType);
+			}
+		},
+
+		// Load original request data for amendment editing
+		_loadAmendmentData: function (sReqNo, sType) {
+			var oODataModel = this.getOwnerComponent().getModel();
+			var that = this;
+			if (!oODataModel) { return; }
+
+			sap.ui.core.BusyIndicator.show(0);
+			oODataModel.read("/GateReqHdrSet", {
+				filters: [
+					new Filter("GatePassReqNo", FilterOperator.EQ, sReqNo),
+					new Filter("GatePassType",  FilterOperator.EQ, sType)
+				],
+				urlParameters: { "$expand": "GateReqItmNav" },
+				success: function (oData) {
+					sap.ui.core.BusyIndicator.hide();
+					var oRow = oData.results && oData.results[0];
+					if (oRow) {
+						that._prefillAmendmentModel(oRow);
+					} else {
+						MessageToast.show("Amendment data not found. Please fill in manually.");
+					}
+				},
+				error: function () {
+					sap.ui.core.BusyIndicator.hide();
+					MessageToast.show("Could not load original request. Please fill in manually.");
+				}
+			});
+		},
+
+		// Pre-fill the "gp" model with data from the original request
+		_prefillAmendmentModel: function (oRow) {
+			var oModel = this.getView().getModel("gp");
+			if (!oModel) { return; }
+
+			// Header fields
+			oModel.setProperty("/GatePassReqNo",  oRow.GatePassReqNo  || oRow.GatePassreqNo || "");
+			oModel.setProperty("/GatePassType",   oRow.GatePassType   || "");
+			oModel.setProperty("/isTypeEditable", false);
+			oModel.setProperty("/isFieldEditable", true);
+			oModel.setProperty("/Cocode",         oRow.CoCode         || oRow.Cocode        || "");
+			oModel.setProperty("/Plant",          oRow.Plant          || "");
+			oModel.setProperty("/FiscalYear",     oRow.FiscalYear     || "");
+			oModel.setProperty("/vendor",         oRow.Vendor         || "");
+			oModel.setProperty("/vendorName",     oRow.VendorName     || "");
+			oModel.setProperty("/vendorGST",      oRow.VendorGST      || oRow.VendorGst     || "");
+			oModel.setProperty("/vendorAddress",  [oRow.City, oRow.ZipCode].filter(Boolean).join(", "));
+			oModel.setProperty("/Department",     oRow.Department     || "");
+			oModel.setProperty("/VehicleNo",      oRow.VehicleNo      || "");
+			oModel.setProperty("/ModeOfDispatch", oRow.ModeOfDispatch || "");
+			oModel.setProperty("/Remarks",        oRow.Remarks        || "");
+
+			// Items
+			var aRaw = (oRow.GateReqItmNav && oRow.GateReqItmNav.results) ||
+			           (oRow.GateReqItemNav && oRow.GateReqItemNav.results) || [];
+			var aItems = aRaw.map(function (it, i) {
+				var fQty  = parseFloat(it.RequestedQuantity || it.Quantity || 0);
+				var fRate = parseFloat(it.ItemNetPrice || 0);
+				return {
+					sno:          String(i + 1).padStart(2, "0"),
+					material:     it.Material     || "",
+					materialName: it.MaterialDesc || it.HSNDesc || it.Description || "",
+					hsnCode:      it.HSNCode      || "",
+					hsnDesc:      it.HSNDesc      || "",
+					quantity:     fQty,
+					uom:          it.UOM          || "",
+					rate:         fRate,
+					amount:       (fQty * fRate).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+					remarks:      it.Remarks      || ""
+				};
+			});
+			if (aItems.length === 0) { aItems = [this._newItem(1)]; }
+			oModel.setProperty("/items", aItems);
+			this._recalcTotal();
+
+			// Load vendors and materials for the plant so value helps work
+			var sPlant = oRow.Plant || "";
+			if (sPlant) {
+				this._loadVendors(sPlant);
+				this._loadMaterials(sPlant);
+			}
+
+			MessageToast.show("Amendment: All original fields loaded. Please review and resubmit.", { duration: 4000 });
 		},
 
 		_loadPlants: function () {
@@ -292,6 +385,7 @@ sap.ui.define([
 				GatePassReqNo: "",
 				GatePassType: sType || "",
 				isTypeEditable: !sType,
+				isFieldEditable: false,
 				Cocode: "",
 				Plant: "",
 				FiscalYear: String(new Date().getFullYear()),
@@ -681,6 +775,9 @@ sap.ui.define([
 					sRawImage = sRawImage.substring(iComma + 7);
 				}
 
+				// Determine if this is an amendment resubmit (carry same request number)
+				var sAmendReqNo = this._sAmendReqNo || "";
+
 				var oPayload = {
 					GatePassType: oGp.GatePassType,
 					Cocode: oGp.Cocode,
@@ -692,7 +789,10 @@ sap.ui.define([
 					VendorGST: oGp.vendorGST || "",
 					ZipCode: oSelectedVendor.PostalCode || "",
 					City: oSelectedVendor.City || "",
-					ApprovalReq: "X",
+					ApprovalReq: sAmendReqNo ? "X" : "X", // always reset to Pending for HOD re-review
+					Approval1: "",   // clear previous HOD approval/amendment status
+					Approval2: "",   // clear previous Store approval status
+					GatePassReqNo: sAmendReqNo, // same request number for amendment resubmit
 					Department: oGp.Department,
 					VehicleNo: oGp.VehicleNo || "",
 					ModeOfDispatch: oGp.ModeOfDispatch || "",
@@ -780,7 +880,12 @@ sap.ui.define([
 									});
 								}
 								var sCurrentType = this.getView().getModel("gp").getProperty("/GatePassType");
+								var bWasAmend = !!this._sAmendReqNo;
 								this._resetModel(sCurrentType);
+								this._sAmendReqNo = null;
+								if (bWasAmend) {
+									this.getRouter().navTo("GatePassList");
+								}
 							}.bind(this)
 						});
 					}.bind(this),

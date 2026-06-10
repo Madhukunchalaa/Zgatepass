@@ -28,8 +28,7 @@
 							displayFormat="dd-MM-yyyy"
 							valueFormat="yyyy-MM-dd"
 							class="gpmsFieldInput"
-							width="100%"
-							editable="false" />
+							width="100%" />
 					</VBox>
 					<VBox class="sapUiSmallMargin">
 						<Label text="GE NO" class="gpmsFieldLabel" required="true" />

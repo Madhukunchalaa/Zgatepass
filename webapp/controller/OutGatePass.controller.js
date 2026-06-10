@@ -1352,6 +1352,7 @@ sap.ui.define([
 			}
 
 			var oPayload = {
+				GatePassReqNo: oOut.GatePassreqNo || "",
 				GatePassType: oOut.GatePassType || "RGP",
 				Cocode: oOut.Cocode || "",
 				Plant: oOut.Plant || "",
@@ -1363,6 +1364,8 @@ sap.ui.define([
 				ZipCode: oOut.ZipCode || "",
 				City: oOut.City || "",
 				ApprovalReq: "X",
+				Approval1: "",
+				Approval2: "",
 				Department: oOut.Department || "",
 				VehicleNo: oOut.VehicleNo || "",
 				ModeOfDispatch: oOut.ModeOfTransport || "",
@@ -1428,7 +1431,7 @@ sap.ui.define([
 			var oUserModel = sap.ui.getCore().getModel("user");
 			var bIsStoreUser = oUserModel ? oUserModel.getProperty("/IsStoreUser") : false;
 			if (!bIsStoreUser) {
-				sap.m.MessageBox.error("Only Store users (Z_MM_GATEPASS_STORE_FRONT_VIEW) are authorized to generate a Gate Pass.");
+				sap.m.MessageBox.error("Only Store users (ZC_MM_GATEPASS_STORE_FRONTVIEW) are authorized to generate a Gate Pass.");
 				return;
 			}
 

@@ -202,7 +202,7 @@ xmlns:layout="sap.ui.layout"
 								<Select selectedKey="{inward>/Status}" width="100%" class="gpmsFieldInput">
 									<core:Item key="" text="Select status"/>
 									<core:Item key="OPEN" text="OPEN"/>
-									<core:Item key="AWAITING FOR VENDOR ACKNOWLEDGEMENT" text="AWAITING FOR VENDOR ACKNOWLEDGEMENT"/>
+									<core:Item key="AWAITING FOR RETURN" text="AWAITING FOR RETURN"/>
 									<core:Item key="CLOSED" text="CLOSED"/>
 								</Select>
 							</VBox>

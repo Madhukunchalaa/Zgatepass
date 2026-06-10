@@ -169,7 +169,7 @@
 						</VBox>
 						<VBox class="sapUiSmallMargin" visible="{= ${out>/GatePassType} === 'RGP' }">
 							<Label text="Due Date" class="gpmsFieldLabel"/>
-							<DatePicker value="{out>/ReturnableDate}" displayFormat="dd-MM-yyyy" editable="false" class="gpmsFieldInput" width="100%"/>
+							<DatePicker value="{out>/ReturnableDate}" displayFormat="dd-MM-yyyy" editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }" class="gpmsFieldInput" width="100%"/>
 						</VBox>
 
 					</layout:Grid>
@@ -199,15 +199,15 @@
 							<ColumnListItem>
 								<cells>
 									<Text text="{out>sno}"/>
-									<Text text="{out>materialName}"/>
-									<Text text="{out>hsnCode}"/>
+									<Input value="{out>materialName}" editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }" class="gpmsTableInput"/>
+									<Input value="{out>hsnCode}" editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }" class="gpmsTableInput"/>
 									<Input value="{path: 'out>sentQty', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}"
 										editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }"
 										textAlign="Right"
 										liveChange=".onItemUpdate"/>
 									<Text text="{path: 'out>recvdQty', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" textAlign="Right" visible="{= ${out>/GatePassType} !== 'NRGP' }"/>
 									<Text text="{path: 'out>balQty', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" class="gpmsBoldText" visible="{= ${out>/GatePassType} !== 'NRGP' }"/>
-									<Text text="{out>uom}"/>
+									<Input value="{out>uom}" editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }" class="gpmsTableInput"/>
 									<Input value="{out>rate}"
 										editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }"
 										textAlign="Right"

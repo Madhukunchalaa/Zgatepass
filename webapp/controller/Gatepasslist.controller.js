@@ -180,18 +180,19 @@ sap.ui.define([
 			var sRole = oUserModel ? oUserModel.getProperty("/Role") : "";
 			var sStatus = oItem.Status || "";
 
-			var bApproved = sStatus === "Approved" || sStatus === "APPROVED" || sStatus === "A";
+			var bApproved  = sStatus === "Approved"  || sStatus === "APPROVED"  || sStatus === "A";
 			var bAmendment = sStatus === "Amendment" || sStatus === "AMENDMENT" || sStatus === "AM";
 
 			if (bAmendment) {
-				// Any user can open Amendment requests to edit and resubmit
-				this.getRouter().navTo("OutGatePass", { reqNo: oItem.GatePassReqNo, gpNo: oItem.GatePassNo || "-" });
+				// Route back to GatePassCreation in amendment mode so user can edit and resubmit
+				this.getRouter().navTo("GatePassAmendment", {
+					type:  encodeURIComponent(oItem.GatePassType  || "NRGP"),
+					reqNo: encodeURIComponent(oItem.GatePassReqNo || "")
+				});
 			} else if (bIsStoreUser) {
 				if (bApproved) {
-					// Store User can directly open requests
 					this.getRouter().navTo("OutGatePass", { reqNo: oItem.GatePassReqNo, gpNo: oItem.GatePassNo || "-" });
 				} else {
-					// Route to StoreRequestDetail so they can Approve or Reject first
 					var oTemp = this.getOwnerComponent().getModel("storeTemp");
 					if (!oTemp) {
 						oTemp = new sap.ui.model.json.JSONModel();
@@ -204,7 +205,7 @@ sap.ui.define([
 					});
 				}
 			} else {
-				sap.m.MessageBox.warning("Access to Out Gate Pass creation is only allowed for Approved requests under the Store User (Z_MM_GATEPASS_STORE_FRONT_VIEW) role.\n\nYour current Role: " + (sRole || "No Role Assigned"));
+				sap.m.MessageBox.warning("Access to Out Gate Pass creation is only allowed for Approved requests under the Store User (ZC_MM_GATEPASS_STORE_FRONTVIEW) role.\n\nYour current Role: " + (sRole || "No Role Assigned"));
 			}
 		},
 
@@ -212,12 +213,21 @@ sap.ui.define([
 			var oItem = oEvent.getSource().getBindingContext("gatePassList").getObject();
 			var oUserModel = sap.ui.getCore().getModel("user");
 			var bIsStoreUser = oUserModel ? oUserModel.getProperty("/IsStoreUser") : false;
-			var bIsHodUser = oUserModel ? oUserModel.getProperty("/IsHodUser") : false;
-			var sRole = oUserModel ? oUserModel.getProperty("/Role") : "";
+			var bIsHodUser   = oUserModel ? oUserModel.getProperty("/IsHodUser")   : false;
+			var sRole   = oUserModel ? oUserModel.getProperty("/Role")   : "";
 			var sStatus = oItem.Status || "";
 
-			var bApproved = sStatus === "Approved" || sStatus === "APPROVED" || sStatus === "A";
+			var bApproved  = sStatus === "Approved"  || sStatus === "APPROVED"  || sStatus === "A";
 			var bAmendment = sStatus === "Amendment" || sStatus === "AMENDMENT" || sStatus === "AM";
+
+			// Amendment: route requester (non-HOD, non-Store) back to creation form to edit and resubmit
+			if (bAmendment && !bIsHodUser) {
+				this.getRouter().navTo("GatePassAmendment", {
+					type:  encodeURIComponent(oItem.GatePassType  || "NRGP"),
+					reqNo: encodeURIComponent(oItem.GatePassReqNo || "")
+				});
+				return;
+			}
 
 			// For fully approved requests, any user clicking the row goes directly to generate gate pass
 			if (bApproved) {
