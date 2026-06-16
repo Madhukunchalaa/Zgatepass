@@ -6,11 +6,11 @@ sap.ui.define([
 ], function (BaseController, JSONModel, MessageBox, MessageToast) {
 	"use strict";
 
-	return BaseController.extend("zgpms.meilpower.com.controller.NRGPDetail", {
+	return BaseController.extend("zgpms.meilpower.com.controller.RGPDetail", {
 
 		onInit: function () {
 			this._resetModel();
-			this.getRouter().getRoute("NRGPDetail").attachPatternMatched(this._onRouteMatched, this);
+			this.getRouter().getRoute("RGPDetail").attachPatternMatched(this._onRouteMatched, this);
 		},
 
 		_onRouteMatched: function (oEvent) {
@@ -23,11 +23,9 @@ sap.ui.define([
 			}
 			var oArgs = oEvent.getParameter("arguments");
 			var sGPNo = oArgs.gpNo;
-			var sGPType = oArgs.gpType || "NRGP";
 			this._sCurrentGPNo = sGPNo;
-			this._sCurrentGPType = sGPType;
 			if (sGPNo) {
-				this._loadData(sGPNo, sGPType);
+				this._loadData(sGPNo);
 			}
 		},
 
@@ -36,7 +34,7 @@ sap.ui.define([
 				GatePassNo: "",
 				GatePassreqNo: "",
 				GatePassDate: "",
-				GatePassType: "NRGP",
+				GatePassType: "RGP",
 				Plant: "",
 				FiscalYear: "",
 				Department: "",
@@ -48,7 +46,6 @@ sap.ui.define([
 				VendorAddress: "",
 				PurchasingDoc: "",
 				NoOfPacakages: 0,
-				LRNnumber: "",
 				VehicleNo: "",
 				ModeOfTransport: "Road",
 				TransporterName: "",
@@ -62,30 +59,32 @@ sap.ui.define([
 				EWayBillNo: "",
 				EWayBillDate: null,
 				DCNotes: "",
+				ReturnableDate: "",
+				ExtendedReturnableDate: null,
 				DocOptionIndex: 0,
 				TransportByIndex: 1,
 				items: [],
 				CommentsList: [],
 				FinalTotal: "0.00"
 			};
-			var oModel = this.getView().getModel("nrgp");
+			var oModel = this.getView().getModel("rgp");
 			if (oModel) {
 				oModel.setData(oData);
 			} else {
-				this.getView().setModel(new JSONModel(oData), "nrgp");
+				this.getView().setModel(new JSONModel(oData), "rgp");
 			}
 		},
 
-		_loadData: function (sGPNo, sGPType) {
+		_loadData: function (sGPNo) {
 			var oODataModel = this.getOwnerComponent().getModel();
-			if (!oODataModel) return;
+			if (!oODataModel) { return; }
 
 			sap.ui.core.BusyIndicator.show(0);
 
 			oODataModel.read("/OutGatePassSet", {
 				filters: [
 					new sap.ui.model.Filter("GatePassNo", sap.ui.model.FilterOperator.EQ, sGPNo),
-					new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, sGPType || "NRGP")
+					new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, "RGP")
 				],
 				urlParameters: { "$expand": "OutgateNav" },
 				success: function (oData) {
@@ -96,12 +95,10 @@ sap.ui.define([
 						return;
 					}
 
-					// Prefer a result whose GatePassNo matches what was requested
 					var oResult = aResults.find(function (r) {
 						return (r.GatePassNo || "").trim() === sGPNo.trim();
 					}) || aResults[0];
 
-					// Consolidate OutgateNav items only from results matching the requested GP
 					var aCombinedItems = [];
 					aResults.forEach(function (res) {
 						if ((res.GatePassNo || "").trim() !== sGPNo.trim()) { return; }
@@ -110,13 +107,10 @@ sap.ui.define([
 							var bExists = aCombinedItems.some(function (existing) {
 								return existing.ItemNo === itm.ItemNo;
 							});
-							if (!bExists) {
-								aCombinedItems.push(itm);
-							}
+							if (!bExists) { aCombinedItems.push(itm); }
 						});
 					});
 
-					// If no items found for this specific GP, fall back to all items
 					if (aCombinedItems.length === 0) {
 						aResults.forEach(function (res) {
 							var aItems = (res.OutgateNav && res.OutgateNav.results) || (Array.isArray(res.OutgateNav) ? res.OutgateNav : []);
@@ -130,7 +124,6 @@ sap.ui.define([
 					}
 
 					oResult.OutgateNav = { results: aCombinedItems };
-					// Always trust the route parameter as the authoritative GP number
 					oResult.GatePassNo = sGPNo;
 					this._mapData(oResult);
 				}.bind(this),
@@ -156,40 +149,49 @@ sap.ui.define([
 			return String(vDate);
 		},
 
+		_dateToYYYYMMDD: function (sDisplayDate) {
+			if (!sDisplayDate) { return ""; }
+			var aParts = sDisplayDate.split("-");
+			if (aParts.length === 3 && aParts[2].length === 4) {
+				return aParts[2] + aParts[1] + aParts[0];
+			}
+			if (/^\d{8}$/.test(sDisplayDate)) { return sDisplayDate; }
+			return "";
+		},
+
 		_getStatusState: function (sStatus) {
-			if (sStatus === "CLOSED" || sStatus === "Approved" || sStatus === "APPROVED" || sStatus === "A") return "Success";
-			if (sStatus === "AWAITING FOR VENDOR ACKNOWLEDGEMENT" || sStatus === "Pending" || sStatus === "PENDING") return "Warning";
-			if (sStatus === "OPEN") return "Information";
-			if (sStatus === "Rejected" || sStatus === "REJECTED" || sStatus === "R" || sStatus === "CANCELLED" || sStatus === "Cancelled") return "Error";
-			if (sStatus === "AM" || sStatus === "AMENDMENT") return "Error";
+			if (sStatus === "CLOSED" || sStatus === "Approved" || sStatus === "APPROVED" || sStatus === "A") { return "Success"; }
+			if (sStatus === "AWAITING FOR VENDOR ACKNOWLEDGEMENT" || sStatus === "Pending" || sStatus === "PENDING") { return "Warning"; }
+			if (sStatus === "OPEN") { return "Information"; }
+			if (sStatus === "Rejected" || sStatus === "REJECTED" || sStatus === "R" || sStatus === "CANCELLED" || sStatus === "Cancelled") { return "Error"; }
+			if (sStatus === "AM" || sStatus === "AMENDMENT") { return "Error"; }
 			return "None";
 		},
 
 		_mapData: function (oData) {
-			var oModel = this.getView().getModel("nrgp");
+			var oModel = this.getView().getModel("rgp");
 
 			var sReqNo = oData.GatePassReqNo || oData.GatePassreqNo || "";
-			var aAttachments = [];
+			var sCleanGPNo = (oData.GatePassNo || "").trim();
+			var sCleanReqNo = sReqNo.trim();
 
-			if (oData.Base64Img1) aAttachments.push({ name: "Attachment_1.jpg", content: oData.Base64Img1 });
-			if (oData.Base64Img2) aAttachments.push({ name: "Attachment_2.jpg", content: oData.Base64Img2 });
-			if (oData.Base64Img3) aAttachments.push({ name: "Attachment_3.jpg", content: oData.Base64Img3 });
-			if (oData.Base64Img4) aAttachments.push({ name: "Attachment_4.jpg", content: oData.Base64Img4 });
+			var oNavData = null;
+			try {
+				var oCoreModel = sap.ui.getCore().getModel("selectedRGP");
+				if (oCoreModel) { oNavData = oCoreModel.getData(); }
+			} catch (e) {}
 
-			if (aAttachments.length === 0 && sReqNo) {
-				var sStored = localStorage.getItem("attachments_" + sReqNo);
-				if (sStored) {
-					try {
-						aAttachments = JSON.parse(sStored);
-					} catch(e) {}
-				}
-			}
-			oModel.setProperty("/attachments", aAttachments);
+			var oLocalLogistics = null;
+			try {
+				var sLocal = (sCleanGPNo ? localStorage.getItem("logistics_" + sCleanGPNo) : null)
+					|| (sCleanReqNo ? localStorage.getItem("logistics_" + sCleanReqNo) : null);
+				if (sLocal) { oLocalLogistics = JSON.parse(sLocal); }
+			} catch (e) {}
 
 			oModel.setProperty("/GatePassNo", oData.GatePassNo || "");
-			oModel.setProperty("/GatePassreqNo", oData.GatePassReqNo || oData.GatePassreqNo || "");
-			oModel.setProperty("/GatePassDate", this._formatDate(oData.GatePassDate));
-			oModel.setProperty("/GatePassType", oData.GatePassType || "NRGP");
+			oModel.setProperty("/GatePassreqNo", sReqNo);
+			oModel.setProperty("/GatePassDate", this._formatDate(oData.GatePassDate) || (oNavData ? oNavData.GatePassDate : ""));
+			oModel.setProperty("/GatePassType", oData.GatePassType || "RGP");
 			oModel.setProperty("/Plant", oData.Plant || "");
 			oModel.setProperty("/FiscalYear", oData.FiscalYear || "");
 			oModel.setProperty("/Department", oData.Department || "");
@@ -201,36 +203,31 @@ sap.ui.define([
 			oModel.setProperty("/VendorAddress", [oData.City, oData.ZipCode].filter(Boolean).join(", "));
 			oModel.setProperty("/PurchasingDoc", oData.PurchasingDoc || "");
 			oModel.setProperty("/NoOfPacakages", oData.NoOfPacakages || 0);
-			var oLocalLogistics = null;
-			var sCleanGPNo = (oData.GatePassNo || "").trim();
-			var sCleanReqNo = (oData.GatePassReqNo || oData.GatePassreqNo || "").trim();
-			try {
-				var sLocal = (sCleanGPNo ? localStorage.getItem("logistics_" + sCleanGPNo) : null) || (sCleanReqNo ? localStorage.getItem("logistics_" + sCleanReqNo) : null);
-				if (sLocal) {
-					oLocalLogistics = JSON.parse(sLocal);
-				}
-			} catch (e) {}
-
-			oModel.setProperty("/LRNnumber", oData.LRNumber || oData.LRNnumber || "");
 			oModel.setProperty("/VehicleNo", oData.VehicleNo || "");
 			oModel.setProperty("/ModeOfTransport", oData.ModeOfDispatch || "Road");
-			oModel.setProperty("/TransporterName", oData.TransporterName || "");
-			oModel.setProperty("/TransporterGST", oData.TransporterGST || "");
+			oModel.setProperty("/TransporterName", oData.TransporterName || (oLocalLogistics ? oLocalLogistics.TransporterName : "") || "");
+			oModel.setProperty("/TransporterGST", oData.TransporterGST || (oLocalLogistics ? oLocalLogistics.TransporterGST : "") || "");
 			oModel.setProperty("/Remarks", oData.Remarks || "");
-			
-			var sGPStatus = (oData.GPStatus || "").trim().toUpperCase();
-			if (!sGPStatus && oLocalLogistics && oLocalLogistics.GPStatus) {
-				sGPStatus = oLocalLogistics.GPStatus.trim().toUpperCase();
-			}
-			oModel.setProperty("/GPStatus", sGPStatus);
-			oModel.setProperty("/StatusState", this._getStatusState(sGPStatus));
-			
+			oModel.setProperty("/ReturnableDate", this._formatDate(oData.ReturnableDate || oData.DueDate));
 			oModel.setProperty("/ChallanNumber", oData.ChallanNumber || "");
 			oModel.setProperty("/GateEntryNo", oData.GateEntryNo || "");
 			oModel.setProperty("/DocOptionIndex", oData.ChallanNumber ? 1 : 0);
 			oModel.setProperty("/EWayBillNo", oData.EWayBillNo || (oLocalLogistics ? oLocalLogistics.EWayBillNo : "") || "");
 			oModel.setProperty("/EWayBillDate", oData.EWayBillDate || (oLocalLogistics ? oLocalLogistics.EWayBillDate : null));
 			oModel.setProperty("/DCNotes", oData.DCNotes || (oLocalLogistics ? oLocalLogistics.DCNotes : "") || "");
+
+			var sGPStatus = (oData.GPStatus || "").trim().toUpperCase();
+			if (!sGPStatus && oLocalLogistics && oLocalLogistics.GPStatus) {
+				sGPStatus = oLocalLogistics.GPStatus.trim().toUpperCase();
+			}
+			if (!sGPStatus && sCleanGPNo) {
+				var sFallback = localStorage.getItem("logistics_" + sCleanGPNo);
+				if (sFallback) {
+					try { sGPStatus = JSON.parse(sFallback).GPStatus || ""; } catch (e) {}
+				}
+			}
+			oModel.setProperty("/GPStatus", sGPStatus);
+			oModel.setProperty("/StatusState", this._getStatusState(sGPStatus));
 
 			var aRaw = (oData.OutgateNav && oData.OutgateNav.results) || [];
 			var aMapped = aRaw.map(function (it, i) {
@@ -274,26 +271,13 @@ sap.ui.define([
 				}
 			}
 			oModel.setProperty("/CommentsList", aComments);
-
 			oModel.refresh(true);
 		},
 
-		_dateToYYYYMMDD: function (sDisplayDate) {
-			// Accepts dd-MM-yyyy → YYYYMMDD
-			if (!sDisplayDate) { return ""; }
-			var aParts = sDisplayDate.split("-");
-			if (aParts.length === 3 && aParts[2].length === 4) {
-				return aParts[2] + aParts[1] + aParts[0];
-			}
-			// Already YYYYMMDD
-			if (/^\d{8}$/.test(sDisplayDate)) { return sDisplayDate; }
-			return "";
-		},
-
 		onRecievedQuantityInputLiveChange: function (oEvent) {
-			var oCtx = oEvent.getSource().getBindingContext("nrgp");
+			var oCtx = oEvent.getSource().getBindingContext("rgp");
 			var oItem = oCtx.getObject();
-			var oModel = this.getView().getModel("nrgp");
+			var oModel = this.getView().getModel("rgp");
 
 			var fSent = parseFloat(oItem.SentQuantity || 0);
 			var fRecvd = parseFloat(oItem.RecievedQuantity || 0);
@@ -307,19 +291,19 @@ sap.ui.define([
 		},
 
 		_recalcTotal: function () {
-			var oModel = this.getView().getModel("nrgp");
+			var oModel = this.getView().getModel("rgp");
 			var aItems = oModel.getProperty("/items") || [];
 			var fTotal = aItems.reduce(function (s, it) { return s + parseFloat(it.Totalvalue || 0); }, 0);
 			oModel.setProperty("/FinalTotal", fTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 		},
 
 		onSelectStatusChange: function () {
-			var oModel = this.getView().getModel("nrgp");
+			var oModel = this.getView().getModel("rgp");
 			oModel.setProperty("/StatusState", this._getStatusState(oModel.getProperty("/GPStatus")));
 		},
 
 		onAddCommentButtonPress: function () {
-			var oModel = this.getView().getModel("nrgp");
+			var oModel = this.getView().getModel("rgp");
 			var aExisting = oModel.getProperty("/CommentsList") || [];
 			if (aExisting.length >= 10) {
 				sap.m.MessageToast.show("Maximum 10 comments allowed.");
@@ -333,34 +317,27 @@ sap.ui.define([
 		onButtonDeleteCommentPress: function (oEvent) {
 			var oItem = oEvent.getSource().getParent();
 			var iIndex = oItem.getParent().indexOfItem(oItem);
-			var oModel = this.getView().getModel("nrgp");
+			var oModel = this.getView().getModel("rgp");
 			var aExisting = oModel.getProperty("/CommentsList") || [];
 			var aNew = aExisting.filter(function (_, i) { return i !== iIndex; });
 			oModel.setProperty("/CommentsList", aNew);
 		},
 
-		onAttachmentPress: function (oEvent) {
-			var oContext = oEvent.getSource().getBindingContext("nrgp");
-			var oAttachment = oContext.getObject();
-			if (oAttachment && oAttachment.content) {
-				var newTab = window.open();
-				if (newTab) {
-					newTab.document.write('<iframe src="' + oAttachment.content + '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>');
-				} else {
-					var link = document.createElement('a');
-					link.href = oAttachment.content;
-					link.download = oAttachment.name;
-					link.click();
-				}
-			}
-		},
-
 		onSAVEButtonPress: function () {
-			var oData = this.getView().getModel("nrgp").getData();
+			var oData = this.getView().getModel("rgp").getData();
 			var oODataModel = this.getOwnerComponent().getModel();
 
 			if (!oODataModel) {
 				MessageBox.warning("Backend service not available.");
+				return;
+			}
+
+			var aInvalidHSN = (oData.items || []).filter(function (it) {
+				var sHSN = (it.HSNCode || "").trim();
+				return sHSN.length > 0 && !/^\d{8}$/.test(sHSN);
+			});
+			if (aInvalidHSN.length > 0) {
+				MessageBox.error("HSN Code must be exactly 8 digits for item(s): " + aInvalidHSN.map(function (it) { return it.HSNCode; }).join(", "));
 				return;
 			}
 
@@ -381,8 +358,8 @@ sap.ui.define([
 
 			var sToday = new Date().toISOString().split("T")[0];
 			var sChallanDate = oData.ChallanDate ? new Date(oData.ChallanDate).toISOString().split("T")[0] : sToday;
-
 			var sAuthorativeGPNo = this._sCurrentGPNo || oData.GatePassNo || "";
+
 			var oPayload = {
 				GatePassreqNo: oData.GatePassreqNo || "",
 				FiscalYear: oData.FiscalYear || String(new Date().getFullYear()),
@@ -400,16 +377,12 @@ sap.ui.define([
 				NoOfPacakages: parseInt(oData.NoOfPacakages || 0),
 				Department: oData.Department || "",
 				ChallanNumber: oData.ChallanNumber || "",
-				GatePassType: oData.GatePassType || "NRGP",
+				GatePassType: "RGP",
 				VehicleNo: oData.VehicleNo || "",
-				LRNumber: oData.LRNnumber || "",
 				ModeOfDispatch: oData.ModeOfTransport || "",
-				TransporterName: oData.TransporterName || "",
-				TransporterGST: oData.TransporterGST || "",
 				Remarks: oData.Remarks || "",
 				GPStatus: oData.GPStatus || "",
 				Message: "",
-				// Flat comment fields Comment1-10 / Sno1-10 / cdate1-10
 				Comment1: "", Comment2: "", Comment3: "", Comment4: "", Comment5: "",
 				Comment6: "", Comment7: "", Comment8: "", Comment9: "", Comment10: "",
 				Sno1: "", Sno2: "", Sno3: "", Sno4: "", Sno5: "",
@@ -418,7 +391,7 @@ sap.ui.define([
 				cdate6: "", cdate7: "", cdate8: "", cdate9: "", cdate10: "",
 				OutgateNav: (oData.items || []).map(function (it, i) {
 					return {
-						GatePassType: "NRGP",
+						GatePassType: "RGP",
 						GatePassNo: sAuthorativeGPNo,
 						ItemNo: it.ItemNo || String((i + 1) * 10).padStart(5, "0"),
 						Material: it.Material || "",
@@ -453,7 +426,7 @@ sap.ui.define([
 					sap.ui.core.BusyIndicator.hide();
 					var sMsg = oResponse.Message || "Gate Pass updated successfully!";
 					MessageBox.success(sMsg);
-					var oModel = this.getView().getModel("nrgp");
+					var oModel = this.getView().getModel("rgp");
 					oModel.setProperty("/StatusState", this._getStatusState(oData.GPStatus));
 				}.bind(this),
 				error: function (oError) {
@@ -462,14 +435,14 @@ sap.ui.define([
 					try {
 						var oResp = JSON.parse(oError.responseText);
 						sMsg = oResp.error.message.value;
-					} catch (e) { /* ignore */ }
+					} catch (e) {}
 					MessageBox.error(sMsg);
 				}
 			});
 		},
 
-		onCancelGatePass: function () {
-			var oModel = this.getView().getModel("nrgp");
+		onCANCELGATEPASSButtonPress: function () {
+			var oModel = this.getView().getModel("rgp");
 			var sGPNo = oModel.getProperty("/GatePassNo");
 			if (!sGPNo) {
 				MessageBox.warning("No Gate Pass has been generated yet.");
@@ -492,7 +465,7 @@ sap.ui.define([
 		},
 
 		onPRINTGATEPASSButtonPress: async function () {
-			var oOut = this.getView().getModel("nrgp").getData();
+			var oOut = this.getView().getModel("rgp").getData();
 			const { jsPDF } = window.jspdf;
 			var doc = new jsPDF("l", "mm", "a4");
 			var pageWidth = doc.internal.pageSize.width;
@@ -506,9 +479,9 @@ sap.ui.define([
 			var sLogoBase64 = null;
 			try {
 				sLogoBase64 = await this._getImageBase64(sLogoUrl);
-			} catch (e) { /* logo optional */ }
+			} catch (e) {}
 
-			var titleW = doc.getTextWidth("NON-RETURNABLE GATE PASS");
+			var titleW = doc.getTextWidth("RETURNABLE GATE PASS");
 			var gridY = 41, gridH = 32;
 			var lColW = 148, rColW = contentWidth - lColW;
 			var lColX = margin, rColX = margin + lColW;
@@ -519,33 +492,32 @@ sap.ui.define([
 			var tableData = (oOut.items || []).map(function (it, i) {
 				return [
 					i + 1,
-					it.Material || "",
+					it.HSNDesc || it.Material || "",
 					it.HSNCode || "",
 					parseFloat(it.SentQuantity || 0).toLocaleString("en-IN", { minimumFractionDigits: 3 }),
+					parseFloat(it.RecievedQuantity || 0).toLocaleString("en-IN", { minimumFractionDigits: 3 }),
 					it.UOM || "",
 					parseFloat(it.ItemNetPrice || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 }),
 					parseFloat(it.Totalvalue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })
 				];
 			});
-			while (tableData.length < 6) { tableData.push(["", "", "", "", "", "", ""]); }
+			while (tableData.length < 5) { tableData.push(["", "", "", "", "", "", "", ""]); }
 
 			doc.autoTable({
 				startY: 74,
-				head: [["S.No", "DESCRIPTION OF GOODS", "HSN Code", "Outward QTY", "UOM", "Rate (Rs.)", "Value (Rs.)"]],
+				head: [["S.No", "DESCRIPTION OF GOODS", "HSN Code", "Outward QTY", "Recvd QTY", "UOM", "Rate (Rs.)", "Value (Rs.)"]],
 				body: tableData,
 				theme: "grid",
 				headStyles: { fillColor: [235, 235, 235], textColor: [0, 0, 0], fontStyle: "bold", fontSize: 8.5, halign: "center", valign: "middle", cellPadding: 3, lineWidth: 0.3, lineColor: [0, 0, 0] },
 				bodyStyles: { fontSize: 8.5, cellPadding: { top: 3, bottom: 3, left: 2.5, right: 2.5 }, lineColor: [0, 0, 0], lineWidth: 0.25, valign: "middle" },
-				columnStyles: { 0: { cellWidth: 14, halign: "center" }, 1: { cellWidth: "auto" }, 2: { cellWidth: 26, halign: "center" }, 3: { cellWidth: 30, halign: "right" }, 4: { cellWidth: 18, halign: "center" }, 5: { cellWidth: 30, halign: "right" }, 6: { cellWidth: 34, halign: "right" } },
+				columnStyles: { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: "auto" }, 2: { cellWidth: 24, halign: "center" }, 3: { cellWidth: 28, halign: "right" }, 4: { cellWidth: 28, halign: "right" }, 5: { cellWidth: 16, halign: "center" }, 6: { cellWidth: 28, halign: "right" }, 7: { cellWidth: 30, halign: "right" } },
 				margin: { top: 74, left: margin, right: margin, bottom: 60 },
 				didDrawPage: function (data) {
-					// Draw outer borders
 					doc.setLineWidth(0.6);
 					doc.rect(7, 5, pageWidth - 14, pageHeight - 10);
 					doc.setLineWidth(0.2);
 					doc.rect(8.5, 6.5, pageWidth - 17, pageHeight - 13);
 
-					// Logo
 					if (sLogoBase64) {
 						doc.addImage(sLogoBase64, "PNG", margin, 9, 32, 12);
 					} else {
@@ -556,7 +528,6 @@ sap.ui.define([
 						doc.setTextColor(0, 0, 0);
 					}
 
-					// Company Info
 					doc.setTextColor(0, 0, 0);
 					doc.setFont("helvetica", "bold");
 					doc.setFontSize(14);
@@ -569,63 +540,55 @@ sap.ui.define([
 					doc.setFont("helvetica", "bold");
 					doc.text("GSTIN : 33AACCS2753B1ZV  |  CIN : U40109TN1993PTC026223", pageWidth / 2, 27.5, { align: "center" });
 
-					// GP No & Date
 					doc.setFontSize(8.5);
 					doc.setFont("helvetica", "bold");
 					doc.text("GP No : " + (oOut.GatePassNo || ""), pageWidth - margin, 12, { align: "right" });
 					doc.setFont("helvetica", "normal");
 					doc.text("Date : " + sDate, pageWidth - margin, 17, { align: "right" });
+					if (oOut.ReturnableDate) {
+						doc.text("Return By : " + oOut.ReturnableDate, pageWidth - margin, 22, { align: "right" });
+					}
 
-					// Separator
 					doc.setLineWidth(0.5);
 					doc.line(margin, 30.5, pageWidth - margin, 30.5);
 
-					// Title
 					doc.setFont("helvetica", "bold");
 					doc.setFontSize(11);
-					doc.text("NON-RETURNABLE GATE PASS", pageWidth / 2, 37, { align: "center" });
+					doc.text("RETURNABLE GATE PASS", pageWidth / 2, 37, { align: "center" });
 					doc.setLineWidth(0.35);
 					doc.line(pageWidth / 2 - titleW / 2, 38.5, pageWidth / 2 + titleW / 2, 38.5);
 
-					// Info Grid Box
 					doc.setLineWidth(0.3);
 					doc.rect(lColX, gridY, contentWidth, gridH);
 					doc.line(rColX, gridY, rColX, gridY + gridH);
 					doc.setLineWidth(0.2);
 					doc.line(lColX, gridY + 9, rColX, gridY + 9);
 
-					// Left Column Info
 					doc.setFontSize(8.5);
 					doc.setFont("helvetica", "normal");
 					doc.text("Please allow", lColX + pad, gridY + 6);
 					doc.setFont("helvetica", "bold");
 					doc.text(oOut.VendorPerson || "Mr./Ms.", lColX + 34, gridY + 6);
-					doc.text(oOut.VendorName || "", lColX + pad, gridY + 14);
+					doc.text(oOut.Vendor || "", lColX + pad, gridY + 14);
 					doc.setFont("helvetica", "normal");
 					doc.text(splitAddr, lColX + pad, gridY + 19.5);
 					doc.setFont("helvetica", "italic");
 					doc.setFontSize(8);
-					doc.text("to take out the following material from MEIL premises.", lColX + pad, gridY + gridH - 3.5);
+					doc.text("to take out the following material from MEIL premises (to be returned).", lColX + pad, gridY + gridH - 3.5);
 
-					// Right Column Info
 					var rc = rColX + pad, ry = gridY + 6;
 					doc.setFontSize(8.5);
 					doc.setFont("helvetica", "bold"); doc.text("Req. No:", rc, ry);
-					doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassreqNo || "", rc + lblOff, ry);
-					ry += rLH;
+					doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassreqNo || "", rc + lblOff, ry); ry += rLH;
 					doc.setFont("helvetica", "bold"); doc.text("GP Type:", rc, ry);
-					doc.setFont("helvetica", "normal"); doc.text("NRGP", rc + lblOff, ry);
-					ry += rLH;
+					doc.setFont("helvetica", "normal"); doc.text("RGP", rc + lblOff, ry); ry += rLH;
 					doc.setFont("helvetica", "bold"); doc.text("Department:", rc, ry);
-					doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", rc + lblOff, ry);
-					ry += rLH;
+					doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", rc + lblOff, ry); ry += rLH;
 					doc.setFont("helvetica", "bold"); doc.text("Vehicle No:", rc, ry);
-					doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", rc + lblOff, ry);
-					ry += rLH;
+					doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", rc + lblOff, ry); ry += rLH;
 					doc.setFont("helvetica", "bold"); doc.text("Vendor GST:", rc, ry);
 					doc.setFont("helvetica", "normal"); doc.text(oOut.VendorGST || "", rc + lblOff, ry);
 
-					// Page Number
 					doc.setFont("helvetica", "normal"); doc.setFontSize(7.5);
 					doc.text("Page " + data.pageNumber, pageWidth - margin, pageHeight - 7, { align: "right" });
 				}
@@ -661,165 +624,16 @@ sap.ui.define([
 			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
 			sigPositions.forEach(function (sx, i) { doc.text(sigLabels[i], sx + sigLineW / 2, sigY + 5, { align: "center" }); });
 
-			doc.save("GatePass_" + (oOut.GatePassNo || "Draft") + ".pdf");
+			doc.save("GatePass_RGP_" + (oOut.GatePassNo || "Draft") + ".pdf");
 			MessageToast.show("Gate Pass Printed");
-		},
-
-		onGenerateDCButtonPress: async function () {
-			var oModel = this.getView().getModel("nrgp");
-			var oOut = oModel.getData();
-			if (!oOut.ChallanNumber && oOut.GatePassNo) {
-				var sYear = new Date().getFullYear();
-				var sGeneratedDC = "DC/" + sYear + "/" + oOut.GatePassNo;
-				oModel.setProperty("/ChallanNumber", sGeneratedDC);
-				oOut.ChallanNumber = sGeneratedDC;
-			}
-			const { jsPDF } = window.jspdf;
-			var doc = new jsPDF("p", "mm", "a4");
-			var margin = 15;
-			var pageWidth = doc.internal.pageSize.width;
-			var pageHeight = doc.internal.pageSize.height;
-			var contentWidth = pageWidth - margin * 2;
-			var sDate = new Date().toLocaleDateString("en-GB").split("/").join("-");
-
-			doc.setLineWidth(0.6);
-			doc.rect(8, 6, pageWidth - 16, pageHeight - 12);
-			doc.setLineWidth(0.2);
-			doc.rect(9.5, 7.5, pageWidth - 19, pageHeight - 15);
-
-			var sLogoUrl = sap.ui.require.toUrl("zgpms/meilpower/com/images/meil_logo.png");
-			try {
-				var sLogoBase64 = await this._getImageBase64(sLogoUrl);
-				doc.addImage(sLogoBase64, "PNG", margin, 10, 30, 11);
-			} catch (e) { /* logo optional */ }
-
-			doc.setTextColor(0, 0, 0);
-			doc.setFont("helvetica", "bold"); doc.setFontSize(13);
-			doc.text("MEIL Neyveli Energy Private Limited", pageWidth / 2, 13, { align: "center" });
-			doc.setFont("helvetica", "normal"); doc.setFontSize(7.5);
-			doc.text("(Formerly TAQA Neyveli Power Company Private Limited)", pageWidth / 2, 17, { align: "center" });
-			doc.text("250MW LFPP, Uthangal, Neyveli, Tamilnadu - 607804, India.", pageWidth / 2, 20.5, { align: "center" });
-			doc.text("Tel : +91-4142-270300  |  Fax : +91-4142-270401", pageWidth / 2, 24, { align: "center" });
-			doc.setFont("helvetica", "bold");
-			doc.text("GSTIN : 33AACCS2753B1ZV  |  CIN : U40109TN1993PTC026223", pageWidth / 2, 27.5, { align: "center" });
-			doc.setLineWidth(0.5);
-			doc.line(margin, 30.5, pageWidth - margin, 30.5);
-
-			doc.setFont("helvetica", "bold"); doc.setFontSize(11);
-			doc.text("DELIVERY CHALLAN", pageWidth / 2, 37, { align: "center" });
-			var titleW = doc.getTextWidth("DELIVERY CHALLAN");
-			doc.setLineWidth(0.35);
-			doc.line(pageWidth / 2 - titleW / 2, 38.5, pageWidth / 2 + titleW / 2, 38.5);
-
-			var gridY = 41, gridH = 50;
-			var col1W = 62, col2W = 65;
-			var col1X = margin, col2X = margin + col1W, col3X = margin + col1W + col2W;
-			var pad = 3, lh = 5.5;
-
-			doc.setLineWidth(0.3);
-			doc.rect(col1X, gridY, contentWidth, gridH);
-			doc.line(col2X, gridY, col2X, gridY + gridH);
-			doc.line(col3X, gridY, col3X, gridY + gridH);
-
-			doc.setFontSize(8.5); doc.setFont("helvetica", "bold");
-			doc.text("To", col1X + pad, gridY + 8);
-			doc.setFont("helvetica", "normal"); doc.setFontSize(8);
-			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || oOut.City || "", col1W - 14);
-			doc.text(splitAddr, col1X + 10, gridY + 14);
-			doc.setLineWidth(0.2);
-			doc.line(col1X, gridY + gridH - 10, col2X, gridY + gridH - 10);
-			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
-			doc.text("GST No:", col1X + pad, gridY + gridH - 4);
-			doc.setFont("helvetica", "normal");
-			doc.text(oOut.VendorGST || "", col1X + 22, gridY + gridH - 4);
-
-			var c2 = col2X + pad, valOff2 = 30, y2 = gridY + 8;
-			doc.setFontSize(8);
-			doc.setFont("helvetica", "bold"); doc.text("DC No:", c2, y2);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.ChallanNumber || "Draft", c2 + valOff2, y2); y2 += lh;
-			doc.setFont("helvetica", "bold"); doc.text("DC Date:", c2, y2);
-			doc.setFont("helvetica", "normal"); doc.text(sDate, c2 + valOff2, y2); y2 += lh + 2;
-			doc.setFont("helvetica", "bold"); doc.text("Mode Of Transport:", c2, y2);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.ModeOfTransport || "By Road", c2 + valOff2, y2); y2 += lh + 2;
-			doc.setFont("helvetica", "bold"); doc.text("LR/Vehicle No:", c2, y2);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", c2 + valOff2, y2);
-
-			var c3 = col3X + pad, valOff3 = 27, y3 = gridY + 8;
-			doc.setFontSize(8);
-			doc.setFont("helvetica", "bold"); doc.text("GP No:", c3, y3);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassNo || "", c3 + valOff3, y3); y3 += lh;
-			doc.setFont("helvetica", "bold"); doc.text("GP Date:", c3, y3);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassDate || sDate, c3 + valOff3, y3); y3 += lh + 2;
-			doc.setFont("helvetica", "bold"); doc.text("Dept:", c3, y3);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", c3 + valOff3, y3);
-
-			var tableData = (oOut.items || []).map(function (item, index) {
-				return [
-					index + 1,
-					item.Material || "",
-					item.HSNCode || "",
-					item.UOM || "",
-					parseFloat(item.SentQuantity || 0).toLocaleString("en-IN", { minimumFractionDigits: 3 }),
-					parseFloat(item.ItemNetPrice || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 }),
-					parseFloat(item.Totalvalue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })
-				];
-			});
-
-			doc.autoTable({
-				startY: gridY + gridH + 1,
-				head: [["S.No", "DESCRIPTION", "HSN Code", "UOM", "QTY", "Rate", "Amt (In Rs.)"]],
-				body: tableData,
-				theme: "grid",
-				headStyles: { fillColor: [235, 235, 235], textColor: [0, 0, 0], fontStyle: "bold", fontSize: 8, halign: "center", valign: "middle", cellPadding: 3, lineWidth: 0.3, lineColor: [0, 0, 0] },
-				bodyStyles: { fontSize: 8, cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 }, lineColor: [0, 0, 0], lineWidth: 0.25, valign: "middle" },
-				columnStyles: { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: "auto" }, 2: { cellWidth: 25, halign: "center" }, 3: { cellWidth: 16, halign: "center" }, 4: { cellWidth: 20, halign: "right" }, 5: { cellWidth: 22, halign: "right" }, 6: { cellWidth: 27, halign: "right" } },
-				margin: { left: margin, right: margin }
-			});
-
-			var finalY = doc.lastAutoTable.finalY;
-			var fTotalNum = parseFloat(oOut.FinalTotal ? oOut.FinalTotal.toString().replace(/,/g, "") : "0") || 0;
-			var footH = 9, totalColW = 49;
-			doc.setLineWidth(0.25);
-			doc.rect(margin, finalY, contentWidth, footH);
-			doc.line(pageWidth - margin - totalColW, finalY, pageWidth - margin - totalColW, finalY + footH);
-			doc.setFont("helvetica", "normal"); doc.setFontSize(8);
-			doc.text("In Words :  Rupees " + this._numberToWords(Math.round(fTotalNum)) + " Only.", margin + 3, finalY + 5.5);
-			doc.setFont("helvetica", "bold");
-			doc.text("Total", pageWidth - margin - totalColW + 3, finalY + 5.5);
-			doc.text(fTotalNum.toLocaleString("en-IN", { minimumFractionDigits: 2 }), pageWidth - margin - 3, finalY + 5.5, { align: "right" });
-
-			var noteY = finalY + footH + 3;
-			var noteText = oOut.DCNotes || "Empty cylinders return to the vendor and there is no sale in this transaction.";
-			var splitNote = doc.splitTextToSize(noteText, contentWidth - 22);
-			var noteH = Math.max(10, splitNote.length * 5 + 6);
-			doc.setLineWidth(0.25);
-			doc.rect(margin, noteY, contentWidth, noteH);
-			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
-			doc.text("Note :", margin + 3, noteY + 6);
-			doc.setFont("helvetica", "normal");
-			doc.text(splitNote, margin + 18, noteY + 6);
-
-			var sigY = noteY + noteH + 22;
-			var sigLineW = 48;
-			doc.setLineWidth(0.3);
-			doc.line(margin, sigY, margin + sigLineW, sigY);
-			doc.line(pageWidth / 2 - sigLineW / 2, sigY, pageWidth / 2 + sigLineW / 2, sigY);
-			doc.line(pageWidth - margin - sigLineW, sigY, pageWidth - margin, sigY);
-			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
-			doc.text("Prepared By", margin + sigLineW / 2, sigY + 5, { align: "center" });
-			doc.text("Store In-Charge", pageWidth / 2, sigY + 5, { align: "center" });
-			doc.text("Authorised Signatory", pageWidth - margin - sigLineW / 2, sigY + 5, { align: "center" });
-
-			doc.save("DC_" + (oOut.GatePassNo || "Draft") + ".pdf");
-			MessageToast.show("Delivery Challan Downloaded");
 		},
 
 		_numberToWords: function (num) {
 			var a = ["", "One ", "Two ", "Three ", "Four ", "Five ", "Six ", "Seven ", "Eight ", "Nine ", "Ten ", "Eleven ", "Twelve ", "Thirteen ", "Fourteen ", "Fifteen ", "Sixteen ", "Seventeen ", "Eighteen ", "Nineteen "];
 			var b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
-			if ((num = num.toString()).length > 9) return "overflow";
+			if ((num = num.toString()).length > 9) { return "overflow"; }
 			var n = ("000000000" + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
-			if (!n) return "";
+			if (!n) { return ""; }
 			var str = "";
 			str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + " " + a[n[1][1]]) + "Crore " : "";
 			str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + " " + a[n[2][1]]) + "Lakh " : "";

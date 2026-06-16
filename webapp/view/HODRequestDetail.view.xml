@@ -50,10 +50,6 @@
 							<Input value="{hod>/Department}" editable="false" class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
-							<Label text="Fiscal Year" class="gpmsFieldLabel"/>
-							<Input value="{hod>/FiscalYear}" editable="false" class="gpmsFieldInput"/>
-						</VBox>
-						<VBox class="sapUiSmallMargin">
 							<Label text="Vendor Name" class="gpmsFieldLabel"/>
 							<Input value="{hod>/VendorName}" editable="false" class="gpmsFieldInput"/>
 						</VBox>
@@ -65,32 +61,54 @@
 							<Label text="City / Address" class="gpmsFieldLabel"/>
 							<Input value="{hod>/VendorAddress}" editable="false" class="gpmsFieldInput"/>
 						</VBox>
-						<VBox class="sapUiSmallMargin">
-							<Label text="Vehicle No." class="gpmsFieldLabel"/>
-							<Input value="{hod>/VehicleNo}" editable="false" class="gpmsFieldInput"/>
-						</VBox>
-						<VBox class="sapUiSmallMargin">
-							<Label text="Mode of Dispatch" class="gpmsFieldLabel"/>
-							<Input value="{hod>/ModeOfDispatch}" editable="false" class="gpmsFieldInput"/>
-						</VBox>
-						<VBox class="sapUiSmallMargin">
-							<Label text="Remarks" class="gpmsFieldLabel"/>
-							<Input value="{hod>/Remarks}" editable="false" class="gpmsFieldInput"/>
+						<VBox class="sapUiSmallMargin" visible="{= ${hod>/GatePassType} === 'RGP' }">
+							<Label text="Due Date" class="gpmsFieldLabel"/>
+							<Input value="{hod>/ReturnableDate}" editable="false" class="gpmsFieldInput"/>
 						</VBox>
 					</layout:Grid>
 				</Panel>
 
-				<!-- Attachment Panel — shown only when an image was uploaded -->
-				<Panel class="gpmsSection" expandable="false" visible="{= !!${hod>/Base64Img1}}">
+				<!-- Attachment Panel — shown only when a file was uploaded -->
+				<Panel class="gpmsSection" expandable="false" visible="{hod>/hasAttachment}">
 					<headerToolbar>
 						<Toolbar class="gpmsSectionBar">
 							<core:Icon src="sap-icon://attachment" class="gpmsSectionBarIcon"/>
-							<Label text="Attached Image" class="gpmsSectionBarLabel"/>
+							<Label text="Gate Pass Attachments" class="gpmsSectionBarLabel"/>
 						</Toolbar>
 					</headerToolbar>
-					<VBox class="sapUiSmallMargin" alignItems="Center">
-						<Image src="{hod>/Base64Img1}" press=".onImagePress" activeSrc="{hod>/Base64Img1}" width="250px" class="sapUiSmallMarginBottom"/>
-					</VBox>
+					<FlexBox class="sapUiSmallMargin" wrap="Wrap" justifyContent="SpaceAround" alignItems="Center" width="100%">
+						<!-- Attachment 1 Block -->
+						<VBox class="sapUiMediumMarginEnd sapUiSmallMarginBottom gpmsAttachmentPreviewBox" alignItems="Center" visible="{hod>/hasAttachment1}" width="280px">
+							<Label text="Attachment 1" class="gpmsBoldText sapUiSmallMarginBottom"/>
+							<!-- Image Preview -->
+							<VBox alignItems="Center" visible="{hod>/isImage1}">
+								<Image src="{hod>/Base64Img1}" press=".onImagePress" activeSrc="{hod>/Base64Img1}" width="220px" class="sapUiSmallMarginBottom gpmsAttachmentThumbnail"/>
+							</VBox>
+							<!-- Non-Image File Icon -->
+							<VBox alignItems="Center" visible="{= !${hod>/isImage1} }">
+								<core:Icon src="{= ${hod>/isPdf1} ? 'sap-icon://pdf-attachment' : 'sap-icon://doc-attachment' }" size="4rem" color="#1A237E" class="sapUiMediumMarginBottom"/>
+								<Text text="{hod>/Fname}" class="gpmsBoldText sapUiSmallMarginBottom" maxLines="1"/>
+							</VBox>
+							<!-- Action Button -->
+							<Button text="{= ${hod>/isPdf1} ? 'Open PDF 1' : 'Download File 1' }" icon="{= ${hod>/isPdf1} ? 'sap-icon://pdf-attachment' : 'sap-icon://download' }" press=".onDownloadAttachment1" type="Emphasized" class="sapUiSmallMarginTop"/>
+						</VBox>
+
+						<!-- Attachment 2 Block -->
+						<VBox class="sapUiSmallMarginBottom gpmsAttachmentPreviewBox" alignItems="Center" visible="{hod>/hasAttachment2}" width="280px">
+							<Label text="Attachment 2" class="gpmsBoldText sapUiSmallMarginBottom"/>
+							<!-- Image Preview -->
+							<VBox alignItems="Center" visible="{hod>/isImage2}">
+								<Image src="{hod>/Base64Img2}" press=".onImagePress" activeSrc="{hod>/Base64Img2}" width="220px" class="sapUiSmallMarginBottom gpmsAttachmentThumbnail"/>
+							</VBox>
+							<!-- Non-Image File Icon -->
+							<VBox alignItems="Center" visible="{= !${hod>/isImage2} }">
+								<core:Icon src="{= ${hod>/isPdf2} ? 'sap-icon://pdf-attachment' : 'sap-icon://doc-attachment' }" size="4rem" color="#1A237E" class="sapUiMediumMarginBottom"/>
+								<Text text="{hod>/Fname2}" class="gpmsBoldText sapUiSmallMarginBottom" maxLines="1"/>
+							</VBox>
+							<!-- Action Button -->
+							<Button text="{= ${hod>/isPdf2} ? 'Open PDF 2' : 'Download File 2' }" icon="{= ${hod>/isPdf2} ? 'sap-icon://pdf-attachment' : 'sap-icon://download' }" press=".onDownloadAttachment2" type="Emphasized" class="sapUiSmallMarginTop"/>
+						</VBox>
+					</FlexBox>
 				</Panel>
 
 				<!-- Items Table -->
@@ -138,20 +156,33 @@
 					<headerToolbar>
 						<Toolbar class="gpmsSectionBar">
 							<core:Icon src="sap-icon://approvals" class="gpmsSectionBarIcon"/>
-							<Label text="HOD Remarks" class="gpmsSectionBarLabel"/>
+							<Label text="Decision &amp; Remarks" class="gpmsSectionBarLabel"/>
 						</Toolbar>
 					</headerToolbar>
-					<VBox class="sapUiSmallMargin">
-						<Label text="Enter your remarks before approving / rejecting / sending for amendment" class="gpmsFieldLabel"/>
-						<TextArea
-							value="{hod>/HODRemarks}"
-							placeholder="Enter HOD remarks here (up to 250 characters)..."
-							rows="4"
-							width="100%"
-							maxLength="250"
-							showExceededText="true"
-							class="gpmsFieldInput gpmsTextAreaBig"/>
-					</VBox>
+					<layout:Grid defaultSpan="XL6 L6 M12 S12" vSpacing="0" hSpacing="0.5">
+						<!-- Requester Remarks (Read-Only) -->
+						<VBox class="sapUiSmallMargin">
+							<Label text="Requester Remarks" class="gpmsFieldLabel"/>
+							<TextArea
+								value="{hod>/Remarks}"
+								editable="false"
+								rows="5"
+								width="100%"
+								class="gpmsFieldInput gpmsFieldInputReadonly gpmsTextAreaBig"/>
+						</VBox>
+						<!-- HOD Remarks (Editable) -->
+						<VBox class="sapUiSmallMargin">
+							<Label text="HOD Remarks" class="gpmsFieldLabel"/>
+							<TextArea
+								value="{hod>/HODRemarks}"
+								placeholder="Enter your remarks here before approving / rejecting / sending for amendment (up to 250 characters)..."
+								rows="5"
+								width="100%"
+								maxLength="250"
+								showExceededText="true"
+								class="gpmsFieldInput gpmsTextAreaBig"/>
+						</VBox>
+					</layout:Grid>
 				</Panel>
 
 			</VBox>

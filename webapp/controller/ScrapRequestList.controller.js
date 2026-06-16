@@ -93,43 +93,66 @@ sap.ui.define([
 		},
 
 		_deriveStatus: function (oItem) {
-			var s1 = oItem.Approval1;
+			var fnGetProp = function (obj, sProp) {
+				if (!obj) return "";
+				var sTarget = sProp.toLowerCase();
+				for (var key in obj) {
+					if (key.toLowerCase() === sTarget) {
+						return obj[key];
+					}
+				}
+				return "";
+			};
+
+			var s1 = fnGetProp(oItem, "Approval1");
 			if (!s1 || s1 === "null" || s1 === "undefined") s1 = "";
 			s1 = String(s1).trim().toUpperCase();
 
-			var s2 = oItem.Approval2;
+			var s2 = fnGetProp(oItem, "Approval2");
 			if (!s2 || s2 === "null" || s2 === "undefined") s2 = "";
 			s2 = String(s2).trim().toUpperCase();
 
-			var sStatus = oItem.Status || oItem.ReqStatus;
+			var sStatus = fnGetProp(oItem, "Status") || fnGetProp(oItem, "ReqStatus");
 			if (!sStatus || sStatus === "null" || sStatus === "undefined") sStatus = "";
 			sStatus = String(sStatus).trim().toUpperCase();
 
-			// 1. Primary logic based on Approval fields
-			if (s1 === "R"  || s2 === "R")  return "Rejected";
-			if (s1 === "AM" || s2 === "AM") return "Amendment";
-			if (s2) return "Approved"; // If Store approved, it is fully approved
+			var sAppReq = fnGetProp(oItem, "ApprovalReq");
+			sAppReq = String(sAppReq).trim().toUpperCase();
+
+			// 1. Rejected checks
+			if (s1 === "R" || s2 === "R" || sAppReq === "R" || sStatus === "REJECTED") {
+				return "Rejected";
+			}
+
+			// 2. Amendment checks
+			if (s1 === "AM" || s2 === "AM" || sAppReq === "AM" || sAppReq === "AMENDMENT" || sStatus === "AM" || sStatus === "AMENDMENT") {
+				return "Amendment";
+			}
+
+			// 3. Approved checks (Store acted, or explicitly Approved)
+			if (s2 || sStatus === "APPROVED") {
+				return "Approved";
+			}
 			
 			// If backend GET_ENTITYSET forgot Approval2 but returned STORERemarks, we can assume Store acted
-			var sStoreRemarks = oItem.STORERemarks;
+			var sStoreRemarks = fnGetProp(oItem, "STORERemarks");
 			if (sStoreRemarks && String(sStoreRemarks).trim() !== "" && String(sStoreRemarks) !== "null") {
 				return "Approved";
 			}
 
-			if (s1 && !s2) return "Store Approval Pending";
-			
-			// 2. Fallback to Status/ApprovalReq fields
-			if (oItem.ApprovalReq === "A") return "Approved";
-			if (oItem.ApprovalReq === "R") return "Rejected";
-			if (oItem.ApprovalReq === "P") return "Pending";
-			
+			// 4. Pending checks
+			if (s1 && s1 !== "X" && s1 !== "PENDING" && !s2) {
+				return "Store Approval Pending";
+			}
+
+			// Fallback checks
 			if (sStatus === "STORE APPROVAL PENDING") return "Store Approval Pending";
 			if (sStatus === "APPROVED") return "Approved";
 			if (sStatus === "REJECTED") return "Rejected";
 			if (sStatus === "AMENDMENT") return "Amendment";
 			if (sStatus === "CAN" || sStatus === "CANCELLED") return "Cancelled";
 			if (sStatus === "C"   || sStatus === "CLOSED")    return "Closed";
-			
+
 			return "Pending";
 		},
 

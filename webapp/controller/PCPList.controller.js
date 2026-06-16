@@ -11,6 +11,7 @@ sap.ui.define([
 	return BaseController.extend("zgpms.meilpower.com.controller.PCPList", {
 
 		onInit: function () {
+			this.getView().setModel(new JSONModel({ results: [] }), "pcpList");
 			var oRouter = this.getRouter();
 			oRouter.getRoute("PCPList").attachMatched(this._onRouteMatched, this);
 		},
@@ -26,41 +27,40 @@ sap.ui.define([
 		_loadPCPList: function () {
 			var oView = this.getView();
 			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) { return; }
+
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var sPlant = (oUserModel && oUserModel.getProperty("/Plant")) || "";
+			var aFilters = sPlant ? [new Filter("Plant", FilterOperator.EQ, sPlant)] : [];
 
 			sap.ui.core.BusyIndicator.show(0);
-			// Fetch PCPs
 			var that = this;
 			oODataModel.read("/PCPHdrSet", {
-				filters: [new Filter("SourceType", FilterOperator.EQ, "PettyCash")],
-				urlParameters: {
-					"$expand": "PCPItmNav"
-				},
+				filters: aFilters,
+				urlParameters: { "$expand": "PCPItmNav" },
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
 					var aResults = oData.results || [];
 
-					// Format data for the view
 					aResults.forEach(function (oItem) {
 						oItem.PCPDate = that._formatSAPDateToDisplay(oItem.PCPDate);
 						oItem.GEDate = that._formatSAPDateToDisplay(oItem.GEDate);
 
-						// Get first item desc and PCPNo
 						oItem.FirstItemDesc = "";
 						if (oItem.PCPItmNav && oItem.PCPItmNav.results && oItem.PCPItmNav.results.length > 0) {
 							oItem.FirstItemDesc = oItem.PCPItmNav.results[0].ItemDescription || "";
-							oItem.PCPNo = oItem.PCPItmNav.results[0].PCPNo || oItem.PurchaseOrder || oItem.GateEntryNo || "";
+							oItem.PCPNo = oItem.PCPItmNav.results[0].GatepassNo || oItem.PCPItmNav.results[0].PCPNo || oItem.PurchaseOrder || oItem.GateEntryNo || "";
 						} else {
-							oItem.PCPNo = oItem.PurchaseOrder || oItem.GateEntryNo || "";
+							oItem.PCPNo = oItem.GatepassNo || oItem.PCPNo || oItem.PurchaseOrder || oItem.GateEntryNo || "";
 						}
 					});
 
-					var oListModel = new JSONModel(aResults);
-					oView.setModel(oListModel, "pcpList");
+					oView.getModel("pcpList").setProperty("/results", aResults);
 				},
-				error: function (oError) {
+				error: function () {
 					sap.ui.core.BusyIndicator.hide();
-					MessageBox.error("Failed to load PCP List.");
-					oView.setModel(new JSONModel([]), "pcpList");
+					MessageBox.error("Failed to load Gate Entry List.");
+					oView.getModel("pcpList").setProperty("/results", []);
 				}
 			});
 		},
@@ -161,8 +161,9 @@ sap.ui.define([
 			}
 			
 			// Dynamically populate distinct dates for filter
-			var aData = this.getView().getModel("pcpList").getData();
-			var aUniqueDates = [...new Set(aData.map(item => item.PCPDate))].filter(Boolean);
+			var oListModel = this.getView().getModel("pcpList");
+			var aData = oListModel ? (oListModel.getProperty("/results") || []) : [];
+			var aUniqueDates = [...new Set(aData.map(function(item) { return item.PCPDate; }))].filter(Boolean);
 			var oDateFilter = this._oFilterDialog.getFilterItems()[0];
 			oDateFilter.removeAllItems();
 			var sapItem = sap.ui.require("sap/m/ViewSettingsItem");
@@ -178,17 +179,58 @@ sap.ui.define([
 		// ==========================================================
 
 		onAddPCP: function () {
-			this._openPCPDialog("CREATE");
+			this.getRouter().navTo("GatePassWithPO");
 		},
 
 		onViewPCP: function (oEvent) {
 			var oRowCtx = oEvent.getSource().getBindingContext("pcpList");
-			this._openPCPDialog("VIEW", oRowCtx.getObject());
+			var oItem = oRowCtx.getObject();
+			var sGeDate = this._toSAPDate(oItem.GEDate);
+			this._storeNavEntry(oItem, sGeDate);
+			this.getRouter().navTo("GatePassWithPOEdit", {
+				gateEntryNo: oItem.GateEntryNo,
+				geDate: sGeDate,
+				sourceType: oItem.SourceType || "PO",
+				mode: "VIEW"
+			});
 		},
 
 		onEditPCP: function (oEvent) {
 			var oRowCtx = oEvent.getSource().getBindingContext("pcpList");
-			this._openPCPDialog("EDIT", oRowCtx.getObject());
+			var oItem = oRowCtx.getObject();
+			var sGeDate = this._toSAPDate(oItem.GEDate);
+			this._storeNavEntry(oItem, sGeDate);
+			this.getRouter().navTo("GatePassWithPOEdit", {
+				gateEntryNo: oItem.GateEntryNo,
+				geDate: sGeDate,
+				sourceType: oItem.SourceType || "PO",
+				mode: "EDIT"
+			});
+		},
+
+		// Store the selected item's raw OData data for the edit form to use directly
+		_storeNavEntry: function (oItem, sGEDateRaw) {
+			sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel({
+				GateEntryNo: oItem.GateEntryNo,
+				GEDate: sGEDateRaw,
+				SourceType: oItem.SourceType || "",
+				Vendor: oItem.Vendor || "",
+				VendorDesc: oItem.VendorDesc || "",
+				Plant: oItem.Plant || "",
+				Department: oItem.Department || "",
+				PurchaseOrder: oItem.PurchaseOrder || "",
+				RGPNumber: oItem.RGPNumber || "",
+				DCNumber: oItem.DCNumber || "",
+				DCdate: oItem.DCdate || "",
+				GatepassNo: oItem.GatepassNo || "",
+				BudgetCode: oItem.BudgetCode || "",
+				TotalCost: oItem.TotalCost || "0.00",
+				RRNo: oItem.RRNo || "",
+				InspectionStatus: oItem.InspectionStatus || "",
+				Inspectiondate: oItem.Inspectiondate || "",
+				Remarks: oItem.Remarks || "",
+				PCPItmNav: oItem.PCPItmNav || { results: [] }
+			}), "selectedGateEntry");
 		},
 
 		_openPCPDialog: function (sMode, oDataObj) {
@@ -208,15 +250,10 @@ sap.ui.define([
 
 				// Configure View Mode vs Edit Mode
 				var bIsView = sMode === "VIEW";
-				this.getView().byId("pcpEntryPoint").setEditable(!bIsView);
-				this.getView().byId("pcpGENo").setEditable(sMode === "CREATE");
-				this.getView().byId("pcpDate").setEditable(!bIsView);
-				this.getView().byId("pcpDCInvoiceNo").setEditable(!bIsView);
-				this.getView().byId("pcpDCInvoiceDate").setEditable(!bIsView);
-				this.getView().byId("pcpBudgetCode").setEditable(!bIsView);
-				this.getView().byId("pcpTotalCost").setEditable(!bIsView);
-
-				this.getView().byId("btnSubmitPCP").setVisible(!bIsView);
+				var oSubmitBtn = this.getView().byId("btnSubmitPCP");
+				if (oSubmitBtn) {
+					oSubmitBtn.setVisible(!bIsView);
+				}
 
 				oDialog.open();
 			}.bind(this));
@@ -247,7 +284,8 @@ sap.ui.define([
 					SourceType: "",
 					ItemNo: "",
 					BudgetCode: "",
-					TotalCost: ""
+					TotalCost: "",
+					isView: false
 				};
 			} else {
 				// Format back from DD-MM-YYYY to YYYY-MM-DD for date pickers
@@ -274,7 +312,15 @@ sap.ui.define([
 					SourceType: oSourceData.SourceType || "",
 					ItemNo: "",
 					BudgetCode: oSourceData.BudgetCode,
-					TotalCost: oSourceData.TotalCost || "0"
+					TotalCost: oSourceData.TotalCost || "0",
+					PurchaseOrder: oSourceData.PurchaseOrder || "",
+					RGPNumber: oSourceData.RGPNumber || "",
+					PCPNo: oSourceData.GatepassNo || oSourceData.PCPNo || "",
+					RRNo: oSourceData.RRNo || "",
+					Remarks: oSourceData.Remarks || "",
+					InspectionStatus: oSourceData.InspectionStatus || "",
+					Inspectiondate: formatBack(oSourceData.Inspectiondate || ""),
+					isView: sMode === "VIEW"
 				};
 
 				if (oSourceData.PCPItmNav && oSourceData.PCPItmNav.results && oSourceData.PCPItmNav.results.length > 0) {
@@ -363,6 +409,16 @@ sap.ui.define([
 			var oDate = new Date(sDate);
 			if (isNaN(oDate.getTime())) return "";
 			return oDate.getFullYear() + String(oDate.getMonth() + 1).padStart(2, "0") + String(oDate.getDate()).padStart(2, "0");
+		},
+
+		// Convert display date (DD-MM-YYYY) back to SAP format (YYYYMMDD)
+		_toSAPDate: function (sDisplayDate) {
+			if (!sDisplayDate) return "";
+			var aParts = sDisplayDate.split("-");
+			if (aParts.length === 3 && aParts[0].length === 2) {
+				return aParts[2] + aParts[1] + aParts[0];
+			}
+			return sDisplayDate;
 		},
 
 		onSubmitPCP: function () {

@@ -1,4 +1,4 @@
-sap.ui.define([
+﻿﻿sap.ui.define([
 	"sap/ui/core/mvc/Controller",
 	"sap/ui/model/json/JSONModel",
 	"sap/m/MessageBox",
@@ -143,6 +143,27 @@ sap.ui.define([
 
 		_applyDocToView: function (oDoc, sStep) {
 			var oData = JSON.parse(JSON.stringify(oDoc)); // deep clone
+			
+			if (oData.items) {
+				oData.items.forEach(function (it) {
+					var fSent = parseFloat(it.SentQuantity) || 0;
+					var fRec = parseFloat(it.RecievedQuantity) || 0;
+					var fBal = parseFloat(it.BalanceQuantity);
+					if (isNaN(fBal)) {
+						fBal = fSent;
+					} else if (fBal === 0 && fRec === 0) {
+						fBal = fSent;
+					}
+
+					it.PrevBalance = fBal;
+
+					if (sStep === "STORE_CLOSE") {
+						it.RecievedQuantity = "0";
+						it.BalanceQuantity = String(fBal);
+					}
+				});
+			}
+
 			oData.dropdowns = this._getDefaultDropdowns();
 			oData.ui = this._buildUIFlags(sStep);
 			// wrap header fields so the form binding path (/header/...) works
@@ -227,10 +248,31 @@ sap.ui.define([
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
 					var sGPNo = oData.GatePassNo || "";
-					MessageBox.success("IRGP " + sGPNo + " created successfully.", {
-						onClose: function () {
+					var oPrintHeader = {
+						IRGPNo:               sGPNo,
+						GEDate:               oHeader.GEDate,
+						DueDate:              oHeader.DueDate,
+						Department:           oHeader.Department,
+						RequestType:          oHeader.RequestType || "IRGP",
+						RequestUser:          oHeader.RequestUser || "",
+						ContractName:         oHeader.ContractName,
+						ContractEmployeeName: oHeader.ContractEmployeeName,
+						Remarks:              oHeader.Remarks || ""
+					};
+					MessageBox.show("IRGP " + sGPNo + " created successfully.", {
+						icon: MessageBox.Icon.SUCCESS,
+						title: "IRGP Created",
+						actions: ["Print", "Go to List"],
+						emphasizedAction: "Print",
+						onClose: function (sAction) {
 							oModel.setProperty("/ui/hasPendingChanges", false);
-							this._getRouter().navTo("IRGP", { step: "LIST", gpNo: "ALL" });
+							if (sAction === "Print") {
+								this._printDocument(oPrintHeader, aItems).then(function () {
+									this._getRouter().navTo("IRGP", { step: "LIST", gpNo: "ALL" });
+								}.bind(this));
+							} else {
+								this._getRouter().navTo("IRGP", { step: "LIST", gpNo: "ALL" });
+							}
 						}.bind(this)
 					});
 				}.bind(this),
@@ -275,7 +317,7 @@ sap.ui.define([
 				ReturnedDate:    this._toSAPDate(oHeader.ReturnedDate || ""),
 				ReturnUser:      oHeader.ReturnUser || "",
 				Status:          "Reservation Linked",
-				MRNumber:        aItems.length === 1 ? aItems[0].MRNumber : aItems.map(function (it) { return it.MRNumber; }).join(","),
+				MRNumber:        aItems[0] ? aItems[0].MRNumber : "",
 				Message:         "",
 				IRGPItmNav:    aItems.map(function (it) {
 					return {
@@ -324,6 +366,98 @@ sap.ui.define([
 		},
 
 		// =========================================================================
+		// OData: Update — Edit existing IRGP (EDIT step)
+		// =========================================================================
+
+		onSubmitEdit: function () {
+			var oModel  = this.getView().getModel("irgp");
+			var oHeader = oModel.getProperty("/header");
+			var aItems  = oModel.getProperty("/items");
+
+			if (!oHeader.Department)           { MessageBox.error("Please enter Department."); return; }
+			if (!oHeader.ContractName)         { MessageBox.error("Please enter Contract Vendor Name."); return; }
+			if (!oHeader.ContractEmployeeName) { MessageBox.error("Please enter Responsible Person Name."); return; }
+			if (!oHeader.DueDate)              { MessageBox.error("Please enter Expected Due Date."); return; }
+			if (!aItems || aItems.length === 0){ MessageBox.error("Please add at least one material item."); return; }
+
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) { return; }
+
+			var oPayload = {
+				GatePassNo:      oHeader.IRGPNo,
+				RequestDate:     this._toSAPDate(oHeader.GEDate || new Date().toISOString().split("T")[0]),
+				DueDate:         this._toSAPDate(oHeader.DueDate),
+				Department:      oHeader.Department,
+				RequestedUser:   oHeader.RequestUser  || "",
+				ContractName:    oHeader.ContractName,
+				TAQAEmployee:    oHeader.ContractEmployeeName,
+				RequestType:     oHeader.RequestType  || "IRGP",
+				Remarks:         oHeader.Remarks      || "",
+				RevisedDueDate:  this._toSAPDate(oHeader.RevisedDueDate || oHeader.DueDate),
+				ReturnedDate:    this._toSAPDate(oHeader.ReturnedDate   || ""),
+				ReturnUser:      oHeader.ReturnUser   || "",
+				MRNumber:        oHeader.MRNumber     || "",
+				Status:          STATUS_REVERSE[oHeader.StatusCode] || "Open",
+				Message:         "",
+				IRGPItmNav: aItems.map(function (it, i) {
+					return {
+						GatePassNo:       oHeader.IRGPNo,
+						ItemNo:           it.ItemNo || String((i + 1) * 10).padStart(5, "0"),
+						ItemCode:         it.ItemCode        || "",
+						ItemDescription:  it.ItemDescription || "",
+						SentQuantity:     parseFloat(it.SentQuantity     || 0).toFixed(3),
+						RecievedQuantity: parseFloat(it.RecievedQuantity || 0).toFixed(3),
+						BalanceQuantity:  parseFloat(it.BalanceQuantity  || it.SentQuantity || 0).toFixed(3),
+						UOM:              it.UOM             || "",
+						MRNumber:         it.MRNumber        || "",
+						Location:         it.Location        || "",
+						Mp2ItmCode:       it.Mp2ItemCode      || "",
+						DefaultBin:       it.DefaultBin       || ""
+					};
+				})
+			};
+
+			sap.ui.core.BusyIndicator.show(0);
+			oODataModel.create("/IRGPHdrSet", oPayload, {
+				success: function (oData) {
+					sap.ui.core.BusyIndicator.hide();
+					var sMsg = (oData && oData.Message) || ("IRGP " + oHeader.IRGPNo + " updated successfully.");
+					var oPrintHeader = {
+						IRGPNo:               oHeader.IRGPNo,
+						GEDate:               oHeader.GEDate,
+						DueDate:              oHeader.DueDate,
+						Department:           oHeader.Department,
+						RequestType:          oHeader.RequestType || "IRGP",
+						RequestUser:          oHeader.RequestUser || "",
+						ContractName:         oHeader.ContractName,
+						ContractEmployeeName: oHeader.ContractEmployeeName,
+						Remarks:              oHeader.Remarks || ""
+					};
+					MessageBox.show(sMsg, {
+						icon: MessageBox.Icon.SUCCESS,
+						title: "IRGP Updated",
+						actions: ["Print", "Go to List"],
+						emphasizedAction: "Print",
+						onClose: function (sAction) {
+							oModel.setProperty("/ui/hasPendingChanges", false);
+							if (sAction === "Print") {
+								this._printDocument(oPrintHeader, aItems).then(function () {
+									this._getRouter().navTo("IRGP", { step: "LIST", gpNo: "ALL" });
+								}.bind(this));
+							} else {
+								this._getRouter().navTo("IRGP", { step: "LIST", gpNo: "ALL" });
+							}
+						}.bind(this)
+					});
+				}.bind(this),
+				error: function (oError) {
+					sap.ui.core.BusyIndicator.hide();
+					MessageBox.error(this._parseODataError(oError, "Failed to update IRGP."));
+				}.bind(this)
+			});
+		},
+
+		// =========================================================================
 		// OData: Update — Verify Returns & Close (STORE_CLOSE step)
 		// =========================================================================
 
@@ -361,16 +495,35 @@ sap.ui.define([
 					var sReturnedDate = new Date().toISOString().split("T")[0];
 					var sODataStatus = STATUS_REVERSE[oHeader.StatusCode] || "Closed";
 					var oPayload = {
-						GatePassNo:   oHeader.IRGPNo,
-						Status:       sODataStatus,
-						ReturnedDate: this._toSAPDate(sReturnedDate),
-						ReturnUser:   oHeader.ReturnUser || "",
-						IRGPItmNav:   aItems.map(function (it) {
+						GatePassNo:      oHeader.IRGPNo,
+						RequestDate:     this._toSAPDate(oHeader.GEDate || new Date().toISOString().split("T")[0]),
+						DueDate:         this._toSAPDate(oHeader.DueDate),
+						Department:      oHeader.Department,
+						RequestedUser:   oHeader.RequestUser || "",
+						ContractName:    oHeader.ContractName,
+						TAQAEmployee:    oHeader.ContractEmployeeName,
+						RequestType:     oHeader.RequestType || "IRGP",
+						Remarks:         oHeader.Remarks || "",
+						RevisedDueDate:  this._toSAPDate(oHeader.RevisedDueDate || oHeader.DueDate),
+						ReturnedDate:    this._toSAPDate(sReturnedDate),
+						ReturnUser:      oHeader.ReturnUser || "",
+						Status:          sODataStatus,
+						MRNumber:        oHeader.MRNumber || (aItems[0] ? aItems[0].MRNumber : ""),
+						Message:         "",
+						IRGPItmNav:    aItems.map(function (it) {
 							return {
 								GatePassNo:       oHeader.IRGPNo,
 								ItemNo:           it.ItemNo || String(it.SNo * 10).padStart(5, "0"),
+								ItemCode:         it.ItemCode         || "",
+								ItemDescription:  it.ItemDescription  || "",
+								SentQuantity:     parseFloat(it.SentQuantity || 0).toFixed(3),
 								RecievedQuantity: parseFloat(it.RecievedQuantity || 0).toFixed(3),
-								BalanceQuantity:  parseFloat(it.BalanceQuantity  || 0).toFixed(3)
+								BalanceQuantity:  parseFloat(it.BalanceQuantity  || 0).toFixed(3),
+								UOM:              it.UOM              || "",
+								MRNumber:         it.MRNumber         || "",
+								Location:         it.Location         || "",
+								Mp2ItmCode:       it.Mp2ItemCode       || "",
+								DefaultBin:       it.DefaultBin        || ""
 							};
 						})
 					};
@@ -402,7 +555,9 @@ sap.ui.define([
 
 		_sanitizeMRN: function (sVal) {
 			if (!sVal) { return ""; }
-			return /^0+$/.test(sVal.trim()) ? "" : sVal.trim();
+			var sTrim = sVal.trim();
+			if (/^0+$/.test(sTrim)) { return ""; }
+			return sTrim.replace(/^0+/, "");
 		},
 
 		// Normalise any SAP date format to "YYYY-MM-DD" for DatePicker valueFormat
@@ -547,12 +702,12 @@ sap.ui.define([
 			oModel.setProperty("/ui/bannerType",     "Warning");
 			oModel.setProperty("/ui/headerEditable",  false);
 			oModel.setProperty("/ui/itemsEditable",   false);
-			oModel.setProperty("/ui/mrNumberEditable",true);
+			oModel.setProperty("/ui/mrNumberEditable",false);
 			oModel.setProperty("/ui/receivedQtyEditable", false);
 			oModel.setProperty("/ui/submitVisible",   false);
 			oModel.setProperty("/ui/submitResVisible",true);
 			oModel.setProperty("/ui/closeVisible",    false);
-			oModel.setProperty("/ui/printVisible",    true);
+			oModel.setProperty("/ui/printVisible",    false);
 		},
 
 		_applyStoreCloseMode: function () {
@@ -563,7 +718,7 @@ sap.ui.define([
 			oModel.setProperty("/ui/bannerType",         "Warning");
 			oModel.setProperty("/ui/headerEditable",      false);
 			oModel.setProperty("/ui/itemsEditable",       false);
-			oModel.setProperty("/ui/mrNumberEditable",    false);
+			oModel.setProperty("/ui/mrNumberEditable",    true);
 			oModel.setProperty("/ui/receivedQtyEditable", true);
 			oModel.setProperty("/ui/storeStatusEditable", true);
 			oModel.setProperty("/ui/submitVisible",       false);
@@ -598,10 +753,28 @@ sap.ui.define([
 			oModel.setProperty("/ui/printVisible",    true);
 		},
 
+		_applyEditMode: function () {
+			var oModel = this.getView().getModel("irgp");
+			oModel.setProperty("/ui/currentStep",          "EDIT");
+			oModel.setProperty("/ui/title",                "Edit IRGP");
+			oModel.setProperty("/ui/bannerText",           "Edit Mode: Modify IRGP details and resubmit.");
+			oModel.setProperty("/ui/bannerType",           "Warning");
+			oModel.setProperty("/ui/headerEditable",        true);
+			oModel.setProperty("/ui/itemsEditable",         true);
+			oModel.setProperty("/ui/mrNumberEditable",      false);
+			oModel.setProperty("/ui/receivedQtyEditable",   false);
+			oModel.setProperty("/ui/submitVisible",         false);
+			oModel.setProperty("/ui/submitResVisible",      false);
+			oModel.setProperty("/ui/closeVisible",          false);
+			oModel.setProperty("/ui/printVisible",          false);
+			oModel.setProperty("/ui/submitEditVisible",     true);
+		},
+
 		_applyModeForStep: function (sStep) {
 			if      (sStep === "USER_UPDATE")  { this._applyUserUpdateMode(); }
 			else if (sStep === "STORE_CLOSE")  { this._applyStoreCloseMode(); }
 			else if (sStep === "CLOSED")       { this._applyClosedMode(); }
+			else if (sStep === "EDIT")         { this._applyEditMode(); }
 		},
 
 		_buildUIFlags: function (sStep) {
@@ -613,12 +786,13 @@ sap.ui.define([
 				bannerType:           "Information",
 				headerEditable:       false,
 				itemsEditable:        false,
-				mrNumberEditable:     sStep === "USER_UPDATE",
+				mrNumberEditable:     sStep === "STORE_CLOSE",
 				receivedQtyEditable:  sStep === "STORE_CLOSE",
 				storeStatusEditable:  sStep === "STORE_CLOSE",
 				revisedDueDateEditable: sStep === "STORE_CLOSE",
 				submitVisible:        false,
 				submitResVisible:     sStep === "USER_UPDATE",
+				submitEditVisible:    sStep === "EDIT",
 				closeVisible:         sStep === "STORE_CLOSE",
 				printVisible:         true
 			};
@@ -641,6 +815,11 @@ sap.ui.define([
 				aFilters.push(new sap.ui.model.Filter("StatusCode", sap.ui.model.FilterOperator.EQ, sKey));
 			}
 			oBinding.filter(aFilters);
+		},
+
+		onActionEdit: function (oEvent) {
+			var oItem = oEvent.getSource().getBindingContext("irgpGlobal").getObject();
+			this._getRouter().navTo("IRGP", { step: "EDIT", gpNo: oItem.IRGPNo });
 		},
 
 		onActionLinkMRN: function (oEvent) {
@@ -688,19 +867,22 @@ sap.ui.define([
 			var oInput = oEvent.getSource();
 			var sPath  = oInput.getBindingContext("irgp").getPath();
 			var oModel = this.getView().getModel("irgp");
-			var fSent  = parseFloat(oModel.getProperty(sPath + "/SentQuantity")) || 0;
+			var fPrevBal = parseFloat(oModel.getProperty(sPath + "/PrevBalance"));
+			if (isNaN(fPrevBal)) {
+				fPrevBal = parseFloat(oModel.getProperty(sPath + "/SentQuantity")) || 0;
+			}
 			var fRec   = parseFloat(oInput.getValue()) || 0;
-			if (fRec > fSent) {
-				MessageBox.error("Received Quantity cannot exceed Sent Quantity (" + fSent + ").");
+			if (fRec > fPrevBal) {
+				MessageBox.error("Received Quantity cannot exceed remaining Balance Quantity (" + fPrevBal + ").");
 				oInput.setValue("0");
 				fRec = 0;
 			}
-			this._recalculateBalance(sPath, fSent, fRec);
+			this._recalculateBalance(sPath, fPrevBal, fRec);
 		},
 
-		_recalculateBalance: function (sPath, fSent, fRec) {
+		_recalculateBalance: function (sPath, fBase, fRec) {
 			var oModel = this.getView().getModel("irgp");
-			var fBal = Math.max(fSent - fRec, 0);
+			var fBal = Math.max(fBase - fRec, 0);
 			oModel.setProperty(sPath + "/BalanceQuantity", String(fBal));
 			oModel.setProperty("/ui/hasPendingChanges", true);
 		},
@@ -737,178 +919,240 @@ sap.ui.define([
 			}
 		},
 
-		// =========================================================================
+		// ==========================================================
 		onPrint: async function () {
 			var oIRGP = this.getView().getModel("irgp").getData();
 			if (!oIRGP.header.IRGPNo || oIRGP.header.IRGPNo === "Draft (Auto-Generated)") {
 				MessageBox.warning("Please submit/save the IRGP first before printing.");
 				return;
 			}
+			this._printDocument(oIRGP.header, oIRGP.items);
+		},
 
+		onPrintRow: async function (oEvent) {
+			var oItem = oEvent.getSource().getBindingContext("irgpGlobal").getObject();
+			var oHeader = {
+				IRGPNo:               oItem.IRGPNo,
+				GEDate:               oItem.GEDate,
+				DueDate:              oItem.DueDate,
+				Department:           oItem.Department,
+				RequestType:          oItem.RequestType,
+				RequestUser:          oItem.RequestUser,
+				ContractName:         oItem.ContractName,
+				ContractEmployeeName: oItem.ContractEmployeeName,
+				Remarks:              oItem.Remarks
+			};
+			this._printDocument(oHeader, oItem.items);
+		},
+
+		_printDocument: async function (oHeader, aItems) {
 			const { jsPDF } = window.jspdf;
-			// Landscape A4
+			// ── Landscape A4 ─────────────────────────────────────────────────────
 			var doc = new jsPDF('l', 'mm', 'a4');
-			var pageWidth = doc.internal.pageSize.width;    // 297mm
+			var pageWidth  = doc.internal.pageSize.width;   // 297mm
 			var pageHeight = doc.internal.pageSize.height;  // 210mm
-			var margin = 12;
-			var contentWidth = pageWidth - margin * 2;       // 273mm
+			var margin = 14;
+			var cW = pageWidth - margin * 2;                // content width ~269mm
 
-			var sLogoUrl = sap.ui.require.toUrl("zgpms/meilpower/com/images/meil_logo.png");
+			// ── Logo ─────────────────────────────────────────────────────────────
+			var sLogoUrl    = sap.ui.require.toUrl("zgpms/meilpower/com/images/meil_logo.png");
 			var sLogoBase64 = null;
-			try {
-				sLogoBase64 = await this._getImageBase64(sLogoUrl);
-			} catch (e) { /* logo optional */ }
+			try { sLogoBase64 = await this._getImageBase64(sLogoUrl); } catch (e) { /* optional */ }
 
-			var sTypeLabel = "INWARD RETURNABLE GATE PASS";
+			// ── Helper: format date DD-MM-YYYY ───────────────────────────────────
+			var fmtDate = function (s) {
+				if (!s) { return ""; }
+				if (/^\d{2}-\d{2}-\d{4}$/.test(s)) { return s; }   // already formatted
+				var d = new Date(s);
+				if (isNaN(d)) { return s; }
+				var dd = String(d.getDate()).padStart(2, "0");
+				var mm = String(d.getMonth() + 1).padStart(2, "0");
+				var yy = d.getFullYear();
+				return dd + "-" + mm + "-" + yy;
+			};
 
-			// Build items table data
-			var tableData = (oIRGP.items || []).map(function (it, i) {
+			// ── Build items rows (pad to at least 5) ─────────────────────────────
+			var tableData = (aItems || []).map(function (it, i) {
 				return [
 					i + 1,
-					it.ItemCode || "",
+					it.ItemCode        || "",
+					it.Location        || "",
+					it.Mp2ItemCode     || "",
 					it.ItemDescription || "",
-					parseFloat(it.SentQuantity || 0).toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }),
-					parseFloat(it.RecvdQuantity || 0).toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }),
-					parseFloat(it.BalanceQuantity || 0).toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }),
-					it.UOM || "",
-					it.MRNumber || ""
+					parseFloat(it.SentQuantity || 0).toFixed(2),
+					it.UOM             || "",
+					it.DefaultBin      || ""
 				];
 			});
 			while (tableData.length < 5) { tableData.push(["", "", "", "", "", "", "", ""]); }
 
+			// ═══════════════════════════════════════════════════════════════════
+			// didDrawPage  –  header drawn on every page
+			// ═══════════════════════════════════════════════════════════════════
+			var drawHeader = function () {
+				var y = margin;
+
+				// Logo (top-left)
+				if (sLogoBase64) {
+					doc.addImage(sLogoBase64, 'PNG', margin, y, 28, 11);
+				} else {
+					doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(180, 0, 0);
+					doc.text("MEIL", margin, y + 8);
+					doc.setTextColor(0, 0, 0);
+				}
+
+				// Company name – centred, large bold
+				doc.setFont("helvetica", "bold");
+				doc.setFontSize(16);
+				doc.setTextColor(0, 0, 0);
+				doc.text("MEIL Neyveli Energy Private Limited", pageWidth / 2, y + 8, { align: "center" });
+
+				// Subtitle – underlined, centred
+				y += 14;
+				doc.setFont("helvetica", "normal");
+				doc.setFontSize(9.5);
+				var sSubtitle = "Internal Returnable Gate Pass (IRGP)";
+				var subW = doc.getTextWidth(sSubtitle);
+				var subX = (pageWidth - subW) / 2;
+				doc.text(sSubtitle, subX, y);
+				doc.setLineWidth(0.3);
+				doc.line(subX, y + 0.8, subX + subW, y + 0.8);  // underline
+
+				// ── Info row: left (IRGP No + tagline) / right (Req Dept / GP Date / Due Date) ──
+				y += 7;
+				var rightLabelX = pageWidth - margin - 56;
+				var rightValueX = pageWidth - margin - 2;
+
+				// IRGP No – bold
+				doc.setFont("helvetica", "bold"); doc.setFontSize(9.5);
+				doc.text("IRGP No: " + (oHeader.IRGPNo || ""), margin, y);
+				// Tagline below
+				doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+				doc.text("To take out the following material", margin, y + 5);
+
+				// Right: Req Dept
+				doc.setFont("helvetica", "bold"); doc.setFontSize(8.5);
+				doc.text("Req Dept:", rightLabelX, y);
+				doc.setFont("helvetica", "normal");
+				doc.text(oHeader.Department || "", rightValueX, y, { align: "right" });
+
+				// GP Date
+				doc.setFont("helvetica", "bold");
+				doc.text("GP Date:", rightLabelX, y + 5);
+				doc.setFont("helvetica", "normal");
+				doc.text(fmtDate(oHeader.GEDate), rightValueX, y + 5, { align: "right" });
+
+				// Due Date
+				doc.setFont("helvetica", "bold");
+				doc.text("Due Date:", rightLabelX, y + 10);
+				doc.setFont("helvetica", "normal");
+				doc.text(fmtDate(oHeader.DueDate), rightValueX, y + 10, { align: "right" });
+			};
+
+			// ── Table starting Y ─────────────────────────────────────────────────
+			var tableStartY = margin + 14 + 7 + 15;  // header block height ≈ 51mm
+
+			// ── Draw the items table ─────────────────────────────────────────────
 			doc.autoTable({
-				startY: 65,
-				head: [['S.No', 'Item Code', 'Description', 'Sent Qty', 'Recvd Qty', 'Bal Qty', 'UOM', 'MR Number']],
+				startY: tableStartY,
+				head: [['S.No', 'Item Code', 'Location', 'Mp2ItemCode', 'DESCRIPTION', 'QTY', 'UOM', 'DefaultBin']],
 				body: tableData,
 				theme: 'grid',
 				headStyles: {
-					fillColor: [235, 235, 235],
+					fillColor: [255, 255, 255],
 					textColor: [0, 0, 0],
 					fontStyle: 'bold',
-					fontSize: 8.5,
-					halign: 'center',
+					fontSize: 8,
+					halign: 'left',
 					valign: 'middle',
-					cellPadding: 3,
+					cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
 					lineWidth: 0.3,
 					lineColor: [0, 0, 0]
 				},
 				bodyStyles: {
-					fontSize: 8.5,
-					cellPadding: { top: 3, bottom: 3, left: 2, right: 2 },
+					fontSize: 8,
+					cellPadding: { top: 3.5, bottom: 3.5, left: 2, right: 2 },
 					lineColor: [0, 0, 0],
 					lineWidth: 0.25,
-					valign: 'middle'
+					valign: 'middle',
+					fillColor: [255, 255, 255],
+					textColor: [0, 0, 0]
 				},
-				alternateRowStyles: { fillColor: [250, 250, 250] },
+				alternateRowStyles: { fillColor: [255, 255, 255] },
 				columnStyles: {
-					0: { cellWidth: 12, halign: 'center' },
-					1: { cellWidth: 26, halign: 'center' },
-					2: { cellWidth: 'auto', halign: 'left' },
-					3: { cellWidth: 24, halign: 'right' },
-					4: { cellWidth: 24, halign: 'right' },
-					5: { cellWidth: 24, halign: 'right' },
-					6: { cellWidth: 18, halign: 'center' },
-					7: { cellWidth: 30, halign: 'center' }
+					0: { cellWidth: 12,    halign: 'center' },
+					1: { cellWidth: 34,    halign: 'left'   },
+					2: { cellWidth: 22,    halign: 'left'   },
+					3: { cellWidth: 28,    halign: 'left'   },
+					4: { cellWidth: 'auto', halign: 'left' },
+					5: { cellWidth: 16,    halign: 'center' },
+					6: { cellWidth: 18,    halign: 'left'   },
+					7: { cellWidth: 30,    halign: 'left'   }
 				},
-				margin: { top: 65, left: margin, right: margin, bottom: 40 },
-				didDrawPage: function (data) {
-					// Draw outer borders
-					doc.setLineWidth(0.6);
-					doc.rect(7, 5, pageWidth - 14, pageHeight - 10);
-					doc.setLineWidth(0.2);
-					doc.rect(8.5, 6.5, pageWidth - 17, pageHeight - 13);
-
-					// Logo
-					if (sLogoBase64) {
-						doc.addImage(sLogoBase64, 'PNG', margin, 9, 32, 12);
-					} else {
-						doc.setFont("helvetica", "bold");
-						doc.setFontSize(18);
-						doc.setTextColor(180, 0, 0);
-						doc.text("MEIL", margin, 18);
-						doc.setTextColor(0, 0, 0);
-					}
-
-					// Company Info
-					doc.setTextColor(0, 0, 0);
-					doc.setFont("helvetica", "bold");
-					doc.setFontSize(14);
-					doc.text("MEIL Neyveli Energy Private Limited", pageWidth / 2, 13, { align: "center" });
-					doc.setFont("helvetica", "normal");
-					doc.setFontSize(7.5);
-					doc.text("(Formerly TAQA Neyveli Power Company Private Limited)", pageWidth / 2, 17, { align: "center" });
-					doc.text("250MW LFPP, Uthangal, Neyveli, Tamilnadu - 607804, India.", pageWidth / 2, 20.5, { align: "center" });
-					doc.text("Tel : +91-4142-270300  |  Fax : +91-4142-270401", pageWidth / 2, 24, { align: "center" });
-					doc.setFont("helvetica", "bold");
-
-					// Title Background & Text
-					var sTitleY = 27;
-					doc.setFillColor(230, 230, 230);
-					doc.rect(margin, sTitleY, contentWidth, 7, 'F');
-					doc.rect(margin, sTitleY, contentWidth, 7, 'S'); // border
-					doc.setFontSize(11);
-					doc.text(sTypeLabel, pageWidth / 2, sTitleY + 5, { align: "center" });
-
-					// IRGP Header Data Box
-					var gridY = 36, gridH = 26;
-					var pad = 3, rLH = 5.5;
-					doc.rect(margin, gridY, contentWidth, gridH);
-					
-					var midX = margin + (contentWidth / 2);
-					doc.line(midX, gridY, midX, gridY + gridH); // center divider
-
-					doc.setFontSize(9);
-					// Left side
-					doc.text("IRGP No", margin + pad, gridY + rLH);
-					doc.text(": " + (oIRGP.header.IRGPNo || ""), margin + pad + 30, gridY + rLH);
-
-					doc.text("Date", margin + pad, gridY + rLH * 2);
-					doc.text(": " + (oIRGP.header.GEDate || ""), margin + pad + 30, gridY + rLH * 2);
-
-					doc.text("Department", margin + pad, gridY + rLH * 3);
-					doc.text(": " + (oIRGP.header.Department || ""), margin + pad + 30, gridY + rLH * 3);
-
-					doc.text("Req Type", margin + pad, gridY + rLH * 4);
-					doc.text(": " + (oIRGP.header.RequestType || ""), margin + pad + 30, gridY + rLH * 4);
-
-					// Right side
-					doc.text("Vendor Name", midX + pad, gridY + rLH);
-					doc.text(": " + (oIRGP.header.VendorName || ""), midX + pad + 30, gridY + rLH);
-
-					doc.text("Contract Name", midX + pad, gridY + rLH * 2);
-					doc.text(": " + (oIRGP.header.ContractName || ""), midX + pad + 30, gridY + rLH * 2);
-
-					doc.text("Emp Name", midX + pad, gridY + rLH * 3);
-					doc.text(": " + (oIRGP.header.ContractEmployeeName || ""), midX + pad + 30, gridY + rLH * 3);
-				}
+				margin: { left: margin, right: margin },
+				didDrawPage: function () { drawHeader(); }
 			});
 
-			// Footer remarks
+			// ── Remarks row (full width, below table) ────────────────────────────
 			var finalY = doc.lastAutoTable.finalY;
-			doc.setFont("helvetica", "normal");
-			doc.setFontSize(9);
-			
-			// Box for remarks
-			doc.rect(margin, finalY + 4, contentWidth, 12);
-			doc.text("Remarks:", margin + 2, finalY + 8);
-			var remarksStr = doc.splitTextToSize((oIRGP.header.Remarks || "N/A"), contentWidth - 20);
-			doc.text(remarksStr, margin + 18, finalY + 8);
+			var remH   = 8;
+			doc.setLineWidth(0.3);
+			doc.rect(margin, finalY, cW, remH);
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+			doc.text("Remarks", margin + 2, finalY + 5.5);
+			doc.setLineWidth(0.25);
+			doc.line(margin + 20, finalY, margin + 20, finalY + remH);  // separator after "Remarks"
+			doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+			var sRem = doc.splitTextToSize(oHeader.Remarks || "", cW - 26);
+			doc.text(sRem, margin + 23, finalY + 5.5);
 
-			var sigY = finalY + 30;
+			// ── Footer info block ────────────────────────────────────────────────
+			var footY = finalY + remH + 10;
+			var halfW = cW / 2;
+
+			// Left: Prepared Name
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8.5);
+			doc.text("Prepared Name:", margin, footY);
+			doc.setFont("helvetica", "normal");
+			doc.text(oHeader.RequestUser || "", margin + 32, footY);
+
+			// Right: Req Name
 			doc.setFont("helvetica", "bold");
-			doc.text("Requested By", margin + 20, sigY, { align: "center" });
-			doc.text("HOD", margin + 100, sigY, { align: "center" });
-			doc.text("Stores", margin + 180, sigY, { align: "center" });
-			doc.text("Authorized Signatory", pageWidth - margin - 35, sigY, { align: "center" });
-
-			doc.setFontSize(8);
+			doc.text("Req Name:", margin + halfW, footY);
 			doc.setFont("helvetica", "normal");
-			doc.text("This is a computer generated document, signature is not mandatory.", pageWidth / 2, pageHeight - 15, { align: "center" });
+			doc.text(oHeader.RequestUser || "", margin + halfW + 22, footY);
 
-			// Instead of doc.save, show print preview dialog
+			// Left: Contract Name
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8.5);
+			doc.text("Contract Name:", margin, footY + 8);
+			doc.setFont("helvetica", "normal");
+			var sContract = doc.splitTextToSize(oHeader.ContractName || "", halfW - 34);
+			doc.text(sContract, margin + 32, footY + 8);
+
+			// Right: Contract/Employee Name
+			doc.setFont("helvetica", "bold");
+			doc.text("Contract/Employee Name:", margin + halfW, footY + 8);
+			doc.setFont("helvetica", "normal");
+			var sEmpName = doc.splitTextToSize(oHeader.ContractEmployeeName || "", halfW - 46);
+			doc.text(sEmpName, margin + halfW + 46, footY + 8);
+
+			// ── Signature area ───────────────────────────────────────────────────
+			var sigY = pageHeight - 22;
+
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+			doc.text("For MEIL Neyveli Energy Private Limited", margin, sigY);
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+			doc.text("Authorised Signatory", margin, sigY + 14);
+
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+			doc.text("Receiver's Sign", pageWidth - margin, sigY + 14, { align: "right" });
+
+			// ── Draw header once (first page already rendered by autoTable callback) ─
+			// (autoTable calls didDrawPage for each page, so header is already drawn)
+
+			// ── Open print dialog ────────────────────────────────────────────────
 			doc.autoPrint();
-			var blobUrl = doc.output('bloburl');
-			window.open(blobUrl, '_blank');
+			window.open(doc.output('bloburl'), '_blank');
 			sap.m.MessageToast.show("Print Preview Opened");
 		},
 
@@ -1021,6 +1265,7 @@ sap.ui.define([
 					storeStatusEditable: false,
 					submitVisible: true,
 					submitResVisible: false,
+					submitEditVisible: false,
 					closeVisible: false,
 					printVisible: false
 				}

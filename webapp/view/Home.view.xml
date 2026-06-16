@@ -64,7 +64,7 @@
 					</GenericTile>
 
 					<!-- Gate Pass with PO Card -->
-					<GenericTile class="gpmsDashCard poCard" press=".onGenericTileGatePassWithPOPress" header="GATE PASS WITH PO/PETTY CASH" subheader="PO Based Gate Entry" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }">
+					<GenericTile class="gpmsDashCard poCard" press=".onGenericTileGatePassWithPOPress" header="CREATE ENTRIES" subheader="Create Gate Entry (PO/PCP)" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }">
 						<TileContent>
 							<core:Icon src="sap-icon://purchase-order" class="gpmsCardIcon"/>
 						</TileContent>
@@ -85,7 +85,7 @@
 					</GenericTile>
 
 					<!-- Add PCP Card -->
-					<GenericTile class="gpmsDashCard pcpCard" press=".onPressAddPCP" header="ADD PCP" subheader="Petty Cash Purchase" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }">
+					<GenericTile class="gpmsDashCard pcpCard" press=".onPressAddPCP" header="GATE ENTRY LIST" subheader="View Gate Entry Records" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }">
 						<TileContent>
 							<core:Icon src="sap-icon://lead" class="gpmsCardIcon"/>
 						</TileContent>
@@ -116,6 +116,13 @@
 					<GenericTile class="gpmsDashCard" press=".onPressScrapRequestList" header="SCRAP REQUEST LIST" subheader="Scrap Approvals">
 						<TileContent>
 							<core:Icon src="sap-icon://list" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- Scrap Entity List Card -->
+					<GenericTile class="gpmsDashCard" press=".onPressScrapInventory" header="SCRAP ENTITY LIST" subheader="Scrap Stock Inventory">
+						<TileContent>
+							<core:Icon src="sap-icon://inventory" class="gpmsCardIcon"/>
 						</TileContent>
 					</GenericTile>
 

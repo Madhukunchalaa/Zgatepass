@@ -177,6 +177,7 @@ sap.ui.define([
 				TransporterGST: "",
 				DCNotes: "",
 				InsuranceRequired: false,
+				LRNnumber: "",
 				VehicleNo: "",
 				ModeOfTransport: "Road",
 				TransportByIndex: 1,
@@ -404,7 +405,7 @@ sap.ui.define([
 			oOutModel.setProperty("/ApprovalIcon", sIcon);
 			oOutModel.setProperty("/GatePassNo", oData.GatePassNo || "");
 			oOutModel.setProperty("/GatePassType", oData.GatePassType || "");
-			oOutModel.setProperty("/GatePassDate", oData.GatePassDate || "");
+			oOutModel.setProperty("/GatePassDate", new Date().toLocaleDateString("en-GB").split("/").join("-"));
 			oOutModel.setProperty("/ReturnableDate", oData.ReturnableDate || null);
 			oOutModel.setProperty("/Requestor", oData.Requestor || "");
 			oOutModel.setProperty("/Department", oData.Department);
@@ -414,13 +415,37 @@ sap.ui.define([
 			oOutModel.setProperty("/ZipCode", oData.ZipCode || oData.PostalCode || "");
 			oOutModel.setProperty("/City", oData.City || "");
 			oOutModel.setProperty("/FiscalYear", oData.FiscalYear || String(new Date().getFullYear()));
-			oOutModel.setProperty("/TransporterName", oData.TransporterName || oData.VendorName || "");
-			oOutModel.setProperty("/TransporterGST", oData.TransporterGST || oData.VendorGST || "");
+			var oLocalLogistics = null;
+			try {
+				var sCleanGPNo = (oData.GatePassNo || "").trim();
+				var sCleanReqNo = (sReqNo || "").trim();
+				var sLocal = (sCleanGPNo ? localStorage.getItem("logistics_" + sCleanGPNo) : null) || (sCleanReqNo ? localStorage.getItem("logistics_" + sCleanReqNo) : null);
+				console.log("[GPMS Debug] _validateAndMapData: sCleanGPNo =", sCleanGPNo, "sCleanReqNo =", sCleanReqNo, "sLocal =", sLocal);
+				if (sLocal) {
+					oLocalLogistics = JSON.parse(sLocal);
+				}
+			} catch (e) {
+				console.error("[GPMS Debug] _validateAndMapData error:", e);
+			}
+
+			var sTransName = oData.TransporterName || (oLocalLogistics ? oLocalLogistics.TransporterName : "") || "";
+			var sTransGST  = oData.TransporterGST  || (oLocalLogistics ? oLocalLogistics.TransporterGST : "")  || "";
+			var sEWayNo    = oData.EWayBillNo || (oLocalLogistics ? oLocalLogistics.EWayBillNo : "") || "";
+			var sEWayDate  = oData.EWayBillDate || (oLocalLogistics ? oLocalLogistics.EWayBillDate : null);
+			var sDCNotes   = oData.DCNotes || (oLocalLogistics ? oLocalLogistics.DCNotes : "") || "";
+
+			oOutModel.setProperty("/TransporterName", sTransName);
+			oOutModel.setProperty("/TransporterGST",  sTransGST);
+			oOutModel.setProperty("/EWayBillNo",      sEWayNo);
+			oOutModel.setProperty("/EWayBillDate",    sEWayDate);
+			oOutModel.setProperty("/DCNotes",         sDCNotes);
+
 			oOutModel.setProperty("/VendorAddress", (oData.City || "") + ", " + (oData.ZipCode || ""));
 			oOutModel.setProperty("/VendorPerson", oData.VendorPerson);
 			oOutModel.setProperty("/UserRemarks", oData.Remarks || "");
 			oOutModel.setProperty("/HODRemarks", oData.HODRemarks || "");
 			oOutModel.setProperty("/StoreRemarks", oData.STORERemarks || "");
+			oOutModel.setProperty("/LRNnumber", oData.LRNnumber || "");
 			oOutModel.setProperty("/VehicleNo", oData.VehicleNo);
 			oOutModel.setProperty("/ModeOfTransport", oData.ModeOfDispatch);
 			oOutModel.setProperty("/Plant", oData.Plant || oData.Werks || "");
@@ -471,14 +496,31 @@ sap.ui.define([
 				oOutModel.setProperty("/EWayBillDate", oData.EWayBillDate || null);
 				oOutModel.setProperty("/DCNotes", oData.DCNotes || "");
 				oOutModel.setProperty("/DocOptionIndex", oData.ChallanNumber ? 1 : 0);
-				oOutModel.setProperty("/Status", oData.GPStatus || "OPEN");
-			} else {
-				// GateReqHdrSet didn't return a GatePassNo — check OutGatePassSet directly
-				var sReqNo = oData.GatePassReqNo || oData.GatePassreqNo || "";
-				var sGPType = oData.GatePassType || "";
-				if (sReqNo) {
-					this._checkExistingGatePass(sReqNo, sGPType);
+				var sStatusVal;
+				if (oLocalLogistics && oLocalLogistics.GPStatus) {
+					sStatusVal = oLocalLogistics.GPStatus.trim().toUpperCase();
+				} else if (oData.GPStatus && oData.GPStatus.trim().toUpperCase() !== "OPEN" && oData.GPStatus.trim() !== "") {
+					sStatusVal = oData.GPStatus.trim().toUpperCase();
+				} else {
+					sStatusVal = "OPEN";
 				}
+				if (sStatusVal === "AWAITING FOR RETURN" || sStatusVal === "AWAITING ACKNOWLEDGEMENT") {
+					sStatusVal = "AWAITING FOR VENDOR ACKNOWLEDGEMENT";
+				}
+				console.log("[GPMS Debug] _validateAndMapData: setting /Status =", sStatusVal);
+				oOutModel.setProperty("/Status", sStatusVal);
+				// Restore Transport By radio: Self if name matches company, else Vendor
+				var sSavedTransporter = oData.TransporterName || "";
+				var bIsSelf = (sSavedTransporter === "MEIL Neyveli Energy Private Limited");
+				oOutModel.setProperty("/TransportByIndex", bIsSelf ? 0 : 1);
+			}
+			oOutModel.refresh(true);
+
+			// Always check OutGatePassSet directly to load the latest saved logistics and status details
+			var sReqNo = oData.GatePassReqNo || oData.GatePassreqNo || "";
+			var sGPType = oData.GatePassType || "";
+			if (sReqNo) {
+				this._checkExistingGatePass(sReqNo, sGPType);
 			}
 		},
 
@@ -501,20 +543,64 @@ sap.ui.define([
 
 					oOutModel.setProperty("/GatePassNo", oGP.GatePassNo);
 					oOutModel.setProperty("/GatePassType", oGP.GatePassType || oOutModel.getProperty("/GatePassType"));
-					oOutModel.setProperty("/GatePassDate", oGP.GatePassDate || "");
+					var vGPDate = oGP.GpDate || oGP.GatePassDate;
+					var sGPDateDisplay = "";
+					if (vGPDate instanceof Date) {
+						sGPDateDisplay = vGPDate.toLocaleDateString("en-GB").split("/").join("-");
+					} else if (typeof vGPDate === "string" && /^\d{8}$/.test(vGPDate)) {
+						sGPDateDisplay = vGPDate.slice(6, 8) + "-" + vGPDate.slice(4, 6) + "-" + vGPDate.slice(0, 4);
+					} else if (vGPDate) {
+						var dParsed = new Date(vGPDate);
+						sGPDateDisplay = isNaN(dParsed.getTime()) ? "" : dParsed.toLocaleDateString("en-GB").split("/").join("-");
+					}
+					oOutModel.setProperty("/GatePassDate", sGPDateDisplay || new Date().toLocaleDateString("en-GB").split("/").join("-"));
 					oOutModel.setProperty("/showLogistics", true);
 					oOutModel.setProperty("/ChallanNumber", oGP.ChallanNumber || "");
 					oOutModel.setProperty("/ChallanDate", oGP.ChallanDate || null);
-					oOutModel.setProperty("/EWayBillNo", oGP.EWayBillNo || "");
-					oOutModel.setProperty("/EWayBillDate", oGP.EWayBillDate || null);
-					oOutModel.setProperty("/DCNotes", oGP.DCNotes || "");
-					oOutModel.setProperty("/DocOptionIndex", oGP.ChallanNumber ? 1 : 0);
-					oOutModel.setProperty("/Status", oGP.GPStatus || "OPEN");
+					var oLocalLogistics2 = null;
+					try {
+						var sCleanGP2 = (oGP.GatePassNo || "").trim();
+						var sCleanReq2 = (sReqNo || "").trim();
+						var sLocal2 = (sCleanGP2 ? localStorage.getItem("logistics_" + sCleanGP2) : null) || (sCleanReq2 ? localStorage.getItem("logistics_" + sCleanReq2) : null);
+						console.log("[GPMS Debug] _checkExistingGatePass: sCleanGP2 =", sCleanGP2, "sCleanReq2 =", sCleanReq2, "sLocal2 =", sLocal2);
+						if (sLocal2) {
+							oLocalLogistics2 = JSON.parse(sLocal2);
+						}
+					} catch (e) {
+						console.error("[GPMS Debug] _checkExistingGatePass error:", e);
+					}
+
+					oOutModel.setProperty("/EWayBillNo", oGP.EWayBillNo || (oLocalLogistics2 ? oLocalLogistics2.EWayBillNo : ""));
+					oOutModel.setProperty("/EWayBillDate", oGP.EWayBillDate || (oLocalLogistics2 ? oLocalLogistics2.EWayBillDate : null));
+					oOutModel.setProperty("/DCNotes", oGP.DCNotes || (oLocalLogistics2 ? oLocalLogistics2.DCNotes : ""));
+					var sCurrentStatus = (oOutModel.getProperty("/Status") || "").trim().toUpperCase();
+					var sGPStatusVal;
+					if (oLocalLogistics2 && oLocalLogistics2.GPStatus) {
+						sGPStatusVal = oLocalLogistics2.GPStatus.trim().toUpperCase();
+					} else if (oGP.GPStatus && oGP.GPStatus.trim().toUpperCase() !== "OPEN" && oGP.GPStatus.trim() !== "") {
+						sGPStatusVal = oGP.GPStatus.trim().toUpperCase();
+					} else {
+						// Don't overwrite with "OPEN" from backend — keep what was already set
+						sGPStatusVal = sCurrentStatus || "OPEN";
+					}
+					if (sGPStatusVal === "AWAITING FOR RETURN" || sGPStatusVal === "AWAITING ACKNOWLEDGEMENT") {
+						sGPStatusVal = "AWAITING FOR VENDOR ACKNOWLEDGEMENT";
+					}
+					console.log("[GPMS Debug] _checkExistingGatePass: setting /Status =", sGPStatusVal);
+					oOutModel.setProperty("/Status", sGPStatusVal);
+					oOutModel.setProperty("/LRNnumber", oGP.LRNnumber || oOutModel.getProperty("/LRNnumber"));
 					oOutModel.setProperty("/VehicleNo", oGP.VehicleNo || oOutModel.getProperty("/VehicleNo"));
 					oOutModel.setProperty("/ModeOfTransport", oGP.ModeOfDispatch || oOutModel.getProperty("/ModeOfTransport"));
-					oOutModel.setProperty("/TransporterName", oGP.TransporterName || oOutModel.getProperty("/TransporterName"));
-					oOutModel.setProperty("/TransporterGST", oGP.TransporterGST || oOutModel.getProperty("/TransporterGST"));
+					oOutModel.setProperty("/TransporterName", oGP.TransporterName || (oLocalLogistics2 ? oLocalLogistics2.TransporterName : "") || oOutModel.getProperty("/TransporterName"));
+					oOutModel.setProperty("/TransporterGST", oGP.TransporterGST || (oLocalLogistics2 ? oLocalLogistics2.TransporterGST : "") || oOutModel.getProperty("/TransporterGST"));
+					// Restore Transport By radio: Self if name matches company, else Vendor
+					var sSavedTransporter2 = oGP.TransporterName || "";
+					var bIsSelf2 = (sSavedTransporter2 === "MEIL Neyveli Energy Private Limited");
+					oOutModel.setProperty("/TransportByIndex", bIsSelf2 ? 0 : 1);
+					// Restore DC option
+					oOutModel.setProperty("/DocOptionIndex", oGP.ChallanNumber ? 1 : 0);
 					oOutModel.setProperty("/NoOfPackages", oGP.NoOfPacakages || 0);
+					oOutModel.refresh(true);
 
 					// Remap items from gate pass navigation if present
 					var aRaw = (oGP.OutgateNav && oGP.OutgateNav.results) || [];
@@ -1258,9 +1344,9 @@ sap.ui.define([
 				oOutModel.setProperty("/TransporterName", "MEIL Neyveli Energy Private Limited");
 				oOutModel.setProperty("/TransporterGST", "33AACCS2753B1ZV");
 			} else {
-				// Vendor - auto fetch vendor name and GST
-				oOutModel.setProperty("/TransporterName", oOutModel.getProperty("/VendorName") || "");
-				oOutModel.setProperty("/TransporterGST", oOutModel.getProperty("/VendorGST") || "");
+				// Vendor — clear fields so store person can enter transporter details manually
+				oOutModel.setProperty("/TransporterName", "");
+				oOutModel.setProperty("/TransporterGST", "");
 			}
 			oOutModel.setProperty("/TransportByIndex", iIndex);
 		},
@@ -1296,6 +1382,7 @@ sap.ui.define([
 						Vendor: oOutData.VendorName || "",
 						VendorAddress: oOutData.VendorAddress || "",
 						ModeOfTransport: oOutData.ModeOfTransport || "Road",
+						LRNnumber: oOutData.LRNnumber || "",
 						VehicleNo: oOutData.VehicleNo || "",
 						InvoiceValue: oOutData.FinalTotal ? oOutData.FinalTotal.toString().replace(/,/g, "") : "",
 						RgpDescription: oOutData.UserRemarks || ""
@@ -1570,6 +1657,23 @@ sap.ui.define([
 
 			sap.ui.core.BusyIndicator.show(0);
 
+			// Save logistics/transporter details locally to prevent OData validation errors
+			if (oOut.GatePassNo) {
+				var oLogistics = {
+					TransporterName: oOut.TransporterName || "",
+					TransporterGST: oOut.TransporterGST || "",
+					EWayBillNo: oOut.EWayBillNo || "",
+					EWayBillDate: oOut.EWayBillDate || "",
+					DCNotes: oOut.DCNotes || "",
+					GPStatus: oOut.Status || ""
+				};
+				console.log("[GPMS Debug] onSaveLogistics: saving logistics =", oLogistics, "GPNo =", oOut.GatePassNo, "ReqNo =", oOut.GatePassreqNo);
+				localStorage.setItem("logistics_" + String(oOut.GatePassNo).trim(), JSON.stringify(oLogistics));
+				if (oOut.GatePassreqNo) {
+					localStorage.setItem("logistics_" + String(oOut.GatePassreqNo).trim(), JSON.stringify(oLogistics));
+				}
+			}
+
 			// We use the same payload structure as generation but for update/save
 			var oPayload = {
 				GatePassreqNo: oOut.GatePassreqNo || "",
@@ -1577,7 +1681,7 @@ sap.ui.define([
 				VehicleNo: oOut.VehicleNo,
 				ModeOfDispatch: oOut.ModeOfTransport,
 				Remarks: oOut.UserRemarks,
-				GPStatus: oOut.Status || "", // OPEN, CLOSE, ASSIGN
+				GPStatus: oOut.Status || "",
 				// TransporterName: oOut.TransporterName || "",
 				// TransporterGST: oOut.TransporterGST || "",
 				// EWayBillNo: oOut.EWayBillNo || "",
@@ -1587,7 +1691,6 @@ sap.ui.define([
 				GatePassType: oOut.GatePassType || "RGP",
 				ChallanNumber: oOut.ChallanNumber || "",
 				ChallanDate: fnFormatDate(oOut.ChallanDate) || fnFormatDate(new Date()),
-				// ... other fields as needed by backend
 				"OutgateNav": (oOut.items || []).map(function (it, index) {
 					return {
 						GatePassNo: oOut.GatePassNo,

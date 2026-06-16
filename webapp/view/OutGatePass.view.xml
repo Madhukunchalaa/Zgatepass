@@ -256,9 +256,13 @@
 						<VBox class="sapUiSmallMarginTop">
 							<!-- Row 1 -->
 							<HBox wrap="Wrap" class="sapUiTinyMarginBottom">
-								<VBox width="50%" class="sapUiSmallMarginEnd">
-									<Label text="L.R/Vehicle No." class="gpmsFieldLabel"/>
-									<Input value="{out>/VehicleNo}" placeholder="Enter LR or Vehicle No" class="gpmsFieldInput" width="100%"/>
+								<VBox width="25%" class="sapUiSmallMarginEnd">
+									<Label text="LR Number" class="gpmsFieldLabel"/>
+									<Input value="{out>/LRNnumber}" placeholder="Enter LR Number" class="gpmsFieldInput" width="100%"/>
+								</VBox>
+								<VBox width="25%" class="sapUiSmallMarginEnd">
+									<Label text="Vehicle No." class="gpmsFieldLabel"/>
+									<Input value="{out>/VehicleNo}" placeholder="Enter Vehicle No" class="gpmsFieldInput" width="100%"/>
 								</VBox>
 								<VBox width="45%">
 									<Label text="Transport By" class="gpmsFieldLabel"/>
@@ -331,7 +335,7 @@
 								<Select selectedKey="{out>/Status}" width="100%" class="gpmsFieldInput">
 									<core:Item key="" text="Select status"/>
 									<core:Item key="OPEN" text="OPEN"/>
-									<core:Item key="AWAITING FOR VENDOR ACKNOWLEDGEMENT" text="Awaiting for Return"/>
+									<core:Item key="AWAITING FOR VENDOR ACKNOWLEDGEMENT" text="{= ${out>/GatePassType} === 'NRGP' ? 'Awaiting for Vendor Acknowledgement' : 'Awaiting for Return' }"/>
 									<core:Item key="CLOSED" text="CLOSED"/>
 									<core:Item key="CANCELLED" text="CANCELLED"/>
 								</Select>

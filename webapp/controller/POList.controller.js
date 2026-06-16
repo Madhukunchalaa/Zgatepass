@@ -25,9 +25,13 @@ sap.ui.define([
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (!oODataModel) { return; }
 
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var sPlant = (oUserModel && oUserModel.getProperty("/Plant")) || "";
+
 			sap.ui.core.BusyIndicator.show(0);
+			var aFilters = sPlant ? [new Filter("Plant", FilterOperator.EQ, sPlant)] : [];
 			oODataModel.read("/GateInPoHdrSet", {
-				filters: [new Filter("SourceType", FilterOperator.EQ, "PO")],
+				filters: aFilters,
 				urlParameters: { "$expand": "GateInPoNav" },
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
@@ -75,8 +79,12 @@ sap.ui.define([
 		onViewItems: function (oEvent) {
 			var oButton = oEvent.getSource();
 			var oContext = oButton.getBindingContext("poModel");
-			var sPoNumber = oContext.getProperty("PurchaseOrder");
-			var sPlant = oContext.getProperty("Plant") || "2301";
+			var oItem = oContext.getObject();
+			var sPoNumber = oItem.PurchaseOrder;
+			var sPlant = oItem.Plant || "2301";
+
+			// Store the full row (with expanded GateInPoNav) so the form can use it directly
+			sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel(oItem), "selectedPO");
 
 			this.getRouter().navTo("GatePassWithPODetail", {
 				poNumber: sPoNumber,

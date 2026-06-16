@@ -1,0 +1,56 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.ScrapInventory"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:core="sap.ui.core"
+	height="100%">
+	<Page
+		title="Scrap Entity List"
+		showNavButton="true"
+		navButtonPress=".onNavBack"
+		class="gpmsPage">
+		<content>
+			<VBox class="sapUiSmallMargin">
+				<Table
+					id="scrapInventoryTable"
+					items="{scrapInv>/items}"
+					noDataText="No inventory items found"
+					class="gpmsTable"
+					alternateRowColors="true">
+					<headerToolbar>
+						<OverflowToolbar>
+							<HBox class="sapUiTinyMarginTop sapUiTinyMarginBottom">
+								<Button text="Copy" press=".onCopy" class="sapUiTinyMarginEnd" />
+								<Button text="CSV" press=".onExportCSV" class="sapUiTinyMarginEnd" />
+								<Button text="Excel" press=".onExportExcel" class="sapUiTinyMarginEnd" />
+								<Button text="Print" press=".onPrint" />
+							</HBox>
+							<ToolbarSpacer/>
+							<SearchField
+								width="300px"
+								liveChange=".onSearch"
+								placeholder="Search Material..."
+								class="gpmsFieldInput"/>
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column width="5rem"><Text text="Id" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Material" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Qty" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="UOM" class="gpmsTableHeaderText"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem class="gpmsTableRow">
+							<cells>
+								<Text text="{scrapInv>id}" class="gpmsTableText"/>
+								<Text text="{scrapInv>material}" class="gpmsTableText"/>
+								<Text text="{scrapInv>quantity}" class="gpmsTableText"/>
+								<Text text="{scrapInv>uom}" class="gpmsTableText"/>
+							</cells>
+						</ColumnListItem>
+					</items>
+				</Table>
+			</VBox>
+		</content>
+	</Page>
+</mvc:View>

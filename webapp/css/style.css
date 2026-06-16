@@ -214,7 +214,7 @@
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    background: linear-gradient(rgba(0, 0, 30, 0.45), rgba(0, 0, 30, 0.35)), url('../assets/img/power_plant.png') no-repeat center center !important;
+    background: linear-gradient(rgba(0, 0, 30, 0.45), rgba(0, 0, 30, 0.35)), url('../assets/img/power_plant.jpg') no-repeat center center !important;
     background-size: cover !important;
     z-index: 0 !important;
 }
@@ -1144,4 +1144,23 @@
 
 .approveBtn .sapMBtnIcon {
     color: white !important;
+}
+
+/* Dual Attachment Preview Box Styling */
+.gpmsAttachmentPreviewBox {
+    border: 1px solid var(--border) !important;
+    padding: 16px !important;
+    border-radius: var(--r) !important;
+    background-color: #FAFBFE !important;
+    transition: all 0.2s ease !important;
+}
+.gpmsAttachmentPreviewBox:hover {
+    border-color: var(--navy) !important;
+    background-color: #ffffff !important;
+    box-shadow: var(--shadow) !important;
+}
+.gpmsAttachmentThumbnail {
+    border-radius: var(--r-sm) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
 }

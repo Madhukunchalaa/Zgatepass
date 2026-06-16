@@ -8,7 +8,7 @@
         <subHeader>
             <Bar>
                 <contentLeft>
-                    <SearchField id="idGatePassSearchField" width="18rem"
+                    <SearchField id="idGatePassSearchField" width="16rem"
                         placeholder="Search by Request No."
                         liveChange=".onSearchFieldLiveChange" />
                 </contentLeft>
@@ -23,12 +23,13 @@
                         <core:Item key="Cancelled" text="Cancelled" />
                         <core:Item key="Amendment" text="Amendment" />
                     </Select>
-                    <Select id="idTypeFilterSelect" width="11rem" change=".onSelectFilterChange">
+                    <Select id="idTypeFilterSelect" width="10rem" change=".onSelectFilterChange">
                         <core:Item key="" text="All Types" />
                         <core:Item key="NRGP" text="NRGP" />
                         <core:Item key="RGP" text="RGP" />
                         <core:Item key="GP with PO" text="GP with PO" />
                     </Select>
+
                 </contentMiddle>
                 <contentRight>
                     <Button icon="sap-icon://clear-filter" text="Reset" press=".onResetButtonPress" />
@@ -46,7 +47,7 @@
 
                 <headerToolbar>
                     <Toolbar>
-                        <Title text="Gate Pass Redquest List" level="H3" />
+                        <Title text="Gate Pass Request List" level="H3" />
                         <ToolbarSpacer />
                         <Text id="idItemCountText" text="" />
                     </Toolbar>
@@ -60,6 +61,9 @@
                         <Text text="Type" />
                     </Column>
                     <Column width="8rem">
+                        <Text text="Date" />
+                    </Column>
+                    <Column width="10rem">
                         <Text text="Status" />
                     </Column>
                     <Column width="6rem">
@@ -71,15 +75,14 @@
                     <Column width="12rem" minScreenWidth="Tablet" demandPopin="true">
                         <Text text="Department" />
                     </Column>
-                    <Column width="10rem" minScreenWidth="Tablet" demandPopin="true">
+                    <Column width="8rem" minScreenWidth="Tablet" demandPopin="true">
                         <Text text="" />
                     </Column>
-                   
                 </columns>
 
                 <items>
                     <ColumnListItem
-                        type="{= ${user>/IsHodUser} &amp;&amp; ${gatePassList>GatePassType} !== 'GP with PO' ? 'Navigation' : 'Inactive'}"
+                        type="{= (${gatePassList>GatePassType} !== 'GP with PO') &amp;&amp; (${user>/IsHodUser} || ${user>/IsStoreUser} || ${gatePassList>Status} === 'Approved' || ${gatePassList>Status} === 'APPROVED' || ${gatePassList>Status} === 'Amendment' || ${gatePassList>Status} === 'AMENDMENT' || ${gatePassList>Status} === 'AM') ? 'Navigation' : 'Inactive'}"
                         press=".onColumnListItemPress">
                         <cells>
                             <ObjectIdentifier
@@ -87,9 +90,16 @@
                                 titleActive="{= ${user>/IsStoreUser} || ${gatePassList>Status} === 'Approved' || ${gatePassList>Status} === 'Amendment' || ${gatePassList>Status} === 'AMENDMENT' }"
                                 titlePress=".onObjectIdentifierReqNoTitlePress" />
                             <Text text="{gatePassList>GatePassType}" />
+                            <Text text="{
+                                path: 'gatePassList>GatePassDate',
+                                type: 'sap.ui.model.type.Date',
+                                formatOptions: {
+                                    pattern: 'dd-MM-yyyy'
+                                }
+                            }" />
                             <ObjectStatus
-                                text="{gatePassList>Status}"
-                                state="{= (${gatePassList>Status} === 'Approved' || ${gatePassList>Status} === 'Closed' || ${gatePassList>Status} === 'CLOSED') ? 'Success' : (${gatePassList>Status} === 'Rejected' || ${gatePassList>Status} === 'REJECTED' || ${gatePassList>Status} === 'Cancelled' || ${gatePassList>Status} === 'CANCELLED') ? 'Error' : 'Warning'}" />
+                                text="{parts: [{path: 'gatePassList>Status'}, {path: 'gatePassList>Approval1'}, {path: 'gatePassList>Approval2'}, {path: 'gatePassList>ApprovalReq'}, {path: 'gatePassList>STORERemarks'}, {path: 'gatePassList>StoreAmmend'}], formatter: '.formatStatus'}"
+                                state="{parts: [{path: 'gatePassList>Status'}, {path: 'gatePassList>Approval1'}, {path: 'gatePassList>Approval2'}, {path: 'gatePassList>ApprovalReq'}, {path: 'gatePassList>STORERemarks'}, {path: 'gatePassList>StoreAmmend'}], formatter: '.formatStatusState'}" />
                             <Text text="{gatePassList>Plant}" />
                             <Text text="{gatePassList>VendorName}" />
                             <Text text="{gatePassList>Department}" />
@@ -98,7 +108,7 @@
                                 icon="sap-icon://approvals"
                                 type="Accept"
                                 class="approveBtn"
-                                visible="{= (${gatePassList>Status} === 'Store Approval Pending') &amp;&amp; !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }"
+                                visible="{parts: [{path: 'gatePassList>Status'}, {path: 'gatePassList>Approval1'}, {path: 'gatePassList>Approval2'}, {path: 'gatePassList>ApprovalReq'}, {path: 'gatePassList>STORERemarks'}, {path: 'gatePassList>StoreAmmend'}], formatter: '.showApproveBtn'}"
                                 press=".onApproveButtonPress" />
                         </cells>
                     </ColumnListItem>
@@ -107,5 +117,4 @@
             </Table>
         </content>
     </Page>
-
 </mvc:View>

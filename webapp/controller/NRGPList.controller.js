@@ -232,7 +232,8 @@ sap.ui.define([
 				return;
 			}
 			if (oItem.GatePassType === "RGP") {
-				this.getRouter().navTo("OutGatePass", { reqNo: oItem.GatePassreqNo, gpNo: oItem.GatePassNo });
+				sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel(oItem), "selectedRGP");
+				this.getRouter().navTo("RGPDetail", { gpNo: oItem.GatePassNo });
 			} else {
 				this.getRouter().navTo("NRGPDetail", { gpNo: oItem.GatePassNo, gpType: oItem.GatePassType });
 			}

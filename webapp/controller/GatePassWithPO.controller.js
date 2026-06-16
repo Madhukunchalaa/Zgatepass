@@ -14,6 +14,7 @@ sap.ui.define([
 			this._resetModel();
 			this.getRouter().getRoute("GatePassWithPO").attachPatternMatched(this._onRouteMatched, this);
 			this.getRouter().getRoute("GatePassWithPODetail").attachPatternMatched(this._onRouteMatchedDetail, this);
+			this.getRouter().getRoute("GatePassWithPOEdit").attachPatternMatched(this._onRouteMatchedEdit, this);
 		},
 
 		_onRouteMatched: function () {
@@ -39,16 +40,262 @@ sap.ui.define([
 			this._onRouteMatched();
 			var sPoNumber = oEvent.getParameter("arguments").poNumber;
 			var sPlant = oEvent.getParameter("arguments").plant;
-			
+
 			var oModel = this.getView().getModel("gpo");
-			if (oModel) {
-				oModel.setProperty("/SourceType", "PO");
-				oModel.setProperty("/PurchaseOrder", sPoNumber);
-				oModel.setProperty("/Plant", sPlant);
-				
-				// Manually trigger the PO change logic to fetch details
-				this._fetchPODetails(sPoNumber, sPlant);
+			if (!oModel) { return; }
+
+			oModel.setProperty("/SourceType", "PO");
+			oModel.setProperty("/PurchaseOrder", sPoNumber);
+			oModel.setProperty("/Plant", sPlant);
+
+			// Use pre-loaded row data from POList — avoids SAP filter bug where backend
+			// ignores PurchaseOrder filter and returns wrong first record
+			var oCoreModel = sap.ui.getCore().getModel("selectedPO");
+			if (oCoreModel) {
+				var oCoreData = oCoreModel.getData();
+				sap.ui.getCore().setModel(null, "selectedPO");
+				if (oCoreData) {
+					if (oCoreData.Vendor) { oModel.setProperty("/Vendor", oCoreData.Vendor); }
+					if (oCoreData.VendorDesc) { oModel.setProperty("/VendorDesc", oCoreData.VendorDesc); }
+					oModel.setProperty("/Department", oCoreData.Department || "");
+					var aNavItems = (oCoreData.GateInPoNav && oCoreData.GateInPoNav.results) || [];
+					var aItems = aNavItems.map(function (item, idx) {
+						var sItemNo = item.ItemNo || String((idx + 1) * 10);
+						if (/^0+\d+$/.test(sItemNo)) { sItemNo = String(parseInt(sItemNo, 10)); }
+						return {
+							ItemNo: sItemNo,
+							ItemDescription: item.ItemDescription || "",
+							POQuantity: item.POQuantity || "0.000",
+							RecievedQuantity: item.RecievedQuantity || "0.000",
+							UOM: item.UOM || "",
+							PurchaseOrder: item.PurchaseOrder || sPoNumber,
+							Plant: item.Plant || sPlant,
+							GatePassNo: item.GatePassNo || ""
+						};
+					});
+					oModel.setProperty("/GateInPoNav", aItems);
+					return;
+				}
 			}
+
+			// Fallback: fetch from OData if core model is not available
+			this._fetchPODetails(sPoNumber, sPlant);
+		},
+
+		_onRouteMatchedEdit: function (oEvent) {
+			this._resetModel();
+			var oArgs = oEvent.getParameter("arguments");
+			var sGateEntryNo = oArgs.gateEntryNo;
+			var sGeDate = oArgs.geDate;
+			var sSourceType = oArgs.sourceType;
+			var sMode = oArgs.mode;
+
+			var oODataModel = this.getOwnerComponent().getModel();
+			var oModel = this.getView().getModel("gpo");
+			if (!oODataModel || !oModel) { return; }
+
+			var parseDate = function (vDate) {
+				if (!vDate) return "";
+				if (vDate instanceof Date) {
+					return isNaN(vDate.getTime()) ? "" : vDate.toISOString().split("T")[0];
+				}
+				if (typeof vDate === "string") {
+					var oTsMatch = vDate.match(/\/Date\((\d+)[^)]*\)\//);
+					if (oTsMatch) {
+						var oD = new Date(parseInt(oTsMatch[1], 10));
+						return isNaN(oD.getTime()) ? "" : oD.toISOString().split("T")[0];
+					}
+					if (/^\d{8}$/.test(vDate)) {
+						return vDate === "00000000" ? "" : vDate.substring(0, 4) + "-" + vDate.substring(4, 6) + "-" + vDate.substring(6, 8);
+					}
+				}
+				return vDate;
+			};
+
+			var safeTrim = function (vVal) {
+				return (vVal === null || vVal === undefined) ? "" : String(vVal).trim();
+			};
+
+			var fetchPOItems = function (sPO, sPlant) {
+				sap.ui.core.BusyIndicator.show(0);
+				oODataModel.read("/GateInPoHdrSet", {
+					filters: [
+						new sap.ui.model.Filter("PurchaseOrder", sap.ui.model.FilterOperator.EQ, sPO),
+						new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sPlant)
+					],
+					urlParameters: { "$expand": "GateInPoNav" },
+					success: function (oPoData) {
+						sap.ui.core.BusyIndicator.hide();
+						var oPoResult = (oPoData && oPoData.results && oPoData.results.length > 0) ? oPoData.results[0] : null;
+						if (oPoResult && oPoResult.GateInPoNav && oPoResult.GateInPoNav.results && oPoResult.GateInPoNav.results.length > 0) {
+							var aPoItems = oPoResult.GateInPoNav.results.map(function (item, idx) {
+								var sItemNo = item.ItemNo || item.Itemno || item.PurchaseOrderItem || item.POItem || "";
+								if (!sItemNo) { sItemNo = String((idx + 1) * 10); }
+								if (/^0+\d+$/.test(sItemNo)) { sItemNo = String(parseInt(sItemNo, 10)); }
+								return {
+									ItemNo: sItemNo,
+									ItemDescription: item.ItemDescription || "",
+									POQuantity: item.POQuantity || item.RecievedQuantity || "0.000",
+									RecievedQuantity: item.RecievedQuantity || item.POQuantity || "0.000",
+									UOM: item.UOM || "",
+									PurchaseOrder: item.PurchaseOrder || sPO,
+									Plant: item.Plant || sPlant,
+									GatePassNo: item.GatePassNo || ""
+								};
+							});
+							oModel.setProperty("/GateInPoNav", aPoItems);
+						}
+					},
+					error: function () { sap.ui.core.BusyIndicator.hide(); }
+				});
+			};
+
+			var applyData = function (oRaw) {
+				var sRawSourceType = safeTrim(oRaw.SourceType || "PO");
+				var bIsPO = sRawSourceType === "PO" || sRawSourceType === "PO_RGP" || sRawSourceType === "FREE" || sRawSourceType === "SERVICE" || sRawSourceType === "STAFF_WELFARE";
+				var sPO = safeTrim(oRaw.PurchaseOrder || oRaw.Purchaseorder || oRaw.GatePassreqNo || "");
+				var sPlant = safeTrim(oRaw.Plant);
+
+				var aExistingItems = (oRaw.PCPItmNav && oRaw.PCPItmNav.results) || [];
+				var aMapped = aExistingItems.map(function (it, idx) {
+					return {
+						ItemNo: it.ItemNo || String((idx + 1) * 10).padStart(5, "0"),
+						ItemDescription: it.ItemDescription || "",
+						POQuantity: it.POQuantity || it.RecievedQuantity || "0.000",
+						RecievedQuantity: it.RecievedQuantity || it.POQuantity || "0.000",
+						UOM: it.UOM || "",
+						PurchaseOrder: it.PurchaseOrder || sPO
+					};
+				});
+
+				oModel.setData({
+					GEDate: parseDate(oRaw.GEDate),
+					SourceType: sRawSourceType,
+					Vendor: safeTrim(oRaw.Vendor),
+					VendorDesc: safeTrim(oRaw.VendorDesc || oRaw.VendorName),
+					Plant: sPlant,
+					Department: safeTrim(oRaw.Department),
+					PurchaseOrder: sPO,
+					RGPNumber: safeTrim(oRaw.RGPNumber),
+					DCNumber: safeTrim(oRaw.DCNumber),
+					DCdate: parseDate(oRaw.DCdate),
+					PCPNo: safeTrim(oRaw.GatepassNo || oRaw.PCPNo || oRaw.PcpNo || oRaw.GatePassNo),
+					BudgetCode: safeTrim(oRaw.BudgetCode),
+					TotalCost: safeTrim(oRaw.TotalCost || "0.00"),
+					RRNo: safeTrim(oRaw.RRNo),
+					InspectionStatus: safeTrim(oRaw.InspectionStatus || "Pending"),
+					Inspectiondate: parseDate(oRaw.Inspectiondate),
+					Remarks: safeTrim(oRaw.Remarks),
+					GateEntryNo: safeTrim(oRaw.GateEntryNo),
+					GatePassNo: safeTrim(oRaw.GatepassNo || oRaw.GatePassNo || oRaw.PCPNo || oRaw.PcpNo),
+					GateInPoNav: aMapped,
+					isExisting: true,
+					isEditMode: sMode === "EDIT"
+				});
+
+				// If RRNo is missing from gate entry data, fetch it from the PO header without touching items
+				if (!safeTrim(oRaw.RRNo) && sPO && sPlant) {
+					oODataModel.read("/GateInPoHdrSet", {
+						filters: [
+							new sap.ui.model.Filter("PurchaseOrder", sap.ui.model.FilterOperator.EQ, sPO),
+							new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sPlant)
+						],
+						success: function (oPoData) {
+							var oPoHdr = (oPoData.results && oPoData.results.length > 0) ? oPoData.results[0] : null;
+							if (oPoHdr && oPoHdr.RRNo) {
+								oModel.setProperty("/RRNo", oPoHdr.RRNo);
+							}
+						},
+						error: function () {}
+					});
+				}
+
+				// Fallback: if no saved items found, prefer fetching from PCPHdrSet (actual gate entry items)
+				// Only fall back to GateInPoHdrSet (PO items) when no gate pass number exists (new entry)
+				if (aMapped.length === 0) {
+					var sGPN = safeTrim(oRaw.GatepassNo || oRaw.GatePassNo || oRaw.GateEntryNo || "");
+					if (sGPN) {
+						sap.ui.core.BusyIndicator.show(0);
+						oODataModel.read("/PCPHdrSet", {
+							filters: [new sap.ui.model.Filter("GatepassNo", sap.ui.model.FilterOperator.EQ, sGPN)],
+							urlParameters: { "$expand": "PCPItmNav" },
+							success: function (oPcpData) {
+								sap.ui.core.BusyIndicator.hide();
+								var aPcpRes = (oPcpData && oPcpData.results) || [];
+								var aFetched = [];
+								if (aPcpRes.length > 0 && aPcpRes[0].PCPItmNav && aPcpRes[0].PCPItmNav.results) {
+									aFetched = aPcpRes[0].PCPItmNav.results.map(function (it, idx) {
+										return {
+											ItemNo: it.ItemNo || String((idx + 1) * 10).padStart(5, "0"),
+											ItemDescription: it.ItemDescription || "",
+											POQuantity: it.POQuantity || it.RecievedQuantity || "0.000",
+											RecievedQuantity: it.RecievedQuantity || it.POQuantity || "0.000",
+											UOM: it.UOM || "",
+											PurchaseOrder: it.PurchaseOrder || sPO
+										};
+									});
+								}
+								if (aFetched.length > 0) {
+									oModel.setProperty("/GateInPoNav", aFetched);
+								} else if (bIsPO && sPO && sPlant) {
+									fetchPOItems(sPO, sPlant);
+								}
+							},
+							error: function () {
+								sap.ui.core.BusyIndicator.hide();
+								if (bIsPO && sPO && sPlant) { fetchPOItems(sPO, sPlant); }
+							}
+						});
+					} else if (bIsPO && sPO && sPlant) {
+						fetchPOItems(sPO, sPlant);
+					}
+				}
+			};
+
+			// Use pre-loaded data from list navigation (most reliable — avoids SAP filter quirks)
+			var oCoreModel = sap.ui.getCore().getModel("selectedGateEntry");
+			if (oCoreModel) {
+				var oCoreData = oCoreModel.getData();
+				sap.ui.getCore().setModel(null, "selectedGateEntry"); // clear so it's never reused
+				if (oCoreData) {
+					applyData(oCoreData);
+					return;
+				}
+			}
+
+			// Fallback: read from OData (used when navigating directly via URL)
+			var aFilters = [new sap.ui.model.Filter("GateEntryNo", sap.ui.model.FilterOperator.EQ, sGateEntryNo)];
+			if (sGeDate) { aFilters.push(new sap.ui.model.Filter("GEDate", sap.ui.model.FilterOperator.EQ, sGeDate)); }
+			if (sSourceType) { aFilters.push(new sap.ui.model.Filter("SourceType", sap.ui.model.FilterOperator.EQ, sSourceType)); }
+
+			sap.ui.core.BusyIndicator.show(0);
+			oODataModel.read("/PCPHdrSet", {
+				filters: aFilters,
+				urlParameters: { "$expand": "PCPItmNav" },
+				success: function (oData) {
+					sap.ui.core.BusyIndicator.hide();
+					var aResults = oData.results || [];
+					if (aResults.length > 0) {
+						// Prefer a record with matching SourceType and non-empty PurchaseOrder
+						var oResult = aResults[0];
+						if (aResults.length > 1) {
+							var oBest = aResults.find(function (r) {
+								return safeTrim(r.SourceType) === sSourceType && safeTrim(r.PurchaseOrder);
+							}) || aResults.find(function (r) {
+								return safeTrim(r.PurchaseOrder);
+							});
+							if (oBest) { oResult = oBest; }
+						}
+						applyData(oResult);
+					} else {
+						sap.m.MessageBox.error("Gate Entry record not found: " + sGateEntryNo);
+					}
+				},
+				error: function () {
+					sap.ui.core.BusyIndicator.hide();
+					sap.m.MessageBox.error("Failed to load Gate Entry details.");
+				}
+			});
 		},
 
 		_resetModel: function () {
@@ -210,10 +457,16 @@ sap.ui.define([
 		_fetchPODetails: function (sPO, sPlant) {
 			var oODataModel = this.getOwnerComponent().getModel();
 			var sPath = "/GateInPoHdrSet";
+			// console.log(sPO);
+			// console.log(sPlant);
+			
 			var aFilters = [
 				new Filter("PurchaseOrder", FilterOperator.EQ, sPO),
 				new Filter("Plant", FilterOperator.EQ, sPlant)
+
 			];
+			// console.log(aFilters)
+			
 
 			sap.ui.core.BusyIndicator.show(0);
 			oODataModel.read(sPath, {
@@ -224,12 +477,16 @@ sap.ui.define([
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
 					var oResultData = (oData && oData.results && oData.results.length > 0) ? oData.results[0] : null;
+					// console.log(oResultData);
 					if (oResultData) {
 						var oModel = this.getView().getModel("gpo");
 						if (oResultData.Vendor) { oModel.setProperty("/Vendor", oResultData.Vendor); }
 						if (oResultData.VendorDesc) { oModel.setProperty("/VendorDesc", oResultData.VendorDesc); }
-						if (oResultData.Department) { oModel.setProperty("/Department", oResultData.Department); }
-						oModel.setProperty("/SourceType", "PO"); // Force source type to PO
+						oModel.setProperty("/Department", oResultData.Department || "");
+						var sCurrentType = oModel.getProperty("/SourceType");
+						if (sCurrentType !== "PO" && sCurrentType !== "PO_RGP" && sCurrentType !== "FREE" && sCurrentType !== "SERVICE" && sCurrentType !== "STAFF_WELFARE") {
+							oModel.setProperty("/SourceType", "PO");
+						}
 						if (oResultData.DCNumber) { oModel.setProperty("/DCNumber", oResultData.DCNumber); }
 						if (oResultData.RRNo) { oModel.setProperty("/RRNo", oResultData.RRNo); }
 						if (oResultData.GatePassNo) { oModel.setProperty("/GatePassNo", oResultData.GatePassNo); }
@@ -362,10 +619,11 @@ sap.ui.define([
 				oModel.setProperty("/PurchaseOrder", oSelectedPO.PurchaseOrder || "");
 				oModel.setProperty("/Vendor", oSelectedPO.Vendor || "");
 				oModel.setProperty("/VendorDesc", oSelectedPO.VendorDesc || "");
-				if (oSelectedPO.Department) {
-					oModel.setProperty("/Department", oSelectedPO.Department);
+				oModel.setProperty("/Department", oSelectedPO.Department || "");
+				var sCurrentType = oModel.getProperty("/SourceType");
+				if (sCurrentType !== "PO" && sCurrentType !== "PO_RGP" && sCurrentType !== "FREE" && sCurrentType !== "SERVICE" && sCurrentType !== "STAFF_WELFARE") {
+					oModel.setProperty("/SourceType", "PO");
 				}
-				oModel.setProperty("/SourceType", "PO"); // Force source type to PO
 				oModel.setProperty("/DCNumber", oSelectedPO.DCNumber || "");
 				oModel.setProperty("/RRNo", oSelectedPO.RRNo || "");
 
@@ -428,7 +686,16 @@ sap.ui.define([
 				GatePassNo: "",
 				RecievedQuantity: ""
 			});
-			oModel.setProperty("/GateInPoNav", aItems);
+			oModel.setProperty("/GateInPoNav", aItems.slice());
+		},
+
+		onPOQuantityInputLiveChange: function (oEvent) {
+			var oInput = oEvent.getSource();
+			var sVal = oEvent.getParameter("value");
+			var sClean = sVal.replace(/[^0-9.]/g, "");
+			var aParts = sClean.split(".");
+			if (aParts.length > 2) { sClean = aParts[0] + "." + aParts.slice(1).join(""); }
+			if (sClean !== sVal) { oInput.setValue(sClean); }
 		},
 
 		onDeleteItem: function (oEvent) {
@@ -448,7 +715,7 @@ sap.ui.define([
 			var oModel = this.getView().getModel("gpo");
 			var sSourceType = (oModel ? oModel.getProperty("/SourceType") : "") || "";
 			sSourceType = sSourceType.toUpperCase().trim();
-			return sSourceType === "PO";
+			return sSourceType === "PO" || sSourceType === "PO_RGP" || sSourceType === "FREE" || sSourceType === "SERVICE" || sSourceType === "STAFF_WELFARE";
 		},
 
 		_isPCPFlow: function () {
@@ -459,136 +726,43 @@ sap.ui.define([
 		},
 
 		onSubmit: function () {
-			if (this._isPOFlow()) {
-				this._submitPOFlow();
-			} else if (this._isPCPFlow()) {
-				this._submitPCPFlow();
-			} else {
-				// Fallback robustness check: if a PO number is present, treat as PO flow
-				var oModel = this.getView().getModel("gpo");
-				if (oModel && oModel.getProperty("/PurchaseOrder")) {
-					this._submitPOFlow();
-				} else {
-					MessageBox.error("Please select a Source Type (PO or Petty Cash) before submitting.");
-				}
-			}
-		},
-
-		// =========================================================================
-		// PO Workflow Implementation Methods
-		// =========================================================================
-
-		_validatePO: function (oData) {
-			if (!oData.GEDate) {
-				MessageBox.error("Please enter GE Date.");
-				return false;
-			}
-			if (!oData.Plant) {
-				MessageBox.error("Please enter Plant.");
-				return false;
-			}
-			if (!oData.Department) {
-				MessageBox.error("Please enter Department.");
-				return false;
-			}
-			if (!oData.GateInPoNav || oData.GateInPoNav.length === 0) {
-				MessageBox.error("Please add at least one item.");
-				return false;
-			}
-			return true;
-		},
-
-		_preparePOPayload: function (oData) {
-			var sPlant = oData.Plant;
-			var sPO = oData.PurchaseOrder;
-
-			var aNavItems = oData.GateInPoNav.map(function (oItem) {
-				return {
-					PurchaseOrder: sPO || "",
-					Plant: sPlant,
-					ItemNo: oItem.ItemNo || "",
-					ItemDescription: oItem.ItemDescription || "",
-					POQuantity: oItem.POQuantity ? String(oItem.POQuantity) : "0.000",
-					UOM: oItem.UOM || "",
-					GatePassNo: "",
-					RecievedQuantity: oItem.RecievedQuantity ? String(oItem.RecievedQuantity) : "0.000"
-				};
-			});
-
-			var sGEDate = this._formatDateToSAP(oData.GEDate);
-			var sInspectionDate = this._formatDateToSAP(oData.Inspectiondate);
-
-			return {
-				PurchaseOrder: sPO || "",
-				Plant: sPlant,
-				SourceType: oData.SourceType || "PO",
-				Vendor: oData.Vendor || "",
-				VendorDesc: oData.VendorDesc || "",
-				Department: oData.Department || "",
-				DCNumber: oData.DCNumber || "",
-				RRNo: oData.RRNo || "",
-				InspectionStatus: oData.InspectionStatus || "Pending",
-				Inspectiondate: sInspectionDate,
-				Remarks: oData.Remarks || "",
-				GateEntryNo: "",
-				GEDate: sGEDate,
-				Message: "",
-				GateInPoNav: aNavItems
-			};
-		},
-
-		_submitPOFlow: function () {
 			var oModel = this.getView().getModel("gpo");
 			var oData = oModel.getData();
 
-			if (!this._validatePO(oData)) {
-				return;
-			}
-
-			var oPayload = this._preparePOPayload(oData);
-			this._executeODataCreate("/GateInPoHdrSet", oPayload);
-		},
-
-		// =========================================================================
-		// Petty Cash Purchase (PCP) Workflow Implementation Methods
-		// =========================================================================
-
-		_validatePCP: function (oData) {
 			if (!oData.GEDate) {
 				MessageBox.error("Please enter GE Date.");
-				return false;
+				return;
 			}
 			if (!oData.Plant) {
 				MessageBox.error("Please enter Plant.");
-				return false;
-			}
-			if (!oData.Department) {
-				MessageBox.error("Please enter Department.");
-				return false;
-			}
-			if (!oData.VendorDesc) {
-				MessageBox.error("Please enter Vendor Name.");
-				return false;
-			}
-			var fTotalCost = parseFloat(oData.TotalCost || 0);
-			if (fTotalCost > 5000) {
-				MessageBox.error("Total Cost for Petty Cash Purchase cannot exceed 5000.");
-				return false;
+				return;
 			}
 			if (!oData.GateInPoNav || oData.GateInPoNav.length === 0) {
 				MessageBox.error("Please add at least one material item.");
-				return false;
+				return;
 			}
-			return true;
-		},
 
-		_preparePCPPayload: function (oData) {
+			// Petty Cash specific validation (total cost check)
+			var sSourceType = (oData.SourceType || "").toUpperCase().trim();
+			var bIsPCP = sSourceType === "PETTY CASH" || sSourceType === "PETTYCASH" || sSourceType === "PCP" || sSourceType === "PETTY_CASH";
+			if (bIsPCP) {
+				if (!oData.VendorDesc) {
+					MessageBox.error("Please enter Vendor Name.");
+					return;
+				}
+				var fTotalCost = parseFloat(oData.TotalCost || 0);
+				if (fTotalCost > 5000) {
+					MessageBox.error("Total Cost for Petty Cash Purchase cannot exceed 5000.");
+					return;
+				}
+			}
+
+			// Unify payload mapping for all scenarios
 			var sPlant = oData.Plant;
-			var sGEDateSAP = this._formatDateToSAP(oData.GEDate);
-			var sDCDateSAP = oData.DCdate ? this._formatDateToSAP(oData.DCdate) : sGEDateSAP;
+			var sPO = oData.PurchaseOrder;
 
 			var aNavItems = oData.GateInPoNav.map(function (oItem, idx) {
-				var sQty = oItem.RecievedQuantity || oItem.POQuantity || "0.000";
+				var sQty = oItem.POQuantity || oItem.RecievedQuantity || "0.000";
 
 				var sItemNo = oItem.ItemNo || String((idx + 1) * 10);
 				if (/^\d+$/.test(sItemNo)) {
@@ -596,7 +770,7 @@ sap.ui.define([
 				}
 
 				return {
-					SourceType: "PettyCash",
+					SourceType: oData.SourceType || "PO",
 					ItemNo: sItemNo,
 					ItemDescription: oItem.ItemDescription || "",
 					RecievedQuantity: String(parseFloat(sQty).toFixed(3)),
@@ -606,38 +780,32 @@ sap.ui.define([
 				};
 			});
 
-			return {
-				GEDate: sGEDateSAP,
+			var sGEDate = this._formatDateToSAP(oData.GEDate);
+			var sDCDateSAP = oData.DCdate ? this._formatDateToSAP(oData.DCdate) : sGEDate;
+
+			var oPayload = {
+				GEDate: sGEDate,
 				Plant: sPlant,
 				Vendor: oData.Vendor || "",
 				VendorDesc: oData.VendorDesc || "",
-				SourceType: "PettyCash",
+				SourceType: oData.SourceType || "PO",
 				Department: oData.Department || "",
 				DCNumber: oData.DCNumber || "",
-				PurchaseOrder: oData.PurchaseOrder || "",
+				PurchaseOrder: sPO || "",
 				RRNo: oData.RRNo || "",
 				GateEntryNo: oData.GateEntryNo || "",
-				PCPDate: sGEDateSAP,
+				GatepassNo: oData.PCPNo || "",
+				PCPDate: sGEDate,
 				DCdate: sDCDateSAP,
 				BudgetCode: oData.BudgetCode || "",
 				EntryPoint: "",
-				InspectionStatus: "",
-				Inspectiondate: "",
+				InspectionStatus: oData.InspectionStatus || "",
+				Inspectiondate: oData.Inspectiondate ? this._formatDateToSAP(oData.Inspectiondate) : "",
 				Remarks: oData.Remarks || "",
 				Message: "",
 				PCPItmNav: aNavItems
 			};
-		},
 
-		_submitPCPFlow: function () {
-			var oModel = this.getView().getModel("gpo");
-			var oData = oModel.getData();
-
-			if (!this._validatePCP(oData)) {
-				return;
-			}
-
-			var oPayload = this._preparePCPPayload(oData);
 			this._executeODataCreate("/PCPHdrSet", oPayload);
 		},
 
@@ -658,9 +826,14 @@ sap.ui.define([
 				oODataModel.create(sEntitySet, oPayload, {
 					success: function (oResponse) {
 						sap.ui.core.BusyIndicator.hide();
-						var sMsg = (oResponse && oResponse.Message) ? oResponse.Message : "Success";
-						MessageToast.show(sMsg);
-						this._resetModel();
+						var sMsg = (oResponse && oResponse.Message) ? oResponse.Message : "Gate Entry saved successfully.";
+						var oModel = this.getView().getModel("gpo");
+						MessageBox.success(sMsg, {
+							onClose: function () {
+								if (oModel) { oModel.setProperty("/ui/hasPendingChanges", false); }
+								this.getRouter().navTo("PCPList");
+							}.bind(this)
+						});
 					}.bind(this),
 					error: function (oError) {
 						sap.ui.core.BusyIndicator.hide();
@@ -718,6 +891,10 @@ sap.ui.define([
 
 		onNavHome: function () {
 			this.getRouter().navTo("home");
+		},
+
+		onNavBack: function () {
+			this.getRouter().navTo("PCPList");
 		}
 
 	});

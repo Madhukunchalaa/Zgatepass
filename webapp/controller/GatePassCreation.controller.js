@@ -215,14 +215,24 @@ sap.ui.define([
 			var oArgs = oEvent.getParameter("arguments");
 			var sType  = oArgs ? (oArgs.type  || null) : null;
 			var sReqNo = oArgs ? (oArgs.reqNo || null) : null;
+			var sStatus = oArgs ? (oArgs.status || null) : null;
 			if (sReqNo) { sReqNo = decodeURIComponent(sReqNo); }
 			if (sType)  { sType  = decodeURIComponent(sType); }
+			if (sStatus) { sStatus = decodeURIComponent(sStatus); }
 
 			// Pass type into _resetModel so GatePassType is set in the initial model
 			this._resetModel(sType);
 			this._sAmendReqNo = sReqNo || null;
 
 			var oModel = this.getView().getModel("gp");
+
+			// If this is an amendment, make fields editable immediately (before async data load)
+			// so the user is not stuck looking at a locked read-only form while OData fetches.
+			if (sReqNo && oModel) {
+				oModel.setProperty("/isFieldEditable", true);
+				oModel.setProperty("/isTypeEditable",  false); // GP Type must not change on amendment
+			}
+
 			if (oModel) {
 				// Pre-fill Plant, Company Code and Department from logged-in user profile
 				var oUserModel = sap.ui.getCore().getModel("user");
@@ -253,21 +263,24 @@ sap.ui.define([
 
 			// If this is an amendment, load the original request data to pre-fill all fields
 			if (sReqNo && sType) {
-				this._loadAmendmentData(sReqNo, sType);
+				this._loadAmendmentData(sReqNo, sType, sStatus);
 			}
 		},
 
-		// Load original request data for amendment editing
-		_loadAmendmentData: function (sReqNo, sType) {
+		_loadAmendmentData: function (sReqNo, sType, sStatus) {
 			var oODataModel = this.getOwnerComponent().getModel();
 			var that = this;
 			if (!oODataModel) { return; }
+
+			// Default status parameter to "AM" or "AMENDMENT" if missing
+			var sTargetStatus = sStatus || "AM";
 
 			sap.ui.core.BusyIndicator.show(0);
 			oODataModel.read("/GateReqHdrSet", {
 				filters: [
 					new Filter("GatePassReqNo", FilterOperator.EQ, sReqNo),
-					new Filter("GatePassType",  FilterOperator.EQ, sType)
+					new Filter("GatePassType",  FilterOperator.EQ, sType),
+					new Filter("Status",        FilterOperator.EQ, sTargetStatus)
 				],
 				urlParameters: { "$expand": "GateReqItmNav" },
 				success: function (oData) {
@@ -276,7 +289,12 @@ sap.ui.define([
 					if (oRow) {
 						that._prefillAmendmentModel(oRow);
 					} else {
-						MessageToast.show("Amendment data not found. Please fill in manually.");
+						// Fallback query if AM status failed
+						if (sTargetStatus !== "AMENDMENT") {
+							that._loadAmendmentData(sReqNo, sType, "AMENDMENT");
+						} else {
+							MessageToast.show("Amendment data not found. Please fill in manually.");
+						}
 					}
 				},
 				error: function () {
@@ -308,6 +326,32 @@ sap.ui.define([
 			oModel.setProperty("/ModeOfDispatch", oRow.ModeOfDispatch || "");
 			oModel.setProperty("/Remarks",        oRow.Remarks        || "");
 
+			// Date parsing helper
+			var fnParseDate = function (vDate) {
+				if (!vDate || vDate === "00000000" || vDate === "") { return null; }
+				if (vDate instanceof Date) { return vDate; }
+				if (typeof vDate === "string" && vDate.indexOf("/Date(") === 0) {
+					var ms = parseInt(vDate.replace(/\/Date\((\d+)[^)]*\)\//, "$1"), 10);
+					return new Date(ms);
+				}
+				if (typeof vDate === "string" && /^\d{8}$/.test(vDate)) {
+					var y = parseInt(vDate.slice(0, 4), 10);
+					var m = parseInt(vDate.slice(4, 6), 10) - 1;
+					var d = parseInt(vDate.slice(6, 8), 10);
+					return new Date(y, m, d);
+				}
+				var parsed = new Date(vDate);
+				return isNaN(parsed.getTime()) ? null : parsed;
+			};
+
+			var oRawDate = oRow.GpDate || oRow.Gpdate || oRow.GPDate || oRow.GatePassDate || oRow.GatepassDate || oRow.RequestDate || oRow.Requestdate || oRow.CreateDate || oRow.CreatedOn || oRow.Erdat || oRow.Aedat;
+			var oParsedGpDate = fnParseDate(oRawDate) || new Date();
+			oModel.setProperty("/gpDate", oParsedGpDate);
+
+			var oRawRetDate = oRow.ReturnableDate || oRow.Returnabledate || oRow.RetDate || oRow.Retdate;
+			var oParsedRetDate = fnParseDate(oRawRetDate);
+			oModel.setProperty("/returnableDate", oParsedRetDate);
+
 			// Items
 			var aRaw = (oRow.GateReqItmNav && oRow.GateReqItmNav.results) ||
 			           (oRow.GateReqItemNav && oRow.GateReqItemNav.results) || [];
@@ -338,7 +382,166 @@ sap.ui.define([
 				this._loadMaterials(sPlant);
 			}
 
+			// Load original attachment if any
+			this._loadAmendmentBase64(oRow.GatePassReqNo || oRow.GatePassreqNo || "", oRow.GatePassType || "");
+
 			MessageToast.show("Amendment: All original fields loaded. Please review and resubmit.", { duration: 4000 });
+		},
+
+		_loadAmendmentBase64: function (sReqNo, sType) {
+			var oODataModel = this.getOwnerComponent().getModel();
+			var oGpModel = this.getView().getModel("gp");
+			if (!oODataModel || !oGpModel || !sReqNo) { return; }
+			var that = this;
+
+			// First, check localStorage fallback
+			try {
+				var sLocalAttach = localStorage.getItem("attachments_" + sReqNo);
+				if (sLocalAttach) {
+					var aLocal = JSON.parse(sLocalAttach);
+					if (aLocal && aLocal.length > 0) {
+						aLocal.forEach(function (att) {
+							if (att.type) {
+								var sT = att.type.toUpperCase().trim();
+								if (sT.indexOf("PDF") !== -1 || sT === "APPLICATION/PDF") {
+									att.type = "pdf";
+								} else if (sT.indexOf("PNG") !== -1 || sT === "IMAGE/PNG") {
+									att.type = "png";
+								} else if (sT.indexOf("JPG") !== -1 || sT.indexOf("JPEG") !== -1 || sT === "IMAGE/JPEG") {
+									att.type = "jpg";
+								} else if (sT.indexOf("DOC") !== -1 || sT.indexOf("WORD") !== -1 || sT.indexOf("OFFICEDOCUMENT") !== -1) {
+									att.type = "docx";
+								}
+							}
+						});
+						oGpModel.setProperty("/attachments", aLocal);
+						return; // successfully loaded from local cache
+					}
+				}
+			} catch (e) {
+				console.error("Error loading localStorage attachments for amendment: ", e);
+			}
+
+			// If not in localStorage, query backend creation entity
+			var sKeyPath = "/GatePassReqHdrSet(GatePassReqNo='" + sReqNo + "',GatePassType='" + sType + "')";
+			oODataModel.read(sKeyPath, {
+				success: function (oData) {
+					var aAttachments = that._processLoadedAttachmentsForCreation(oData);
+					if (aAttachments.length > 0) {
+						oGpModel.setProperty("/attachments", aAttachments);
+					} else {
+						// Try filter fallback
+						oODataModel.read("/GatePassReqHdrSet", {
+							filters: [new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)],
+							success: function (oData2) {
+								var oItem = oData2.results && oData2.results[0];
+								if (oItem) {
+									var aAttachmentsFallback = that._processLoadedAttachmentsForCreation(oItem);
+									oGpModel.setProperty("/attachments", aAttachmentsFallback);
+								}
+							},
+							error: function (oErr) {
+								console.error("Filter OData read on /GatePassReqHdrSet failed: ", oErr);
+							}
+						});
+					}
+				},
+				error: function (oError) {
+					console.error("Direct OData read on " + sKeyPath + " failed. Trying filter query.", oError);
+					
+					// Try filter fallback
+					oODataModel.read("/GatePassReqHdrSet", {
+						filters: [new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)],
+						success: function (oData2) {
+							var oItem = oData2.results && oData2.results[0];
+							if (oItem) {
+								var aAttachmentsFallback = that._processLoadedAttachmentsForCreation(oItem);
+								oGpModel.setProperty("/attachments", aAttachmentsFallback);
+							}
+						},
+						error: function (oErr) {
+							console.error("Filter OData read on /GatePassReqHdrSet failed: ", oErr);
+						}
+					});
+				}
+			});
+		},
+
+		_processLoadedAttachmentsForCreation: function (oData) {
+			var aAttachments = [];
+			if (!oData) return aAttachments;
+
+			// Attachment 1
+			var sImg1 = oData.Base64Img1 || oData.Base64img1 || "";
+			var sFname1 = oData.FILENAME || oData.Filename || oData.FileName || oData.Fname || "";
+			var sFtype1 = (oData.FILETYPE || oData.Filetype || oData.FileType || oData.Ftype || "").toUpperCase().trim();
+			if (sImg1) {
+				if (sFtype1) {
+					if (sFtype1.indexOf("PDF") !== -1 || sFtype1 === "APPLICATION/PDF") {
+						sFtype1 = "PDF";
+					} else if (sFtype1.indexOf("PNG") !== -1 || sFtype1 === "IMAGE/PNG") {
+						sFtype1 = "PNG";
+					} else if (sFtype1.indexOf("JPG") !== -1 || sFtype1.indexOf("JPEG") !== -1 || sFtype1 === "IMAGE/JPEG") {
+						sFtype1 = "JPG";
+					} else if (sFtype1.indexOf("DOC") !== -1 || sFtype1.indexOf("WORD") !== -1 || sFtype1.indexOf("OFFICEDOCUMENT") !== -1) {
+						sFtype1 = "DOCX";
+					}
+				}
+				var sMime1 = "image/jpeg";
+				if (sFtype1 === "PDF") sMime1 = "application/pdf";
+				else if (sFtype1 === "PNG") sMime1 = "image/png";
+				else if (sFtype1 === "GIF") sMime1 = "image/gif";
+				
+				var sFullContent1 = sImg1;
+				if (sImg1.indexOf("data:") !== 0) {
+					sFullContent1 = "data:" + sMime1 + ";base64," + sImg1;
+				}
+				
+				var sFullFileName1 = sFname1 ? (sFname1 + "." + sFtype1.toLowerCase()) : ("attachment1." + sFtype1.toLowerCase());
+				aAttachments.push({
+					name: sFullFileName1,
+					size: "",
+					content: sFullContent1,
+					type: sFtype1.toLowerCase()
+				});
+			}
+
+			// Attachment 2
+			var sImg2 = oData.Base64Img2 || oData.Base64img2 || "";
+			var sFname2 = oData.FILENAME2 || oData.Filename2 || oData.FileName2 || oData.Fname2 || "";
+			var sFtype2 = (oData.FILETYPE2 || oData.Filetype2 || oData.FileType2 || oData.Ftype2 || "").toUpperCase().trim();
+			if (sImg2) {
+				if (sFtype2) {
+					if (sFtype2.indexOf("PDF") !== -1 || sFtype2 === "APPLICATION/PDF") {
+						sFtype2 = "PDF";
+					} else if (sFtype2.indexOf("PNG") !== -1 || sFtype2 === "IMAGE/PNG") {
+						sFtype2 = "PNG";
+					} else if (sFtype2.indexOf("JPG") !== -1 || sFtype2.indexOf("JPEG") !== -1 || sFtype2 === "IMAGE/JPEG") {
+						sFtype2 = "JPG";
+					} else if (sFtype2.indexOf("DOC") !== -1 || sFtype2.indexOf("WORD") !== -1 || sFtype2.indexOf("OFFICEDOCUMENT") !== -1) {
+						sFtype2 = "DOCX";
+					}
+				}
+				var sMime2 = "image/jpeg";
+				if (sFtype2 === "PDF") sMime2 = "application/pdf";
+				else if (sFtype2 === "PNG") sMime2 = "image/png";
+				else if (sFtype2 === "GIF") sMime2 = "image/gif";
+				
+				var sFullContent2 = sImg2;
+				if (sImg2.indexOf("data:") !== 0) {
+					sFullContent2 = "data:" + sMime2 + ";base64," + sImg2;
+				}
+				
+				var sFullFileName2 = sFname2 ? (sFname2 + "." + sFtype2.toLowerCase()) : ("attachment2." + sFtype2.toLowerCase());
+				aAttachments.push({
+					name: sFullFileName2,
+					size: "",
+					content: sFullContent2,
+					type: sFtype2.toLowerCase()
+				});
+			}
+
+			return aAttachments;
 		},
 
 		_loadPlants: function () {
@@ -574,8 +777,14 @@ sap.ui.define([
 		onFileChange: function (oEvent) {
 			var oModel = this.getView().getModel("gp");
 			var aFiles = oEvent.getParameter("files");
+			var aCurrent = oModel.getProperty("/attachments") || [];
 
 			if (aFiles && aFiles.length > 0) {
+				if (aCurrent.length + aFiles.length > 2) {
+					sap.m.MessageBox.error("You can only upload a maximum of 2 attachments.");
+					oEvent.getSource().clear();
+					return;
+				}
 				var readAndAdd = function (oFile) {
 					var reader = new FileReader();
 					reader.onload = function (e) {
@@ -589,7 +798,6 @@ sap.ui.define([
 							sSize = (oFile.size / 1048576).toFixed(1) + " MB";
 						}
 						
-						var aCurrent = oModel.getProperty("/attachments") || [];
 						var bExists = aCurrent.some(function (att) {
 							return att.name === oFile.name;
 						});
@@ -748,6 +956,10 @@ sap.ui.define([
 						MessageBox.error("HSN Code is mandatory at row " + (i + 1) + ".");
 						return;
 					}
+					if (!/^\d{8}$/.test(oItem.hsnCode.trim())) {
+						MessageBox.error("HSN Code must be exactly 8 digits at row " + (i + 1) + ". Entered: \"" + oItem.hsnCode.trim() + "\"");
+						return;
+					}
 				}
 
 				var oVendorModel = this.getView().getModel("vendors");
@@ -769,10 +981,16 @@ sap.ui.define([
 					return y + m + day;
 				};
 
-				var sRawImage = (oGp.attachments && oGp.attachments.length > 0) ? oGp.attachments[0].content : "";
-				var iComma = sRawImage.indexOf("base64,");
-				if (iComma !== -1) {
-					sRawImage = sRawImage.substring(iComma + 7);
+				var sRawImage1 = (oGp.attachments && oGp.attachments.length > 0) ? oGp.attachments[0].content : "";
+				var iComma1 = sRawImage1.indexOf("base64,");
+				if (iComma1 !== -1) {
+					sRawImage1 = sRawImage1.substring(iComma1 + 7);
+				}
+
+				var sRawImage2 = (oGp.attachments && oGp.attachments.length > 1) ? oGp.attachments[1].content : "";
+				var iComma2 = sRawImage2.indexOf("base64,");
+				if (iComma2 !== -1) {
+					sRawImage2 = sRawImage2.substring(iComma2 + 7);
 				}
 
 				// Determine if this is an amendment resubmit (carry same request number)
@@ -789,16 +1007,18 @@ sap.ui.define([
 					VendorGST: oGp.vendorGST || "",
 					ZipCode: oSelectedVendor.PostalCode || "",
 					City: oSelectedVendor.City || "",
-					ApprovalReq: sAmendReqNo ? "X" : "X", // always reset to Pending for HOD re-review
-					Approval1: "",   // clear previous HOD approval/amendment status
-					Approval2: "",   // clear previous Store approval status
+					ApprovalReq: "X",
+					Approval1: "",
+					Approval2: "",
+					StoreAmmend: "",
 					GatePassReqNo: sAmendReqNo, // same request number for amendment resubmit
 					Department: oGp.Department,
 					VehicleNo: oGp.VehicleNo || "",
 					ModeOfDispatch: oGp.ModeOfDispatch || "",
 					Remarks: oGp.Remarks || "",
 					ReturnableDate: fnFormatDate(oGp.returnableDate),
-					Base64Img1: sRawImage,
+					Base64Img1: sRawImage1,
+					Base64Img2: sRawImage2,
 
 					GateReqItemNav: (oGp.items || []).map(function (it, index) {
 						var fQty = parseFloat(String(it.quantity).replace(/,/g, '')) || 0;
@@ -827,14 +1047,26 @@ sap.ui.define([
 					var iDot = sAttachName.lastIndexOf(".");
 					oPayload.Fname = iDot !== -1 ? sAttachName.substring(0, iDot) : sAttachName;
 					oPayload.Ftype = iDot !== -1 ? sAttachName.substring(iDot + 1).toUpperCase() : "";
+				} else {
+					oPayload.Fname = "";
+					oPayload.Ftype = "";
+				}
+
+				if (oGp.attachments && oGp.attachments.length > 1) {
+					var sAttachName2 = oGp.attachments[1].name || "";
+					var iDot2 = sAttachName2.lastIndexOf(".");
+					oPayload.Fname2 = iDot2 !== -1 ? sAttachName2.substring(0, iDot2) : sAttachName2;
+					oPayload.Ftype2 = iDot2 !== -1 ? sAttachName2.substring(iDot2 + 1).toUpperCase() : "";
+				} else {
+					oPayload.Fname2 = "";
+					oPayload.Ftype2 = "";
 				}
 
 				// --- DEBUGGING ---
 				// Log the exact Base64 string being uploaded to the backend for comparison
 				console.log("=== BASE64 UPLOAD PAYLOAD ===");
-				console.log("String Length: " + (oPayload.Base64Img1 ? oPayload.Base64Img1.length : 0));
-				console.log("Base64 Value:");
-				console.log(oPayload.Base64Img1);
+				console.log("String 1 Length: " + (oPayload.Base64Img1 ? oPayload.Base64Img1.length : 0));
+				console.log("String 2 Length: " + (oPayload.Base64Img2 ? oPayload.Base64Img2.length : 0));
 				console.log("===============================");
 
 				var oODataModel = this.getOwnerComponent().getModel();
@@ -849,7 +1081,7 @@ sap.ui.define([
 					success: function (oData) {
 						sap.ui.core.BusyIndicator.hide();
 
-						var sReqNo = oData.GatePassReqNo || "";
+						var sReqNo = oData.GatePassReqNo || oData.GatePassreqNo || "";
 						if (sReqNo) {
 							var aCurrentAttachments = this.getView().getModel("gp").getProperty("/attachments") || [];
 							if (aCurrentAttachments.length > 0) {

@@ -104,7 +104,7 @@
 				},
 				{
 					"name": "GatePassAmendment",
-					"pattern": "GatePassAmendment/:type:/:reqNo:",
+					"pattern": "GatePassAmendment/:type:/:reqNo:/:status:",
 					"target": "TargetGatePassCreation"
 				},
 				{
@@ -161,6 +161,11 @@
 				{
 					"name": "GatePassWithPODetail",
 					"pattern": "GatePassWithPO/{poNumber}/{plant}",
+					"target": ["TargetGatePassWithPO"]
+				},
+				{
+					"name": "GatePassWithPOEdit",
+					"pattern": "GatePassWithPO/Edit/{gateEntryNo}/{geDate}/{sourceType}/{mode}",
 					"target": ["TargetGatePassWithPO"]
 				},
 				{
@@ -232,6 +237,16 @@
 					"name": "StoreRequestDetail",
 					"pattern": "StoreRequestDetail/:reqNo:/:gpType:",
 					"target": ["TargetStoreRequestDetail"]
+				},
+				{
+					"name": "ScrapInventory",
+					"pattern": "ScrapInventory",
+					"target": ["TargetScrapInventory"]
+				},
+				{
+					"name": "RGPDetail",
+					"pattern": "RGPDetail/:gpNo:",
+					"target": ["TargetRGPDetail"]
 				}
 			],
 			"targets": {
@@ -350,6 +365,11 @@
 					"viewId": "ScrapGatepassDetail",
 					"viewName": "ScrapGatepassDetail"
 				},
+				"TargetScrapInventory": {
+					"viewType": "XML",
+					"viewId": "ScrapInventory",
+					"viewName": "ScrapInventory"
+				},
 				"TargetHODRequestDetail": {
 					"viewType": "XML",
 					"viewId": "HODRequestDetail",
@@ -359,6 +379,11 @@
 					"viewType": "XML",
 					"viewId": "StoreRequestDetail",
 					"viewName": "StoreRequestDetail"
+				},
+				"TargetRGPDetail": {
+					"viewType": "XML",
+					"viewId": "RGPDetail",
+					"viewName": "RGPDetail"
 				}
 			}
 		}

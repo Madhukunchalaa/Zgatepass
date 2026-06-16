@@ -60,7 +60,7 @@
 							<Select
                              id="gpType"
                              selectedKey="{gp>/GatePassType}"
-                             enabled="{gp>/isFieldEditable}"
+                             enabled="{gp>/isTypeEditable}"
                              class="gpmsFieldInput"
                              width="100%">
     
@@ -159,50 +159,50 @@
 							<Label text="Vendor Address" class="gpmsFieldLabel"/>
 							<Input
 								value="{gp>/vendorAddress}"
-								editable="false"
-								class="gpmsFieldInput gpmsFieldInputReadonly"
+								placeholder="Enter vendor address"
+								class="gpmsFieldInput"
 								width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="Vendor's GST" class="gpmsFieldLabel"/>
 							<Input
 								value="{gp>/vendorGST}"
-								editable="false"
-								class="gpmsFieldInput gpmsFieldInputReadonly"
+								placeholder="Enter vendor GST"
+								class="gpmsFieldInput"
 								width="100%"/>
 						</VBox>
 					</layout:Grid>
 				</Panel>
 
-				<!-- ─── SECTION 3 · Photo Attachment ──────────── -->
+				<!-- ─── SECTION 3 · Attachments ──────────── -->
 				<Panel class="gpmsSection" expandable="false">
 					<headerToolbar>
 						<Toolbar class="gpmsSectionBar">
-							<core:Icon src="sap-icon://camera" class="gpmsSectionBarIcon"/>
-							<Label text="Photo Attachments" class="gpmsSectionBarLabel"/>
+							<core:Icon src="sap-icon://attachment" class="gpmsSectionBarIcon"/>
+							<Label text="Attachments (Images, PDF, Word)" class="gpmsSectionBarLabel"/>
 						</Toolbar>
 					</headerToolbar>
 					<VBox class="sapUiSmallMargin">
 						<HBox alignItems="Center" class="sapUiSmallMarginBottom" wrap="Wrap">
 							<unified:FileUploader
 								id="photoUploader"
-								buttonText="Browse &amp; Upload Photo(s)"
+								buttonText="Browse &amp; Upload File(s)"
 								class="gpmsFileUploader"
 								multiple="true"
 								change=".onFileChange"
-								tooltip="Upload one or more gate pass photos"/>
+								tooltip="Upload one or more gate pass attachments (images, PDF, Word documents)"/>
 						</HBox>
 						
-						<!-- List of Uploaded Photos -->
+						<!-- List of Uploaded Attachments -->
 						<List
 							id="attachmentsList"
-							noDataText="No photo attachments uploaded."
+							noDataText="No attachments uploaded."
 							items="{gp>/attachments}"
 							class="gpmsAttachmentList">
 							<CustomListItem class="gpmsAttachmentListItem">
 								<HBox alignItems="Center" justifyContent="SpaceBetween" width="100%">
 									<HBox alignItems="Center">
-										<core:Icon src="sap-icon://attachment-photo" class="gpmsAttachmentIcon sapUiSmallMarginEnd" color="#1A237E"/>
+										<core:Icon src="sap-icon://attachment" class="gpmsAttachmentIcon sapUiSmallMarginEnd" color="#1A237E"/>
 										<VBox>
 											<Text text="{gp>name}" class="gpmsAttachmentNameText"/>
 											<Text text="{gp>size}" class="gpmsAttachmentSizeText" visible="{= !!${gp>size}}"/>
@@ -366,7 +366,7 @@
 			<OverflowToolbar class="gpmsFooterBar">
 				<ToolbarSpacer/>
 				<Button text="Clear All" icon="sap-icon://clear-all" press=".onClear" class="gpmsClearBtn"/>
-				<Button text="Submit Gate Pass Request" icon="sap-icon://paper-plane" press=".onSubmit" class="gpmsSubmitBtn"/>
+				<Button text="{= ${gp>/GatePassReqNo} ? 'Resubmit Request' : 'Submit Gate Pass Request' }" icon="sap-icon://paper-plane" press=".onSubmit" class="gpmsSubmitBtn"/>
 			</OverflowToolbar>
 		</footer>
 	</Page>

@@ -51,6 +51,23 @@ sap.ui.define([
 			var oIRGPGlobalModel = new JSONModel(oIRGPGlobalData);
 			this.setModel(oIRGPGlobalModel, "irgpGlobal");
 
+			// Initialize mock scrap inventory in localStorage if not already present
+			if (!localStorage.getItem("mockScrapInventory")) {
+				var oScrapInv = {
+					"Metal": { quantity: 280205.5, uom: "Kilogram" },
+					"Spent Oil": { quantity: 9585, uom: "Litre" },
+					"Plastic": { quantity: 66989, uom: "Kilogram" },
+					"Rubber": { quantity: 3121, uom: "Kilogram" },
+					"Glass": { quantity: 6, uom: "Kilogram" },
+					"Others": { quantity: 0, uom: "Number" },
+					"Wood": { quantity: 2258, uom: "Kilogram" },
+					"Lube/Diesel filter": { quantity: 0, uom: "Kilogram" },
+					"Other filter": { quantity: 2, uom: "Kilogram" },
+					"Electrical Waste": { quantity: 3861, uom: "Kilogram" }
+				};
+				localStorage.setItem("mockScrapInventory", JSON.stringify(oScrapInv));
+			}
+
 			this.getRouter().initialize();
 		},
 
@@ -70,9 +87,9 @@ sap.ui.define([
 						oUserModel.setProperty("/Cocode", oResult.Cocode || "");
 						oUserModel.setProperty("/Department", oResult.Department || "");
 						oUserModel.setProperty("/Role", sRole);
-						oUserModel.setProperty("/IsGatepassUserOnly", sRole === "ZC_MM_GATEPASS_USER_FRONT_VIEW");
-						oUserModel.setProperty("/IsHodUser", sRole === "ZC_MM_GATEPASS_HOD_FRONT_VIEW");
-						oUserModel.setProperty("/IsStoreUser", sRole === "ZC_MM_GATEPASS_STORE_FRONTVIEW");
+						oUserModel.setProperty("/IsGatepassUserOnly", sRole === "ZC_MM_GATEPASS_USER_FRONT_VIEW" || sRole === "ZC_MM_GATEPASS_USER_FRONTVIEW" || sRole === "Z_MM_GATEPASS_USER_FRONT_VIEW" || sRole === "Z_MM_GATEPASS_USER_FRONTVIEW");
+						oUserModel.setProperty("/IsHodUser", sRole === "ZC_MM_GATEPASS_HOD_FRONT_VIEW" || sRole === "ZC_MM_GATEPASS_HOD_FRONTVIEW" || sRole === "Z_MM_GATEPASS_HOD_FRONT_VIEW" || sRole === "Z_MM_GATEPASS_HOD_FRONTVIEW");
+						oUserModel.setProperty("/IsStoreUser", sRole === "ZC_MM_GATEPASS_STORE_FRONTVIEW" || sRole === "ZC_MM_GATEPASS_STORE_FRONT_VIEW" || sRole === "Z_MM_GATEPASS_STORE_FRONTVIEW" || sRole === "Z_MM_GATEPASS_STORE_FRONT_VIEW");
 						localStorage.setItem("gpms_user", JSON.stringify(oUserModel.getData()));
 					}
 				}.bind(this),

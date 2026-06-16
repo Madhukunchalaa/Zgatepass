@@ -5,46 +5,49 @@
 	xmlns:f="sap.f"
 	xmlns:core="sap.ui.core"
 	height="100%">
-	<Page title="PCPs" class="gpmsPage" showNavButton="true" navButtonPress=".onNavBack">
+	<Page title="Gate Entry List" class="gpmsPage" showNavButton="true" navButtonPress=".onNavBack">
 		<content>
 			<VBox class="sapUiSmallMargin">
-				<Table id="pcpTable" items="{pcpList>/}" class="gpmsTable" noDataText="No PCPs Found" alternateRowColors="true">
+				<Table id="pcpTable" items="{pcpList>/results}" class="gpmsTable" noDataText="No Gate Entries Found" alternateRowColors="true">
 					<headerToolbar>
 						<OverflowToolbar>
-							<Title text="PCP List" level="H2"/>
+							<Title text="Gate Entry List" level="H2"/>
 							<ToolbarSpacer />
 							<SearchField width="300px" search=".onSearch" placeholder="Search..." class="gpmsFieldInput"/>
 							<Button icon="sap-icon://sort" tooltip="Sort" press=".onSort" type="Transparent"/>
 							<Button icon="sap-icon://filter" tooltip="Filter" press=".onFilter" type="Transparent"/>
-							<Button text="Add PCP" icon="sap-icon://add" type="Emphasized" press=".onAddPCP" />
+							<Button text="Create Entry" icon="sap-icon://add" type="Emphasized" press=".onAddPCP" />
 						</OverflowToolbar>
 					</headerToolbar>
 					<columns>
-						<Column><Text text="PCP No" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="PCP Date" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Entry" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="GE No" class="gpmsTableHeaderText"/></Column>
 						<Column><Text text="GE Date" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="GE No" class="gpmsTableHeaderText"/></Column>
 						<Column><Text text="Supplier" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Items" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="DC/INV No" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Source Type" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Desc" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Dept" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="RGP No" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Inv No" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="RR No" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Inspection Status" class="gpmsTableHeaderText"/></Column>
 						<Column hAlign="Center"><Text text="Action" class="gpmsTableHeaderText"/></Column>
 					</columns>
 					<items>
 						<ColumnListItem class="gpmsTableRow">
 							<cells>
-								<Text text="{pcpList>PCPNo}" class="gpmsTableText"/>
-								<Text text="{pcpList>PCPDate}" class="gpmsTableText"/>
-								<Text text="{pcpList>EntryPoint}" class="gpmsTableText"/>
-								<Text text="{pcpList>GateEntryNo}" class="gpmsTableText"/>
 								<Text text="{pcpList>GEDate}" class="gpmsTableText"/>
+								<Text text="{pcpList>GateEntryNo}" class="gpmsTableText"/>
 								<Text text="{pcpList>VendorDesc}" class="gpmsTableText"/>
+								<Text text="{pcpList>SourceType}" class="gpmsTableText"/>
 								<Text text="{pcpList>FirstItemDesc}" class="gpmsTableText"/>
+								<Text text="{pcpList>Department}" class="gpmsTableText"/>
+								<Text text="{pcpList>RGPNumber}" class="gpmsTableText"/>
 								<Text text="{pcpList>DCNumber}" class="gpmsTableText"/>
+								<Text text="{pcpList>RRNo}" class="gpmsTableText"/>
+								<Text text="{pcpList>InspectionStatus}" class="gpmsTableText"/>
 								<HBox justifyContent="Center" class="gpmsActionBox">
 									<Button icon="sap-icon://show" type="Default" tooltip="View" press=".onViewPCP" class="sapUiTinyMarginEnd gpmsActionButton"/>
 									<Button icon="sap-icon://edit" type="Default" tooltip="Edit" press=".onEditPCP" class="sapUiTinyMarginEnd gpmsActionButton"/>
-									<Button icon="sap-icon://print" type="Default" tooltip="Print" press=".onPrintRow" class="gpmsActionButton"/>
 								</HBox>
 							</cells>
 						</ColumnListItem>

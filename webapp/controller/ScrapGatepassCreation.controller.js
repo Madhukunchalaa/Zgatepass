@@ -26,6 +26,12 @@ sap.ui.define([
 			var oDate = new Date();
 			var that = this;
 			
+			var oInventory = JSON.parse(localStorage.getItem("mockScrapInventory") || "{}");
+			var aAvailableMaterials = Object.keys(oInventory).map(function (sKey) {
+				return { key: sKey, text: sKey };
+			});
+			aAvailableMaterials.unshift({ key: "", text: "Select Material" });
+
 			var oInitialData = {
 				requestDate: oDate,
 				vendor: "",
@@ -39,6 +45,7 @@ sap.ui.define([
 				requestId: sReqNo || "",
 				isFromRequest: !!sReqNo,
 				saleOrder: "",
+				availableMaterials: aAvailableMaterials,
 				items: [
 					{
 						sno: "1",
@@ -234,11 +241,43 @@ sap.ui.define([
 			
 			if (sType && oInventory[sType]) {
 				oModel.setProperty(sPath + "/availQty", oInventory[sType].quantity.toString());
+				oModel.setProperty(sPath + "/originalQty", oInventory[sType].quantity);
 				oModel.setProperty(sPath + "/uom", oInventory[sType].uom);
 			} else {
 				oModel.setProperty(sPath + "/availQty", "0");
+				oModel.setProperty(sPath + "/originalQty", 0);
 				oModel.setProperty(sPath + "/uom", "KG");
 			}
+			this._recalculateRow(oContext);
+		},
+
+		onSendoutQtyLiveChange: function (oEvent) {
+			var oInput = oEvent.getSource();
+			var oContext = oInput.getBindingContext("scrapGp");
+			this._recalculateRow(oContext);
+		},
+
+		_recalculateRow: function (oContext) {
+			var oModel = this.getView().getModel("scrapGp");
+			var sPath = oContext.getPath();
+			
+			var sType = oModel.getProperty(sPath + "/type");
+			var sSendout = oModel.getProperty(sPath + "/sendoutQty") || "";
+			var fSendout = parseFloat(sSendout) || 0;
+			
+			var oInventory = JSON.parse(localStorage.getItem("mockScrapInventory") || "{}");
+			var fOriginal = 0;
+			if (sType && oInventory[sType]) {
+				fOriginal = parseFloat(oInventory[sType].quantity) || 0;
+			} else {
+				fOriginal = parseFloat(oModel.getProperty(sPath + "/originalQty")) || 0;
+			}
+			
+			var fRemaining = fOriginal - fSendout;
+			if (fRemaining < 0) {
+				fRemaining = 0;
+			}
+			oModel.setProperty(sPath + "/availQty", fRemaining.toFixed(3));
 		},
 
 		onAddItem: function () {
@@ -294,10 +333,13 @@ sap.ui.define([
 			
 			oData.items.forEach(function(item) {
 				var sendQty = parseFloat(item.sendoutQty) || 0;
-				var availQty = parseFloat(item.availQty) || 0;
+				var stockQty = 0;
+				if (item.type && oInventory[item.type]) {
+					stockQty = parseFloat(oInventory[item.type].quantity) || 0;
+				}
 				if (!item.type) { bValid = false; MessageBox.error("Please select a Material Type."); }
 				else if (sendQty <= 0) { bValid = false; MessageBox.error("Sendout Qty must be greater than 0."); }
-				else if (sendQty > availQty) { bValid = false; MessageBox.error("Sendout Qty cannot exceed Avail Qty for " + item.type); }
+				else if (sendQty > stockQty) { bValid = false; MessageBox.error("Sendout Qty cannot exceed Avail Qty (" + stockQty + ") for " + item.type); }
 			});
 			
 			if (!bValid) return;

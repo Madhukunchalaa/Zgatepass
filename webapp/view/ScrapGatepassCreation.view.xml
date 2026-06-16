@@ -115,19 +115,13 @@
 							<ColumnListItem class="gpmsItemRow">
 								<cells>
 									<Text text="{scrapGp>sno}" class="gpmsTableText"/>
-									<Select selectedKey="{scrapGp>type}" change=".onMaterialTypeSelect" class="gpmsFieldInput" width="100%" enabled="{= !${scrapGp>/requestId} }">
-										<core:Item key="" text="Select Material" />
-										<core:Item key="Metal" text="Metal" />
-										<core:Item key="Rubber" text="Rubber" />
-										<core:Item key="Oil" text="Oil" />
-										<core:Item key="Plastic" text="Plastic" />
-										<core:Item key="Copper" text="Copper" />
-										<core:Item key="Batteries" text="Batteries" />
-										<core:Item key="Spent Oil(Barrel Capacity)" text="Spent Oil(Barrel Capacity)" />
+									<Select selectedKey="{scrapGp>type}" change=".onMaterialTypeSelect" class="gpmsFieldInput" width="100%" enabled="{= !${scrapGp>/requestId} }"
+											items="{scrapGp>/availableMaterials}">
+										<core:Item key="{scrapGp>key}" text="{scrapGp>text}" />
 									</Select>
 									<Input value="{scrapGp>description}" class="gpmsTableInput" placeholder="Enter description" editable="{= !${scrapGp>/requestId} }"/>
 									<Input value="{scrapGp>availQty}" editable="false" class="gpmsTableInput gpmsFieldInputReadonly"/>
-									<Input value="{scrapGp>sendoutQty}" type="Text" class="gpmsTableInput"/>
+									<Input value="{scrapGp>sendoutQty}" type="Text" liveChange=".onSendoutQtyLiveChange" class="gpmsTableInput"/>
 									<Input value="{scrapGp>uom}" editable="false" class="gpmsTableInput gpmsFieldInputReadonly"/>
 									<HBox visible="{= !${scrapGp>/requestId} }">
 										<Button icon="sap-icon://add" type="Transparent" press=".onAddItem" class="sapUiTinyMarginEnd" />

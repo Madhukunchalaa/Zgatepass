@@ -41,10 +41,21 @@ sap.ui.define([
 					success: function (oData) {
 						var aResults = oData.results || [];
 						iReqPending += aResults.filter(function (item) {
-							var s = item.ApprovalReq || item.Status || "";
-							return s !== "A" && s !== "APPROVED" && s !== "Approved" &&
-								   s !== "R" && s !== "REJECTED" && s !== "Rejected" &&
-								   s !== "AM" && s !== "AMENDMENT" && s !== "Amendment";
+							var fnGetProp = function (obj, sProp) {
+								if (!obj) return "";
+								var sTarget = sProp.toLowerCase();
+								for (var key in obj) {
+									if (key.toLowerCase() === sTarget) {
+										return obj[key];
+									}
+								}
+								return "";
+							};
+							var s = fnGetProp(item, "ApprovalReq") || fnGetProp(item, "Status") || "";
+							s = String(s).trim().toUpperCase();
+							return s !== "A" && s !== "APPROVED" &&
+								   s !== "R" && s !== "REJECTED" &&
+								   s !== "AM" && s !== "AMENDMENT";
 						}).length;
 						iReqDone++;
 						if (iReqDone === 3) {
@@ -153,7 +164,12 @@ sap.ui.define([
 
 		onPressScrapGatepassList: function () {
 			this.getRouter().navTo("ScrapGatepassList");
+		},
+
+		onPressScrapInventory: function () {
+			this.getRouter().navTo("ScrapInventory");
 		}
 
 	});
 });
+

@@ -55,7 +55,7 @@
 									<Column width="180px">
 										<Text text="Status" class="gpmsHeaderText"/>
 									</Column>
-									<Column width="150px" hAlign="Right">
+									<Column width="260px" hAlign="Right">
 										<Text text="Actions" class="gpmsHeaderText"/>
 									</Column>
 								</columns>
@@ -75,15 +75,32 @@
 												icon="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' ? 'sap-icon://workflow-tasks' : ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' ? 'sap-icon://task' : 'sap-icon://accept' }"/>
 
 											<!-- Dynamic Actions matching stage -->
-											<HBox justifyContent="End" alignItems="Center">
+											<HBox justifyContent="End" alignItems="Center" wrap="Wrap">
+												<!-- View (Store only) -->
+												<Button text="View" icon="sap-icon://show" press="onViewButtonPress"
+													visible="{= !${user>/IsGatepassUserOnly} }"
+													class="sapUiTinyMarginEnd"/>
+
+												<!-- Print (Store only) -->
+												<Button text="Print" icon="sap-icon://print" press="onPrintRow"
+													visible="{= !${user>/IsGatepassUserOnly} }"
+													class="sapUiTinyMarginEnd"/>
+
+												<!-- Edit (Store only, non-CLOSED) -->
+												<Button text="Edit" icon="sap-icon://edit" press="onActionEdit"
+													visible="{= ${irgpGlobal>StatusCode} !== 'CLOSED' &amp;&amp; !${user>/IsGatepassUserOnly} }"
+													class="sapUiTinyMarginEnd"/>
+
 												<!-- Link MRN (User Mode) -->
-												<Button text="Link MRN" type="Emphasized" icon="sap-icon://edit" press="onActionLinkMRN" visible="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' &amp;&amp; !${user>/IsStoreUser} }"/>
+												<Button text="Link MRN" type="Emphasized" icon="sap-icon://chain-link" press="onActionLinkMRN"
+													visible="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' &amp;&amp; !${user>/IsStoreUser} }"
+													class="sapUiTinyMarginEnd"/>
 
-												<!-- Add Qty & Close (Store Mode) -->
-												<Button text="Add Qty &amp; Close" type="Emphasized" icon="sap-icon://task" press="onAddQtyAmpCloseButtonPress" visible="{= ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' }"/>
+												<!-- Verify &amp; Close (Store Mode) -->
+												<Button text="Verify &amp; Close" type="Emphasized" icon="sap-icon://task" press="onAddQtyAmpCloseButtonPress"
+													visible="{= ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' }"
+													class="sapUiTinyMarginEnd"/>
 
-												<!-- View details (Archived/Closed) -->
-												<Button text="View" icon="sap-icon://show" press="onViewButtonPress" visible="{= ${irgpGlobal>StatusCode} === 'CLOSED' }"/>
 											</HBox>
 										</cells>
 									</ColumnListItem>
@@ -98,7 +115,7 @@
 
 					<!-- PAGE TITLE HEADER -->
 					<HBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMarginBottom">
-						<Title text="{= ${irgp>/ui/currentStep} === 'CREATE' ? 'Add IRGP' : 'IRGP Details' }" level="H2" class="gpmsHeroTitle"/>
+						<Title text="{= ${irgp>/ui/currentStep} === 'CREATE' ? 'Add IRGP' : ${irgp>/ui/currentStep} === 'EDIT' ? 'Edit IRGP' : 'IRGP Details' }" level="H2" class="gpmsHeroTitle"/>
 					</HBox>
 
 				<!-- ─── FORM CARD ─── -->
@@ -351,7 +368,7 @@
 								</t:Column>
 
 								<!-- Item Description -->
-								<t:Column width="280px">
+								<t:Column width="280px" visible="{= ${irgp>/header/RequestType} !== 'Tools' }">
 									<Label text="Item Description" class="gpmsHeaderText"/>
 									<t:template>
 										<Input value="{irgp>ItemDescription}" editable="{irgp>/ui/itemsEditable}" placeholder="e.g. Hydraulic Jack Pump" class="gpmsTableInput"/>
@@ -370,7 +387,11 @@
 								<t:Column width="110px" hAlign="Right" visible="{= ${irgp>/ui/currentStep} !== 'CREATE' }">
 									<Label text="Sent Qty" class="gpmsHeaderText"/>
 									<t:template>
-										<Input value="{irgp>SentQuantity}" type="Text" editable="false" class="gpmsTableInput gpmsFieldInputReadonly" textAlign="Right"/>
+										<Input value="{irgp>SentQuantity}" type="Text"
+											editable="{irgp>/ui/itemsEditable}"
+											liveChange="onSentQtyChange"
+											class="{= ${irgp>/ui/itemsEditable} ? 'gpmsTableInput' : 'gpmsTableInput gpmsFieldInputReadonly' }"
+											textAlign="Right"/>
 									</t:template>
 								</t:Column>
 
@@ -408,15 +429,15 @@
 									</t:template>
 								</t:Column>
 
-								<t:Column width="160px" visible="{= ${irgp>/ui/currentStep} !== 'CREATE' }">
+								<t:Column width="160px" visible="{= ${irgp>/ui/currentStep} !== 'CREATE' &amp;&amp; ${irgp>/header/RequestType} !== 'Tools' }">
 									<Label text="MRNumber" class="gpmsHeaderText"/>
 									<t:template>
-										<Input value="{irgp>MRNumber}" editable="{irgp>/ui/mrNumberEditable}" placeholder="Enter MR Number" maxLength="10" class="gpmsTableInput"/>
+										<Input value="{irgp>MRNumber}" editable="{= ${user>/IsStoreUser} &amp;&amp; ${irgp>/ui/currentStep} !== 'CLOSED' &amp;&amp; ${irgp>/ui/currentStep} !== 'LIST' }" placeholder="Enter MR Number" maxLength="10" class="gpmsTableInput"/>
 									</t:template>
 								</t:Column>
 
 								<!-- Location -->
-								<t:Column width="160px">
+								<t:Column width="160px" visible="{= ${irgp>/header/RequestType} !== 'Tools' }">
 									<Label text="Location" class="gpmsHeaderText"/>
 									<t:template>
 										<Input value="{irgp>Location}" editable="{irgp>/ui/itemsEditable}" class="gpmsTableInput"/>
@@ -424,7 +445,7 @@
 								</t:Column>
 
 								<!-- Mp2ItemCode -->
-								<t:Column width="130px">
+								<t:Column width="130px" visible="{= ${irgp>/header/RequestType} !== 'Tools' }">
 									<Label text="Mp2ItemCode" class="gpmsHeaderText"/>
 									<t:template>
 										<Input value="{irgp>Mp2ItemCode}" editable="{irgp>/ui/itemsEditable}" class="gpmsTableInput"/>
@@ -432,15 +453,15 @@
 								</t:Column>
 
 								<!-- DefaultBin -->
-								<t:Column width="110px">
+								<t:Column width="110px" visible="{= ${irgp>/header/RequestType} !== 'Tools' }">
 									<Label text="DefaultBin" class="gpmsHeaderText"/>
 									<t:template>
 										<Input value="{irgp>DefaultBin}" editable="{irgp>/ui/itemsEditable}" class="gpmsTableInput"/>
 									</t:template>
 								</t:Column>
 
-								<!-- Action Column (CREATE mode only) -->
-								<t:Column width="100px" hAlign="Center" visible="{= ${irgp>/ui/currentStep} === 'CREATE' }">
+								<!-- Action Column (CREATE and EDIT modes) -->
+								<t:Column width="100px" hAlign="Center" visible="{= ${irgp>/ui/currentStep} === 'CREATE' || ${irgp>/ui/currentStep} === 'EDIT' }">
 									<Label text="Action" class="gpmsHeaderText"/>
 									<t:template>
 										<HBox justifyContent="Center" alignItems="Center">
@@ -478,9 +499,9 @@
 								<Select selectedKey="{irgp>/header/StatusCode}"
 									enabled="{irgp>/ui/storeStatusEditable}"
 									class="gpmsFieldInput" width="100%">
-									<core:Item key="PENDING_RESERVATION" text="Pending Reservation"/>
-									<core:Item key="PENDING_RECEIPT"     text="Completed Reservation"/>
-									<core:Item key="CLOSED"              text="Closed"/>
+									<core:Item key="PENDING_RESERVATION" text="Open"/>
+									<core:Item key="PENDING_RECEIPT"     text="Pending"/>
+									<core:Item key="CLOSED"              text="Close"/>
 								</Select>
 							</VBox>
 
@@ -490,6 +511,7 @@
 						<HBox class="sapUiSmallMarginTop" justifyContent="Start" alignItems="Center">
 							
 							<Button text="Submit" type="Emphasized" press="onSubmit" visible="{irgp>/ui/submitVisible}" class="gpmsSubmitBtn sapUiTinyMarginEnd"/>
+							<Button text="Update IRGP" type="Emphasized" press="onSubmitEdit" visible="{irgp>/ui/submitEditVisible}" class="gpmsSubmitBtn sapUiTinyMarginEnd"/>
 							<Button text="Submit Reservation" type="Emphasized" press="onSubmitReservation" visible="{irgp>/ui/submitResVisible}" class="gpmsSubmitBtn sapUiTinyMarginEnd"/>
 							<Button text="Save &amp; Close IRGP" type="Accept" press="onSaveAmpCloseIRGPButtonPress" visible="{irgp>/ui/closeVisible}" class="gpmsSubmitBtn sapUiTinyMarginEnd"/>
 							<Button text="Print Slip" type="Default" icon="sap-icon://print" press="onPrint" visible="{irgp>/ui/printVisible}" class="sapUiTinyMarginEnd"/>

@@ -62,9 +62,9 @@ sap.ui.define([
                         oUserModel.setProperty("/Cocode", oResult.Cocode || "");
                         oUserModel.setProperty("/Department", oResult.Department || "");
                         oUserModel.setProperty("/Role", sRole);
-                        oUserModel.setProperty("/IsGatepassUserOnly", sRole === "ZC_MM_GATEPASS_USER_FRONT_VIEW");
-                        oUserModel.setProperty("/IsHodUser", sRole === "ZC_MM_GATEPASS_HOD_FRONT_VIEW");
-                        oUserModel.setProperty("/IsStoreUser", sRole === "ZC_MM_GATEPASS_STORE_FRONTVIEW");
+                        oUserModel.setProperty("/IsGatepassUserOnly", sRole === "ZC_MM_GATEPASS_USER_FRONT_VIEW" || sRole === "ZC_MM_GATEPASS_USER_FRONTVIEW" || sRole === "Z_MM_GATEPASS_USER_FRONT_VIEW" || sRole === "Z_MM_GATEPASS_USER_FRONTVIEW");
+                        oUserModel.setProperty("/IsHodUser", sRole === "ZC_MM_GATEPASS_HOD_FRONT_VIEW" || sRole === "ZC_MM_GATEPASS_HOD_FRONTVIEW" || sRole === "Z_MM_GATEPASS_HOD_FRONT_VIEW" || sRole === "Z_MM_GATEPASS_HOD_FRONTVIEW");
+                        oUserModel.setProperty("/IsStoreUser", sRole === "ZC_MM_GATEPASS_STORE_FRONTVIEW" || sRole === "ZC_MM_GATEPASS_STORE_FRONT_VIEW" || sRole === "Z_MM_GATEPASS_STORE_FRONTVIEW" || sRole === "Z_MM_GATEPASS_STORE_FRONT_VIEW");
                         localStorage.setItem("gpms_user", JSON.stringify(oUserModel.getData()));
                     }
                     fnNavigate();

@@ -27,13 +27,13 @@ sap.ui.define([
 				var bIsGatepassUserOnly = oUserModel.getProperty("/IsGatepassUserOnly");
 				var bIsHodUser = oUserModel.getProperty("/IsHodUser");
 				if (bIsGatepassUserOnly) {
-					var aUserOnlyAllowed = ["home", "GatePassList", "GatePassCreation", "IRGP", "ScrapRequestCreation", "ScrapRequestList", "AshGatePassCreation", "AshGatePassList"];
+					var aUserOnlyAllowed = ["home", "GatePassList", "GatePassCreation", "GatePassAmendment", "IRGP", "ScrapRequestCreation", "ScrapRequestList", "AshGatePassCreation", "AshGatePassList"];
 					if (aUserOnlyAllowed.indexOf(sRouteName) === -1) {
 						this.getRouter().navTo("home");
 						return;
 					}
 				} else if (bIsHodUser) {
-					var aHodAllowed = ["home", "GatePassList", "NRGPList", "ScrapRequestList", "ScrapRequestDetail", "ScrapGatepassList", "AshGatePassList", "AshGatePassDetail", "HODRequestDetail"];
+					var aHodAllowed = ["home", "GatePassList", "NRGPList", "GatePassAmendment", "ScrapRequestList", "ScrapRequestDetail", "ScrapGatepassList", "AshGatePassList", "AshGatePassDetail", "HODRequestDetail"];
 					if (aHodAllowed.indexOf(sRouteName) === -1) {
 						this.getRouter().navTo("home");
 						return;
