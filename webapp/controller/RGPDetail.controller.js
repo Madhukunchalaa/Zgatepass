@@ -38,31 +38,39 @@ sap.ui.define([
 				Plant: "",
 				FiscalYear: "",
 				Department: "",
+				VendorCode: "",
+				VendorName: "",
 				Vendor: "",
 				VendorGST: "",
 				VendorPerson: "",
+				CommonDesc: "",
 				City: "",
 				ZipCode: "",
 				VendorAddress: "",
 				PurchasingDoc: "",
 				NoOfPacakages: 0,
 				VehicleNo: "",
+				LRNumber: "",
 				ModeOfTransport: "Road",
 				TransporterName: "",
 				TransporterGST: "",
 				Remarks: "",
+				UserRemarks: "",
+				HODRemarks: "",
+				StoreRemarks: "",
 				GPStatus: "",
 				StatusState: "None",
 				ChallanNumber: "",
 				ChallanDate: null,
 				GateEntryNo: "",
 				EWayBillNo: "",
-				EWayBillDate: null,
+				EDateWayBill: null,
 				DCNotes: "",
 				ReturnableDate: "",
-				ExtendedReturnableDate: null,
+				ExtReturnDate:"",
 				DocOptionIndex: 0,
 				TransportByIndex: 1,
+				InsuranceRequired: false,
 				items: [],
 				CommentsList: [],
 				FinalTotal: "0.00"
@@ -134,20 +142,6 @@ sap.ui.define([
 			});
 		},
 
-		_formatDate: function (vDate) {
-			if (!vDate || vDate === "00000000" || vDate === "") { return ""; }
-			if (typeof vDate === "string" && vDate.indexOf("/Date(") === 0) {
-				var ms = parseInt(vDate.replace(/\/Date\((\d+)[^)]*\)\//, "$1"), 10);
-				vDate = new Date(ms);
-			}
-			if (typeof vDate === "string" && /^\d{8}$/.test(vDate)) {
-				vDate = new Date(vDate.slice(0, 4), parseInt(vDate.slice(4, 6), 10) - 1, vDate.slice(6, 8));
-			}
-			if (vDate instanceof Date && !isNaN(vDate)) {
-				return vDate.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).split("/").join("-");
-			}
-			return String(vDate);
-		},
 
 		_dateToYYYYMMDD: function (sDisplayDate) {
 			if (!sDisplayDate) { return ""; }
@@ -195,26 +189,38 @@ sap.ui.define([
 			oModel.setProperty("/Plant", oData.Plant || "");
 			oModel.setProperty("/FiscalYear", oData.FiscalYear || "");
 			oModel.setProperty("/Department", oData.Department || "");
+			oModel.setProperty("/VendorCode", oData.Vendor || "");
+			oModel.setProperty("/VendorName", oData.VendorName || "");
 			oModel.setProperty("/Vendor", oData.VendorName || oData.Vendor || "");
 			oModel.setProperty("/VendorGST", oData.VendorGST || "");
-			oModel.setProperty("/VendorPerson", oData.VendorPerson || "");
+			oModel.setProperty("/VendorPerson", oData.VendorPerson || (oLocalLogistics ? oLocalLogistics.VendorPerson : "") || "");
+			oModel.setProperty("/CommonDesc", oData.CommonDesc || (oLocalLogistics ? oLocalLogistics.CommonDesc : "") || "");
 			oModel.setProperty("/City", oData.City || "");
 			oModel.setProperty("/ZipCode", oData.ZipCode || "");
 			oModel.setProperty("/VendorAddress", [oData.City, oData.ZipCode].filter(Boolean).join(", "));
 			oModel.setProperty("/PurchasingDoc", oData.PurchasingDoc || "");
 			oModel.setProperty("/NoOfPacakages", oData.NoOfPacakages || 0);
 			oModel.setProperty("/VehicleNo", oData.VehicleNo || "");
+			oModel.setProperty("/LRNumber", oData.LRNumber || "");
 			oModel.setProperty("/ModeOfTransport", oData.ModeOfDispatch || "Road");
-			oModel.setProperty("/TransporterName", oData.TransporterName || (oLocalLogistics ? oLocalLogistics.TransporterName : "") || "");
+			var sTransporterName = oData.TransporterName || (oLocalLogistics ? oLocalLogistics.TransporterName : "") || "";
+			var bIsSelf = (sTransporterName === "MEIL Neyveli Energy Private Limited");
+			oModel.setProperty("/TransportByIndex", bIsSelf ? 0 : 1);
+			oModel.setProperty("/TransporterName", sTransporterName);
 			oModel.setProperty("/TransporterGST", oData.TransporterGST || (oLocalLogistics ? oLocalLogistics.TransporterGST : "") || "");
 			oModel.setProperty("/Remarks", oData.Remarks || "");
+			oModel.setProperty("/UserRemarks", oData.Remarks || "");
+			oModel.setProperty("/HODRemarks", oData.HODRemarks || "");
+			oModel.setProperty("/StoreRemarks", oData.STORERemarks || oData.StoreRemarks || "");
 			oModel.setProperty("/ReturnableDate", this._formatDate(oData.ReturnableDate || oData.DueDate));
+			oModel.setProperty("/ExtReturnDate", this._formatDate(oData.ExtReturnDate || oData.Extreturndate || oData.ExtendedReturnableDate));
 			oModel.setProperty("/ChallanNumber", oData.ChallanNumber || "");
 			oModel.setProperty("/GateEntryNo", oData.GateEntryNo || "");
 			oModel.setProperty("/DocOptionIndex", oData.ChallanNumber ? 1 : 0);
 			oModel.setProperty("/EWayBillNo", oData.EWayBillNo || (oLocalLogistics ? oLocalLogistics.EWayBillNo : "") || "");
 			oModel.setProperty("/EWayBillDate", oData.EWayBillDate || (oLocalLogistics ? oLocalLogistics.EWayBillDate : null));
 			oModel.setProperty("/DCNotes", oData.DCNotes || (oLocalLogistics ? oLocalLogistics.DCNotes : "") || "");
+			oModel.setProperty("/InsuranceRequired", (oData.InsuranceReq || "").toUpperCase() === "YES");
 
 			var sGPStatus = (oData.GPStatus || "").trim().toUpperCase();
 			if (!sGPStatus && oLocalLogistics && oLocalLogistics.GPStatus) {
@@ -239,6 +245,7 @@ sap.ui.define([
 					sno: i + 1,
 					ItemNo: it.ItemNo || "",
 					Material: it.Material || "",
+					MaterialDesc: it.MaterialDesc || it.MaterialName || it.Description || it.HSNDesc || "",
 					HSNCode: it.HSNCode || "",
 					HSNDesc: it.HSNDesc || "",
 					UOM: it.UOM || "",
@@ -272,6 +279,53 @@ sap.ui.define([
 			}
 			oModel.setProperty("/CommentsList", aComments);
 			oModel.refresh(true);
+
+			// Always fetch from GateReqHdrSet to get HODRemarks, StoreRemarks and VendorName
+			if (sReqNo) {
+				this._loadFromReqHdr(sReqNo, oData.GatePassType || "RGP");
+			}
+		},
+
+		_loadFromReqHdr: function (sReqNo, sGPType) {
+			var oODataModel = this.getOwnerComponent().getModel();
+			var oModel = this.getView().getModel("rgp");
+			if (!oODataModel || !oModel) { return; }
+
+			oODataModel.read("/GateReqHdrSet", {
+				filters: [
+					new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo),
+					new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, sGPType)
+				],
+				success: function (oData) {
+					var oResult = oData.results && oData.results[0];
+					if (!oResult) { return; }
+					if (oResult.VendorName) {
+						oModel.setProperty("/VendorName", oResult.VendorName);
+						oModel.setProperty("/Vendor", oResult.VendorName);
+					}
+					if (oResult.VendorPerson) {
+						oModel.setProperty("/VendorPerson", oResult.VendorPerson);
+					}
+					if (oResult.CommonDesc) {
+						oModel.setProperty("/CommonDesc", oResult.CommonDesc);
+					}
+					oModel.setProperty("/HODRemarks", oResult.HODRemarks || oResult.HodRemarks || "");
+					oModel.setProperty("/StoreRemarks", oResult.STORERemarks || oResult.StoreRemarks || "");
+				}
+			});
+		},
+
+		onTransportByChange: function (oEvent) {
+			var iIndex = oEvent.getParameter("selectedIndex");
+			var oModel = this.getView().getModel("rgp");
+			if (iIndex === 0) {
+				oModel.setProperty("/TransporterName", "MEIL Neyveli Energy Private Limited");
+				oModel.setProperty("/TransporterGST", "33AACCS2753B1ZV");
+			} else {
+				oModel.setProperty("/TransporterName", "");
+				oModel.setProperty("/TransporterGST", "");
+			}
+			oModel.setProperty("/TransportByIndex", iIndex);
 		},
 
 		onRecievedQuantityInputLiveChange: function (oEvent) {
@@ -348,7 +402,9 @@ sap.ui.define([
 					EWayBillNo: oData.EWayBillNo || "",
 					EWayBillDate: oData.EWayBillDate || "",
 					DCNotes: oData.DCNotes || "",
-					GPStatus: oData.GPStatus || ""
+					GPStatus: oData.GPStatus || "",
+					VendorPerson: oData.VendorPerson || "",
+					CommonDesc: oData.CommonDesc || ""
 				};
 				localStorage.setItem("logistics_" + String(oData.GatePassNo).trim(), JSON.stringify(oLogistics));
 				if (oData.GatePassreqNo) {
@@ -365,8 +421,8 @@ sap.ui.define([
 				FiscalYear: oData.FiscalYear || String(new Date().getFullYear()),
 				Plant: oData.Plant || "",
 				GatePassNo: sAuthorativeGPNo,
-				Vendor: oData.Vendor || "",
-				VendorName: "",
+				Vendor: oData.VendorCode || oData.Vendor || "",
+				VendorName: oData.VendorName || "",
 				VendorGST: oData.VendorGST || "",
 				VendorPerson: oData.VendorPerson || "",
 				ZipCode: oData.ZipCode || "",
@@ -374,21 +430,33 @@ sap.ui.define([
 				GatePassDate: sToday,
 				PurchasingDoc: oData.PurchasingDoc || "",
 				ChallanDate: sChallanDate,
+				ReturnableDate: this._dateToYYYYMMDD(oData.ReturnableDate) || "",
+				ExtReturnDate: this._dateToYYYYMMDD(oData.ExtReturnDate) || "",
+				CommonDesc: oData.CommonDesc || "",
 				NoOfPacakages: parseInt(oData.NoOfPacakages || 0),
 				Department: oData.Department || "",
 				ChallanNumber: oData.ChallanNumber || "",
 				GatePassType: "RGP",
 				VehicleNo: oData.VehicleNo || "",
+				LRNumber: oData.LRNumber || "",
 				ModeOfDispatch: oData.ModeOfTransport || "",
 				Remarks: oData.Remarks || "",
 				GPStatus: oData.GPStatus || "",
 				Message: "",
+				GPbase64: "",
+				DCbase64: "",
+				TransporterName: oData.TransporterName || "",
+				TransporterGST: oData.TransporterGST || "",
 				Comment1: "", Comment2: "", Comment3: "", Comment4: "", Comment5: "",
 				Comment6: "", Comment7: "", Comment8: "", Comment9: "", Comment10: "",
 				Sno1: "", Sno2: "", Sno3: "", Sno4: "", Sno5: "",
 				Sno6: "", Sno7: "", Sno8: "", Sno9: "", Sno10: "",
 				cdate1: "", cdate2: "", cdate3: "", cdate4: "", cdate5: "",
 				cdate6: "", cdate7: "", cdate8: "", cdate9: "", cdate10: "",
+				DCNotes: oData.DCNotes || "",
+				InsuranceReq: oData.InsuranceRequired ? "Yes" : "",
+				InsuranceDate: oData.InsuranceDate || "",
+				InsuranceAmount: oData.InsuranceAmount || "0",
 				OutgateNav: (oData.items || []).map(function (it, i) {
 					return {
 						GatePassType: "RGP",
@@ -425,7 +493,11 @@ sap.ui.define([
 				success: function (oResponse) {
 					sap.ui.core.BusyIndicator.hide();
 					var sMsg = oResponse.Message || "Gate Pass updated successfully!";
-					MessageBox.success(sMsg);
+					MessageBox.success(sMsg, {
+						onClose: function () {
+							this._loadData(sAuthorativeGPNo);
+						}.bind(this)
+					});
 					var oModel = this.getView().getModel("rgp");
 					oModel.setProperty("/StatusState", this._getStatusState(oData.GPStatus));
 				}.bind(this),
@@ -439,6 +511,59 @@ sap.ui.define([
 					MessageBox.error(sMsg);
 				}
 			});
+		},
+
+		onInsuranceRequiredCheckBoxSelect: function (oEvent) {
+			var bSelected = oEvent.getParameter("selected");
+			var oData = this.getView().getModel("rgp").getData();
+			if (bSelected) {
+				if (!this._pInsuranceDialog) {
+					this._pInsuranceDialog = sap.ui.core.Fragment.load({
+						id: this.getView().getId(),
+						name: "zgpms.meilpower.com.view.fragments.InwardInsuranceDialog",
+						controller: this
+					}).then(function (oDialog) {
+						this.getView().addDependent(oDialog);
+						oDialog.setModel(new sap.ui.model.json.JSONModel({}), "insurance");
+						return oDialog;
+					}.bind(this));
+				}
+				this._pInsuranceDialog.then(function (oDialog) {
+					oDialog.getModel("insurance").setData({
+						InvoiceNo: oData.GatePassreqNo || "",
+						InsuranceDate: new Date().toLocaleDateString("en-GB").split("/").join("-"),
+						ReceivedDate: new Date().toLocaleDateString("en-GB").split("/").join("-"),
+						Vendor: oData.VendorName || oData.Vendor || "",
+						VendorAddress: oData.VendorAddress || "",
+						ModeOfTransport: oData.ModeOfTransport || "Road",
+						LRNnumber: oData.LRNnumber || "",
+						VehicleNo: oData.VehicleNo || "",
+						InvoiceValue: oData.FinalTotal ? oData.FinalTotal.toString().replace(/,/g, "") : "",
+						RgpDescription: oData.UserRemarks || ""
+					});
+					oDialog.open();
+				});
+			}
+		},
+
+		onInsuranceSubmit: function () {
+			var oModel = this.getView().getModel("rgp");
+			this._pInsuranceDialog.then(function (oDialog) {
+				var oInsData = oDialog.getModel("insurance").getData();
+				var sDate = oInsData.InsuranceDate || "";
+				var aParts = sDate.split("-");
+				var sFormatted = (aParts.length === 3) ? aParts[2] + aParts[1] + aParts[0] : sDate;
+				oModel.setProperty("/InsuranceRequired", true);
+				oModel.setProperty("/InsuranceDate", sFormatted);
+				oModel.setProperty("/InsuranceAmount", oInsData.InvoiceValue || "");
+				oDialog.close();
+			});
+			sap.m.MessageToast.show("Insurance details saved.");
+		},
+
+		onInsuranceCancel: function () {
+			this.byId("idInsuranceRequiredRGPCheckBox").setSelected(false);
+			this._pInsuranceDialog.then(function (oDialog) { oDialog.close(); });
 		},
 
 		onCANCELGATEPASSButtonPress: function () {
@@ -626,6 +751,161 @@ sap.ui.define([
 
 			doc.save("GatePass_RGP_" + (oOut.GatePassNo || "Draft") + ".pdf");
 			MessageToast.show("Gate Pass Printed");
+		},
+
+		onGenerateDCButtonPress: async function () {
+			var oModel = this.getView().getModel("rgp");
+			var oOut = oModel.getData();
+			if (!oOut.ChallanNumber && oOut.GatePassNo) {
+				var oNow = new Date();
+				var sDay = String(oNow.getDate()).padStart(2, "0");
+				var sMon = String(oNow.getMonth() + 1).padStart(2, "0");
+				var sYear = String(oNow.getFullYear());
+				var sHrs = String(oNow.getHours()).padStart(2, "0");
+				var sMin = String(oNow.getMinutes()).padStart(2, "0");
+				var sSec = String(oNow.getSeconds()).padStart(2, "0");
+				var sGeneratedDC = "DC/" + sDay + sMon + sYear + "/" + sHrs + sMin + sSec + "/" + oOut.GatePassNo;
+				oModel.setProperty("/ChallanNumber", sGeneratedDC);
+				oOut.ChallanNumber = sGeneratedDC;
+			}
+			const { jsPDF } = window.jspdf;
+			var doc = new jsPDF("p", "mm", "a4");
+			var margin = 15;
+			var pageWidth = doc.internal.pageSize.width;
+			var pageHeight = doc.internal.pageSize.height;
+			var contentWidth = pageWidth - margin * 2;
+			var sDate = new Date().toLocaleDateString("en-GB").split("/").join("-");
+
+			doc.setLineWidth(0.6);
+			doc.rect(8, 6, pageWidth - 16, pageHeight - 12);
+			doc.setLineWidth(0.2);
+			doc.rect(9.5, 7.5, pageWidth - 19, pageHeight - 15);
+
+			var sLogoUrl = sap.ui.require.toUrl("zgpms/meilpower/com/images/meil_logo.png");
+			try {
+				var sLogoBase64 = await this._getImageBase64(sLogoUrl);
+				doc.addImage(sLogoBase64, "PNG", margin, 10, 30, 11);
+			} catch (e) { /* logo optional */ }
+
+			doc.setTextColor(0, 0, 0);
+			doc.setFont("helvetica", "bold"); doc.setFontSize(13);
+			doc.text("MEIL Neyveli Energy Private Limited", pageWidth / 2, 13, { align: "center" });
+			doc.setFont("helvetica", "normal"); doc.setFontSize(7.5);
+			doc.text("(Formerly TAQA Neyveli Power Company Private Limited)", pageWidth / 2, 17, { align: "center" });
+			doc.text("250MW LFPP, Uthangal, Neyveli, Tamilnadu - 607804, India.", pageWidth / 2, 20.5, { align: "center" });
+			doc.text("Tel : +91-4142-270300  |  Fax : +91-4142-270401", pageWidth / 2, 24, { align: "center" });
+			doc.setFont("helvetica", "bold");
+			doc.text("GSTIN : 33AACCS2753B1ZV  |  CIN : U40109TN1993PTC026223", pageWidth / 2, 27.5, { align: "center" });
+			doc.setLineWidth(0.5);
+			doc.line(margin, 30.5, pageWidth - margin, 30.5);
+
+			doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+			doc.text("DELIVERY CHALLAN", pageWidth / 2, 37, { align: "center" });
+			var titleW = doc.getTextWidth("DELIVERY CHALLAN");
+			doc.setLineWidth(0.35);
+			doc.line(pageWidth / 2 - titleW / 2, 38.5, pageWidth / 2 + titleW / 2, 38.5);
+
+			var gridY = 41, gridH = 50;
+			var col1W = 62, col2W = 65;
+			var col1X = margin, col2X = margin + col1W, col3X = margin + col1W + col2W;
+			var pad = 3, lh = 5.5;
+
+			doc.setLineWidth(0.3);
+			doc.rect(col1X, gridY, contentWidth, gridH);
+			doc.line(col2X, gridY, col2X, gridY + gridH);
+			doc.line(col3X, gridY, col3X, gridY + gridH);
+
+			doc.setFontSize(8.5); doc.setFont("helvetica", "bold");
+			doc.text("To", col1X + pad, gridY + 8);
+			doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || oOut.City || "", col1W - 14);
+			doc.text(splitAddr, col1X + 10, gridY + 14);
+			doc.setLineWidth(0.2);
+			doc.line(col1X, gridY + gridH - 10, col2X, gridY + gridH - 10);
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+			doc.text("GST No:", col1X + pad, gridY + gridH - 4);
+			doc.setFont("helvetica", "normal");
+			doc.text(oOut.VendorGST || "", col1X + 22, gridY + gridH - 4);
+
+			var c2 = col2X + pad, valOff2 = 30, y2 = gridY + 8;
+			doc.setFontSize(8);
+			doc.setFont("helvetica", "bold"); doc.text("DC No:", c2, y2);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.ChallanNumber || "Draft", c2 + valOff2, y2); y2 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("DC Date:", c2, y2);
+			doc.setFont("helvetica", "normal"); doc.text(sDate, c2 + valOff2, y2); y2 += lh + 2;
+			doc.setFont("helvetica", "bold"); doc.text("Mode Of Transport:", c2, y2);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.ModeOfTransport || "By Road", c2 + valOff2, y2); y2 += lh + 2;
+			doc.setFont("helvetica", "bold"); doc.text("LR/Vehicle No:", c2, y2);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", c2 + valOff2, y2);
+
+			var c3 = col3X + pad, valOff3 = 27, y3 = gridY + 8;
+			doc.setFontSize(8);
+			doc.setFont("helvetica", "bold"); doc.text("GP No:", c3, y3);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassNo || "", c3 + valOff3, y3); y3 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("GP Date:", c3, y3);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassDate || sDate, c3 + valOff3, y3); y3 += lh + 2;
+			doc.setFont("helvetica", "bold"); doc.text("Dept:", c3, y3);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", c3 + valOff3, y3);
+
+			var tableData = (oOut.items || []).map(function (item, index) {
+				return [
+					index + 1,
+					item.Material || "",
+					item.HSNCode || "",
+					item.UOM || "",
+					parseFloat(item.SentQuantity || 0).toLocaleString("en-IN", { minimumFractionDigits: 3 }),
+					parseFloat(item.ItemNetPrice || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 }),
+					parseFloat(item.Totalvalue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })
+				];
+			});
+
+			doc.autoTable({
+				startY: gridY + gridH + 1,
+				head: [["S.No", "DESCRIPTION", "HSN Code", "UOM", "QTY", "Rate", "Amt (In Rs.)"]],
+				body: tableData,
+				theme: "grid",
+				headStyles: { fillColor: [235, 235, 235], textColor: [0, 0, 0], fontStyle: "bold", fontSize: 8, halign: "center", valign: "middle", cellPadding: 3, lineWidth: 0.3, lineColor: [0, 0, 0] },
+				bodyStyles: { fontSize: 8, cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 }, lineColor: [0, 0, 0], lineWidth: 0.25, valign: "middle" },
+				columnStyles: { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: "auto" }, 2: { cellWidth: 25, halign: "center" }, 3: { cellWidth: 16, halign: "center" }, 4: { cellWidth: 20, halign: "right" }, 5: { cellWidth: 22, halign: "right" }, 6: { cellWidth: 27, halign: "right" } },
+				margin: { left: margin, right: margin }
+			});
+
+			var finalY = doc.lastAutoTable.finalY;
+			var fTotalNum = parseFloat(oOut.FinalTotal ? oOut.FinalTotal.toString().replace(/,/g, "") : "0") || 0;
+			var footH = 9, totalColW = 49;
+			doc.setLineWidth(0.25);
+			doc.rect(margin, finalY, contentWidth, footH);
+			doc.line(pageWidth - margin - totalColW, finalY, pageWidth - margin - totalColW, finalY + footH);
+			doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+			doc.text("In Words :  Rupees " + this._numberToWords(Math.round(fTotalNum)) + " Only.", margin + 3, finalY + 5.5);
+			doc.setFont("helvetica", "bold");
+			doc.text("Total", pageWidth - margin - totalColW + 3, finalY + 5.5);
+			doc.text(fTotalNum.toLocaleString("en-IN", { minimumFractionDigits: 2 }), pageWidth - margin - 3, finalY + 5.5, { align: "right" });
+
+			var noteY = finalY + footH + 3;
+			var noteText = oOut.DCNotes || "Empty cylinders return to the vendor and there is no sale in this transaction.";
+			var splitNote = doc.splitTextToSize(noteText, contentWidth - 22);
+			var noteH = Math.max(10, splitNote.length * 5 + 6);
+			doc.setLineWidth(0.25);
+			doc.rect(margin, noteY, contentWidth, noteH);
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+			doc.text("Note :", margin + 3, noteY + 6);
+			doc.setFont("helvetica", "normal");
+			doc.text(splitNote, margin + 18, noteY + 6);
+
+			var sigY = noteY + noteH + 22;
+			var sigLineW = 48;
+			doc.setLineWidth(0.3);
+			doc.line(margin, sigY, margin + sigLineW, sigY);
+			doc.line(pageWidth / 2 - sigLineW / 2, sigY, pageWidth / 2 + sigLineW / 2, sigY);
+			doc.line(pageWidth - margin - sigLineW, sigY, pageWidth - margin, sigY);
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+			doc.text("Prepared By", margin + sigLineW / 2, sigY + 5, { align: "center" });
+			doc.text("Store In-Charge", pageWidth / 2, sigY + 5, { align: "center" });
+			doc.text("Authorised Signatory", pageWidth - margin - sigLineW / 2, sigY + 5, { align: "center" });
+
+			doc.save("DC_" + (oOut.GatePassNo || "Draft") + ".pdf");
+			MessageToast.show("Delivery Challan Downloaded");
 		},
 
 		_numberToWords: function (num) {

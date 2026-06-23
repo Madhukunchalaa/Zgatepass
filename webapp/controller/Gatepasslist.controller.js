@@ -319,35 +319,14 @@ sap.ui.define([
 		},
 
 		formatStatus: function (sStatus, sApproval1, sApproval2, sApprovalReq, sStoreRemarks, sStoreAmmend) {
-			var s1 = (sApproval1 || "").trim().toUpperCase();
-			var s2 = (sApproval2 || "").trim().toUpperCase();
-			sStatus = (sStatus || "").trim().toUpperCase();
-			var sAppReq = (sApprovalReq || "").trim().toUpperCase();
-			var sAmmend = (sStoreAmmend || "").trim().toUpperCase();
-
-			if (s1 === "R" || s2 === "R" || sAppReq === "R" || sStatus === "REJECTED") {
-				return "Rejected";
-			}
-			if (sAmmend === "AM" || s1 === "AM" || s2 === "AM" || sAppReq === "AM" || sAppReq === "AMENDMENT" || sStatus === "AM" || sStatus === "AMENDMENT") {
-				return "Amendment";
-			}
-			if (s2 || sStatus === "APPROVED") {
-				return "Approved";
-			}
-			if (sStoreRemarks && String(sStoreRemarks).trim() !== "" && String(sStoreRemarks) !== "null") {
-				return "Approved";
-			}
-			if (s1 && s1 !== "X" && s1 !== "PENDING" && !s2) {
-				return "Store Approval Pending";
-			}
-			if (sStatus === "STORE APPROVAL PENDING") return "Store Approval Pending";
-			if (sStatus === "APPROVED") return "Approved";
-			if (sStatus === "REJECTED") return "Rejected";
-			if (sStatus === "AMENDMENT") return "Amendment";
-			if (sStatus === "CAN" || sStatus === "CANCELLED") return "Cancelled";
-			if (sStatus === "C" || sStatus === "CLOSED") return "Closed";
-
-			return "Pending";
+			return this._deriveStatus({
+				Status: sStatus,
+				Approval1: sApproval1,
+				Approval2: sApproval2,
+				ApprovalReq: sApprovalReq,
+				STORERemarks: sStoreRemarks,
+				StoreAmmend: sStoreAmmend
+			});
 		},
 
 		formatStatusState: function (sStatus, sApproval1, sApproval2, sApprovalReq, sStoreRemarks, sStoreAmmend) {

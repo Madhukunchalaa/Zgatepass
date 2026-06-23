@@ -120,10 +120,6 @@ sap.ui.define([
 			});
 		},
 
-		_formatDate: function (sDate) {
-			if (!sDate || sDate.length < 8) return sDate || "";
-			return sDate.substring(6, 8) + "-" + sDate.substring(4, 6) + "-" + sDate.substring(0, 4);
-		},
 
 		_getStatusState: function (sStatus) {
 			if (sStatus === "CLOSED" || sStatus === "Approved" || sStatus === "APPROVED" || sStatus === "A") return "Success";

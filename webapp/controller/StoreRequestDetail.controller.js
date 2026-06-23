@@ -517,20 +517,6 @@ sap.ui.define([
 			return null;
 		},
 
-		_formatDate: function (vDate) {
-			if (!vDate || vDate === "00000000" || vDate === "") { return ""; }
-			if (typeof vDate === "string" && vDate.indexOf("/Date(") === 0) {
-				var ms = parseInt(vDate.replace(/\/Date\((\d+)[^)]*\)\//, "$1"), 10);
-				vDate = new Date(ms);
-			}
-			if (typeof vDate === "string" && /^\d{8}$/.test(vDate)) {
-				return vDate.slice(6, 8) + "-" + vDate.slice(4, 6) + "-" + vDate.slice(0, 4);
-			}
-			if (vDate instanceof Date && !isNaN(vDate)) {
-				return vDate.toLocaleDateString("en-GB").split("/").join("-");
-			}
-			return String(vDate || "");
-		},
 
 		_formatBase64ToBlobUrl: function (sRawImg) {
 			var sImg = sRawImg || "";

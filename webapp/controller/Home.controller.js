@@ -29,6 +29,17 @@ sap.ui.define([
 
 			var oCountsModel = this.getView().getModel("hodCounts");
 
+			// Track all 8 parallel calls — BusyIndicator hides only when every call settles
+			var iTotalCalls = 8;
+			var iSettled = 0;
+			sap.ui.core.BusyIndicator.show(0);
+			var fnSettle = function () {
+				iSettled++;
+				if (iSettled >= iTotalCalls) {
+					sap.ui.core.BusyIndicator.hide();
+				}
+			};
+
 			// Gate Pass Request List — backend requires GatePassType filter; count pending client-side
 			var iReqPending = 0;
 			var iReqDone = 0;
@@ -61,7 +72,9 @@ sap.ui.define([
 						if (iReqDone === 3) {
 							oCountsModel.setProperty("/gatePassListCount", iReqPending);
 						}
-					}
+						fnSettle();
+					},
+					error: function () { fnSettle(); }
 				});
 			});
 
@@ -77,7 +90,9 @@ sap.ui.define([
 						if (iGPDone === 3) {
 							oCountsModel.setProperty("/nrgpListCount", iGPCount);
 						}
-					}
+						fnSettle();
+					},
+					error: function () { fnSettle(); }
 				});
 			});
 
@@ -86,7 +101,9 @@ sap.ui.define([
 				filters: [new Filter("GatePassType", FilterOperator.EQ, "NRGP")],
 				success: function (oData) {
 					oCountsModel.setProperty("/scrapGpListCount", (oData.results || []).length);
-				}
+					fnSettle();
+				},
+				error: function () { fnSettle(); }
 			});
 
 			// Ash GP List — total ash gate passes
@@ -94,7 +111,9 @@ sap.ui.define([
 				filters: [new Filter("GatePassType", FilterOperator.EQ, "NRGP")],
 				success: function (oData) {
 					oCountsModel.setProperty("/ashGpListCount", (oData.results || []).length);
-				}
+					fnSettle();
+				},
+				error: function () { fnSettle(); }
 			});
 		},
 
@@ -168,6 +187,14 @@ sap.ui.define([
 
 		onPressScrapInventory: function () {
 			this.getRouter().navTo("ScrapInventory");
+		},
+
+		onPressPCPManageList: function () {
+			this.getRouter().navTo("PCPManageList");
+		},
+
+		onPressInspectionList: function () {
+			this.getRouter().navTo("InspectionList");
 		}
 
 	});

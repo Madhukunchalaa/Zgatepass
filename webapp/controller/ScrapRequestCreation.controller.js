@@ -211,23 +211,13 @@ sap.ui.define([
 							sType = sFound || "Metal";
 						}
 						
-						var sRawUom = (subItem.Uom || subItem.Vrkme || subItem.Meins || subItem.UOM || "").toUpperCase();
-						var sUom = "KG";
-						if (sRawUom.indexOf("KG") !== -1 || sRawUom.indexOf("KILOGRAM") !== -1) {
-							sUom = "KG";
-						} else if (sRawUom.indexOf("LITRE") !== -1 || sRawUom.indexOf("LTR") !== -1 || sRawUom === "L" || sRawUom === "LIT") {
-							sUom = "L";
-						} else if (sRawUom.indexOf("TON") !== -1 || sRawUom.indexOf("TO") !== -1 || sRawUom.indexOf("MT") !== -1) {
-							sUom = "MT";
-						}
-
 						return {
 							sno: String(idx + 1),
 							type: sType,
 							description: subItem.MaterialDesc || subItem.Arktx || subItem.Description || subItem.Maktx || "",
 							quantity: (subItem.OrderQuantity || "0").toString(),
 							availQty: (subItem.OrderQuantity || "0").toString(),
-							uom: sUom
+							uom: that._normalizeUOM(subItem.Uom || subItem.Vrkme || subItem.Meins || subItem.UOM || "")
 						};
 					});
 
@@ -365,23 +355,13 @@ sap.ui.define([
 										sType = sFound || "Metal";
 									}
 									
-									var sRawUom = (subItem.Uom || subItem.Vrkme || subItem.Meins || subItem.UOM || "").toUpperCase();
-									var sUom = "KG";
-									if (sRawUom.indexOf("KG") !== -1 || sRawUom.indexOf("KILOGRAM") !== -1) {
-										sUom = "KG";
-									} else if (sRawUom.indexOf("LITRE") !== -1 || sRawUom.indexOf("LTR") !== -1 || sRawUom === "L" || sRawUom === "LIT") {
-										sUom = "L";
-									} else if (sRawUom.indexOf("TON") !== -1 || sRawUom.indexOf("TO") !== -1 || sRawUom.indexOf("MT") !== -1) {
-										sUom = "MT";
-									}
-
 									return {
 										sno: String(idx + 1),
 										type: sType,
 										description: subItem.MaterialDesc || subItem.Arktx || subItem.Description || subItem.Maktx || "",
 										quantity: (subItem.OrderQuantity || subItem.Quantity || subItem.Kwmeng || subItem.Qty || "0").toString(),
 										availQty: (subItem.OrderQuantity || subItem.Quantity || subItem.Kwmeng || subItem.Qty || "0").toString(),
-										uom: sUom
+										uom: that._normalizeUOM(subItem.Uom || subItem.Vrkme || subItem.Meins || subItem.UOM || "")
 									};
 								});
 

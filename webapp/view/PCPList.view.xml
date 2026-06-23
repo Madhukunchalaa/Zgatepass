@@ -8,7 +8,21 @@
 	<Page title="Gate Entry List" class="gpmsPage" showNavButton="true" navButtonPress=".onNavBack">
 		<content>
 			<VBox class="sapUiSmallMargin">
-				<Table id="pcpTable" items="{pcpList>/results}" class="gpmsTable" noDataText="No Gate Entries Found" alternateRowColors="true">
+				<!-- Date Range Filter Bar -->
+			<HBox alignItems="End" class="sapUiSmallMarginBottom" wrap="Wrap">
+				<VBox class="sapUiSmallMarginEnd">
+					<Label text="From Date" class="gpmsFieldLabel"/>
+					<DatePicker id="idFilterFromDate" displayFormat="dd-MM-yyyy" placeholder="From Date" width="180px" class="gpmsFieldInput"/>
+				</VBox>
+				<VBox class="sapUiSmallMarginEnd">
+					<Label text="To Date" class="gpmsFieldLabel"/>
+					<DatePicker id="idFilterToDate" displayFormat="dd-MM-yyyy" placeholder="To Date" width="180px" class="gpmsFieldInput"/>
+				</VBox>
+				<Button text="Apply" type="Emphasized" press=".onDateFilter" class="sapUiSmallMarginEnd"/>
+				<Button text="Clear" type="Transparent" press=".onClearDateFilter"/>
+			</HBox>
+
+			<Table id="pcpTable" items="{pcpList>/results}" class="gpmsTable" noDataText="No Gate Entries Found" alternateRowColors="true" growing="true" growingThreshold="20" growingScrollToLoad="true">
 					<headerToolbar>
 						<OverflowToolbar>
 							<Title text="Gate Entry List" level="H2"/>
@@ -24,11 +38,11 @@
 						<Column><Text text="GE No" class="gpmsTableHeaderText"/></Column>
 						<Column><Text text="Supplier" class="gpmsTableHeaderText"/></Column>
 						<Column><Text text="Source Type" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Desc" class="gpmsTableHeaderText"/></Column>
 						<Column><Text text="Dept" class="gpmsTableHeaderText"/></Column>
 						<Column><Text text="RGP No" class="gpmsTableHeaderText"/></Column>
 						<Column><Text text="Inv No" class="gpmsTableHeaderText"/></Column>
 						<Column><Text text="RR No" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Gate Pass No" class="gpmsTableHeaderText"/></Column>
 						<Column><Text text="Inspection Status" class="gpmsTableHeaderText"/></Column>
 						<Column hAlign="Center"><Text text="Action" class="gpmsTableHeaderText"/></Column>
 					</columns>
@@ -39,11 +53,11 @@
 								<Text text="{pcpList>GateEntryNo}" class="gpmsTableText"/>
 								<Text text="{pcpList>VendorDesc}" class="gpmsTableText"/>
 								<Text text="{pcpList>SourceType}" class="gpmsTableText"/>
-								<Text text="{pcpList>FirstItemDesc}" class="gpmsTableText"/>
 								<Text text="{pcpList>Department}" class="gpmsTableText"/>
 								<Text text="{pcpList>RGPNumber}" class="gpmsTableText"/>
 								<Text text="{pcpList>DCNumber}" class="gpmsTableText"/>
 								<Text text="{pcpList>RRNo}" class="gpmsTableText"/>
+								<Text text="{pcpList>GatepassNo}" class="gpmsTableText"/>
 								<Text text="{pcpList>InspectionStatus}" class="gpmsTableText"/>
 								<HBox justifyContent="Center" class="gpmsActionBox">
 									<Button icon="sap-icon://show" type="Default" tooltip="View" press=".onViewPCP" class="sapUiTinyMarginEnd gpmsActionButton"/>

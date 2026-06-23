@@ -36,6 +36,7 @@ sap.ui.define([
 				TransporterName: "",
 				TransporterGst: "",
 				DCNotes: "",
+				DCNumber: "",
 				GatePassNo: "",
 				finalTotal: "0.00",
 				ASHItmNav: []
@@ -177,8 +178,9 @@ sap.ui.define([
 			var oSosModel = this.getView().getModel("sos");
 			var aSaleOrders = oSosModel ? oSosModel.getProperty("/results") : [];
 
+			var sNormalized = sValue.replace(/^0+/, "") || sValue;
 			var oSelectedSO = aSaleOrders.find(function (so) {
-				return so.saleOrder === sValue;
+				return so.saleOrder === sValue || (so.saleOrder || "").replace(/^0+/, "") === sNormalized;
 			});
 
 			if (oSelectedSO) {
@@ -195,16 +197,23 @@ sap.ui.define([
 				return;
 			}
 
+			var sPaddedValue = sValue.padStart(10, "0");
 			sap.ui.core.BusyIndicator.show(0);
 			oODataModel.read("/ZsaleOrdersSet", {
 				filters: [
 					new Filter("SalesDocType", FilterOperator.EQ, "ZASH"),
-					new Filter("SalesDocument", FilterOperator.EQ, sValue)
+					new Filter("SalesDocument", FilterOperator.EQ, sPaddedValue)
 				],
 				urlParameters: { "$expand": "SaleodrItmNav" },
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
-					var oItem = oData && oData.results && oData.results[0];
+					var oItem = null;
+					if (oData && oData.results) {
+						oItem = oData.results.find(function(r) {
+							var sDoc = (r.SalesDocument || "").replace(/^0+/, "");
+							return r.SalesDocument === sPaddedValue || sDoc === sNormalized;
+						});
+					}
 					if (oItem) {
 						var aItemsRaw = [];
 						if (oItem.SaleodrItmNav) {
@@ -357,6 +366,7 @@ sap.ui.define([
 				TransporterName: oData.TransporterName,
 				TransporterGst: oData.TransporterGst,
 				DCNotes: oData.DCNotes,
+				DCNumber: oData.DCNumber,
 				GatePassNo: "",
 				ASHItmNav: oData.ASHItmNav.map(function(item) {
 					return {

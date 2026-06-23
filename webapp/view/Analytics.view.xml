@@ -13,24 +13,27 @@
 			<ScrollContainer vertical="true" horizontal="false" height="100%" width="100%">
 				<VBox class="gpmsAnalyticsPage">
 
-					<!-- ── Page Header ─────────────────────────────────── -->
-					<HBox alignItems="Center" justifyContent="SpaceBetween" class="gpmsAnalyticsHeader">
+					<!-- Page Header -->
+					<HBox alignItems="Center" justifyContent="SpaceBetween" class="gpmsAnalyticsHeader gpmsAnimFadeIn">
 						<VBox>
 							<Title text="Analytics Dashboard" level="H1" class="gpmsAnalyticsTitle"/>
-							<Text text="Gate Pass Management — Live Summary" class="gpmsAnalyticsSubTitle"/>
+							<Text text="Gate Pass Management — Complete Overview" class="gpmsAnalyticsSubTitle"/>
 						</VBox>
 						<Button icon="sap-icon://home" text="Home" press=".onNavHome" type="Transparent" class="gpmsAnalyticsHomeBtn"/>
 					</HBox>
 
-					<!-- ── KPI Tiles ───────────────────────────────────── -->
-					<HBox wrap="Wrap" class="gpmsKpiRow">
+					<!-- Truck & Gate Animation Banner -->
+					<core:HTML content="&lt;div class='gpmsAnimBanner'&gt;&lt;div class='gpmsAnimBannerText'&gt;GATE PASS MANAGEMENT SYSTEM&lt;/div&gt;&lt;div class='gpmsAnimRoad'&gt;&lt;/div&gt;&lt;div class='gpmsAnimTruck'&gt;&lt;/div&gt;&lt;div class='gpmsAnimGatePostL'&gt;&lt;/div&gt;&lt;div class='gpmsAnimGatePostR'&gt;&lt;/div&gt;&lt;div class='gpmsAnimBarrierL'&gt;&lt;/div&gt;&lt;div class='gpmsAnimBarrierR'&gt;&lt;/div&gt;&lt;div class='gpmsAnimGateLabel gpmsAnimGateLblL'&gt;ENTRY&lt;/div&gt;&lt;div class='gpmsAnimGateLabel gpmsAnimGateLblR'&gt;EXIT&lt;/div&gt;&lt;div class='gpmsAnimFloat gpmsAnimFloat1'&gt;&lt;/div&gt;&lt;div class='gpmsAnimFloat gpmsAnimFloat2'&gt;&lt;/div&gt;&lt;div class='gpmsAnimFloat gpmsAnimFloat3'&gt;&lt;/div&gt;&lt;/div&gt;"/>
+
+					<!-- KPI Tiles Row 1 — Gate Pass Requests -->
+					<HBox wrap="Wrap" class="gpmsKpiRow gpmsAnimSlideUp gpmsAnimDelay1">
 
 						<VBox class="gpmsKpiCard gpmsKpiTotal">
 							<HBox alignItems="Center">
 								<core:Icon src="sap-icon://documents" class="gpmsKpiIcon"/>
 								<VBox class="gpmsKpiTextBox">
 									<Title text="{analytics>/tiles/total}" level="H1" class="gpmsKpiNum"/>
-									<Text text="Total Gate Passes" class="gpmsKpiLbl"/>
+									<Text text="TOTAL REQUESTS" class="gpmsKpiLbl"/>
 								</VBox>
 							</HBox>
 						</VBox>
@@ -40,27 +43,7 @@
 								<core:Icon src="sap-icon://pending" class="gpmsKpiIcon"/>
 								<VBox class="gpmsKpiTextBox">
 									<Title text="{analytics>/tiles/pending}" level="H1" class="gpmsKpiNum"/>
-									<Text text="Total Pending" class="gpmsKpiLbl"/>
-								</VBox>
-							</HBox>
-						</VBox>
-
-						<VBox class="gpmsKpiCard gpmsKpiNrgp">
-							<HBox alignItems="Center">
-								<core:Icon src="sap-icon://add-document" class="gpmsKpiIcon"/>
-								<VBox class="gpmsKpiTextBox">
-									<Title text="{analytics>/tiles/nrgpPending}" level="H1" class="gpmsKpiNum"/>
-									<Text text="NRGP Pending" class="gpmsKpiLbl"/>
-								</VBox>
-							</HBox>
-						</VBox>
-
-						<VBox class="gpmsKpiCard gpmsKpiRgp">
-							<HBox alignItems="Center">
-								<core:Icon src="sap-icon://shipping-status" class="gpmsKpiIcon"/>
-								<VBox class="gpmsKpiTextBox">
-									<Title text="{analytics>/tiles/rgpPending}" level="H1" class="gpmsKpiNum"/>
-									<Text text="RGP Pending" class="gpmsKpiLbl"/>
+									<Text text="PENDING" class="gpmsKpiLbl"/>
 								</VBox>
 							</HBox>
 						</VBox>
@@ -70,7 +53,7 @@
 								<core:Icon src="sap-icon://accept" class="gpmsKpiIcon"/>
 								<VBox class="gpmsKpiTextBox">
 									<Title text="{analytics>/tiles/approved}" level="H1" class="gpmsKpiNum"/>
-									<Text text="Approved" class="gpmsKpiLbl"/>
+									<Text text="APPROVED" class="gpmsKpiLbl"/>
 								</VBox>
 							</HBox>
 						</VBox>
@@ -80,21 +63,100 @@
 								<core:Icon src="sap-icon://cancel" class="gpmsKpiIcon"/>
 								<VBox class="gpmsKpiTextBox">
 									<Title text="{analytics>/tiles/rejected}" level="H1" class="gpmsKpiNum"/>
-									<Text text="Rejected" class="gpmsKpiLbl"/>
+									<Text text="REJECTED" class="gpmsKpiLbl"/>
 								</VBox>
 							</HBox>
 						</VBox>
 
 					</HBox>
 
-					<!-- ── Charts Row ─────────────────────────────────── -->
-					<HBox wrap="Wrap" class="gpmsChartsRow" alignItems="Stretch">
+					<!-- KPI Tiles Row 2 — Operations -->
+					<HBox wrap="Wrap" class="gpmsKpiRow gpmsAnimSlideUp gpmsAnimDelay2">
 
-						<!-- Grouped Column Chart -->
+						<VBox class="gpmsKpiCard gpmsKpiNrgp">
+							<HBox alignItems="Center">
+								<core:Icon src="sap-icon://add-document" class="gpmsKpiIcon"/>
+								<VBox class="gpmsKpiTextBox">
+									<Title text="{analytics>/tiles/nrgpTotal}" level="H1" class="gpmsKpiNum"/>
+									<Text text="NRGP REQUESTS" class="gpmsKpiLbl"/>
+								</VBox>
+							</HBox>
+						</VBox>
+
+						<VBox class="gpmsKpiCard gpmsKpiRgp">
+							<HBox alignItems="Center">
+								<core:Icon src="sap-icon://shipping-status" class="gpmsKpiIcon"/>
+								<VBox class="gpmsKpiTextBox">
+									<Title text="{analytics>/tiles/rgpTotal}" level="H1" class="gpmsKpiNum"/>
+									<Text text="RGP REQUESTS" class="gpmsKpiLbl"/>
+								</VBox>
+							</HBox>
+						</VBox>
+
+						<VBox class="gpmsKpiCard gpmsKpiOutGP">
+							<HBox alignItems="Center">
+								<core:Icon src="sap-icon://exit-full-screen" class="gpmsKpiIcon"/>
+								<VBox class="gpmsKpiTextBox">
+									<Title text="{analytics>/tiles/outGatePass}" level="H1" class="gpmsKpiNum"/>
+									<Text text="OUT GATE PASSES" class="gpmsKpiLbl"/>
+								</VBox>
+							</HBox>
+						</VBox>
+
+						<VBox class="gpmsKpiCard gpmsKpiGateEntry">
+							<HBox alignItems="Center">
+								<core:Icon src="sap-icon://enter-more" class="gpmsKpiIcon"/>
+								<VBox class="gpmsKpiTextBox">
+									<Title text="{analytics>/tiles/gateEntries}" level="H1" class="gpmsKpiNum"/>
+									<Text text="GATE ENTRIES" class="gpmsKpiLbl"/>
+								</VBox>
+							</HBox>
+						</VBox>
+
+					</HBox>
+
+					<!-- KPI Tiles Row 3 — Scrap &amp; Ash -->
+					<HBox wrap="Wrap" class="gpmsKpiRow gpmsAnimSlideUp gpmsAnimDelay3">
+
+						<VBox class="gpmsKpiCard gpmsKpiScrapReq">
+							<HBox alignItems="Center">
+								<core:Icon src="sap-icon://delete" class="gpmsKpiIcon"/>
+								<VBox class="gpmsKpiTextBox">
+									<Title text="{analytics>/tiles/scrapRequests}" level="H1" class="gpmsKpiNum"/>
+									<Text text="SCRAP REQUESTS" class="gpmsKpiLbl"/>
+								</VBox>
+							</HBox>
+						</VBox>
+
+						<VBox class="gpmsKpiCard gpmsKpiScrapGP">
+							<HBox alignItems="Center">
+								<core:Icon src="sap-icon://sales-document" class="gpmsKpiIcon"/>
+								<VBox class="gpmsKpiTextBox">
+									<Title text="{analytics>/tiles/scrapGatePasses}" level="H1" class="gpmsKpiNum"/>
+									<Text text="SCRAP GATE PASSES" class="gpmsKpiLbl"/>
+								</VBox>
+							</HBox>
+						</VBox>
+
+						<VBox class="gpmsKpiCard gpmsKpiAsh">
+							<HBox alignItems="Center">
+								<core:Icon src="sap-icon://factory" class="gpmsKpiIcon"/>
+								<VBox class="gpmsKpiTextBox">
+									<Title text="{analytics>/tiles/ashGatePasses}" level="H1" class="gpmsKpiNum"/>
+									<Text text="ASH GATE PASSES" class="gpmsKpiLbl"/>
+								</VBox>
+							</HBox>
+						</VBox>
+
+					</HBox>
+
+					<!-- Charts Row 1 — NRGP vs RGP Status + Overall Donut -->
+					<HBox wrap="Wrap" class="gpmsChartsRow gpmsAnimSlideUp gpmsAnimDelay4" alignItems="Stretch">
+
 						<VBox class="gpmsChartCard gpmsChartLarge">
 							<HBox alignItems="Center" class="gpmsChartCardHeader">
 								<core:Icon src="sap-icon://bar-chart" class="gpmsChartIcon"/>
-								<Title text="Status by Type (NRGP vs RGP)" level="H3" class="gpmsChartCardTitle"/>
+								<Title text="NRGP vs RGP — Status Breakdown" level="H3" class="gpmsChartCardTitle"/>
 							</HBox>
 							<viz:VizFrame id="idBarChart" vizType="column" width="100%" height="300px">
 								<viz:dataset>
@@ -104,18 +166,17 @@
 										</viz.data:dimensions>
 										<viz.data:measures>
 											<viz.data:MeasureDefinition name="NRGP" value="{analytics>nrgp}"/>
-											<viz.data:MeasureDefinition name="RGP"  value="{analytics>rgp}"/>
+											<viz.data:MeasureDefinition name="RGP" value="{analytics>rgp}"/>
 										</viz.data:measures>
 									</viz.data:FlattenedDataset>
 								</viz:dataset>
 								<viz:feeds>
 									<viz.feeds:FeedItem uid="categoryAxis" type="Dimension" values="Status"/>
-									<viz.feeds:FeedItem uid="valueAxis"    type="Measure"   values="NRGP,RGP"/>
+									<viz.feeds:FeedItem uid="valueAxis" type="Measure" values="NRGP,RGP"/>
 								</viz:feeds>
 							</viz:VizFrame>
 						</VBox>
 
-						<!-- Donut Chart -->
 						<VBox class="gpmsChartCard gpmsChartSmall">
 							<HBox alignItems="Center" class="gpmsChartCardHeader">
 								<core:Icon src="sap-icon://donut-chart" class="gpmsChartIcon"/>
@@ -134,15 +195,66 @@
 								</viz:dataset>
 								<viz:feeds>
 									<viz.feeds:FeedItem uid="color" type="Dimension" values="Status"/>
-									<viz.feeds:FeedItem uid="size"  type="Measure"   values="Count"/>
+									<viz.feeds:FeedItem uid="size" type="Measure" values="Count"/>
 								</viz:feeds>
 							</viz:VizFrame>
 						</VBox>
 
 					</HBox>
 
-					<!-- ── NRGP vs RGP Summary Cards ──────────────────── -->
-					<HBox wrap="Wrap" class="gpmsTypeRow">
+					<!-- Charts Row 2 — All Types Overview + Gate Entry Inspection -->
+					<HBox wrap="Wrap" class="gpmsChartsRow gpmsAnimSlideUp gpmsAnimDelay5" alignItems="Stretch">
+
+						<VBox class="gpmsChartCard gpmsChartLarge">
+							<HBox alignItems="Center" class="gpmsChartCardHeader">
+								<core:Icon src="sap-icon://horizontal-bar-chart" class="gpmsChartIcon"/>
+								<Title text="All Gate Pass Types — Volume" level="H3" class="gpmsChartCardTitle"/>
+							</HBox>
+							<viz:VizFrame id="idAllTypesChart" vizType="bar" width="100%" height="300px">
+								<viz:dataset>
+									<viz.data:FlattenedDataset data="{analytics>/allTypesBar}">
+										<viz.data:dimensions>
+											<viz.data:DimensionDefinition name="Type" value="{analytics>type}"/>
+										</viz.data:dimensions>
+										<viz.data:measures>
+											<viz.data:MeasureDefinition name="Count" value="{analytics>count}"/>
+										</viz.data:measures>
+									</viz.data:FlattenedDataset>
+								</viz:dataset>
+								<viz:feeds>
+									<viz.feeds:FeedItem uid="categoryAxis" type="Dimension" values="Type"/>
+									<viz.feeds:FeedItem uid="valueAxis" type="Measure" values="Count"/>
+								</viz:feeds>
+							</viz:VizFrame>
+						</VBox>
+
+						<VBox class="gpmsChartCard gpmsChartSmall">
+							<HBox alignItems="Center" class="gpmsChartCardHeader">
+								<core:Icon src="sap-icon://inspection" class="gpmsChartIcon"/>
+								<Title text="Gate Entry Inspection Status" level="H3" class="gpmsChartCardTitle"/>
+							</HBox>
+							<viz:VizFrame id="idGateEntryPieChart" vizType="donut" width="100%" height="300px">
+								<viz:dataset>
+									<viz.data:FlattenedDataset data="{analytics>/gateEntryPie}">
+										<viz.data:dimensions>
+											<viz.data:DimensionDefinition name="Status" value="{analytics>status}"/>
+										</viz.data:dimensions>
+										<viz.data:measures>
+											<viz.data:MeasureDefinition name="Count" value="{analytics>count}"/>
+										</viz.data:measures>
+									</viz.data:FlattenedDataset>
+								</viz:dataset>
+								<viz:feeds>
+									<viz.feeds:FeedItem uid="color" type="Dimension" values="Status"/>
+									<viz.feeds:FeedItem uid="size" type="Measure" values="Count"/>
+								</viz:feeds>
+							</viz:VizFrame>
+						</VBox>
+
+					</HBox>
+
+					<!-- Summary Cards Row 1 — NRGP + RGP -->
+					<HBox wrap="Wrap" class="gpmsTypeRow gpmsAnimSlideUp gpmsAnimDelay6">
 
 						<VBox class="gpmsTypeCard gpmsTypeNrgp">
 							<HBox alignItems="Center" class="gpmsTypeCardHeader">
@@ -204,6 +316,109 @@
 										<Text text="Rejected" class="gpmsTypeStatLabel"/>
 									</HBox>
 									<Text text="{analytics>/tiles/rgpRejected}" class="gpmsTypeStatVal gpmsStatRejected"/>
+								</HBox>
+							</VBox>
+						</VBox>
+
+					</HBox>
+
+					<!-- Summary Cards Row 2 — Gate Entries + Scrap -->
+					<HBox wrap="Wrap" class="gpmsTypeRow gpmsAnimSlideUp gpmsAnimDelay7">
+
+						<VBox class="gpmsTypeCard gpmsTypeGateEntry">
+							<HBox alignItems="Center" class="gpmsTypeCardHeader">
+								<core:Icon src="sap-icon://enter-more" class="gpmsTypeHdrIcon"/>
+								<Title text="Gate Entry Summary" level="H3" class="gpmsTypeHdrTitle"/>
+								<ToolbarSpacer/>
+								<ObjectNumber number="{analytics>/tiles/gateEntries}" unit="Total" state="None" class="gpmsTypeTotalBadge"/>
+							</HBox>
+							<VBox class="gpmsTypeStatList">
+								<HBox justifyContent="SpaceBetween" alignItems="Center" class="gpmsTypeStat">
+									<HBox alignItems="Center">
+										<core:Icon src="sap-icon://accept" class="gpmsTypeStatIcon gpmsStatApproved"/>
+										<Text text="Inspected" class="gpmsTypeStatLabel"/>
+									</HBox>
+									<Text text="{analytics>/tiles/gateEntriesInspected}" class="gpmsTypeStatVal gpmsStatApproved"/>
+								</HBox>
+								<HBox justifyContent="SpaceBetween" alignItems="Center" class="gpmsTypeStat">
+									<HBox alignItems="Center">
+										<core:Icon src="sap-icon://pending" class="gpmsTypeStatIcon gpmsStatPending"/>
+										<Text text="Pending Inspection" class="gpmsTypeStatLabel"/>
+									</HBox>
+									<Text text="{analytics>/tiles/gateEntriesPendingInsp}" class="gpmsTypeStatVal gpmsStatPending"/>
+								</HBox>
+							</VBox>
+						</VBox>
+
+						<VBox class="gpmsTypeCard gpmsTypeScrap">
+							<HBox alignItems="Center" class="gpmsTypeCardHeader">
+								<core:Icon src="sap-icon://delete" class="gpmsTypeHdrIcon"/>
+								<Title text="Scrap Summary" level="H3" class="gpmsTypeHdrTitle"/>
+								<ToolbarSpacer/>
+								<ObjectNumber number="{analytics>/tiles/scrapRequests}" unit="Requests" state="None" class="gpmsTypeTotalBadge"/>
+							</HBox>
+							<VBox class="gpmsTypeStatList">
+								<HBox justifyContent="SpaceBetween" alignItems="Center" class="gpmsTypeStat">
+									<HBox alignItems="Center">
+										<core:Icon src="sap-icon://accept" class="gpmsTypeStatIcon gpmsStatApproved"/>
+										<Text text="Approved Requests" class="gpmsTypeStatLabel"/>
+									</HBox>
+									<Text text="{analytics>/tiles/scrapReqApproved}" class="gpmsTypeStatVal gpmsStatApproved"/>
+								</HBox>
+								<HBox justifyContent="SpaceBetween" alignItems="Center" class="gpmsTypeStat">
+									<HBox alignItems="Center">
+										<core:Icon src="sap-icon://pending" class="gpmsTypeStatIcon gpmsStatPending"/>
+										<Text text="Pending Requests" class="gpmsTypeStatLabel"/>
+									</HBox>
+									<Text text="{analytics>/tiles/scrapReqPending}" class="gpmsTypeStatVal gpmsStatPending"/>
+								</HBox>
+								<HBox justifyContent="SpaceBetween" alignItems="Center" class="gpmsTypeStat">
+									<HBox alignItems="Center">
+										<core:Icon src="sap-icon://sales-document" class="gpmsTypeStatIcon gpmsStatInfo"/>
+										<Text text="Scrap Gate Passes" class="gpmsTypeStatLabel"/>
+									</HBox>
+									<Text text="{analytics>/tiles/scrapGatePasses}" class="gpmsTypeStatVal gpmsStatInfo"/>
+								</HBox>
+							</VBox>
+						</VBox>
+
+					</HBox>
+
+					<!-- Summary Card Row 3 — Ash -->
+					<HBox wrap="Wrap" class="gpmsTypeRow gpmsAnimSlideUp gpmsAnimDelay8">
+
+						<VBox class="gpmsTypeCard gpmsTypeAsh">
+							<HBox alignItems="Center" class="gpmsTypeCardHeader">
+								<core:Icon src="sap-icon://factory" class="gpmsTypeHdrIcon"/>
+								<Title text="Ash Gate Pass Summary" level="H3" class="gpmsTypeHdrTitle"/>
+								<ToolbarSpacer/>
+								<ObjectNumber number="{analytics>/tiles/ashGatePasses}" unit="Total" state="None" class="gpmsTypeTotalBadge"/>
+							</HBox>
+							<VBox class="gpmsTypeStatList">
+								<HBox justifyContent="SpaceBetween" alignItems="Center" class="gpmsTypeStat">
+									<HBox alignItems="Center">
+										<core:Icon src="sap-icon://factory" class="gpmsTypeStatIcon gpmsStatInfo"/>
+										<Text text="Total Ash Disposal Gate Passes" class="gpmsTypeStatLabel"/>
+									</HBox>
+									<Text text="{analytics>/tiles/ashGatePasses}" class="gpmsTypeStatVal gpmsStatInfo"/>
+								</HBox>
+							</VBox>
+						</VBox>
+
+						<VBox class="gpmsTypeCard gpmsTypeOutGP">
+							<HBox alignItems="Center" class="gpmsTypeCardHeader">
+								<core:Icon src="sap-icon://exit-full-screen" class="gpmsTypeHdrIcon"/>
+								<Title text="Out Gate Pass Summary" level="H3" class="gpmsTypeHdrTitle"/>
+								<ToolbarSpacer/>
+								<ObjectNumber number="{analytics>/tiles/outGatePass}" unit="Total" state="None" class="gpmsTypeTotalBadge"/>
+							</HBox>
+							<VBox class="gpmsTypeStatList">
+								<HBox justifyContent="SpaceBetween" alignItems="Center" class="gpmsTypeStat">
+									<HBox alignItems="Center">
+										<core:Icon src="sap-icon://exit-full-screen" class="gpmsTypeStatIcon gpmsStatInfo"/>
+										<Text text="Total Generated Out Gate Passes" class="gpmsTypeStatLabel"/>
+									</HBox>
+									<Text text="{analytics>/tiles/outGatePass}" class="gpmsTypeStatVal gpmsStatInfo"/>
 								</HBox>
 							</VBox>
 						</VBox>

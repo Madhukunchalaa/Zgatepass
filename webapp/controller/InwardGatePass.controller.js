@@ -30,13 +30,19 @@ sap.ui.define([
 			this._rawHeader = null;
 			var oData = {
 				GatePassNo: "",
+				GatePassDate: "",
 				DueDate: "",
-				RevisedDueDate: "",
+				ExtReturnDate: "",
+				ReturnDate: "",
 				ReceivedDate: null,
+				RequestType: "RGP",
 				Plant: "",
 				Department: "",
 				VendorName: "",
 				VendorGST: "",
+				UserRemarks: "",
+				HODRemarks: "",
+				StoreRemarks: "",
 				items: [],
 				showLogistics: false,
 				DocOptionIndex: 0,
@@ -51,6 +57,17 @@ sap.ui.define([
 				GateEntryNo: "",
 				EWayBillNo: "",
 				EWayBillDate: null,
+				InsuranceRequired: false,
+				showInsuranceDetails: false,
+				InsuranceDate: "",
+				InsuranceAmount: "",
+				InsuranceInvoiceNo: "",
+				InsuranceDateDisplay: "",
+				InsuranceVendor: "",
+				InsuranceVendorAddress: "",
+				InsuranceModeOfTransport: "Road",
+				InsuranceVehicleNo: "",
+				InsuranceDescription: "",
 				FinalTotal: "0.00"
 			};
 			var oModel = this.getView().getModel("inward");
@@ -61,22 +78,6 @@ sap.ui.define([
 			}
 		},
 
-		_formatDate: function (vDate) {
-			if (!vDate || vDate === "00000000" || vDate === "") { return ""; }
-			// Handle OData /Date(ms)/ format
-			if (typeof vDate === "string" && vDate.indexOf("/Date(") === 0) {
-				var ms = parseInt(vDate.replace(/\/Date\((\d+)[^)]*\)\//, "$1"), 10);
-				vDate = new Date(ms);
-			}
-			// Handle YYYYMMDD string (e.g. "20260504")
-			if (typeof vDate === "string" && /^\d{8}$/.test(vDate)) {
-				vDate = new Date(vDate.slice(0, 4), parseInt(vDate.slice(4, 6), 10) - 1, vDate.slice(6, 8));
-			}
-			if (vDate instanceof Date && !isNaN(vDate)) {
-				return vDate.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).split("/").join("-");
-			}
-			return String(vDate);
-		},
 
 		_formatDateForPayload: function (sDate) {
 			if (!sDate) { return ""; }
@@ -106,20 +107,40 @@ sap.ui.define([
 
 			sap.ui.core.BusyIndicator.show(0);
 
-			oODataModel.read("/GatePassHDRSet", {
-				filters: [new sap.ui.model.Filter("GatePassNo", sap.ui.model.FilterOperator.EQ, sGPNo)],
-				urlParameters: { "$expand": "GatePassItemNav" },
+			oODataModel.read("/OutGatePassSet", {
+				filters: [
+					new sap.ui.model.Filter("GatePassNo", sap.ui.model.FilterOperator.EQ, sGPNo),
+					new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, "RGP")
+				],
+				urlParameters: { "$expand": "OutgateNav" },
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
-					var oResult = oData.results && oData.results[0];
-					if (!oResult) {
+					var aResults = oData.results || [];
+					if (aResults.length === 0) {
 						MessageBox.error("RGP Gate Pass " + sGPNo + " not found.");
 						return;
 					}
+					var oResult = aResults.find(function (r) {
+						return (r.GatePassNo || "").trim() === sGPNo.trim();
+					}) || aResults[0];
+
 					if (oResult.GatePassType !== "RGP") {
 						MessageBox.warning("This is an NRGP Gate Pass. Inward is only for RGP.");
 						return;
 					}
+
+					var aCombinedItems = [];
+					aResults.forEach(function (res) {
+						if ((res.GatePassNo || "").trim() !== sGPNo.trim()) { return; }
+						var aItems = (res.OutgateNav && res.OutgateNav.results) || (Array.isArray(res.OutgateNav) ? res.OutgateNav : []);
+						aItems.forEach(function (itm) {
+							var bExists = aCombinedItems.some(function (existing) {
+								return existing.ItemNo === itm.ItemNo;
+							});
+							if (!bExists) { aCombinedItems.push(itm); }
+						});
+					});
+					oResult.OutgateNav = { results: aCombinedItems };
 					this._mapData(oResult);
 				}.bind(this),
 				error: function () {
@@ -132,16 +153,14 @@ sap.ui.define([
 		_mapData: function (oData) {
 			this._rawHeader = oData;
 			var oModel = this.getView().getModel("inward");
-			var aItems = (oData.GatePassItemNav && oData.GatePassItemNav.results) || [];
+			var aItems = (oData.OutgateNav && oData.OutgateNav.results) || [];
 
 			var sFullyReceivedMsg = "";
-			var aMapped = aItems.map(function (item) {
+			var aMapped = aItems.map(function (item, i) {
 				var fSent = parseFloat(item.SentQuantity || item.Quantity || 0);
 				var fRec  = parseFloat(item.RecievedQuantity || 0);
 				var fBal  = parseFloat(item.BalanceQuantity);
 
-				// If balance is 0 or NaN but nothing has been received yet, 
-				// it means it's a new Gate Pass and balance should equal sent quantity.
 				if ((isNaN(fBal) || (fBal === 0 && fRec === 0)) && fSent > 0) {
 					fBal = fSent;
 				}
@@ -150,22 +169,23 @@ sap.ui.define([
 					sFullyReceivedMsg = item.Message || "All items for Gate Pass " + (oData.GatePassNo || "") + " have already been received.";
 				}
 
-				// Derive rate from ItemNetPrice; fall back to Totalvalue / SentQty if price is missing
 				var fRateRaw = parseFloat(item.ItemNetPrice || 0);
 				if (fRateRaw === 0 && fSent > 0) {
 					fRateRaw = parseFloat(item.Totalvalue || 0) / fSent;
 				}
 
 				return {
-					// display fields
+					sno:          i + 1,
 					material:     item.Material || "",
-					materialName: item.Description || item.MaterialName || "",
+					materialName: item.MaterialDesc || item.MaterialName || item.Description || item.HSNDesc || "",
+					hsnCode:      item.HSNCode || "",
 					sentQty:      fSent,
 					recvdQty:     0,
 					balQty:       parseFloat(fBal.toFixed(3)),
 					_initialBal:  parseFloat(fBal.toFixed(3)),
 					uom:          item.UOM || item.Uom || "EA",
-					// raw fields needed for POST
+					rate:         fRateRaw,
+					amount:       parseFloat((fSent * fRateRaw).toFixed(2)),
 					_itemNo:        item.ItemNo || "",
 					_itemNetPrice:  String(fRateRaw.toFixed(2)),
 					_totalValue:    item.Totalvalue || "0.00",
@@ -181,15 +201,48 @@ sap.ui.define([
 			oModel.setProperty("/GatePassNo",     oData.GatePassNo || "");
 			oModel.setProperty("/GatePassDate",   this._formatDate(oData.GatePassDate));
 			oModel.setProperty("/DueDate",        this._formatDate(oData.ReturnableDate || oData.DueDate));
-			oModel.setProperty("/RevisedDueDate", this._formatDate(oData.Extreturndate || oData.ExtendedReturnableDate));
+			oModel.setProperty("/ExtReturnDate",  this._formatDate(oData.ExtReturnDate || oData.Extreturndate || oData.ExtendedReturnableDate));
+			oModel.setProperty("/ReturnDate",     this._formatDate(oData.ReturnableDate || oData.DueDate));
 			oModel.setProperty("/ReceivedDate",   null);
+			oModel.setProperty("/RequestType",    oData.GatePassType || "RGP");
 			oModel.setProperty("/Plant",          oData.Plant || "");
 			oModel.setProperty("/Department",     oData.Department || "");
 			oModel.setProperty("/VendorName",     oData.VendorName || "");
 			oModel.setProperty("/VendorGST",      oData.VendorGST || "");
+			oModel.setProperty("/UserRemarks",    oData.Remarks || "");
+			oModel.setProperty("/HODRemarks",     oData.HODRemarks || "");
+			oModel.setProperty("/StoreRemarks",   oData.STORERemarks || oData.StoreRemarks || "");
+			oModel.setProperty("/InsuranceRequired", (oData.InsuranceReq || "").toLowerCase() === "yes");
+			oModel.setProperty("/InsuranceDate", oData.InsuranceDate || "");
+			oModel.setProperty("/InsuranceAmount", oData.InsuranceAmount || "");
 			oModel.setProperty("/items",          aMapped);
 			oModel.setProperty("/showLogistics",  true);
 			this._calculateFinalTotal();
+
+			var sReqNo = oData.GatePassReqNo || oData.GatePassreqNo || "";
+			if (sReqNo) {
+				this._loadFromReqHdr(sReqNo, oData.GatePassType || "RGP");
+			}
+		},
+
+		_loadFromReqHdr: function (sReqNo, sGPType) {
+			var oODataModel = this.getOwnerComponent().getModel();
+			var oModel = this.getView().getModel("inward");
+			if (!oODataModel || !oModel) { return; }
+
+			oODataModel.read("/GateReqHdrSet", {
+				filters: [
+					new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo),
+					new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, sGPType)
+				],
+				success: function (oData) {
+					var oResult = oData.results && oData.results[0];
+					if (!oResult) { return; }
+					oModel.setProperty("/UserRemarks", oResult.Remarks || oModel.getProperty("/UserRemarks") || "");
+					oModel.setProperty("/HODRemarks", oResult.HODRemarks || oResult.HodRemarks || "");
+					oModel.setProperty("/StoreRemarks", oResult.STORERemarks || oResult.StoreRemarks || "");
+				}
+			});
 		},
 
 		onQtyChange: function (oEvent) {
@@ -214,6 +267,10 @@ sap.ui.define([
 			}
 
 			oModel.setProperty(oContext.getPath() + "/balQty", fBal);
+
+			var fRate = parseFloat(oItem.rate || oItem._itemNetPrice || 0);
+			oModel.setProperty(oContext.getPath() + "/amount", parseFloat((fNow * fRate).toFixed(2)));
+
 			this._calculateFinalTotal();
 		},
 
@@ -280,7 +337,7 @@ sap.ui.define([
 					GatePassNo:         sGatePassNo,
 					ItemNo:             it._itemNo,
 					Material:           it.material,
-					Description:        it.materialName,
+					Description:        (it.materialName || "").substring(0, 40),
 					UOM:                it.uom,
 					ItemNetPrice:       it._itemNetPrice,
 					SentQuantity:       parseFloat(it.sentQty).toFixed(3),
@@ -304,18 +361,18 @@ sap.ui.define([
 				PurchasingDoc:   oHdr.PurchasingDoc   || "",
 				ChallanDate:     oHdr.ChallanDate     || "",
 				GateEntryNo:     oHdr.GateEntryNo     || "",
-				Extreturndate:   this._formatDateForPayload(oModel.getProperty("/RevisedDueDate")) || "",
+				Extreturndate:   this._formatDateForPayload(oModel.getProperty("/ExtReturnDate")) || "",
 				RecievedDate:    this._formatDateForPayload(oModel.getProperty("/ReceivedDate")) || "",
 				ReturnableDate:  oHdr.ReturnableDate  || "",
 				Department:      oHdr.Department      || "",
-				ChallanNumber:   oHdr.ChallanNumber   || "",
+				ChallanNumber:   "",
 				GateExitdate:    oHdr.GateExitdate    || "",
 				ReqEmpID:        oHdr.ReqEmpID        || "",
 				FinanceHODId:    oHdr.FinanceHODId    || "",
 				PlantHODId:      oHdr.PlantHODId      || "",
 				StoreHODId:      oHdr.StoreHODId      || "",
 				HODEmpID:        oHdr.HODEmpID        || "",
-				Remarks:         oModel.getProperty("/DCNotes") || oHdr.Remarks || "",
+				Remarks:         oModel.getProperty("/UserRemarks") || oModel.getProperty("/DCNotes") || oHdr.Remarks || "",
 				VehicleNo:       oModel.getProperty("/VehicleNo") || "",
 				ModeOfDispatch:  oModel.getProperty("/ModeOfTransport") || "",
 				GateRetItmNav:   aNavItems
@@ -578,6 +635,22 @@ sap.ui.define([
 			doc.save("InwardDC_" + (oInward.GatePassNo || "Draft") + ".pdf");
 		},
 
+		onAddInsurance: function () {
+			var oModel = this.getView().getModel("inward");
+			var oData = oModel.getData();
+			if (!oModel.getProperty("/showInsuranceDetails")) {
+				oModel.setProperty("/InsuranceInvoiceNo", oData.GatePassNo || "");
+				oModel.setProperty("/InsuranceDateDisplay", new Date().toLocaleDateString("en-GB").split("/").join("-"));
+				oModel.setProperty("/InsuranceVendor", oData.VendorName || "");
+				oModel.setProperty("/InsuranceVendorAddress", "");
+				oModel.setProperty("/InsuranceModeOfTransport", oData.ModeOfTransport || "Road");
+				oModel.setProperty("/InsuranceVehicleNo", oData.VehicleNo || "");
+				oModel.setProperty("/InsuranceAmount", oData.FinalTotal ? oData.FinalTotal.toString().replace(/,/g, "") : "");
+				oModel.setProperty("/InsuranceDescription", oData.UserRemarks || "");
+			}
+			oModel.setProperty("/showInsuranceDetails", true);
+		},
+
 		onInsuranceCheck: function (oEvent) {
 			var bSelected = oEvent.getParameter("selected");
 			var oInwardModel = this.getView().getModel("inward");
@@ -615,11 +688,18 @@ sap.ui.define([
 		},
 
 		onInsuranceSubmit: function () {
-			sap.m.MessageToast.show("Insurance details saved locally. Ready for backend mapping.");
-			this.byId("idInsuranceRequired").setSelected(true);
+			var oModel = this.getView().getModel("inward");
 			this._pInsuranceDialog.then(function (oDialog) {
+				var oInsData = oDialog.getModel("insurance").getData();
+				var sDate = oInsData.InsuranceDate || "";
+				var aParts = sDate.split("-");
+				var sFormatted = (aParts.length === 3) ? aParts[2] + aParts[1] + aParts[0] : sDate;
+				oModel.setProperty("/InsuranceRequired", true);
+				oModel.setProperty("/InsuranceDate", sFormatted);
+				oModel.setProperty("/InsuranceAmount", oInsData.InvoiceValue || "");
 				oDialog.close();
 			});
+			sap.m.MessageToast.show("Insurance details saved.");
 		},
 
 		onInsuranceCancel: function () {

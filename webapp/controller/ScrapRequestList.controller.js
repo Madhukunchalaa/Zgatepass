@@ -38,21 +38,13 @@ sap.ui.define([
 						var sRequestId = oItem.GatePassReqNo || oItem.RequestId || "";
 
 						// Format date
-						var sDateStr = that._formatRequestDate(oItem.RequestDate || oItem.ReqDate);
+						var sDateStr = that._formatDateSlash(oItem.RequestDate || oItem.ReqDate);
 
 						// Map items
 						var aItems = [];
 						if (oItem.ScrapReqItmNav && oItem.ScrapReqItmNav.results) {
 							aItems = oItem.ScrapReqItmNav.results.map(function(oSubItem, index) {
-								var sRawUom = (oSubItem.UOM || oSubItem.Uom || "").toUpperCase();
-								var sUom = "KG";
-								if (sRawUom.indexOf("KG") !== -1 || sRawUom.indexOf("KILOGRAM") !== -1) {
-									sUom = "KG";
-								} else if (sRawUom.indexOf("LITRE") !== -1 || sRawUom.indexOf("LTR") !== -1 || sRawUom === "L" || sRawUom === "LIT") {
-									sUom = "L";
-								} else if (sRawUom.indexOf("TON") !== -1 || sRawUom.indexOf("TO") !== -1 || sRawUom.indexOf("MT") !== -1) {
-									sUom = "MT";
-								}
+								var sUom = that._normalizeUOM(oSubItem.UOM || oSubItem.Uom || "");
 								return {
 									sno: String(index + 1),
 									type: that._mapMaterialType(oSubItem.Material || oSubItem.MaterialType || oSubItem.Type || "", oSubItem.MaterialDesc || oSubItem.Description || ""),
@@ -92,95 +84,7 @@ sap.ui.define([
 			});
 		},
 
-		_deriveStatus: function (oItem) {
-			var fnGetProp = function (obj, sProp) {
-				if (!obj) return "";
-				var sTarget = sProp.toLowerCase();
-				for (var key in obj) {
-					if (key.toLowerCase() === sTarget) {
-						return obj[key];
-					}
-				}
-				return "";
-			};
 
-			var s1 = fnGetProp(oItem, "Approval1");
-			if (!s1 || s1 === "null" || s1 === "undefined") s1 = "";
-			s1 = String(s1).trim().toUpperCase();
-
-			var s2 = fnGetProp(oItem, "Approval2");
-			if (!s2 || s2 === "null" || s2 === "undefined") s2 = "";
-			s2 = String(s2).trim().toUpperCase();
-
-			var sStatus = fnGetProp(oItem, "Status") || fnGetProp(oItem, "ReqStatus");
-			if (!sStatus || sStatus === "null" || sStatus === "undefined") sStatus = "";
-			sStatus = String(sStatus).trim().toUpperCase();
-
-			var sAppReq = fnGetProp(oItem, "ApprovalReq");
-			sAppReq = String(sAppReq).trim().toUpperCase();
-
-			// 1. Rejected checks
-			if (s1 === "R" || s2 === "R" || sAppReq === "R" || sStatus === "REJECTED") {
-				return "Rejected";
-			}
-
-			// 2. Amendment checks
-			if (s1 === "AM" || s2 === "AM" || sAppReq === "AM" || sAppReq === "AMENDMENT" || sStatus === "AM" || sStatus === "AMENDMENT") {
-				return "Amendment";
-			}
-
-			// 3. Approved checks (Store acted, or explicitly Approved)
-			if (s2 || sStatus === "APPROVED") {
-				return "Approved";
-			}
-			
-			// If backend GET_ENTITYSET forgot Approval2 but returned STORERemarks, we can assume Store acted
-			var sStoreRemarks = fnGetProp(oItem, "STORERemarks");
-			if (sStoreRemarks && String(sStoreRemarks).trim() !== "" && String(sStoreRemarks) !== "null") {
-				return "Approved";
-			}
-
-			// 4. Pending checks
-			if (s1 && s1 !== "X" && s1 !== "PENDING" && !s2) {
-				return "Store Approval Pending";
-			}
-
-			// Fallback checks
-			if (sStatus === "STORE APPROVAL PENDING") return "Store Approval Pending";
-			if (sStatus === "APPROVED") return "Approved";
-			if (sStatus === "REJECTED") return "Rejected";
-			if (sStatus === "AMENDMENT") return "Amendment";
-			if (sStatus === "CAN" || sStatus === "CANCELLED") return "Cancelled";
-			if (sStatus === "C"   || sStatus === "CLOSED")    return "Closed";
-
-			return "Pending";
-		},
-
-		_formatRequestDate: function (vDate) {
-			if (!vDate) return "";
-			if (vDate instanceof Date) {
-				var dd = String(vDate.getDate()).padStart(2, '0');
-				var mm = String(vDate.getMonth() + 1).padStart(2, '0');
-				var yyyy = vDate.getFullYear();
-				return dd + "/" + mm + "/" + yyyy;
-			}
-			if (typeof vDate === "string") {
-				if (vDate.indexOf("Date") !== -1) {
-					var timestamp = parseInt(vDate.replace(/\/Date\((\d+)\)\//, "$1"), 10);
-					if (!isNaN(timestamp)) {
-						return this._formatRequestDate(new Date(timestamp));
-					}
-				}
-				if (/^\d{8}$/.test(vDate)) {
-					return vDate.substring(6, 8) + "/" + vDate.substring(4, 6) + "/" + vDate.substring(0, 4);
-				}
-				var aParts = vDate.split("T")[0].split("-");
-				if (aParts.length === 3) {
-					return aParts[2] + "/" + aParts[1] + "/" + aParts[0];
-				}
-			}
-			return String(vDate);
-		},
 
 
 		onNavBack: function () {

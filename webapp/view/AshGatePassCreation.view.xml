@@ -104,8 +104,8 @@
 					</Table>
 				</Panel>
 
-				<!-- Remarks & Summary -->
-				<Panel class="gpmsSection" expandable="false">
+				<!-- Remarks & Total -->
+				<Panel class="gpmsSection sapUiSmallMarginBottom" expandable="false">
 					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" hSpacing="1">
 						<VBox class="sapUiSmallMargin">
 							<Label text="Remarks" class="gpmsFieldLabel"/>
@@ -115,9 +115,20 @@
 							<Label text="Final Total Rs." class="gpmsFieldLabel"/>
 							<Input value="{ash>/finalTotal}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
 						</VBox>
+					</layout:Grid>
+				</Panel>
 
+				<!-- Logistics & Transport -->
+				<Panel class="gpmsSection" expandable="false">
+					<headerToolbar>
+						<Toolbar height="2.5rem">
+							<core:Icon src="sap-icon://shipping-status" class="sapUiSmallMarginEnd"/>
+							<Title text="LOGISTICS &amp; TRANSPORT" level="H4"/>
+						</Toolbar>
+					</headerToolbar>
+					<layout:Grid defaultSpan="XL4 L4 M6 S12" vSpacing="0" hSpacing="1">
 						<VBox class="sapUiSmallMargin">
-							<Label text="Vehicle No. *" required="true" class="gpmsFieldLabel"/>
+							<Label text="Vehicle No." required="true" class="gpmsFieldLabel"/>
 							<Input value="{ash>/VehicleNo}" placeholder="Enter Vehicle No" class="gpmsFieldInput" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
@@ -128,7 +139,6 @@
 								<core:Item key="AIR" text="AIR" />
 							</Select>
 						</VBox>
-
 						<VBox class="sapUiSmallMargin">
 							<Label text="Transporter Name" class="gpmsFieldLabel"/>
 							<Input value="{ash>/TransporterName}" placeholder="Enter Transporter Name" class="gpmsFieldInput" width="100%"/>
@@ -138,8 +148,15 @@
 							<Input value="{ash>/TransporterGst}" placeholder="Enter Transporter GST" class="gpmsFieldInput" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
+							<Label text="DC Number" class="gpmsFieldLabel"/>
+							<Input value="{ash>/DCNumber}" placeholder="Enter DC Number" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<layoutData>
+								<layout:GridData span="XL8 L8 M12 S12"/>
+							</layoutData>
 							<Label text="DC Notes" class="gpmsFieldLabel"/>
-							<Input value="{ash>/DCNotes}" placeholder="Enter DC Notes" class="gpmsFieldInput" width="100%"/>
+							<TextArea value="{ash>/DCNotes}" placeholder="Enter DC Notes" rows="2" width="100%" class="gpmsFieldInput"/>
 						</VBox>
 					</layout:Grid>
 				</Panel>

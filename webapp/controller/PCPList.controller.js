@@ -107,6 +107,60 @@ sap.ui.define([
 			return vDate;
 		},
 
+		onDateFilter: function () {
+			var oFromDP = this.byId("idFilterFromDate");
+			var oToDP = this.byId("idFilterToDate");
+			var sFrom = oFromDP.getDateValue();
+			var sTo = oToDP.getDateValue();
+
+			if (!sFrom && !sTo) {
+				MessageToast.show("Please select at least one date.");
+				return;
+			}
+
+			var oTable = this.byId("pcpTable");
+			var oBinding = oTable.getBinding("items");
+			var aFilters = [];
+
+			if (sFrom) {
+				var sFromStr = String(sFrom.getDate()).padStart(2, "0") + "-" +
+					String(sFrom.getMonth() + 1).padStart(2, "0") + "-" + sFrom.getFullYear();
+				aFilters.push(new Filter({
+					path: "GEDate",
+					test: function (sValue) {
+						if (!sValue) return false;
+						var aParts = sValue.split("-");
+						if (aParts.length !== 3) return false;
+						var dVal = new Date(aParts[2], parseInt(aParts[1], 10) - 1, aParts[0]);
+						return dVal >= sFrom;
+					}
+				}));
+			}
+			if (sTo) {
+				var dToEnd = new Date(sTo);
+				dToEnd.setHours(23, 59, 59, 999);
+				aFilters.push(new Filter({
+					path: "GEDate",
+					test: function (sValue) {
+						if (!sValue) return false;
+						var aParts = sValue.split("-");
+						if (aParts.length !== 3) return false;
+						var dVal = new Date(aParts[2], parseInt(aParts[1], 10) - 1, aParts[0]);
+						return dVal <= dToEnd;
+					}
+				}));
+			}
+
+			oBinding.filter(aFilters);
+		},
+
+		onClearDateFilter: function () {
+			this.byId("idFilterFromDate").setDateValue(null);
+			this.byId("idFilterToDate").setDateValue(null);
+			var oTable = this.byId("pcpTable");
+			oTable.getBinding("items").filter([]);
+		},
+
 		onSort: function () {
 			if (!this._oSortDialog) {
 				var sapM = sap.ui.require("sap/m/ViewSettingsDialog");
@@ -210,6 +264,16 @@ sap.ui.define([
 
 		// Store the selected item's raw OData data for the edit form to use directly
 		_storeNavEntry: function (oItem, sGEDateRaw) {
+			// Prod backend may return one header record per line item — merge all items for same GateEntryNo
+			var aAllResults = this.getView().getModel("pcpList").getProperty("/results") || [];
+			var aMergedItems = [];
+			aAllResults.forEach(function (oRow) {
+				if (oRow.GateEntryNo === oItem.GateEntryNo) {
+					var aRowItems = (oRow.PCPItmNav && oRow.PCPItmNav.results) || [];
+					aRowItems.forEach(function (it) { aMergedItems.push(it); });
+				}
+			});
+
 			sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel({
 				GateEntryNo: oItem.GateEntryNo,
 				GEDate: sGEDateRaw,
@@ -229,7 +293,7 @@ sap.ui.define([
 				InspectionStatus: oItem.InspectionStatus || "",
 				Inspectiondate: oItem.Inspectiondate || "",
 				Remarks: oItem.Remarks || "",
-				PCPItmNav: oItem.PCPItmNav || { results: [] }
+				PCPItmNav: { results: aMergedItems.length > 0 ? aMergedItems : ((oItem.PCPItmNav && oItem.PCPItmNav.results) || []) }
 			}), "selectedGateEntry");
 		},
 
@@ -434,6 +498,8 @@ sap.ui.define([
 				return;
 			}
 
+			var sTodaySAP = this._formatDateToSAP(new Date().toISOString().split("T")[0]);
+
 			var oPayload = {
 				GateEntryNo: oData.GateEntryNo,
 				EntryPoint: oData.EntryPoint || "PLANT",
@@ -445,6 +511,8 @@ sap.ui.define([
 				Plant: oData.Plant || "",
 				VendorDesc: oData.VendorDesc || "",
 				Department: oData.Department || "",
+				InspectionStatus: "Completed",
+				Inspectiondate: sTodaySAP,
 				PCPItmNav: [
 					{
 						PCPNo: "",

@@ -1,0 +1,111 @@
+<mvc:View
+    controllerName="zgpms.meilpower.com.controller.InspectionDetail"
+    xmlns="sap.m"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:l="sap.ui.layout"
+    xmlns:form="sap.ui.layout.form"
+    xmlns:core="sap.ui.core"
+    height="100%">
+
+    <Page title="Inspection Detail" class="gpmsPage" showNavButton="true" navButtonPress=".onNavBack">
+        <footer>
+            <Toolbar>
+                <ToolbarSpacer/>
+                <Button text="Save Inspection" type="Emphasized" icon="sap-icon://save" press=".onSave"/>
+                <Button text="Cancel" type="Transparent" press=".onNavBack"/>
+            </Toolbar>
+        </footer>
+        <content>
+            <VBox class="sapUiMediumMargin">
+
+                <!-- Gate Entry Info (read-only) -->
+                <Panel headerText="Gate Entry Details" class="sapUiSmallMarginBottom" expandable="false">
+                    <form:SimpleForm editable="false" layout="ResponsiveGridLayout"
+                        labelSpanXL="4" labelSpanL="4" labelSpanM="4" labelSpanS="12"
+                        emptySpanXL="0" emptySpanL="0" emptySpanM="0"
+                        columnsXL="2" columnsL="2" columnsM="1">
+                        <form:content>
+                            <Label text="GE No"/>
+                            <Text text="{insp>/GateEntryNo}"/>
+
+                            <Label text="GE Date"/>
+                            <Text text="{insp>/GEDate}"/>
+
+                            <Label text="Supplier"/>
+                            <Text text="{insp>/VendorDesc}"/>
+
+                            <Label text="Source Type"/>
+                            <Text text="{insp>/SourceType}"/>
+
+                            <Label text="Department"/>
+                            <Text text="{insp>/Department}"/>
+
+                            <Label text="DC / Inv No"/>
+                            <Text text="{insp>/DCNumber}"/>
+
+                            <Label text="RGP No"/>
+                            <Text text="{insp>/RGPNumber}"/>
+
+                            <Label text="RR No"/>
+                            <Text text="{insp>/RRNo}"/>
+
+                            <Label text="Plant"/>
+                            <Text text="{insp>/Plant}"/>
+
+                            <Label text="Budget Code"/>
+                            <Text text="{insp>/BudgetCode}"/>
+                        </form:content>
+                    </form:SimpleForm>
+                </Panel>
+
+                <!-- Item Description (read-only) -->
+                <Panel headerText="Item Details" class="sapUiSmallMarginBottom" expandable="false">
+                    <form:SimpleForm editable="false" layout="ResponsiveGridLayout"
+                        labelSpanXL="4" labelSpanL="4" labelSpanM="4" labelSpanS="12"
+                        emptySpanXL="0" emptySpanL="0" emptySpanM="0"
+                        columnsXL="2" columnsL="2" columnsM="1">
+                        <form:content>
+                            <Label text="Description"/>
+                            <Text text="{insp>/FirstItemDesc}"/>
+
+                            <Label text="Quantity"/>
+                            <Text text="{insp>/RecievedQuantity}"/>
+
+                            <Label text="UOM"/>
+                            <Text text="{insp>/UOM}"/>
+                        </form:content>
+                    </form:SimpleForm>
+                </Panel>
+
+                <!-- Inspection fields (editable) -->
+                <Panel headerText="Inspection Details" class="sapUiSmallMarginBottom" expandable="false">
+                    <form:SimpleForm editable="true" layout="ResponsiveGridLayout"
+                        labelSpanXL="4" labelSpanL="4" labelSpanM="4" labelSpanS="12"
+                        emptySpanXL="0" emptySpanL="0" emptySpanM="0"
+                        columnsXL="2" columnsL="2" columnsM="1">
+                        <form:content>
+                            <Label text="Inspection Date" required="false"/>
+                            <DatePicker id="idInspDate"
+                                value="{insp>/Inspectiondate}"
+                                displayFormat="dd-MM-yyyy"
+                                valueFormat="yyyy-MM-dd"
+                                placeholder="Select inspection date"
+                                width="15rem"/>
+
+                            <Label text="Inspection Status" required="true"/>
+                            <Select id="idInspStatus" selectedKey="{insp>/InspectionStatus}" width="15rem">
+                                <core:Item key="" text="-- Select --"/>
+                                <core:Item key="Pending" text="Pending"/>
+                                <core:Item key="Pass" text="Pass"/>
+                                <core:Item key="Fail" text="Fail"/>
+                                <core:Item key="Partial" text="Partial"/>
+                            </Select>
+                        </form:content>
+                    </form:SimpleForm>
+                </Panel>
+
+            </VBox>
+        </content>
+    </Page>
+
+</mvc:View>

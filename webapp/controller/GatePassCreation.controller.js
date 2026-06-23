@@ -1062,13 +1062,6 @@ sap.ui.define([
 					oPayload.Ftype2 = "";
 				}
 
-				// --- DEBUGGING ---
-				// Log the exact Base64 string being uploaded to the backend for comparison
-				console.log("=== BASE64 UPLOAD PAYLOAD ===");
-				console.log("String 1 Length: " + (oPayload.Base64Img1 ? oPayload.Base64Img1.length : 0));
-				console.log("String 2 Length: " + (oPayload.Base64Img2 ? oPayload.Base64Img2.length : 0));
-				console.log("===============================");
-
 				var oODataModel = this.getOwnerComponent().getModel();
 				if (!oODataModel) {
 					MessageBox.error("Backend OData service not connected.");

@@ -790,18 +790,20 @@
 .gpmsKpiTextBox { gap: 0.1rem !important; }
 
 .gpmsKpiNum.sapMTitle {
-    font-size: 2rem !important;
+    font-size: 2.2rem !important;
     font-weight: 800 !important;
     line-height: 1 !important;
     color: #ffffff !important;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
 }
 
 .gpmsKpiLbl.sapMText {
     font-size: 0.72rem !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.8px !important;
+    font-weight: 700 !important;
+    letter-spacing: 1px !important;
     text-transform: uppercase !important;
-    color: rgba(255,255,255,0.82) !important;
+    color: #ffffff !important;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
     margin-top: 0.25rem !important;
 }
 
@@ -870,8 +872,12 @@
     overflow: hidden !important;
 }
 
-.gpmsTypeNrgp { border-top: 4px solid #6A1B9A !important; }
-.gpmsTypeRgp  { border-top: 4px solid #00695C !important; }
+.gpmsTypeNrgp     { border-top: 4px solid #6A1B9A !important; }
+.gpmsTypeRgp      { border-top: 4px solid #00695C !important; }
+.gpmsTypeGateEntry{ border-top: 4px solid #0277BD !important; }
+.gpmsTypeScrap    { border-top: 4px solid #E65100 !important; }
+.gpmsTypeAsh      { border-top: 4px solid #424242 !important; }
+.gpmsTypeOutGP    { border-top: 4px solid #1A237E !important; }
 
 .gpmsTypeCardHeader {
     padding: 1rem 1.4rem 0.8rem !important;
@@ -903,6 +909,7 @@
 .gpmsStatPending  { color: #E65100 !important; }
 .gpmsStatApproved { color: var(--success) !important; }
 .gpmsStatRejected { color: var(--red) !important; }
+.gpmsStatInfo     { color: var(--navy) !important; }
 
 .gpmsSubmitBtn.sapMBtn .sapMBtnIcon {
     color: #ffffff !important;
@@ -1163,4 +1170,618 @@
     border-radius: var(--r-sm) !important;
     border: 1px solid var(--border) !important;
     box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
+}
+
+/* ─── Analytics — Additional KPI Colour Variants ────────── */
+.gpmsKpiOutGP     { background: linear-gradient(135deg, #1A237E, #283593) !important; }
+.gpmsKpiGateEntry { background: linear-gradient(135deg, #01579B, #0277BD) !important; }
+.gpmsKpiScrapReq  { background: linear-gradient(135deg, #BF360C, #E65100) !important; }
+.gpmsKpiScrapGP   { background: linear-gradient(135deg, #4E342E, #795548) !important; }
+.gpmsKpiAsh       { background: linear-gradient(135deg, #37474F, #546E7A) !important; }
+
+.gpmsKpiOutGP .gpmsKpiIcon,
+.gpmsKpiGateEntry .gpmsKpiIcon,
+.gpmsKpiScrapReq .gpmsKpiIcon,
+.gpmsKpiScrapGP .gpmsKpiIcon,
+.gpmsKpiAsh .gpmsKpiIcon {
+    color: rgba(255,255,255,0.85) !important;
+}
+
+/* ─── Analytics — Slide-up & Fade-in Animations ─────────── */
+@keyframes gpmsAnimFadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gpmsAnimSlideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.gpmsAnimFadeIn {
+    animation: gpmsAnimFadeIn 0.6s ease-out both !important;
+}
+
+.gpmsAnimSlideUp {
+    animation: gpmsAnimSlideUp 0.6s ease-out both !important;
+}
+
+.gpmsAnimDelay1 { animation-delay: 0.1s !important; }
+.gpmsAnimDelay2 { animation-delay: 0.2s !important; }
+.gpmsAnimDelay3 { animation-delay: 0.3s !important; }
+.gpmsAnimDelay4 { animation-delay: 0.45s !important; }
+.gpmsAnimDelay5 { animation-delay: 0.6s !important; }
+.gpmsAnimDelay6 { animation-delay: 0.75s !important; }
+.gpmsAnimDelay7 { animation-delay: 0.9s !important; }
+.gpmsAnimDelay8 { animation-delay: 1.05s !important; }
+
+/* KPI card hover lift */
+.gpmsKpiCard {
+    transition: transform 0.25s ease, box-shadow 0.25s ease !important;
+}
+
+.gpmsKpiCard:hover {
+    transform: translateY(-6px) scale(1.02) !important;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.18) !important;
+}
+
+/* Chart card hover */
+.gpmsChartCard {
+    transition: transform 0.25s ease, box-shadow 0.25s ease !important;
+}
+
+.gpmsChartCard:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.12) !important;
+}
+
+/* Type summary card hover */
+.gpmsTypeCard {
+    transition: transform 0.25s ease, box-shadow 0.25s ease !important;
+}
+
+.gpmsTypeCard:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.12) !important;
+}
+
+/* Type summary bottom margin */
+.gpmsTypeRow {
+    margin-bottom: 1rem !important;
+}
+
+/* ─── Truck & Gate Animation Banner ─────────────────────── */
+.gpmsAnimBanner {
+    position: relative;
+    width: 100%;
+    height: 120px;
+    background: linear-gradient(180deg, #0D1B5E 0%, #1A237E 50%, #283593 100%);
+    border-radius: var(--r-lg);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    box-shadow: 0 6px 24px rgba(13, 27, 94, 0.35);
+}
+
+/* Stars in the sky */
+.gpmsAnimBanner::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 65px;
+    background:
+        radial-gradient(1.5px 1.5px at 6% 22%, rgba(255,255,255,0.8) 50%, transparent 50%),
+        radial-gradient(1px 1px at 15% 55%, rgba(255,255,255,0.5) 50%, transparent 50%),
+        radial-gradient(1.5px 1.5px at 28% 18%, rgba(255,255,255,0.7) 50%, transparent 50%),
+        radial-gradient(1px 1px at 42% 42%, rgba(255,255,255,0.4) 50%, transparent 50%),
+        radial-gradient(2px 2px at 55% 12%, rgba(255,255,255,0.8) 50%, transparent 50%),
+        radial-gradient(1px 1px at 68% 48%, rgba(255,255,255,0.5) 50%, transparent 50%),
+        radial-gradient(1.5px 1.5px at 80% 25%, rgba(255,255,255,0.7) 50%, transparent 50%),
+        radial-gradient(1px 1px at 90% 38%, rgba(255,255,255,0.4) 50%, transparent 50%),
+        radial-gradient(1.5px 1.5px at 96% 15%, rgba(255,255,255,0.6) 50%, transparent 50%);
+    animation: gpmsTwinkle 3s ease-in-out infinite alternate;
+    z-index: 0;
+}
+
+@keyframes gpmsTwinkle {
+    from { opacity: 0.5; }
+    to   { opacity: 1; }
+}
+
+/* Banner title text */
+.gpmsAnimBannerText {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.9);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    z-index: 6;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    white-space: nowrap;
+}
+
+/* Road */
+.gpmsAnimRoad {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 34px;
+    background: #37474F;
+    border-top: 2px solid #546E7A;
+    z-index: 1;
+}
+
+/* Road center dashes — animated scroll */
+.gpmsAnimRoad::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 200%;
+    height: 3px;
+    transform: translateY(-50%);
+    background: repeating-linear-gradient(
+        90deg,
+        #FFD54F 0px, #FFD54F 18px,
+        transparent 18px, transparent 36px
+    );
+    animation: gpmsRoadScroll 1s linear infinite;
+}
+
+/* Road edge highlight */
+.gpmsAnimRoad::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255,255,255,0.12);
+    box-shadow: 0 26px 0 rgba(255,255,255,0.08);
+}
+
+@keyframes gpmsRoadScroll {
+    from { transform: translateY(-50%) translateX(0); }
+    to   { transform: translateY(-50%) translateX(-36px); }
+}
+
+/* ── Truck ── */
+.gpmsAnimTruck {
+    position: absolute;
+    bottom: 26px;
+    width: 90px;
+    height: 40px;
+    z-index: 5;
+    animation: gpmsTruckDrive 10s ease-in-out infinite;
+    background:
+        radial-gradient(circle at 14px 36px, #333 3px, transparent 3px),
+        radial-gradient(circle at 14px 36px, #666 5px, transparent 5px),
+        radial-gradient(circle at 34px 36px, #333 3px, transparent 3px),
+        radial-gradient(circle at 34px 36px, #666 5px, transparent 5px),
+        radial-gradient(circle at 72px 36px, #333 3px, transparent 3px),
+        radial-gradient(circle at 72px 36px, #666 5px, transparent 5px);
+}
+
+/* Truck cargo body with TAQA label */
+.gpmsAnimTruck::before {
+    content: "TAQA";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 55px;
+    height: 28px;
+    background: linear-gradient(180deg, #EF5350 0%, #C62828 100%);
+    border-radius: 3px 3px 0 0;
+    box-shadow: inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.15);
+    color: #ffffff;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+/* Truck cab with headlight glow */
+.gpmsAnimTruck::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 55px;
+    width: 24px;
+    height: 20px;
+    background: linear-gradient(180deg, #64B5F6 0%, #1565C0 100%);
+    border-radius: 0 8px 0 0;
+    box-shadow:
+        inset 0 2px 0 rgba(255,255,255,0.35),
+        26px 8px 20px 6px rgba(255,235,59,0.12);
+}
+
+@keyframes gpmsTruckDrive {
+    0%   { left: -80px; }
+    10%  { left: 55px; }
+    15%  { left: 55px; }
+    55%  { left: calc(50% - 30px); }
+    82%  { left: calc(100% - 120px); }
+    88%  { left: calc(100% - 120px); }
+    100% { left: calc(100% + 80px); }
+}
+
+/* ── Gate Posts ── */
+.gpmsAnimGatePostL,
+.gpmsAnimGatePostR {
+    position: absolute;
+    bottom: 34px;
+    width: 7px;
+    height: 50px;
+    background: linear-gradient(180deg, #FDD835, #F9A825);
+    border-radius: 3px 3px 0 0;
+    z-index: 3;
+    box-shadow: 0 0 10px rgba(253, 216, 53, 0.25);
+}
+
+.gpmsAnimGatePostL { left: 65px; }
+.gpmsAnimGatePostR { right: 65px; }
+
+/* ── Gate Barrier Arms ── */
+.gpmsAnimBarrierL,
+.gpmsAnimBarrierR {
+    position: absolute;
+    bottom: 80px;
+    height: 5px;
+    width: 75px;
+    background: repeating-linear-gradient(
+        90deg,
+        #F44336 0px, #F44336 8px,
+        #FFFFFF 8px, #FFFFFF 16px
+    );
+    border-radius: 2px;
+    z-index: 4;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.gpmsAnimBarrierL {
+    left: 68px;
+    transform-origin: left center;
+    animation: gpmsGateLiftL 10s ease-in-out infinite;
+}
+
+.gpmsAnimBarrierR {
+    right: 68px;
+    transform-origin: right center;
+    animation: gpmsGateLiftR 10s ease-in-out infinite;
+}
+
+@keyframes gpmsGateLiftL {
+    0%, 10%  { transform: rotate(0deg); }
+    13%, 35% { transform: rotate(-85deg); }
+    40%, 100%{ transform: rotate(0deg); }
+}
+
+@keyframes gpmsGateLiftR {
+    0%, 80%   { transform: rotate(0deg); }
+    84%, 94%  { transform: rotate(85deg); }
+    98%, 100% { transform: rotate(0deg); }
+}
+
+/* ── Gate Labels ── */
+.gpmsAnimGateLabel {
+    position: absolute;
+    bottom: 38px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: rgba(255,255,255,0.7);
+    text-transform: uppercase;
+    z-index: 2;
+}
+
+.gpmsAnimGateLblL { left: 42px; }
+.gpmsAnimGateLblR { right: 42px; }
+
+/* ── Floating Package Icons ── */
+.gpmsAnimFloat {
+    position: absolute;
+    width: 14px;
+    height: 12px;
+    border: 1.5px solid rgba(255,255,255,0.2);
+    border-radius: 2px;
+    background: rgba(255,255,255,0.06);
+    z-index: 2;
+}
+
+.gpmsAnimFloat::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255,255,255,0.15);
+}
+
+.gpmsAnimFloat::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(255,255,255,0.15);
+}
+
+.gpmsAnimFloat1 {
+    left: 22%;
+    bottom: 60px;
+    animation: gpmsFloatUp 5s ease-in-out infinite;
+}
+
+.gpmsAnimFloat2 {
+    left: 48%;
+    bottom: 55px;
+    animation: gpmsFloatUp 6s ease-in-out infinite;
+    animation-delay: 1.8s;
+}
+
+.gpmsAnimFloat3 {
+    left: 75%;
+    bottom: 62px;
+    animation: gpmsFloatUp 5.5s ease-in-out infinite;
+    animation-delay: 3.2s;
+}
+
+@keyframes gpmsFloatUp {
+    0%   { opacity: 0; transform: translateY(0) scale(0.7); }
+    15%  { opacity: 0.8; transform: translateY(-5px) scale(1); }
+    80%  { opacity: 0.6; transform: translateY(-28px) scale(1); }
+    100% { opacity: 0; transform: translateY(-38px) scale(0.7); }
+}
+
+/* ─── Global Truck Loader Overlay ───────────────────────── */
+.gpmsLoaderOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 15, 60, 0.75);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.gpmsLoaderOverlay.gpmsLoaderVisible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.gpmsLoaderScene {
+    position: relative;
+    width: 280px;
+    height: 160px;
+    background: linear-gradient(180deg, #0D1B5E 0%, #1A237E 55%, #283593 100%);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.5);
+}
+
+/* Title */
+.gpmsLoaderTitle {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.9);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    z-index: 6;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+    white-space: nowrap;
+}
+
+/* Road */
+.gpmsLoaderRoad {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: #37474F;
+    border-top: 2px solid #546E7A;
+    z-index: 1;
+}
+
+.gpmsLoaderRoad::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 200%;
+    height: 3px;
+    transform: translateY(-50%);
+    background: repeating-linear-gradient(
+        90deg,
+        #FFD54F 0px, #FFD54F 14px,
+        transparent 14px, transparent 28px
+    );
+    animation: gpmsLoaderRoadScroll 0.8s linear infinite;
+}
+
+@keyframes gpmsLoaderRoadScroll {
+    from { transform: translateY(-50%) translateX(0); }
+    to   { transform: translateY(-50%) translateX(-28px); }
+}
+
+/* Truck */
+.gpmsLoaderTruck {
+    position: absolute;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 54px;
+    height: 32px;
+    z-index: 5;
+    animation: gpmsLoaderBounce 0.6s ease-in-out infinite;
+    background:
+        radial-gradient(circle at 9px 28px, #333 2px, transparent 2px),
+        radial-gradient(circle at 9px 28px, #666 3.5px, transparent 3.5px),
+        radial-gradient(circle at 22px 28px, #333 2px, transparent 2px),
+        radial-gradient(circle at 22px 28px, #666 3.5px, transparent 3.5px),
+        radial-gradient(circle at 44px 28px, #333 2px, transparent 2px),
+        radial-gradient(circle at 44px 28px, #666 3.5px, transparent 3.5px);
+}
+
+.gpmsLoaderTruck::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 0;
+    width: 34px;
+    height: 20px;
+    background: linear-gradient(180deg, #EF5350 0%, #C62828 100%);
+    border-radius: 2px;
+    box-shadow: inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.15);
+}
+
+.gpmsLoaderTruck::after {
+    content: "";
+    position: absolute;
+    top: 6px;
+    left: 34px;
+    width: 18px;
+    height: 16px;
+    background: linear-gradient(180deg, #64B5F6 0%, #1565C0 100%);
+    border-radius: 0 6px 0 0;
+    box-shadow:
+        inset 0 2px 0 rgba(255,255,255,0.35),
+        20px 4px 14px 5px rgba(255,235,59,0.1);
+}
+
+@keyframes gpmsLoaderBounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-2px); }
+}
+
+/* Gate post */
+.gpmsLoaderGatePost {
+    position: absolute;
+    bottom: 30px;
+    left: 30px;
+    width: 6px;
+    height: 42px;
+    background: linear-gradient(180deg, #FDD835, #F9A825);
+    border-radius: 3px 3px 0 0;
+    z-index: 3;
+    box-shadow: 0 0 8px rgba(253,216,53,0.3);
+}
+
+/* Gate barrier */
+.gpmsLoaderBarrier {
+    position: absolute;
+    bottom: 68px;
+    left: 33px;
+    width: 60px;
+    height: 4px;
+    background: repeating-linear-gradient(
+        90deg,
+        #F44336 0px, #F44336 7px,
+        #FFFFFF 7px, #FFFFFF 14px
+    );
+    border-radius: 2px;
+    z-index: 4;
+    transform-origin: left center;
+    animation: gpmsLoaderGate 2.5s ease-in-out infinite;
+}
+
+@keyframes gpmsLoaderGate {
+    0%, 30%  { transform: rotate(0deg); }
+    45%, 75% { transform: rotate(-80deg); }
+    90%, 100%{ transform: rotate(0deg); }
+}
+
+/* Exhaust smoke puffs */
+.gpmsLoaderSmoke {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    z-index: 4;
+    bottom: 38px;
+    left: calc(50% - 32px);
+}
+
+.gpmsLoaderSmoke1 {
+    animation: gpmsLoaderPuff 1.2s ease-out infinite;
+}
+
+.gpmsLoaderSmoke2 {
+    animation: gpmsLoaderPuff 1.2s ease-out infinite 0.3s;
+    width: 6px;
+    height: 6px;
+}
+
+.gpmsLoaderSmoke3 {
+    animation: gpmsLoaderPuff 1.2s ease-out infinite 0.6s;
+    width: 5px;
+    height: 5px;
+}
+
+@keyframes gpmsLoaderPuff {
+    0%   { opacity: 0.5; transform: translate(0, 0) scale(1); }
+    50%  { opacity: 0.3; transform: translate(-12px, -10px) scale(1.4); }
+    100% { opacity: 0; transform: translate(-22px, -18px) scale(0.6); }
+}
+
+/* Loading dots below the scene */
+.gpmsLoaderDots {
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 6;
+}
+
+.gpmsLoaderDots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.7);
+    animation: gpmsLoaderDotPulse 1s ease-in-out infinite;
+}
+
+.gpmsLoaderDots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.gpmsLoaderDots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes gpmsLoaderDotPulse {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+    40%           { opacity: 1; transform: scale(1.2); }
+}
+
+/* Hide SAP default busy indicator when our loader is active */
+.gpmsLoaderVisible ~ #sapUiBusyIndicator,
+body.sapUiBusy .sapUiBusyIndicator {
+    opacity: 0 !important;
 }

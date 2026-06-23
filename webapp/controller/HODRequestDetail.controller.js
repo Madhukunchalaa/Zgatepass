@@ -63,10 +63,16 @@ sap.ui.define([
 			if (!oODataModel) { return; }
 			var that = this;
 
+			// Count secondary calls so BusyIndicator stays up until ALL are done
+			var iSecondary = 0;
+			var fnBeginSecondary = function () { iSecondary++; };
+			var fnEndSecondary = function () {
+				iSecondary--;
+				if (iSecondary <= 0) { sap.ui.core.BusyIndicator.hide(); }
+			};
+
 			sap.ui.core.BusyIndicator.show(0);
 
-			// Safest way to read in SAP Gateway when keys might be empty is using $filter.
-			// This matches the structure of the successful GET request that returned d.results.
 			oODataModel.read("/GateReqHdrSet", {
 				filters: [
 					new Filter("GatePassReqNo", FilterOperator.EQ, sReqNo),
@@ -74,20 +80,23 @@ sap.ui.define([
 				],
 				urlParameters: { "$expand": "GateReqItmNav" },
 				success: function (oData) {
-					sap.ui.core.BusyIndicator.hide();
 					var aResults = oData.results || [];
 					var oItem = aResults[0];
 					if (oItem) {
 						that._mapData(oItem);
-						
-						// Fetch extra details if missing from GateReqHdrSet (VendorGST, Address, Remarks)
-						that._loadExtraDetails(sReqNo, sType);
 
-						// GateReqHdrSet does not always store the image — fetch it from creation entity if missing
+						// Fetch extra details if missing (VendorGST, Address, Remarks)
+						fnBeginSecondary();
+						that._loadExtraDetails(sReqNo, sType, fnEndSecondary);
+
+						// Fetch images from creation entity if not in read entity
 						var sCheckImg1 = oItem.Base64Img1 || oItem.Base64img1 || "";
 						var sCheckImg2 = oItem.Base64Img2 || oItem.Base64img2 || "";
 						if (!sCheckImg1 || !sCheckImg2) {
-							that._loadBase64(sReqNo, sType);
+							fnBeginSecondary();
+							that._loadBase64(sReqNo, sType, fnEndSecondary);
+						} else {
+							sap.ui.core.BusyIndicator.hide();
 						}
 					} else {
 						that._loadFromList(sReqNo, sType);
@@ -101,35 +110,32 @@ sap.ui.define([
 		},
 
 		// Fetch Base64 attachments from GatePassReqHdrSet (creation entity stores the image)
-		_loadBase64: function (sReqNo, sType) {
+		_loadBase64: function (sReqNo, sType, fnDone) {
 			var oODataModel = this.getOwnerComponent().getModel();
 			var oHodModel   = this.getView() && this.getView().getModel("hod");
-			if (!oODataModel || !oHodModel) { return; }
+			if (!oODataModel || !oHodModel) { if (fnDone) { fnDone(); } return; }
 			var that = this;
 
-			// Attempt direct key read (same 3-field key format)
 			var sKeyPath = "/GatePassReqHdrSet(GatePassReqNo='" + sReqNo + "',GatePassType='" + sType + "')";
 			oODataModel.read(sKeyPath, {
 				success: function (oData) {
 					if (oData && (oData.Base64Img1 || oData.Base64img1 || oData.Base64Img2 || oData.Base64img2)) {
 						that._processLoadedAttachments(oData, oHodModel);
+						if (fnDone) { fnDone(); }
 					} else {
-						// Image empty in direct read, try filter
-						that._loadBase64ByFilter(sReqNo);
+						that._loadBase64ByFilter(sReqNo, fnDone);
 					}
 				},
-				error: function (oError) {
-					console.error("Direct OData read on " + sKeyPath + " failed. Trying filter query.", oError);
-					// Key read unsupported or failed — try filter approach
-					that._loadBase64ByFilter(sReqNo);
+				error: function () {
+					that._loadBase64ByFilter(sReqNo, fnDone);
 				}
 			});
 		},
 
-		_loadBase64ByFilter: function (sReqNo) {
+		_loadBase64ByFilter: function (sReqNo, fnDone) {
 			var oODataModel = this.getOwnerComponent().getModel();
 			var oHodModel   = this.getView() && this.getView().getModel("hod");
-			if (!oODataModel || !oHodModel) { return; }
+			if (!oODataModel || !oHodModel) { if (fnDone) { fnDone(); } return; }
 			var that = this;
 
 			oODataModel.read("/GatePassReqHdrSet", {
@@ -138,12 +144,11 @@ sap.ui.define([
 					var oItem = oData.results && oData.results[0];
 					if (oItem && (oItem.Base64Img1 || oItem.Base64img1 || oItem.Base64Img2 || oItem.Base64img2)) {
 						that._processLoadedAttachments(oItem, oHodModel);
-					} else {
-						console.log("No attachment found in GatePassReqHdrSet via filter for request " + sReqNo);
 					}
+					if (fnDone) { fnDone(); }
 				},
-				error: function (oError) {
-					console.error("Filter OData read on /GatePassReqHdrSet failed: ", oError);
+				error: function () {
+					if (fnDone) { fnDone(); }
 				}
 			});
 		},
@@ -254,6 +259,11 @@ sap.ui.define([
 		_loadFromList: function (sReqNo, sType) {
 			var oODataModel = this.getOwnerComponent().getModel();
 			var that = this;
+
+			var iSecondary = 0;
+			var fnBegin = function () { iSecondary++; };
+			var fnEnd = function () { iSecondary--; if (iSecondary <= 0) { sap.ui.core.BusyIndicator.hide(); } };
+
 			sap.ui.core.BusyIndicator.show(0);
 
 			oODataModel.read("/GateReqHdrSet", {
@@ -263,7 +273,6 @@ sap.ui.define([
 				],
 				urlParameters: { "$expand": "GateReqItmNav" },
 				success: function (oData) {
-					sap.ui.core.BusyIndicator.hide();
 					var aResults = oData.results || [];
 					var oItem = aResults.find(function (r) {
 						return (r.GatePassReqNo === sReqNo) || (r.GatePassreqNo === sReqNo);
@@ -271,50 +280,54 @@ sap.ui.define([
 					if (oItem) {
 						that._mapData(oItem);
 
-						// Fetch extra details if missing from GateReqHdrSet
-						that._loadExtraDetails(sReqNo, sType);
+						fnBegin();
+						that._loadExtraDetails(sReqNo, sType, fnEnd);
 
 						var sCheckImg1 = oItem.Base64Img1 || oItem.Base64img1 || "";
 						var sCheckImg2 = oItem.Base64Img2 || oItem.Base64img2 || "";
 						if (!sCheckImg1 || !sCheckImg2) {
-							that._loadBase64(sReqNo, sType);
+							fnBegin();
+							that._loadBase64(sReqNo, sType, fnEnd);
+						} else {
+							sap.ui.core.BusyIndicator.hide();
 						}
+					} else {
+						sap.ui.core.BusyIndicator.hide();
 					}
-					// If not found the cached display from hodTemp is still showing
 				},
 				error: function () {
 					sap.ui.core.BusyIndicator.hide();
-					// Cached display remains — no redirect
 				}
 			});
 		},
 
-		_loadExtraDetails: function (sReqNo, sType) {
+		_loadExtraDetails: function (sReqNo, sType, fnDone) {
 			var oODataModel = this.getOwnerComponent().getModel();
 			var oHodModel = this.getView() && this.getView().getModel("hod");
-			if (!oODataModel || !oHodModel) { return; }
+			if (!oODataModel || !oHodModel) { if (fnDone) { fnDone(); } return; }
 
 			var that = this;
 			var sKeyPath = "/GatePassReqHdrSet(GatePassReqNo='" + sReqNo + "',GatePassType='" + sType + "')";
-			
+
 			oODataModel.read(sKeyPath, {
 				success: function (oData) {
 					if (oData) {
 						that._mapExtraDetails(oData, oHodModel);
+						if (fnDone) { fnDone(); }
 					} else {
-						that._loadExtraDetailsByFilter(sReqNo, sType);
+						that._loadExtraDetailsByFilter(sReqNo, sType, fnDone);
 					}
 				},
 				error: function () {
-					that._loadExtraDetailsByFilter(sReqNo, sType);
+					that._loadExtraDetailsByFilter(sReqNo, sType, fnDone);
 				}
 			});
 		},
 
-		_loadExtraDetailsByFilter: function (sReqNo, sType) {
+		_loadExtraDetailsByFilter: function (sReqNo, sType, fnDone) {
 			var oODataModel = this.getOwnerComponent().getModel();
 			var oHodModel = this.getView() && this.getView().getModel("hod");
-			if (!oODataModel || !oHodModel) { return; }
+			if (!oODataModel || !oHodModel) { if (fnDone) { fnDone(); } return; }
 
 			var aFilters = [new Filter("GatePassReqNo", FilterOperator.EQ, sReqNo)];
 			if (sType) {
@@ -329,9 +342,10 @@ sap.ui.define([
 					if (oItem) {
 						that._mapExtraDetails(oItem, oHodModel);
 					}
+					if (fnDone) { fnDone(); }
 				},
-				error: function (oError) {
-					console.error("Failed to load extra details by filter", oError);
+				error: function () {
+					if (fnDone) { fnDone(); }
 				}
 			});
 		},
@@ -363,71 +377,6 @@ sap.ui.define([
 			}
 		},
 
-		_deriveStatus: function (oItem) {
-			var fnGetProp = function (obj, sProp) {
-				if (!obj) return "";
-				var sTarget = sProp.toLowerCase();
-				for (var key in obj) {
-					if (key.toLowerCase() === sTarget) {
-						return obj[key];
-					}
-				}
-				return "";
-			};
-
-			var s1 = fnGetProp(oItem, "Approval1");
-			if (!s1 || s1 === "null" || s1 === "undefined") s1 = "";
-			s1 = String(s1).trim().toUpperCase();
-
-			var s2 = fnGetProp(oItem, "Approval2");
-			if (!s2 || s2 === "null" || s2 === "undefined") s2 = "";
-			s2 = String(s2).trim().toUpperCase();
-
-			var sStatus = fnGetProp(oItem, "Status");
-			if (!sStatus || sStatus === "null" || sStatus === "undefined") sStatus = "";
-			sStatus = String(sStatus).trim().toUpperCase();
-
-			var sAppReq = fnGetProp(oItem, "ApprovalReq");
-			sAppReq = String(sAppReq).trim().toUpperCase();
-
-			var sAmmend = String(fnGetProp(oItem, "StoreAmmend") || "").trim().toUpperCase();
-
-			// 1. Rejected checks
-			if (s1 === "R" || s2 === "R" || sAppReq === "R" || sStatus === "REJECTED") {
-				return "Rejected";
-			}
-
-			// 2. Amendment checks (StoreAmmend is the dedicated store amendment flag)
-			if (sAmmend === "AM" || s1 === "AM" || s2 === "AM" || sAppReq === "AM" || sAppReq === "AMENDMENT" || sStatus === "AM" || sStatus === "AMENDMENT") {
-				return "Amendment";
-			}
-
-			// 3. Approved checks (Store acted, or explicitly Approved)
-			if (s2 || sStatus === "APPROVED") {
-				return "Approved";
-			}
-			
-			// If backend GET_ENTITYSET forgot Approval2 but returned STORERemarks, we can assume Store acted
-			var sStoreRemarks = oItem.STORERemarks || oItem.StoreRemarks || "";
-			if (sStoreRemarks && String(sStoreRemarks).trim() !== "" && String(sStoreRemarks) !== "null") {
-				return "Approved";
-			}
-
-			// 4. Pending checks
-			if (s1 && s1 !== "X" && s1 !== "PENDING" && !s2) {
-				return "Store Approval Pending";
-			}
-
-			// Fallback checks
-			if (sStatus === "STORE APPROVAL PENDING") return "Store Approval Pending";
-			if (sStatus === "APPROVED") return "Approved";
-			if (sStatus === "REJECTED") return "Rejected";
-			if (sStatus === "AMENDMENT") return "Amendment";
-			if (sStatus === "CAN" || sStatus === "CANCELLED") return "Cancelled";
-			if (sStatus === "C"   || sStatus === "CLOSED")    return "Closed";
-
-			return "Pending";
-		},
 
 		_mapData: function (oData) {
 			// Keep the raw OData row so _updateStatus can build the full creation-matching payload
@@ -549,20 +498,6 @@ sap.ui.define([
 			return null;
 		},
 
-		_formatDate: function (vDate) {
-			if (!vDate || vDate === "00000000" || vDate === "") { return ""; }
-			if (typeof vDate === "string" && vDate.indexOf("/Date(") === 0) {
-				var ms = parseInt(vDate.replace(/\/Date\((\d+)[^)]*\)\//, "$1"), 10);
-				vDate = new Date(ms);
-			}
-			if (typeof vDate === "string" && /^\d{8}$/.test(vDate)) {
-				return vDate.slice(6, 8) + "-" + vDate.slice(4, 6) + "-" + vDate.slice(0, 4);
-			}
-			if (vDate instanceof Date && !isNaN(vDate)) {
-				return vDate.toLocaleDateString("en-GB").split("/").join("-");
-			}
-			return String(vDate || "");
-		},
 
 		_formatBase64ToBlobUrl: function (sRawImg) {
 			var sImg = sRawImg || "";

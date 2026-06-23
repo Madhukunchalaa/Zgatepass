@@ -39,21 +39,13 @@ sap.ui.define([
 					sap.ui.core.BusyIndicator.hide();
 					var aList = (oData.results || []).map(function (oItem) {
 						// Format date
-						var sDateStr = that._formatDate(oItem.RequestDate);
+						var sDateStr = that._formatDateSlash(oItem.RequestDate);
 
 						// Map items
 						var aItems = [];
 						if (oItem.ScrapPassItmNav && oItem.ScrapPassItmNav.results) {
 							aItems = oItem.ScrapPassItmNav.results.map(function (oSub, idx) {
-								var sRawUom = (oSub.UOM || "").toUpperCase();
-								var sUom = "KG";
-								if (sRawUom.indexOf("KG") !== -1 || sRawUom.indexOf("KILOGRAM") !== -1) {
-									sUom = "KG";
-								} else if (sRawUom.indexOf("LITRE") !== -1 || sRawUom.indexOf("LTR") !== -1 || sRawUom === "L" || sRawUom === "LIT") {
-									sUom = "L";
-								} else if (sRawUom.indexOf("TON") !== -1 || sRawUom.indexOf("MT") !== -1) {
-									sUom = "MT";
-								}
+								var sUom = that._normalizeUOM(oSub.UOM || "");
 								return {
 									sno: String(idx + 1),
 									itemNo: oSub.ItemNo || "",
@@ -92,27 +84,6 @@ sap.ui.define([
 			});
 		},
 
-		_formatDate: function (vDate) {
-			if (!vDate) return "";
-			if (vDate instanceof Date) {
-				var dd = String(vDate.getDate()).padStart(2, "0");
-				var mm = String(vDate.getMonth() + 1).padStart(2, "0");
-				var yyyy = vDate.getFullYear();
-				return dd + "/" + mm + "/" + yyyy;
-			}
-			if (typeof vDate === "string") {
-				if (vDate.indexOf("Date") !== -1) {
-					var ts = parseInt(vDate.replace(/\/Date\((\d+)\)\//, "$1"), 10);
-					if (!isNaN(ts)) return this._formatDate(new Date(ts));
-				}
-				if (/^\d{8}$/.test(vDate)) {
-					return vDate.substring(6, 8) + "/" + vDate.substring(4, 6) + "/" + vDate.substring(0, 4);
-				}
-				var aParts = vDate.split("T")[0].split("-");
-				if (aParts.length === 3) return aParts[2] + "/" + aParts[1] + "/" + aParts[0];
-			}
-			return String(vDate);
-		},
 
 		onNavBack: function () {
 			this.getRouter().navTo("home");

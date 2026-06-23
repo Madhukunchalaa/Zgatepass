@@ -51,6 +51,92 @@ sap.ui.define([
 			});
 		},
 
+		/**
+		 * Derives a human-readable status string from raw OData approval fields.
+		 * Works for both Gate Pass (uses StoreAmmend) and Scrap (no StoreAmmend).
+		 */
+		_deriveStatus: function (oItem) {
+			if (!oItem) { return "Pending"; }
+			var fnGet = function (sProp) {
+				var sT = sProp.toLowerCase();
+				for (var k in oItem) {
+					if (k.toLowerCase() === sT) {
+						var v = oItem[k];
+						return (v === null || v === undefined || v === "null" || v === "undefined") ? "" : String(v).trim().toUpperCase();
+					}
+				}
+				return "";
+			};
+
+			var s1      = fnGet("Approval1");
+			var s2      = fnGet("Approval2");
+			var sStatus = fnGet("Status") || fnGet("ReqStatus");
+			var sAppReq = fnGet("ApprovalReq");
+			var sAmmend = fnGet("StoreAmmend");
+
+			if (s1 === "R" || s2 === "R" || sAppReq === "R" || sStatus === "REJECTED") { return "Rejected"; }
+			if (sAmmend === "AM" || s1 === "AM" || s2 === "AM" || sAppReq === "AM" || sAppReq === "AMENDMENT" || sStatus === "AM" || sStatus === "AMENDMENT") { return "Amendment"; }
+			if (s2 || sStatus === "APPROVED") { return "Approved"; }
+			var sStoreRmk = fnGet("STORERemarks") || fnGet("StoreRemarks");
+			if (sStoreRmk && sStoreRmk !== "NULL") { return "Approved"; }
+			if (s1 && s1 !== "X" && s1 !== "PENDING" && !s2) { return "Store Approval Pending"; }
+			if (sStatus === "STORE APPROVAL PENDING") { return "Store Approval Pending"; }
+			if (sStatus === "CAN" || sStatus === "CANCELLED") { return "Cancelled"; }
+			if (sStatus === "C"   || sStatus === "CLOSED")    { return "Closed"; }
+			return "Pending";
+		},
+
+		/**
+		 * Formats a date value from any backend format (OData /Date(...), YYYYMMDD, ISO, Date object)
+		 * into DD-MM-YYYY string for display. Returns "" for null/empty/invalid input.
+		 */
+		_formatDate: function (vDate) {
+			if (!vDate || vDate === "00000000" || vDate === "") { return ""; }
+			if (typeof vDate === "string" && vDate.indexOf("/Date(") === 0) {
+				var ms = parseInt(vDate.replace(/\/Date\((\d+)[^)]*\)\//, "$1"), 10);
+				vDate = new Date(ms);
+			}
+			if (typeof vDate === "string" && /^\d{8}$/.test(vDate)) {
+				return vDate.slice(6, 8) + "-" + vDate.slice(4, 6) + "-" + vDate.slice(0, 4);
+			}
+			if (typeof vDate === "string" && vDate.indexOf("Date") !== -1) {
+				var ts = parseInt(vDate.replace(/\/Date\((\d+)\)\//, "$1"), 10);
+				if (!isNaN(ts)) { vDate = new Date(ts); }
+			}
+			if (typeof vDate === "string") {
+				var aParts = vDate.split("T")[0].split("-");
+				if (aParts.length === 3 && aParts[0].length === 4) {
+					return aParts[2] + "-" + aParts[1] + "-" + aParts[0];
+				}
+			}
+			if (vDate instanceof Date && !isNaN(vDate)) {
+				var dd = String(vDate.getDate()).padStart(2, "0");
+				var mm = String(vDate.getMonth() + 1).padStart(2, "0");
+				var yyyy = vDate.getFullYear();
+				return dd + "-" + mm + "-" + yyyy;
+			}
+			return String(vDate || "");
+		},
+
+		/**
+		 * Same as _formatDate but returns DD/MM/YYYY (slash separator) — used in print/PDF contexts.
+		 */
+		_formatDateSlash: function (vDate) {
+			return this._formatDate(vDate).replace(/-/g, "/");
+		},
+
+		/**
+		 * Normalises a raw UOM string from the backend to one of KG / L / MT.
+		 * Defaults to KG when the value is unrecognised or empty.
+		 */
+		_normalizeUOM: function (sRawUom) {
+			var s = (sRawUom || "").toUpperCase();
+			if (s.indexOf("KG") !== -1 || s.indexOf("KILOGRAM") !== -1) { return "KG"; }
+			if (s.indexOf("LITRE") !== -1 || s.indexOf("LTR") !== -1 || s === "L" || s === "LIT") { return "L"; }
+			if (s.indexOf("TON") !== -1 || s.indexOf("TO") !== -1 || s.indexOf("MT") !== -1) { return "MT"; }
+			return "KG";
+		},
+
 		_mapMaterialType: function (sMaterial, sDescription) {
 			sMaterial = (sMaterial || "").toUpperCase();
 			sDescription = (sDescription || "").toUpperCase();

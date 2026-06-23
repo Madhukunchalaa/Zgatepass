@@ -2,10 +2,10 @@
 	controllerName="zgpms.meilpower.com.controller.InwardGatePass"
 	xmlns:mvc="sap.ui.core.mvc"
 	xmlns="sap.m"
-xmlns:layout="sap.ui.layout"
+	xmlns:layout="sap.ui.layout"
 	xmlns:core="sap.ui.core"
 	height="100%">
-	<Page title="Inward Gate Pass (RGP Return)" class="sapUiContentPadding gpmsPage">
+	<Page title="RGP Inward" class="sapUiContentPadding gpmsPage">
 		<headerContent>
 			<Button icon="sap-icon://home" press="onNavHome" type="Transparent"/>
 		</headerContent>
@@ -34,83 +34,100 @@ xmlns:layout="sap.ui.layout"
 					</layout:Grid>
 				</Panel>
 
-				<!-- Gate Pass Details Panel -->
+				<!-- Form Panel -->
 				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginBottom">
 					<headerToolbar>
 						<Toolbar height="3rem">
 							<core:Icon src="sap-icon://header" class="sapUiSmallMarginEnd"/>
-							<Title text="GATE PASS DETAILS" level="H3"/>
+							<Title text="Form" level="H3"/>
 						</Toolbar>
 					</headerToolbar>
-					<layout:Grid defaultSpan="XL4 L4 M6 S12" vSpacing="0">
+					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0">
 
 						<VBox class="sapUiSmallMargin">
-							<Label text="Gate Pass Number" class="gpmsFieldLabel"/>
+							<Label text="Gatepass No" class="gpmsFieldLabel"/>
 							<Input value="{inward>/GatePassNo}" editable="false" class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
-							<Label text="Gate Pass Date" class="gpmsFieldLabel"/>
+							<Label text="Gatepass date" class="gpmsFieldLabel"/>
 							<Input value="{inward>/GatePassDate}" editable="false" class="gpmsFieldInput"/>
 						</VBox>
+
 						<VBox class="sapUiSmallMargin">
-							<Label text="Due Date" class="gpmsFieldLabel"/>
-							<Input value="{inward>/DueDate}" editable="false" class="gpmsFieldInput"/>
-						</VBox>
-						<VBox class="sapUiSmallMargin">
-							<Label text="Revised Due Date" class="gpmsFieldLabel"/>
+							<Label text="Revised Due date" class="gpmsFieldLabel"/>
 							<DatePicker
-								value="{inward>/RevisedDueDate}"
+								value="{inward>/ExtReturnDate}"
+								valueFormat="dd-MM-yyyy"
 								displayFormat="dd-MM-yyyy"
 								class="gpmsFieldInput"
 								width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
-							<Label text="Received Date" class="gpmsFieldLabel"/>
+							<Label text="Return date" class="gpmsFieldLabel"/>
 							<DatePicker
-								value="{inward>/ReceivedDate}"
+								value="{inward>/ReturnDate}"
+								valueFormat="dd-MM-yyyy"
 								displayFormat="dd-MM-yyyy"
 								class="gpmsFieldInput"
 								width="100%"/>
 						</VBox>
+
 						<VBox class="sapUiSmallMargin">
-							<Label text="Department" class="gpmsFieldLabel"/>
-							<Input value="{inward>/Department}" editable="false" class="gpmsFieldInput"/>
+							<Label text="Request Type" class="gpmsFieldLabel"/>
+							<Input value="{inward>/RequestType}" editable="false" class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="Vendor" class="gpmsFieldLabel"/>
 							<Input value="{inward>/VendorName}" editable="false" class="gpmsFieldInput"/>
 						</VBox>
-						<VBox class="sapUiSmallMargin">
-							<Label text="Vendor GST" class="gpmsFieldLabel"/>
-							<Input value="{inward>/VendorGST}" editable="false" class="gpmsFieldInput"/>
-						</VBox>
 
 					</layout:Grid>
 				</Panel>
 
-				<!-- Items Table Panel -->
-				<Panel expandable="true" expanded="true" class="gpmsPanel">
+				<!-- Table of Items -->
+				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginBottom">
 					<headerToolbar>
 						<Toolbar height="3rem">
 							<core:Icon src="sap-icon://list" class="sapUiSmallMarginEnd"/>
-							<Title text="TABLE OF ITEMS" level="H3"/>
+							<Title text="Table of Items" level="H3"/>
 						</Toolbar>
 					</headerToolbar>
-					<Table items="{inward>/items}" class="gpmsItemTable">
+					<Table items="{inward>/items}" class="gpmsItemTable" mode="MultiSelect">
 						<columns>
-							<Column><Text text="Material" class="gpmsHeaderText"/></Column>
-							<Column hAlign="End" width="9rem"><Text text="Sent Qty" class="gpmsHeaderText"/></Column>
-							<Column hAlign="End" width="10rem"><Text text="Received Qty" class="gpmsHeaderText"/></Column>
-							<Column hAlign="End" width="9rem"><Text text="Balance Qty" class="gpmsHeaderText"/></Column>
-							<Column width="5rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
+							<Column width="4rem" hAlign="Center">
+								<Text text="SNo" class="gpmsHeaderText"/>
+							</Column>
+							<Column>
+								<Text text="Brief Description of Material" class="gpmsHeaderText"/>
+							</Column>
+							<Column width="8rem" hAlign="Center">
+								<Text text="HSN Code" class="gpmsHeaderText"/>
+							</Column>
+							<Column width="7rem" hAlign="Right">
+								<Text text="Sent Qty" class="gpmsHeaderText"/>
+							</Column>
+							<Column width="8rem" hAlign="Right">
+								<Text text="Recvd Qty" class="gpmsHeaderText"/>
+							</Column>
+							<Column width="7rem" hAlign="Right">
+								<Text text="Bal Qty" class="gpmsHeaderText"/>
+							</Column>
+							<Column width="5rem" hAlign="Center">
+								<Text text="UOM" class="gpmsHeaderText"/>
+							</Column>
+							<Column width="7rem" hAlign="Right">
+								<Text text="Rate(Rs.)" class="gpmsHeaderText"/>
+							</Column>
+							<Column width="8rem" hAlign="Right">
+								<Text text="Amount" class="gpmsHeaderText"/>
+							</Column>
 						</columns>
 						<items>
 							<ColumnListItem>
 								<cells>
-									<VBox>
-										<Text text="{inward>material}" class="gpmsSnoText"/>
-										<Text text="{inward>materialName}" class="sapUiTinyMarginTop"/>
-									</VBox>
+									<Text text="{inward>sno}" wrapping="false"/>
+									<Text text="{inward>materialName}" wrapping="true"/>
+									<Text text="{inward>hsnCode}" wrapping="false"/>
 									<Text text="{path: 'inward>sentQty', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" textAlign="Right"/>
 									<Input
 										value="{inward>recvdQty}"
@@ -118,33 +135,107 @@ xmlns:layout="sap.ui.layout"
 										type="Text"
 										textAlign="Right"
 										class="gpmsTableInput"/>
-									<ObjectNumber
-										number="{path: 'inward>balQty', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}"
-										state="{= ${inward>balQty} > 0 ? 'Warning' : 'Success'}"/>
-									<Text text="{inward>uom}"/>
+									<Text text="{path: 'inward>balQty', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" textAlign="Right"/>
+									<Text text="{inward>uom}" wrapping="false"/>
+									<Text text="{path: 'inward>rate', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}" textAlign="Right"/>
+									<Text text="{path: 'inward>amount', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}" textAlign="Right"/>
 								</cells>
 							</ColumnListItem>
 						</items>
 					</Table>
 				</Panel>
 
-	
+				<!-- Remarks and Final Total -->
+				<Panel expandable="false" class="gpmsPanel sapUiSmallMarginBottom">
+					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0">
+						<VBox class="sapUiSmallMargin">
+							<Label text="User Remarks" class="gpmsFieldLabel"/>
+							<TextArea value="{inward>/UserRemarks}" placeholder="Enter remarks" width="100%" rows="2" class="gpmsTextArea"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Final Total Rs." class="gpmsFieldLabel"/>
+							<Input value="{inward>/FinalTotal}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+					</layout:Grid>
+					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0">
+						<VBox class="sapUiSmallMargin">
+							<Label text="HOD Remarks" class="gpmsFieldLabel"/>
+							<TextArea value="{inward>/HODRemarks}" placeholder="Enter remarks" width="100%" rows="2" class="gpmsTextArea"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Store Remarks" class="gpmsFieldLabel"/>
+							<TextArea value="{inward>/StoreRemarks}" placeholder="Enter remarks" width="100%" rows="2" class="gpmsTextArea"/>
+						</VBox>
+					</layout:Grid>
+				</Panel>
 
+				<!-- Add Insurance Button (visible when InsuranceReq is Yes) -->
+				<Button
+					text="Add Insurance"
+					icon="sap-icon://shield"
+					type="Emphasized"
+					press=".onAddInsurance"
+					class="sapUiSmallMarginTop sapUiSmallMarginBottom"
+					visible="{inward>/InsuranceRequired}"/>
 
-				<!-- Final Summary -->
-				<HBox justifyContent="End" alignItems="Center" class="sapUiMediumMarginTop sapUiLargeMarginEnd">
-					<VBox alignItems="End">
-						<Label text="TOTAL AMOUNT (RS.)" class="gpmsTotalLabel"/>
-						<Text text="{inward>/FinalTotal}" class="gpmsTotalAmount"/>
-					</VBox>
+				<!-- Insurance Details Panel -->
+				<Panel
+					expandable="false"
+					class="gpmsPanel sapUiSmallMarginBottom"
+					visible="{inward>/showInsuranceDetails}">
+					<headerToolbar>
+						<Toolbar height="3rem">
+							<core:Icon src="sap-icon://shield" class="sapUiSmallMarginEnd"/>
+							<Title text="INSURANCE DETAILS" level="H3"/>
+						</Toolbar>
+					</headerToolbar>
+					<layout:Grid defaultSpan="XL4 L4 M6 S12" vSpacing="0">
+						<VBox class="sapUiSmallMargin">
+							<Label text="Invoice / RGP No" class="gpmsFieldLabel"/>
+							<Input value="{inward>/InsuranceInvoiceNo}" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Insurance Date" class="gpmsFieldLabel"/>
+							<DatePicker value="{inward>/InsuranceDateDisplay}" valueFormat="dd-MM-yyyy" displayFormat="dd-MM-yyyy" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vendor" class="gpmsFieldLabel"/>
+							<Input value="{inward>/InsuranceVendor}" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vendor Address" class="gpmsFieldLabel"/>
+							<Input value="{inward>/InsuranceVendorAddress}" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Mode of Transport" class="gpmsFieldLabel"/>
+							<Select selectedKey="{inward>/InsuranceModeOfTransport}" width="100%" class="gpmsFieldInput">
+								<core:Item key="Road" text="Road"/>
+								<core:Item key="Rail" text="Rail"/>
+								<core:Item key="Air" text="Air"/>
+								<core:Item key="Courier" text="Courier"/>
+							</Select>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="LR / Vehicle No" class="gpmsFieldLabel"/>
+							<Input value="{inward>/InsuranceVehicleNo}" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Invoice Value (Rs)" class="gpmsFieldLabel"/>
+							<Input value="{inward>/InsuranceAmount}" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="RGP Description" class="gpmsFieldLabel"/>
+							<Input value="{inward>/InsuranceDescription}" class="gpmsFieldInput"/>
+						</VBox>
+					</layout:Grid>
+				</Panel>
+
+				<!-- Save Button -->
+				<HBox class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+					<Button text="Save" type="Accept" press=".onPostInward" class="gpmsSubmitBtn" enabled="{= ${inward>/items}.length > 0 }"/>
 				</HBox>
-            </VBox>
-        </content>
-		<footer>
-			<Toolbar class="gpmsFooterBar">
-				<ToolbarSpacer/>
-				<Button text="SUBMIT INWARD GATE PASS" type="Accept" press=".onPostInward" icon="sap-icon://sys-add" class="gpmsSubmitBtn sapUiSmallMarginEnd" enabled="{= ${inward>/items}.length > 0 }"/>
-			</Toolbar>
-		</footer>
+
+			</VBox>
+		</content>
 	</Page>
 </mvc:View>

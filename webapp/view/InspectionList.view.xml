@@ -1,0 +1,67 @@
+<mvc:View
+    controllerName="zgpms.meilpower.com.controller.InspectionList"
+    xmlns="sap.m"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:core="sap.ui.core"
+    height="100%">
+
+    <Page title="Gate Entry List" class="gpmsPage" showNavButton="true" navButtonPress=".onNavBack">
+        <content>
+            <VBox class="sapUiSmallMargin">
+                <Table id="idInspectionTable"
+                    items="{inspList>/results}"
+                    class="gpmsTable"
+                    noDataText="No Gate Entries Found"
+                    alternateRowColors="true">
+
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="Gate Entry List" level="H2"/>
+                            <ToolbarSpacer />
+                            <SearchField width="300px" search=".onSearch" placeholder="Search..." class="gpmsFieldInput"/>
+                            <Button icon="sap-icon://sort" tooltip="Sort" press=".onSort" type="Transparent"/>
+                            <Button icon="sap-icon://filter" tooltip="Filter" press=".onFilter" type="Transparent"/>
+                        </OverflowToolbar>
+                    </headerToolbar>
+
+                    <columns>
+                        <Column><Text text="GE Date" class="gpmsTableHeaderText"/></Column>
+                        <Column><Text text="GE No" class="gpmsTableHeaderText"/></Column>
+                        <Column><Text text="Supplier" class="gpmsTableHeaderText"/></Column>
+                        <Column><Text text="Source Type" class="gpmsTableHeaderText"/></Column>
+                        <Column><Text text="Dept" class="gpmsTableHeaderText"/></Column>
+                        <Column><Text text="RGP No" class="gpmsTableHeaderText"/></Column>
+                        <Column><Text text="Inv No" class="gpmsTableHeaderText"/></Column>
+                        <Column><Text text="RR No" class="gpmsTableHeaderText"/></Column>
+                        <Column><Text text="Gate Pass No" class="gpmsTableHeaderText"/></Column>
+                        <Column><Text text="Inspection Status" class="gpmsTableHeaderText"/></Column>
+                        <Column hAlign="Center"><Text text="Action" class="gpmsTableHeaderText"/></Column>
+                    </columns>
+
+                    <items>
+                        <ColumnListItem class="gpmsTableRow">
+                            <cells>
+                                <Text text="{inspList>GEDate}" class="gpmsTableText"/>
+                                <Text text="{inspList>GateEntryNo}" class="gpmsTableText"/>
+                                <Text text="{inspList>VendorDesc}" class="gpmsTableText"/>
+                                <Text text="{inspList>SourceType}" class="gpmsTableText"/>
+                                <Text text="{inspList>Department}" class="gpmsTableText"/>
+                                <Text text="{inspList>RGPNumber}" class="gpmsTableText"/>
+                                <Text text="{inspList>DCNumber}" class="gpmsTableText"/>
+                                <Text text="{inspList>RRNo}" class="gpmsTableText"/>
+                                <Text text="{inspList>GatepassNo}" class="gpmsTableText"/>
+                                <Text text="{inspList>InspectionStatus}" class="gpmsTableText"/>
+                                <HBox justifyContent="Center" class="gpmsActionBox">
+                                    <Button icon="sap-icon://show" type="Default" tooltip="View" press=".onViewEntry" class="sapUiTinyMarginEnd gpmsActionButton"/>
+                                    <Button icon="sap-icon://edit" type="Default" tooltip="Edit" press=".onEditEntry" class="sapUiTinyMarginEnd gpmsActionButton"/>
+                                </HBox>
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+
+                </Table>
+            </VBox>
+        </content>
+    </Page>
+
+</mvc:View>

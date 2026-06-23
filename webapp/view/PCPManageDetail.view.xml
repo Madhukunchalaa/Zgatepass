@@ -1,0 +1,191 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.PCPManageDetail"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:layout="sap.ui.layout"
+	xmlns:core="sap.ui.core"
+	height="100%">
+
+	<Page id="idPCPPage" title="{pcpDetail>/pageTitle}" class="sapUiContentPadding gpmsPage"
+		showNavButton="true" navButtonPress=".onNavBack">
+
+		<content>
+			<VBox class="gpmsMainContainer">
+
+				<!-- Form Panel -->
+				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginBottom">
+					<headerToolbar>
+						<Toolbar height="3rem">
+							<core:Icon src="sap-icon://header" class="sapUiSmallMarginEnd"/>
+							<Title text="GATE ENTRY DETAILS" level="H3"/>
+						</Toolbar>
+					</headerToolbar>
+					<layout:Grid defaultSpan="XL4 L4 M6 S12" vSpacing="1">
+
+						<!-- Row 1: Entry Point | PCP Date | GE No -->
+						<VBox class="sapUiSmallMargin">
+							<Label text="Entry Point" required="true" class="gpmsFieldLabel"/>
+							<Input id="idEntryPoint"
+								value="{pcpDetail>/EntryPoint}"
+								placeholder="PLANT / OTHERS"
+								width="100%" class="gpmsFieldInput"
+								enabled="{pcpDetail>/editable}"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="PCP Date" required="true" class="gpmsFieldLabel"/>
+							<DatePicker id="idPCPDate"
+								value="{pcpDetail>/PCPDate}"
+								displayFormat="dd-MM-yyyy"
+								valueFormat="yyyy-MM-dd"
+								width="100%" class="gpmsFieldInput"
+								enabled="{pcpDetail>/editable}"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="GE No" required="true" class="gpmsFieldLabel"/>
+							<Input id="idGENo"
+								value="{pcpDetail>/GateEntryNo}"
+								placeholder="Enter GE No"
+								width="100%" class="gpmsFieldInput"
+								enabled="{pcpDetail>/editable}"
+								change=".onGENoChange"/>
+						</VBox>
+
+						<!-- Row 2: Supplier | GE Date | Department -->
+						<VBox class="sapUiSmallMargin">
+							<Label text="Supplier" class="gpmsFieldLabel"/>
+							<Input id="idSupplier"
+								value="{pcpDetail>/VendorDesc}"
+								placeholder="Supplier name"
+								width="100%" class="gpmsFieldInput"
+								enabled="{pcpDetail>/editable}"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="GE Date" class="gpmsFieldLabel"/>
+							<DatePicker id="idPCPGEDate"
+								value="{pcpDetail>/GEDate}"
+								displayFormat="dd-MM-yyyy"
+								valueFormat="yyyy-MM-dd"
+								width="100%" class="gpmsFieldInput"
+								enabled="{pcpDetail>/editable}"
+								change=".onGEDateChange"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Department" required="true" class="gpmsFieldLabel"/>
+							<Input id="idDept"
+								value="{pcpDetail>/Department}"
+								placeholder="Enter Department"
+								width="100%" class="gpmsFieldInput"
+								enabled="{pcpDetail>/editable}"/>
+						</VBox>
+
+						<!-- Row 3: DC / Invoice No | DC / Invoice Date | Budget Code -->
+						<VBox class="sapUiSmallMargin">
+							<Label text="DC / Invoice No" class="gpmsFieldLabel"/>
+							<Input id="idDCNo"
+								value="{pcpDetail>/DCNumber}"
+								placeholder="Enter DC or Invoice No"
+								width="100%" class="gpmsFieldInput"
+								enabled="{pcpDetail>/editable}"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="DC / Invoice Date" class="gpmsFieldLabel"/>
+							<DatePicker id="idDCDate"
+								value="{pcpDetail>/DCdate}"
+								displayFormat="dd-MM-yyyy"
+								valueFormat="yyyy-MM-dd"
+								width="100%" class="gpmsFieldInput"
+								enabled="{pcpDetail>/editable}"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Budget Code" required="true" class="gpmsFieldLabel"/>
+							<Input id="idPCPBudgetCode"
+								value="{pcpDetail>/BudgetCode}"
+								placeholder="CAPEX / OPEX / PETTY CASH"
+								width="100%" class="gpmsFieldInput"
+								enabled="{pcpDetail>/editable}"/>
+						</VBox>
+
+						<!-- Row 4: Item Description | Qty | UOM -->
+						<VBox class="sapUiSmallMargin">
+							<Label text="Item Description" required="true" class="gpmsFieldLabel"/>
+							<Input id="idItemDesc"
+								value="{pcpDetail>/ItemDescription}"
+								placeholder="Item Description"
+								width="100%" class="gpmsFieldInput"
+								enabled="{pcpDetail>/editable}"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Qty" required="true" class="gpmsFieldLabel"/>
+							<Input id="idQty"
+								value="{pcpDetail>/RecievedQuantity}"
+								placeholder="0.000"
+								type="Number"
+								width="100%" class="gpmsFieldInput"
+								enabled="{pcpDetail>/editable}"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="UOM" required="true" class="gpmsFieldLabel"/>
+							<Input id="idUOM"
+								value="{pcpDetail>/UOM}"
+								placeholder="NOS / KG / MT / EA"
+								width="100%" class="gpmsFieldInput"
+								enabled="{pcpDetail>/editable}"/>
+						</VBox>
+
+						<!-- Row 5: Total Cost -->
+						<VBox class="sapUiSmallMargin">
+							<Label text="Total Cost (in Rs)" required="true" class="gpmsFieldLabel"/>
+							<Input id="idPCPTotalCost"
+								value="{pcpDetail>/TotalCost}"
+								type="Number"
+								placeholder="Total Cost (in Rs)"
+								width="100%" class="gpmsFieldInput"
+								enabled="{pcpDetail>/editable}"/>
+						</VBox>
+
+					</layout:Grid>
+				</Panel>
+
+				<!-- Generated GP No banner -->
+				<MessageStrip
+					text="{= 'Gate Pass No generated: ' + ${pcpDetail>/GatepassNo}}"
+					type="Success"
+					showIcon="true"
+					visible="{= !!${pcpDetail>/GatepassNo} }"
+					class="sapUiSmallMarginBottom"/>
+
+				<!-- Action Buttons -->
+				<HBox justifyContent="End" class="sapUiMediumMarginTop">
+					<Button id="idSubmitBtn"
+						text="Submit"
+						type="Accept"
+						press=".onSubmit"
+						icon="sap-icon://sys-add"
+						visible="{pcpDetail>/editable}"
+						class="gpmsSubmitBtn sapUiSmallMarginEnd"/>
+					<Button id="idPrintBtn"
+						text="Print"
+						icon="sap-icon://print"
+						type="Emphasized"
+						press=".onPrint"
+						visible="{= !!${pcpDetail>/GatepassNo} }"
+						class="gpmsDocBtn sapUiSmallMarginEnd"/>
+					<Button text="Back"
+						type="Transparent"
+						press=".onNavBack"
+						icon="sap-icon://nav-back"/>
+				</HBox>
+
+			</VBox>
+		</content>
+	</Page>
+
+</mvc:View>

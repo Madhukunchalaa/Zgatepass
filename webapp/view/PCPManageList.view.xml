@@ -1,0 +1,69 @@
+<mvc:View
+    controllerName="zgpms.meilpower.com.controller.PCPManageList"
+    xmlns="sap.m"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:core="sap.ui.core"
+    height="100%">
+
+    <Page title="PCPs" class="gpmsPage" showNavButton="true" navButtonPress=".onNavBack">
+        <content>
+            <VBox class="sapUiSmallMargin">
+                <Table id="idPCPTable"
+                    items="{pcpManageList>/results}"
+                    class="gpmsTable"
+                    noDataText="No PCP records found."
+                    alternateRowColors="true"
+                    growing="true"
+                    growingThreshold="50">
+
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="PCPs" level="H2"/>
+                            <ToolbarSpacer/>
+                            <SearchField id="idPCPSearch" width="220px" search=".onSearch" placeholder="Search..." class="gpmsFieldInput"/>
+                            <Button text="Add PCP" icon="sap-icon://add" type="Emphasized" press=".onCreateNew"/>
+                        </OverflowToolbar>
+                    </headerToolbar>
+
+                    <columns>
+                        <Column width="9rem"><Text text="PCP No" class="gpmsTableHeaderText"/></Column>
+                        <Column width="8rem"><Text text="PCP Date" class="gpmsTableHeaderText"/></Column>
+                        <Column width="7rem"><Text text="Entry" class="gpmsTableHeaderText"/></Column>
+                        <Column width="6rem"><Text text="GE No" class="gpmsTableHeaderText"/></Column>
+                        <Column width="8rem"><Text text="GE Date" class="gpmsTableHeaderText"/></Column>
+                        <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Supplier" class="gpmsTableHeaderText"/></Column>
+                        <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Items" class="gpmsTableHeaderText"/></Column>
+                        <Column width="9rem" minScreenWidth="Desktop" demandPopin="true"><Text text="DC/INV No" class="gpmsTableHeaderText"/></Column>
+                        <Column width="7rem"><Text text="Status" class="gpmsTableHeaderText"/></Column>
+                        <Column width="9rem" hAlign="Center"><Text text="Action" class="gpmsTableHeaderText"/></Column>
+                    </columns>
+
+                    <items>
+                        <ColumnListItem class="gpmsTableRow">
+                            <cells>
+                                <Text text="{pcpManageList>GatepassNo}" class="gpmsTableText sapMObjectIdentifierTitle"/>
+                                <Text text="{pcpManageList>PCPDate}" class="gpmsTableText"/>
+                                <Text text="{pcpManageList>EntryPoint}" class="gpmsTableText"/>
+                                <Text text="{pcpManageList>GateEntryNo}" class="gpmsTableText"/>
+                                <Text text="{pcpManageList>GEDate}" class="gpmsTableText"/>
+                                <Text text="{pcpManageList>VendorDesc}" class="gpmsTableText"/>
+                                <Text text="{pcpManageList>FirstItemDesc}" class="gpmsTableText"/>
+                                <Text text="{pcpManageList>DCNumber}" class="gpmsTableText"/>
+                                <ObjectStatus
+                                    text="{= ${pcpManageList>GatepassNo} ? 'Closed' : 'Pending'}"
+                                    state="{= ${pcpManageList>GatepassNo} ? 'Success' : 'Warning'}"/>
+                                <HBox justifyContent="Center" class="gpmsActionBox">
+                                    <Button icon="sap-icon://show"  type="Transparent" tooltip="View"  press=".onViewRow"  class="sapUiTinyMarginEnd gpmsActionButton"/>
+                                    <Button icon="sap-icon://edit"  type="Transparent" tooltip="Edit"  press=".onEditRow"  class="sapUiTinyMarginEnd gpmsActionButton"/>
+                                    <Button icon="sap-icon://print" type="Transparent" tooltip="Print" press=".onPrintRow" class="gpmsActionButton"/>
+                                </HBox>
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+
+                </Table>
+            </VBox>
+        </content>
+    </Page>
+
+</mvc:View>

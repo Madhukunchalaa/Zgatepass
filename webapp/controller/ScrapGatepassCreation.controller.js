@@ -170,16 +170,8 @@ sap.ui.define([
 
 					if (oItem.ScrapReqItmNav && oItem.ScrapReqItmNav.results && oItem.ScrapReqItmNav.results.length > 0) {
 						oInitialData.items = oItem.ScrapReqItmNav.results.map(function (subItem, idx) {
-							var sRawUom = (subItem.UOM || subItem.Uom || "").toUpperCase();
-							var sUom = "KG";
-							if (sRawUom.indexOf("KG") !== -1 || sRawUom.indexOf("KILOGRAM") !== -1) {
-								sUom = "KG";
-							} else if (sRawUom.indexOf("LITRE") !== -1 || sRawUom.indexOf("LTR") !== -1 || sRawUom === "L" || sRawUom === "LIT") {
-								sUom = "L";
-							} else if (sRawUom.indexOf("TON") !== -1 || sRawUom.indexOf("TO") !== -1 || sRawUom.indexOf("MT") !== -1) {
-								sUom = "MT";
-							}
 							var sQty = (subItem.OrderQuantity || subItem.Quantity || subItem.Qty || "0").toString();
+							var sUom = that._normalizeUOM(subItem.UOM || subItem.Uom || "");
 							return {
 								sno: String(idx + 1),
 								type: that._mapMaterialType(subItem.Material || subItem.MaterialType || subItem.Type || "", subItem.MaterialDesc || subItem.Description || ""),
@@ -705,71 +697,6 @@ sap.ui.define([
 			});
 		},
 
-		_getMockSaleOrders: function () {
-			return [
-				{
-					saleOrder: "SO-9001",
-					vehicleDetails: "AP-16-TJ-9876",
-					collectArea: "Boiler Area",
-					remarks: "MS Scrap plates from unit 2",
-					vendor: "V1",
-					vendorName: "Sri Manikandan Traders",
-					vendorAddress: "Sri Manikandan Traders, No.102, Vridhachalam Main Road,, Neyveli, India, 607802",
-					vendorGST: "33ABEFS1534J1ZB",
-					items: [
-						{
-							sno: "1",
-							type: "Metal",
-							description: "MS Plates Scrap",
-							quantity: "500",
-							availQty: "500",
-							uom: "KG"
-						}
-					]
-				},
-				{
-					saleOrder: "SO-9002",
-					vehicleDetails: "TS-09-UD-5432",
-					collectArea: "Transformer Yard",
-					remarks: "Used copper wire cables",
-					vendor: "V2",
-					vendorName: "Metal Scrap Buyers Pvt Ltd",
-					vendorAddress: "Metal Scrap Buyers Pvt Ltd, Chennai",
-					vendorGST: "33XXXXXXXXXXXXX",
-					items: [
-						{
-							sno: "1",
-							type: "Copper",
-							description: "Copper Wire Scrap",
-							quantity: "250",
-							availQty: "250",
-							uom: "KG"
-						}
-					]
-				},
-				{
-					saleOrder: "SO-9003",
-					vehicleDetails: "KA-03-ME-4321",
-					collectArea: "Store Room 3",
-					remarks: "Old lead acid batteries",
-					vendor: "V2",
-					vendorName: "Metal Scrap Buyers Pvt Ltd",
-					vendorAddress: "Metal Scrap Buyers Pvt Ltd, Chennai",
-					vendorGST: "33XXXXXXXXXXXXX",
-					items: [
-						{
-							sno: "1",
-							type: "Batteries",
-							description: "Lead Batteries",
-							quantity: "12",
-							availQty: "12",
-							uom: "MT"
-						}
-					]
-				}
-			];
-		},
-
 		onScrapRequestValueHelp: function () {
 			var oODataModel = this.getOwnerComponent().getModel();
 			var that = this;
@@ -1047,17 +974,8 @@ sap.ui.define([
 				}
 
 				var aItemsMapped = aItemsRaw.map(function (subItem, idx) {
-					var sRawUom = (subItem.UOM || subItem.Uom || subItem.uom || "").toUpperCase();
-					var sUom = "KG";
-					if (sRawUom.indexOf("KG") !== -1 || sRawUom.indexOf("KILOGRAM") !== -1) {
-						sUom = "KG";
-					} else if (sRawUom.indexOf("LITRE") !== -1 || sRawUom.indexOf("LTR") !== -1 || sRawUom === "L" || sRawUom === "LIT") {
-						sUom = "L";
-					} else if (sRawUom.indexOf("TON") !== -1 || sRawUom.indexOf("TO") !== -1 || sRawUom.indexOf("MT") !== -1) {
-						sUom = "MT";
-					}
-
 					var sQty = (subItem.OrderQuantity || subItem.Quantity || subItem.Qty || subItem.availQty || subItem.quantity || "0").toString();
+					var sUom = that._normalizeUOM(subItem.UOM || subItem.Uom || subItem.uom || "");
 
 					return {
 						sno: String(idx + 1),
@@ -1074,28 +992,6 @@ sap.ui.define([
 			}
 		},
 
-		_formatDate: function (vDate) {
-			if (!vDate) return "";
-			if (vDate instanceof Date) {
-				var dd = String(vDate.getDate()).padStart(2, "0");
-				var mm = String(vDate.getMonth() + 1).padStart(2, "0");
-				var yyyy = vDate.getFullYear();
-				return dd + "/" + mm + "/" + yyyy;
-			}
-			if (typeof vDate === "string") {
-				if (vDate.indexOf("Date") !== -1) {
-					var ts = parseInt(vDate.replace(/\/Date\((\d+)\)\//, "$1"), 10);
-					if (!isNaN(ts)) return this._formatDate(new Date(ts));
-				}
-				if (/^\d{8}$/.test(vDate)) {
-					if (vDate === "00000000") return "";
-					return vDate.substring(6, 8) + "/" + vDate.substring(4, 6) + "/" + vDate.substring(0, 4);
-				}
-				var aParts = vDate.split("T")[0].split("-");
-				if (aParts.length === 3) return aParts[2] + "/" + aParts[1] + "/" + aParts[0];
-			}
-			return String(vDate);
-		},
 onSaleOrderValueHelp: function () {
 			var oODataModel = this.getOwnerComponent().getModel();
 			var that = this;
@@ -1141,23 +1037,13 @@ onSaleOrderValueHelp: function () {
 							sType = sFound || "Metal";
 						}
 						
-						var sRawUom = (subItem.Uom || subItem.Vrkme || subItem.Meins || subItem.UOM || "").toUpperCase();
-						var sUom = "KG";
-						if (sRawUom.indexOf("KG") !== -1 || sRawUom.indexOf("KILOGRAM") !== -1) {
-							sUom = "KG";
-						} else if (sRawUom.indexOf("LITRE") !== -1 || sRawUom.indexOf("LTR") !== -1 || sRawUom === "L" || sRawUom === "LIT") {
-							sUom = "L";
-						} else if (sRawUom.indexOf("TON") !== -1 || sRawUom.indexOf("TO") !== -1 || sRawUom.indexOf("MT") !== -1) {
-							sUom = "MT";
-						}
-
 						return {
 							sno: String(idx + 1),
 							type: sType,
 							description: subItem.MaterialDesc || subItem.Arktx || subItem.Description || subItem.Maktx || "",
 							quantity: (subItem.OrderQuantity || "0").toString(),
 							availQty: (subItem.OrderQuantity || "0").toString(),
-							uom: sUom
+							uom: that._normalizeUOM(subItem.Uom || subItem.Vrkme || subItem.Meins || subItem.UOM || "")
 						};
 					});
 
@@ -1295,23 +1181,13 @@ onSaleOrderValueHelp: function () {
 										sType = sFound || "Metal";
 									}
 									
-									var sRawUom = (subItem.Uom || subItem.Vrkme || subItem.Meins || subItem.UOM || "").toUpperCase();
-									var sUom = "KG";
-									if (sRawUom.indexOf("KG") !== -1 || sRawUom.indexOf("KILOGRAM") !== -1) {
-										sUom = "KG";
-									} else if (sRawUom.indexOf("LITRE") !== -1 || sRawUom.indexOf("LTR") !== -1 || sRawUom === "L" || sRawUom === "LIT") {
-										sUom = "L";
-									} else if (sRawUom.indexOf("TON") !== -1 || sRawUom.indexOf("TO") !== -1 || sRawUom.indexOf("MT") !== -1) {
-										sUom = "MT";
-									}
-
 									return {
 										sno: String(idx + 1),
 										type: sType,
 										description: subItem.MaterialDesc || subItem.Arktx || subItem.Description || subItem.Maktx || "",
 										quantity: (subItem.OrderQuantity || subItem.Quantity || subItem.Kwmeng || subItem.Qty || "0").toString(),
 										availQty: (subItem.OrderQuantity || subItem.Quantity || subItem.Kwmeng || subItem.Qty || "0").toString(),
-										uom: sUom
+										uom: that._normalizeUOM(subItem.Uom || subItem.Vrkme || subItem.Meins || subItem.UOM || "")
 									};
 								});
 

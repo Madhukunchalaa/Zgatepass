@@ -441,15 +441,20 @@ sap.ui.define([
 			oOutModel.setProperty("/DCNotes",         sDCNotes);
 
 			oOutModel.setProperty("/VendorAddress", (oData.City || "") + ", " + (oData.ZipCode || ""));
-			oOutModel.setProperty("/VendorPerson", oData.VendorPerson);
+			oOutModel.setProperty("/VendorPerson", oData.VendorPerson || (oLocalLogistics ? oLocalLogistics.VendorPerson : "") || "");
 			oOutModel.setProperty("/UserRemarks", oData.Remarks || "");
 			oOutModel.setProperty("/HODRemarks", oData.HODRemarks || "");
 			oOutModel.setProperty("/StoreRemarks", oData.STORERemarks || "");
 			oOutModel.setProperty("/LRNnumber", oData.LRNnumber || "");
-			oOutModel.setProperty("/VehicleNo", oData.VehicleNo);
-			oOutModel.setProperty("/ModeOfTransport", oData.ModeOfDispatch);
+			oOutModel.setProperty("/VehicleNo", oData.VehicleNo || "");
+			oOutModel.setProperty("/ModeOfTransport", oData.ModeOfDispatch || "");
 			oOutModel.setProperty("/Plant", oData.Plant || oData.Werks || "");
 			oOutModel.setProperty("/Cocode", oData.Bukrs || oData.BUKRS || oData.Cocode || oData.CoCode || oData.CompanyCode || "");
+			oOutModel.setProperty("/CommonDesc", oData.CommonDesc || (oLocalLogistics ? oLocalLogistics.CommonDesc : "") || "");
+			oOutModel.setProperty("/InsuranceReq", oData.InsuranceReq || "NO");
+			oOutModel.setProperty("/InsuranceRequired", (oData.InsuranceReq || "").toUpperCase() === "YES");
+			oOutModel.setProperty("/InsuranceDate", oData.InsuranceDate || "");
+			oOutModel.setProperty("/InsuranceAmount", oData.InsuranceAmount || 0);
 
 			// Detect items from different potential navigation properties
 			var aItems = [];
@@ -744,8 +749,14 @@ sap.ui.define([
 			var oOutModel = this.getView().getModel("out");
 			var oOut = oOutModel.getData();
 			if (!oOut.ChallanNumber && oOut.GatePassNo) {
-				var sYear = new Date().getFullYear();
-				var sGeneratedDC = "DC/" + sYear + "/" + oOut.GatePassNo;
+				var oNow = new Date();
+				var sDay = String(oNow.getDate()).padStart(2, "0");
+				var sMon = String(oNow.getMonth() + 1).padStart(2, "0");
+				var sYear = String(oNow.getFullYear());
+				var sHrs = String(oNow.getHours()).padStart(2, "0");
+				var sMin = String(oNow.getMinutes()).padStart(2, "0");
+				var sSec = String(oNow.getSeconds()).padStart(2, "0");
+				var sGeneratedDC = "DC/" + sDay + sMon + sYear + "/" + sHrs + sMin + sSec + "/" + oOut.GatePassNo;
 				oOutModel.setProperty("/ChallanNumber", sGeneratedDC);
 				oOut.ChallanNumber = sGeneratedDC;
 			}
@@ -1393,11 +1404,18 @@ sap.ui.define([
 		},
 
 		onInsuranceSubmit: function () {
-			sap.m.MessageToast.show("Insurance details saved.");
-			this.byId("idInsuranceRequiredCheckBox").setSelected(true);
+			var oOutModel = this.getView().getModel("out");
 			this._pInsuranceDialog.then(function (oDialog) {
+				var oInsData = oDialog.getModel("insurance").getData();
+				var sDate = oInsData.InsuranceDate || "";
+				var aParts = sDate.split("-");
+				var sFormatted = (aParts.length === 3) ? aParts[2] + aParts[1] + aParts[0] : sDate;
+				oOutModel.setProperty("/InsuranceRequired", true);
+				oOutModel.setProperty("/InsuranceDate", sFormatted);
+				oOutModel.setProperty("/InsuranceAmount", oInsData.InvoiceValue || "");
 				oDialog.close();
 			});
+			sap.m.MessageToast.show("Insurance details saved.");
 		},
 
 		onInsuranceCancel: function () {
@@ -1561,11 +1579,12 @@ sap.ui.define([
 				ModeOfDispatch: oOut.ModeOfTransport,
 				Remarks: oOut.UserRemarks,
 				GPStatus: oOut.Status || "",
-				// TransporterName: oOut.TransporterName || "",
-				// TransporterGST: oOut.TransporterGST || "",
-				// EWayBillNo: oOut.EWayBillNo || "",
-				// EWayBillDate: oOut.EWayBillDate ? new Date(oOut.EWayBillDate).toISOString().split("T")[0] : null,
-				// DCNotes: oOut.DCNotes || "",
+				TransporterName: oOut.TransporterName || "",
+				TransporterGST: oOut.TransporterGST || "",
+				DCNotes: oOut.DCNotes || "",
+				InsuranceReq: oOut.InsuranceRequired ? "Yes" : "",
+				InsuranceDate: oOut.InsuranceDate || "",
+				InsuranceAmount: oOut.InsuranceAmount || "0",
 				Message: "",
 
 				"OutgateNav": (oOut.items || []).map(function (it, index) {
@@ -1660,12 +1679,18 @@ sap.ui.define([
 			// Save logistics/transporter details locally to prevent OData validation errors
 			if (oOut.GatePassNo) {
 				var oLogistics = {
+					LRNnumber: oOut.LRNnumber || "",
+					VehicleNo: oOut.VehicleNo || "",
+					ModeOfTransport: oOut.ModeOfTransport || "",
 					TransporterName: oOut.TransporterName || "",
 					TransporterGST: oOut.TransporterGST || "",
 					EWayBillNo: oOut.EWayBillNo || "",
 					EWayBillDate: oOut.EWayBillDate || "",
+					ChallanNumber: oOut.ChallanNumber || "",
 					DCNotes: oOut.DCNotes || "",
-					GPStatus: oOut.Status || ""
+					GPStatus: oOut.Status || "",
+					VendorPerson: oOut.VendorPerson || "",
+					CommonDesc: oOut.CommonDesc || ""
 				};
 				console.log("[GPMS Debug] onSaveLogistics: saving logistics =", oLogistics, "GPNo =", oOut.GatePassNo, "ReqNo =", oOut.GatePassreqNo);
 				localStorage.setItem("logistics_" + String(oOut.GatePassNo).trim(), JSON.stringify(oLogistics));
@@ -1674,38 +1699,81 @@ sap.ui.define([
 				}
 			}
 
-			// We use the same payload structure as generation but for update/save
+			var sToday = fnFormatDate(new Date());
 			var oPayload = {
 				GatePassreqNo: oOut.GatePassreqNo || "",
-				GatePassNo: oOut.GatePassNo || "",
-				VehicleNo: oOut.VehicleNo,
-				ModeOfDispatch: oOut.ModeOfTransport,
-				Remarks: oOut.UserRemarks,
-				GPStatus: oOut.Status || "",
-				// TransporterName: oOut.TransporterName || "",
-				// TransporterGST: oOut.TransporterGST || "",
-				// EWayBillNo: oOut.EWayBillNo || "",
-				// EWayBillDate: fnFormatDate(oOut.EWayBillDate),
-				// DCNotes: oOut.DCNotes || "",
+				FiscalYear: oOut.FiscalYear || String(new Date().getFullYear()),
 				Plant: oOut.Plant || "",
-				GatePassType: oOut.GatePassType || "RGP",
+				GatePassNo: oOut.GatePassNo || "",
+				Vendor: oOut.Vendor || "",
+				VendorName: oOut.VendorName || "",
+				VendorGST: oOut.VendorGST || "",
+				VendorPerson: oOut.VendorPerson || "",
+				ZipCode: oOut.ZipCode || "",
+				City: oOut.City || "",
+				GatePassDate: sToday,
+				PurchasingDoc: oOut.PurchasingDoc || "",
+				ChallanDate: fnFormatDate(oOut.ChallanDate) || sToday,
+				ReturnableDate: fnFormatDate(oOut.ReturnableDate) || "",
+				ExtReturnDate: fnFormatDate(oOut.ExtendedReturnableDate) || "",
+				CommonDesc: oOut.CommonDesc || "",
+				NoOfPacakages: parseInt(oOut.NoOfPackages || 0),
+				Department: oOut.Department || "",
 				ChallanNumber: oOut.ChallanNumber || "",
-				ChallanDate: fnFormatDate(oOut.ChallanDate) || fnFormatDate(new Date()),
-				"OutgateNav": (oOut.items || []).map(function (it, index) {
+				GatePassType: oOut.GatePassType || "RGP",
+				VehicleNo: oOut.VehicleNo || "",
+				ModeOfDispatch: oOut.ModeOfTransport || "",
+				Remarks: oOut.UserRemarks || "",
+				GPStatus: oOut.Status || "",
+				Message: "",
+				GPbase64: "",
+				DCbase64: "",
+				LRNumber: oOut.LRNnumber || "",
+				TransporterName: oOut.TransporterName || "",
+				TransporterGST: oOut.TransporterGST || "",
+				Comment1: "", Comment2: "", Comment3: "", Comment4: "", Comment5: "",
+				Comment6: "", Comment7: "", Comment8: "", Comment9: "", Comment10: "",
+				Sno1: "", Sno2: "", Sno3: "", Sno4: "", Sno5: "",
+				Sno6: "", Sno7: "", Sno8: "", Sno9: "", Sno10: "",
+				cdate1: "", cdate2: "", cdate3: "", cdate4: "", cdate5: "",
+				cdate6: "", cdate7: "", cdate8: "", cdate9: "", cdate10: "",
+				DCNotes: oOut.DCNotes || "",
+				InsuranceReq: oOut.InsuranceRequired ? "Yes" : "",
+				InsuranceDate: oOut.InsuranceDate || "",
+				InsuranceAmount: oOut.InsuranceAmount || "0",
+				OutgateNav: (oOut.items || []).map(function (it, index) {
 					return {
+						GatePassType: oOut.GatePassType || "RGP",
 						GatePassNo: oOut.GatePassNo,
-						ItemNo: String((index + 1) * 10).padStart(5, '0'),
-						SentQuantity: String(it.sentQty),
-						RecievedQuantity: String(it.recvdQty),
-						BalanceQuantity: String(it.balQty),
+						ItemNo: String((index + 1) * 10).padStart(5, "0"),
+						Material: it.material || "",
+						HSNCode: it.hsnCode || "",
+						HSNDesc: it.hsnDesc || "",
+						UOM: it.uom || "",
+						ItemNetPrice: String(parseFloat(it.rate || 0).toFixed(2)),
+						SentQuantity: String(parseFloat(it.sentQty || 0).toFixed(3)),
+						RecievedQuantity: String(parseFloat(it.recvdQty || 0).toFixed(3)),
+						BalanceQuantity: String(parseFloat(it.balQty || 0).toFixed(3)),
 						Remarks: it.itemRemarks || ""
 					};
 				})
 			};
 
-			// Note: If backend supports MERGE/PUT, use oODataModel.update
-			// If it's a deep create for updates, use create. 
-			// Assuming create for now as per typical Fiori patterns for deep entities.
+			// Populate flat comment fields from CommentsList
+			var aOutComments = oOut.CommentsList || [];
+			for (var oci = 0; oci < 10; oci++) {
+				var oOutC = aOutComments[oci];
+				var oIdx = oci + 1;
+				var sRawDate = oOutC ? (oOutC.date || "") : "";
+				var sParts = sRawDate.split("-");
+				var sFmtDate = (sParts.length === 3 && sParts[2].length === 4)
+					? (sParts[2] + sParts[1] + sParts[0])
+					: fnFormatDate(sRawDate);
+				oPayload["Comment" + oIdx] = oOutC ? (oOutC.text || "") : "";
+				oPayload["Sno"     + oIdx] = oOutC ? (oOutC.sno  || String(oIdx)) : "";
+				oPayload["cdate"   + oIdx] = sFmtDate || "";
+			}
+
 			oODataModel.create("/OutGatePassSet", oPayload, {
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();

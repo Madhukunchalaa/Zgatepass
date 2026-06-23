@@ -95,21 +95,13 @@ sap.ui.define([
 			var that = this;
 
 			// Format date
-			var sDateStr = this._formatDate(oItem.RequestDate);
+			var sDateStr = this._formatDateSlash(oItem.RequestDate);
 
 			// Map items from ScrapPassItmNav
 			var aItems = [];
 			if (oItem.ScrapPassItmNav && oItem.ScrapPassItmNav.results) {
 				aItems = oItem.ScrapPassItmNav.results.map(function (oSub, idx) {
-					var sRawUom = (oSub.UOM || "").toUpperCase();
-					var sUom = "KG";
-					if (sRawUom.indexOf("KG") !== -1 || sRawUom.indexOf("KILOGRAM") !== -1) {
-						sUom = "KG";
-					} else if (sRawUom.indexOf("LITRE") !== -1 || sRawUom.indexOf("LTR") !== -1 || sRawUom === "L" || sRawUom === "LIT") {
-						sUom = "L";
-					} else if (sRawUom.indexOf("TON") !== -1 || sRawUom.indexOf("MT") !== -1) {
-						sUom = "MT";
-					}
+					var sUom = that._normalizeUOM(oSub.UOM || "");
 					return {
 						sno: String(idx + 1),
 						itemNo: oSub.ItemNo || "",
@@ -126,7 +118,7 @@ sap.ui.define([
 
 			var sWBTicket = oItem.WBTicketNo || oItem.WeighmentTicket || oItem.weighmentSlipNo || "";
 			var sDCDateRaw = oItem.DCDate || oItem.ChallanDate || oItem.challanDateTime || "";
-			var sDCDateFormatted = sDCDateRaw ? that._formatDate(sDCDateRaw) : "";
+			var sDCDateFormatted = sDCDateRaw ? that._formatDateSlash(sDCDateRaw) : "";
 
 			var oDetailData = {
 				gatePassNo: oItem.GatePassNo || "",
@@ -150,28 +142,6 @@ sap.ui.define([
 			this.getView().setModel(new JSONModel(oDetailData), "scrapGpDetail");
 		},
 
-		_formatDate: function (vDate) {
-			if (!vDate) return "";
-			if (vDate instanceof Date) {
-				var dd = String(vDate.getDate()).padStart(2, "0");
-				var mm = String(vDate.getMonth() + 1).padStart(2, "0");
-				var yyyy = vDate.getFullYear();
-				return dd + "/" + mm + "/" + yyyy;
-			}
-			if (typeof vDate === "string") {
-				if (vDate.indexOf("Date") !== -1) {
-					var ts = parseInt(vDate.replace(/\/Date\((\d+)\)\//, "$1"), 10);
-					if (!isNaN(ts)) return this._formatDate(new Date(ts));
-				}
-				if (/^\d{8}$/.test(vDate)) {
-					if (vDate === "00000000") return "";
-					return vDate.substring(6, 8) + "/" + vDate.substring(4, 6) + "/" + vDate.substring(0, 4);
-				}
-				var aParts = vDate.split("T")[0].split("-");
-				if (aParts.length === 3) return aParts[2] + "/" + aParts[1] + "/" + aParts[0];
-			}
-			return String(vDate);
-		},
 
 		onNavBack: function () {
 			this.getRouter().navTo("ScrapGatepassList");

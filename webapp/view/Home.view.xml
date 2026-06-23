@@ -139,6 +139,20 @@
 							<NumericContent value="{hodCounts>/scrapGpListCount}" withMargin="false" valueColor="Good"/>
 						</TileContent>
 					</GenericTile>
+
+					<!-- PCP List Card -->
+					<GenericTile class="gpmsDashCard pcpManageCard" press=".onPressPCPManageList" header="PCP LIST" subheader="Petty Cash Purchases">
+						<TileContent>
+							<core:Icon src="sap-icon://money-bills" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- Inspection List Card -->
+					<GenericTile class="gpmsDashCard inspectionCard" press=".onPressInspectionList" header="INSPECTION LIST" subheader="Gate Entry Inspections">
+						<TileContent>
+							<core:Icon src="sap-icon://inspection" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
 				</HBox>
 			</VBox>
 		</content>

@@ -13,7 +13,7 @@
 			<VBox class="gpmsMainContainer">
 
 				<!-- Header Details Panel -->
-				<Panel expandable="false" class="gpmsPanel sapUiSmallMarginBottom">
+				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginBottom">
 					<headerToolbar>
 						<Toolbar height="3rem">
 							<core:Icon src="sap-icon://header" class="sapUiSmallMarginEnd"/>
@@ -72,17 +72,38 @@
  
 						<VBox class="sapUiSmallMargin">
 							<Label text="Department" required="true" class="gpmsFieldLabel"/>
-							<Input id="idDepartment" value="{gpo>/Department}" placeholder="Enter Department" class="gpmsFieldInput" editable="{= !${gpo>/isExisting} }"/>
+							<Input value="{gpo>/Department}" class="gpmsFieldInput" editable="false"
+								visible="{= ${gpo>/SourceType} === 'PO' || ${gpo>/SourceType} === 'PO_RGP' }"/>
+							<Select selectedKey="{gpo>/Department}" class="gpmsFieldInput" width="100%"
+								visible="{= ${gpo>/SourceType} !== 'PO' &amp;&amp; ${gpo>/SourceType} !== 'PO_RGP' }"
+								enabled="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }">
+								<core:Item key="" text="Select Department"/>
+								<core:Item key="ADMIN" text="ADMIN"/>
+								<core:Item key="C And I" text="C And I"/>
+								<core:Item key="CHEMICAL" text="CHEMICAL"/>
+								<core:Item key="CIVIL" text="CIVIL"/>
+								<core:Item key="ELECTRICAL" text="ELECTRICAL"/>
+								<core:Item key="PERFORMANCE" text="PERFORMANCE"/>
+								<core:Item key="IT" text="IT"/>
+								<core:Item key="MECHANICAL" text="MECHANICAL"/>
+								<core:Item key="OPERATION" text="OPERATION"/>
+								<core:Item key="SAFETY" text="SAFETY"/>
+								<core:Item key="STORES" text="STORES"/>
+								<core:Item key="FUEL" text="FUEL"/>
+								<core:Item key="ENVIRONMENT" text="ENVIRONMENT"/>
+								<core:Item key="F&amp;A" text="F&amp;A"/>
+								<core:Item key="PURCHASE" text="PURCHASE"/>
+							</Select>
 						</VBox>
  
 						<VBox class="sapUiSmallMargin">
 							<Label text="RGP Number" class="gpmsFieldLabel"/>
-							<Input id="idRGPNumber" value="{gpo>/RGPNumber}" placeholder="Enter RGP Number" class="gpmsFieldInput gpmsPoHighlightedField" editable="{= !${gpo>/isExisting} }"/>
+							<Input id="idRGPNumber" value="{gpo>/RGPNumber}" placeholder="Enter RGP Number" class="gpmsFieldInput gpmsPoHighlightedField" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 						</VBox>
  
 						<VBox class="sapUiSmallMargin">
 							<Label text="DC / Invoice No" class="gpmsFieldLabel"/>
-							<Input id="idDCNumber" value="{gpo>/DCNumber}" placeholder="Enter DC or Invoice No" class="gpmsFieldInput" editable="{= !${gpo>/isExisting} }"/>
+							<Input id="idDCNumber" value="{gpo>/DCNumber}" placeholder="Enter DC or Invoice No" class="gpmsFieldInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 						</VBox>
 
 						<VBox class="sapUiSmallMargin" visible="true">
@@ -94,22 +115,22 @@
 								valueFormat="yyyy-MM-dd"
 								class="gpmsFieldInput"
 								width="100%"
-								editable="{= !${gpo>/isExisting} }"/>
+								editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 						</VBox>
 
 						<VBox class="sapUiSmallMargin" visible="{= ${gpo>/SourceType} === 'PettyCash' }">
 							<Label text="PCP No" class="gpmsFieldLabel"/>
-							<Input id="idPCPNo" value="{gpo>/PCPNo}" placeholder="Enter PCP No" class="gpmsFieldInput gpmsPoHighlightedField" editable="{= !${gpo>/isExisting} }"/>
+							<Input id="idPCPNo" value="{gpo>/PCPNo}" placeholder="Enter PCP No" class="gpmsFieldInput gpmsPoHighlightedField" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 						</VBox>
  
 						<VBox class="sapUiSmallMargin">
 							<Label text="Budget Code" class="gpmsFieldLabel"/>
-							<Input id="idBudgetCode" value="{gpo>/BudgetCode}" placeholder="Enter Budget Code" class="gpmsFieldInput gpmsPoHighlightedField" editable="{= !${gpo>/isExisting} }"/>
+							<Input id="idBudgetCode" value="{gpo>/BudgetCode}" placeholder="Enter Budget Code" class="gpmsFieldInput gpmsPoHighlightedField" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 						</VBox>
  
 						<VBox class="sapUiSmallMargin">
 							<Label text="Total Cost (Rs.)" class="gpmsFieldLabel"/>
-							<Input id="idTotalCost" value="{gpo>/TotalCost}" placeholder="Enter Total Cost" type="Text" class="gpmsFieldInput" editable="{= !${gpo>/isExisting} }"/>
+							<Input id="idTotalCost" value="{gpo>/TotalCost}" placeholder="Enter Total Cost" type="Text" class="gpmsFieldInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 						</VBox>
  
 						<VBox class="sapUiSmallMargin">
@@ -138,9 +159,9 @@
 								editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 						</VBox>
 
-						<VBox class="sapUiSmallMargin" visible="{gpo>/isExisting}">
+						<VBox class="sapUiSmallMargin">
 							<Label text="Gate Entry No" class="gpmsFieldLabel"/>
-							<Input value="{gpo>/GateEntryNo}" editable="false" class="gpmsFieldInput"/>
+							<Input value="{gpo>/GateEntryNo}" placeholder="Enter Gate Entry No" class="gpmsFieldInput" submit=".onGateEntryNoChange" change=".onGateEntryNoChange" editable="{= !${gpo>/isExisting} }"/>
 						</VBox>
 
 						<VBox class="sapUiSmallMargin" visible="{= ${gpo>/isExisting} &amp;&amp; ${gpo>/SourceType} !== 'PettyCash' &amp;&amp; (!!${gpo>/GatePassNo} || !!${gpo>/PCPNo}) }">
@@ -167,13 +188,14 @@
 
 					<VBox class="sapUiSmallMargin sapUiSmallMarginTop">
 						<Label text="Remarks" class="gpmsFieldLabel"/>
-						<TextArea id="idRemarks" value="{gpo>/Remarks}" placeholder="Enter remarks..." rows="3" width="100%" class="gpmsTextArea" editable="{= !${gpo>/isExisting} }"/>
+						<TextArea id="idRemarks" value="{gpo>/Remarks}" placeholder="Enter remarks..." rows="3" width="100%" class="gpmsTextArea" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 					</VBox>
 
 				</Panel>
 
-				<!-- Items Panel -->
-				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginBottom">
+				<!-- Items Panel (PO / PO_RGP) -->
+				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginBottom"
+					visible="{= ${gpo>/SourceType} === 'PO' || ${gpo>/SourceType} === 'PO_RGP' || !${gpo>/SourceType} }">
 					<headerToolbar>
 						<Toolbar height="3rem">
 							<core:Icon src="sap-icon://list" class="sapUiSmallMarginEnd"/>
@@ -186,9 +208,12 @@
 						<columns>
 							<Column width="6rem"><Text text="Item No" class="gpmsHeaderText"/></Column>
 							<Column><Text text="Item Description" class="gpmsHeaderText"/></Column>
-							<Column width="10rem" hAlign="Right"><Text text="QTY" class="gpmsHeaderText"/></Column>
-							<Column width="8rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
-							<Column width="3rem" visible="{= !${gpo>/isExisting} }"></Column>
+							<Column width="9rem" hAlign="Right"><Text text="PO Qty" class="gpmsHeaderText"/></Column>
+							<Column width="9rem" hAlign="Right"><Text text="Received Qty" class="gpmsHeaderText"/></Column>
+							<Column width="9rem" hAlign="Right"><Text text="Balance Qty" class="gpmsHeaderText"/></Column>
+							<Column width="6rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
+							<Column width="9rem"><Text text="Gate Pass No" class="gpmsHeaderText"/></Column>
+							<Column width="3rem" visible="{= !${gpo>/isExisting} }"/>
 						</columns>
 						<items>
 							<ColumnListItem>
@@ -196,23 +221,43 @@
 									<Input value="{gpo>ItemNo}" placeholder="Item No" class="gpmsTableInput" editable="{= !${gpo>/isExisting} }"/>
 									<Input value="{gpo>ItemDescription}" placeholder="Item Description" class="gpmsTableInput" editable="{= !${gpo>/isExisting} }"/>
 									<Input value="{gpo>POQuantity}" placeholder="0.000" type="Text" textAlign="Right" class="gpmsTableInput" editable="{= !${gpo>/isExisting} }" liveChange=".onPOQuantityInputLiveChange"/>
+									<Input value="{gpo>RecievedQuantity}" placeholder="0.000" type="Text" textAlign="Right" class="gpmsTableInput" editable="{= ${gpo>/isEditMode} }"/>
+									<Text text="{path: 'gpo>BalanceQuantity', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" textAlign="Right"/>
+									<Text text="{gpo>UOM}"/>
+									<Text text="{gpo>GatePassNo}"/>
+									<Button icon="sap-icon://delete" type="Transparent" press=".onDeleteItem" class="gpmsDeleteBtn" visible="{= !${gpo>/isExisting} }"/>
+								</cells>
+							</ColumnListItem>
+						</items>
+					</Table>
+				</Panel>
+
+				<!-- Items Panel (Non-PO: PettyCash, FREE, SERVICE, STAFF_WELFARE) -->
+				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginBottom"
+					visible="{= ${gpo>/SourceType} !== 'PO' &amp;&amp; ${gpo>/SourceType} !== 'PO_RGP' &amp;&amp; !!${gpo>/SourceType} }">
+					<headerToolbar>
+						<Toolbar height="3rem">
+							<core:Icon src="sap-icon://list" class="sapUiSmallMarginEnd"/>
+							<Title text="ITEMS" level="H3"/>
+							<ToolbarSpacer/>
+							<Button text="Add Item" icon="sap-icon://add" press=".onAddItem" type="Transparent" class="gpmsAddBtn" visible="{= !${gpo>/isExisting} }"/>
+						</Toolbar>
+					</headerToolbar>
+					<Table id="idSimpleItemsTable" items="{gpo>/GateInPoNav}" class="gpmsItemTable">
+						<columns>
+							<Column><Text text="Item Description" class="gpmsHeaderText"/></Column>
+							<Column width="10rem" hAlign="Right"><Text text="Qty" class="gpmsHeaderText"/></Column>
+							<Column width="8rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
+							<Column width="3rem" visible="{= !${gpo>/isExisting} }"/>
+						</columns>
+						<items>
+							<ColumnListItem>
+								<cells>
+									<Input value="{gpo>ItemDescription}" placeholder="Item Description" class="gpmsTableInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
+									<Input value="{gpo>RecievedQuantity}" placeholder="0.00" type="Number" textAlign="Right" class="gpmsTableInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 									<Select selectedKey="{gpo>UOM}" class="gpmsTableInput" width="100%"
-										enabled="{= !${gpo>/isExisting} }">
-										<core:Item key="" text="-- Select --"/>
-										<core:Item key="AMP" text="Amps"/>
-										<core:Item key="BAG" text="Bag"/>
-										<core:Item key="BBL" text="Barrel"/>
-										<core:Item key="BOT" text="Bottle"/>
-										<core:Item key="BOX" text="Box"/>
-										<core:Item key="BDL" text="Bundle"/>
-										<core:Item key="CAN" text="Can"/>
-										<core:Item key="CTN" text="Carton"/>
-										<core:Item key="CTG" text="Cartridge"/>
-										<core:Item key="COI" text="Coil"/>
-										<core:Item key="CFT" text="Cubic Feet"/>
-										<core:Item key="M3"  text="Cubic Meter"/>
-										<core:Item key="CYL" text="Cylinder"/>
-										<core:Item key="DRM" text="Drum"/>
+										enabled="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }">
+										<core:Item key="NOS" text="Number"/>
 										<core:Item key="FT"  text="Feet"/>
 										<core:Item key="KG"  text="Kilogram"/>
 										<core:Item key="LEN" text="Length"/>
@@ -221,8 +266,6 @@
 										<core:Item key="LOT" text="Lot"/>
 										<core:Item key="M"   text="Meters"/>
 										<core:Item key="MT"  text="Metric Tons"/>
-										<core:Item key="MON" text="Month"/>
-										<core:Item key="NOS" text="Number"/>
 										<core:Item key="PAR" text="Pair"/>
 										<core:Item key="ROL" text="Roll"/>
 										<core:Item key="SET" text="Set"/>
@@ -236,8 +279,9 @@
 										<core:Item key="REA" text="Ream"/>
 										<core:Item key="TON" text="Tons"/>
 										<core:Item key="UN"  text="Unit"/>
+										<core:Item key="MON" text="Month"/>
 									</Select>
-									<Button icon="sap-icon://delete" type="Transparent" press=".onDeleteItem" class="gpmsDeleteBtn"/>
+									<Button icon="sap-icon://delete" type="Transparent" press=".onDeleteItem" class="gpmsDeleteBtn" visible="{= !${gpo>/isExisting} }"/>
 								</cells>
 							</ColumnListItem>
 						</items>

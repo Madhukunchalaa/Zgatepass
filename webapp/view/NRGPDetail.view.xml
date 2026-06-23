@@ -42,10 +42,7 @@
 							<Label text="Plant" class="gpmsFieldLabel"/>
 							<Input value="{nrgp>/Plant}" editable="false" class="gpmsFieldInput"/>
 						</VBox>
-						<VBox class="sapUiSmallMargin">
-							<Label text="Fiscal Year" class="gpmsFieldLabel"/>
-							<Input value="{nrgp>/FiscalYear}" editable="false" class="gpmsFieldInput"/>
-						</VBox>
+						
 						<VBox class="sapUiSmallMargin">
 							<Label text="Department" class="gpmsFieldLabel"/>
 							<Input value="{nrgp>/Department}" editable="false" class="gpmsFieldInput"/>
@@ -59,6 +56,10 @@
 							<Input value="{nrgp>/VendorGST}" editable="false" class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
+							<Label text="Vendor Person" class="gpmsFieldLabel"/>
+							<Input value="{nrgp>/VendorPerson}" placeholder="Enter contact person" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
 							<layoutData>
 								<layout:GridData span="XL6 L6 M12 S12"/>
 							</layoutData>
@@ -66,12 +67,11 @@
 							<Input value="{nrgp>/VendorAddress}" editable="false" class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
-							<Label text="Vehicle No." class="gpmsFieldLabel"/>
-							<Input value="{nrgp>/VehicleNo}" editable="{= ${nrgp>/GPStatus} === 'AM' || ${nrgp>/GPStatus} === 'AMENDMENT' || ${nrgp>/GPStatus} === 'OPEN' }" class="gpmsFieldInput"/>
-						</VBox>
-						<VBox class="sapUiSmallMargin">
-							<Label text="Remarks" class="gpmsFieldLabel"/>
-							<Input value="{nrgp>/Remarks}" editable="{= ${nrgp>/GPStatus} === 'AM' || ${nrgp>/GPStatus} === 'AMENDMENT' || ${nrgp>/GPStatus} === 'OPEN' }" class="gpmsFieldInput"/>
+							<layoutData>
+								<layout:GridData span="XL6 L6 M12 S12"/>
+							</layoutData>
+							<Label text="Common description" class="gpmsFieldLabel"/>
+							<Input value="{nrgp>/CommonDesc}" editable="false" class="gpmsFieldInput"/>
 						</VBox>
 					</layout:Grid>
 				</Panel>
@@ -89,16 +89,19 @@
 							<Column width="3rem" hAlign="Center">
 								<Text text="#" class="gpmsHeaderText" wrapping="false"/>
 							</Column>
-							<Column width="13rem">
+							<Column width="9rem">
+								<Text text="Material" class="gpmsHeaderText" wrapping="false"/>
+							</Column>
+							<Column width="15rem">
 								<Text text="Material Description" class="gpmsHeaderText" wrapping="false"/>
 							</Column>
-							<Column width="8rem">
+							<Column width="9rem">
 								<Text text="HSN Code" class="gpmsHeaderText" wrapping="false"/>
 							</Column>
-							<Column width="4rem">
+							<Column width="5rem">
 								<Text text="UOM" class="gpmsHeaderText" wrapping="false"/>
 							</Column>
-							<Column width="8rem" hAlign="Right">
+							<Column width="9rem" hAlign="Right">
 								<Text text="Rate (Rs.)" class="gpmsHeaderText" wrapping="false"/>
 							</Column>
 							<Column width="9rem" hAlign="Right">
@@ -111,14 +114,18 @@
 								<Text text="Balance Qty" class="gpmsHeaderText" wrapping="false"/>
 							</Column>
 							<Column width="10rem" hAlign="Right">
-								<Text text="Total Value" class="gpmsHeaderText" wrapping="false"/>
+								<Text text="Total (Rs.)" class="gpmsHeaderText" wrapping="false"/>
+							</Column>
+							<Column width="12rem">
+								<Text text="Remarks" class="gpmsHeaderText" wrapping="false"/>
 							</Column>
 						</columns>
 						<items>
 							<ColumnListItem>
 								<cells>
 									<Text text="{nrgp>sno}" wrapping="false"/>
-									<Text text="{nrgp>HSNDesc}" wrapping="true"/>
+									<Text text="{nrgp>Material}" wrapping="false"/>
+									<Text text="{nrgp>MaterialDesc}" wrapping="true"/>
 									<Text text="{nrgp>HSNCode}" wrapping="false"/>
 									<Text text="{nrgp>UOM}" wrapping="false"/>
 									<Text text="{path: 'nrgp>ItemNetPrice', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}" textAlign="Right" wrapping="false"/>
@@ -129,12 +136,36 @@
 										editable="{= ${nrgp>/GPStatus} === 'AM' || ${nrgp>/GPStatus} === 'AMENDMENT' || ${nrgp>/GPStatus} === 'OPEN' }"/>
 									<Text text="{path: 'nrgp>BalanceQuantity', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" textAlign="Right" wrapping="false" class="gpmsBoldText"/>
 									<Text text="{path: 'nrgp>Totalvalue', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}" textAlign="Right" wrapping="false"/>
+									<Text text="{nrgp>Remarks}" wrapping="true"/>
 								</cells>
 							</ColumnListItem>
 						</items>
 					</Table>
 				</Panel>
 
+				<!-- Remarks -->
+				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginBottom">
+					<headerToolbar>
+						<Toolbar height="3rem">
+							<core:Icon src="sap-icon://notes" class="sapUiSmallMarginEnd"/>
+							<Title text="REMARKS" level="H3"/>
+						</Toolbar>
+					</headerToolbar>
+					<layout:Grid defaultSpan="XL4 L4 M6 S12" vSpacing="0" class="sapUiSmallMargin">
+						<VBox class="sapUiSmallMargin">
+							<Label text="Remarks" class="gpmsFieldLabel"/>
+							<TextArea value="{nrgp>/UserRemarks}" editable="false" width="100%" rows="3" class="gpmsTextArea"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="HOD Remarks" class="gpmsFieldLabel"/>
+							<TextArea value="{nrgp>/HODRemarks}" editable="false" width="100%" rows="3" class="gpmsTextArea"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Store Remarks" class="gpmsFieldLabel"/>
+							<TextArea value="{nrgp>/StoreRemarks}" editable="false" width="100%" rows="3" class="gpmsTextArea"/>
+						</VBox>
+					</layout:Grid>
+				</Panel>
 
 				<!-- Logistics & Documents -->
 				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginTop">
@@ -163,7 +194,7 @@
 								</VBox>
 								<VBox width="45%">
 									<Label text="Transport By" class="gpmsFieldLabel"/>
-									<RadioButtonGroup columns="2" selectedIndex="{nrgp>/TransportByIndex}" class="sapUiTinyMarginTop">
+									<RadioButtonGroup columns="2" selectedIndex="{nrgp>/TransportByIndex}" select=".onTransportByChange" class="sapUiTinyMarginTop">
 										<RadioButton text="Self" />
 										<RadioButton text="Vendor" />
 									</RadioButtonGroup>
@@ -198,25 +229,16 @@
 								</VBox>
 							</HBox>
 
-							<!-- Row 4: E-Way Bill -->
-							<HBox wrap="Wrap" class="sapUiSmallMarginTop">
-								<VBox width="50%" class="sapUiSmallMarginEnd">
-									<Label text="E-Way Bill No" class="gpmsFieldLabel"/>
-									<Input value="{nrgp>/EWayBillNo}" placeholder="Enter E-Way Bill No" class="gpmsFieldInput" width="100%"
-										editable="{= ${nrgp>/DocOptionIndex} === 1}"/>
-								</VBox>
-								<VBox width="45%">
-									<Label text="E-Way Bill Date" class="gpmsFieldLabel"/>
-									<DatePicker value="{nrgp>/EWayBillDate}" displayFormat="dd-MM-yyyy" class="gpmsFieldInput" width="100%"
-										editable="{= ${nrgp>/DocOptionIndex} === 1}"/>
-								</VBox>
-							</HBox>
-
 							<!-- Row 5: DC Notes (only when Required) -->
 							<VBox class="sapUiSmallMarginTop" visible="{= ${nrgp>/DocOptionIndex} === 1}">
 								<Label text="DC / DF Notes" class="gpmsFieldLabel"/>
 								<TextArea value="{nrgp>/DCNotes}" width="100%" rows="2" class="gpmsTextArea"/>
 							</VBox>
+
+							<!-- Insurance Required Checkbox -->
+							<HBox class="sapUiSmallMarginTop" alignItems="Center">
+								<CheckBox id="idInsuranceRequiredNRGPCheckBox" text="Insurance Required" selected="{nrgp>/InsuranceRequired}" select=".onInsuranceRequiredCheckBoxSelect"/>
+							</HBox>
 
 							<!-- Row 6: Gate Pass Status -->
 							<VBox class="sapUiSmallMarginTop">

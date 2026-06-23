@@ -83,21 +83,16 @@ sap.ui.define([
 			var sPoNumber = oItem.PurchaseOrder;
 			var sPlant = oItem.Plant || "2301";
 
-			// Store the full row (with expanded GateInPoNav) so the form can use it directly
-			sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel(oItem), "selectedPO");
+			// Use items from the clicked row only — prod backend returns each header record
+			// with the complete item set, so merging across rows produces duplicates.
+			var oMerged = JSON.parse(JSON.stringify(oItem));
+
+			sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel(oMerged), "selectedPO");
 
 			this.getRouter().navTo("GatePassWithPODetail", {
 				poNumber: sPoNumber,
 				plant: sPlant
 			});
-		},
-
-		onCloseItemsDialog: function () {
-			if (this._pItemsDialog) {
-				this._pItemsDialog.then(function(oDialog) {
-					oDialog.close();
-				});
-			}
 		},
 
 		onNavHome: function () {

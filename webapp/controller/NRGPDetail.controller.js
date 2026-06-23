@@ -40,9 +40,12 @@ sap.ui.define([
 				Plant: "",
 				FiscalYear: "",
 				Department: "",
+				VendorCode: "",
+				VendorName: "",
 				Vendor: "",
 				VendorGST: "",
 				VendorPerson: "",
+				CommonDesc: "",
 				City: "",
 				ZipCode: "",
 				VendorAddress: "",
@@ -54,6 +57,9 @@ sap.ui.define([
 				TransporterName: "",
 				TransporterGST: "",
 				Remarks: "",
+				UserRemarks: "",
+				HODRemarks: "",
+				StoreRemarks: "",
 				GPStatus: "",
 				StatusState: "None",
 				ChallanNumber: "",
@@ -64,6 +70,7 @@ sap.ui.define([
 				DCNotes: "",
 				DocOptionIndex: 0,
 				TransportByIndex: 1,
+				InsuranceRequired: false,
 				items: [],
 				CommentsList: [],
 				FinalTotal: "0.00"
@@ -141,20 +148,6 @@ sap.ui.define([
 			});
 		},
 
-		_formatDate: function (vDate) {
-			if (!vDate || vDate === "00000000" || vDate === "") { return ""; }
-			if (typeof vDate === "string" && vDate.indexOf("/Date(") === 0) {
-				var ms = parseInt(vDate.replace(/\/Date\((\d+)[^)]*\)\//, "$1"), 10);
-				vDate = new Date(ms);
-			}
-			if (typeof vDate === "string" && /^\d{8}$/.test(vDate)) {
-				vDate = new Date(vDate.slice(0, 4), parseInt(vDate.slice(4, 6), 10) - 1, vDate.slice(6, 8));
-			}
-			if (vDate instanceof Date && !isNaN(vDate)) {
-				return vDate.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).split("/").join("-");
-			}
-			return String(vDate);
-		},
 
 		_getStatusState: function (sStatus) {
 			if (sStatus === "CLOSED" || sStatus === "Approved" || sStatus === "APPROVED" || sStatus === "A") return "Success";
@@ -193,9 +186,10 @@ sap.ui.define([
 			oModel.setProperty("/Plant", oData.Plant || "");
 			oModel.setProperty("/FiscalYear", oData.FiscalYear || "");
 			oModel.setProperty("/Department", oData.Department || "");
+			oModel.setProperty("/VendorCode", oData.Vendor || "");
+			oModel.setProperty("/VendorName", oData.VendorName || "");
 			oModel.setProperty("/Vendor", oData.VendorName || oData.Vendor || "");
 			oModel.setProperty("/VendorGST", oData.VendorGST || "");
-			oModel.setProperty("/VendorPerson", oData.VendorPerson || "");
 			oModel.setProperty("/City", oData.City || "");
 			oModel.setProperty("/ZipCode", oData.ZipCode || "");
 			oModel.setProperty("/VendorAddress", [oData.City, oData.ZipCode].filter(Boolean).join(", "));
@@ -211,12 +205,20 @@ sap.ui.define([
 				}
 			} catch (e) {}
 
-			oModel.setProperty("/LRNnumber", oData.LRNumber || oData.LRNnumber || "");
-			oModel.setProperty("/VehicleNo", oData.VehicleNo || "");
-			oModel.setProperty("/ModeOfTransport", oData.ModeOfDispatch || "Road");
-			oModel.setProperty("/TransporterName", oData.TransporterName || "");
-			oModel.setProperty("/TransporterGST", oData.TransporterGST || "");
+			oModel.setProperty("/VendorPerson", oData.VendorPerson || (oLocalLogistics ? oLocalLogistics.VendorPerson : "") || "");
+			oModel.setProperty("/CommonDesc", oData.CommonDesc || (oLocalLogistics ? oLocalLogistics.CommonDesc : "") || "");
+			oModel.setProperty("/LRNnumber", oData.LRNumber || oData.LRNnumber || (oLocalLogistics ? oLocalLogistics.LRNnumber : "") || "");
+			oModel.setProperty("/VehicleNo", oData.VehicleNo || (oLocalLogistics ? oLocalLogistics.VehicleNo : "") || "");
+			oModel.setProperty("/ModeOfTransport", oData.ModeOfDispatch || (oLocalLogistics ? oLocalLogistics.ModeOfTransport : "") || "Road");
+			var sTransporterName = oData.TransporterName || (oLocalLogistics ? oLocalLogistics.TransporterName : "") || "";
+			var bIsSelf = (sTransporterName === "MEIL Neyveli Energy Private Limited");
+			oModel.setProperty("/TransportByIndex", bIsSelf ? 0 : 1);
+			oModel.setProperty("/TransporterName", sTransporterName);
+			oModel.setProperty("/TransporterGST", oData.TransporterGST || (oLocalLogistics ? oLocalLogistics.TransporterGST : "") || "");
 			oModel.setProperty("/Remarks", oData.Remarks || "");
+			oModel.setProperty("/UserRemarks", oData.Remarks || "");
+			oModel.setProperty("/HODRemarks", oData.HODRemarks || "");
+			oModel.setProperty("/StoreRemarks", oData.STORERemarks || oData.StoreRemarks || "");
 			
 			var sGPStatus = (oData.GPStatus || "").trim().toUpperCase();
 			if (!sGPStatus && oLocalLogistics && oLocalLogistics.GPStatus) {
@@ -225,12 +227,13 @@ sap.ui.define([
 			oModel.setProperty("/GPStatus", sGPStatus);
 			oModel.setProperty("/StatusState", this._getStatusState(sGPStatus));
 			
-			oModel.setProperty("/ChallanNumber", oData.ChallanNumber || "");
+			oModel.setProperty("/ChallanNumber", oData.ChallanNumber || (oLocalLogistics ? oLocalLogistics.ChallanNumber : "") || "");
 			oModel.setProperty("/GateEntryNo", oData.GateEntryNo || "");
 			oModel.setProperty("/DocOptionIndex", oData.ChallanNumber ? 1 : 0);
 			oModel.setProperty("/EWayBillNo", oData.EWayBillNo || (oLocalLogistics ? oLocalLogistics.EWayBillNo : "") || "");
 			oModel.setProperty("/EWayBillDate", oData.EWayBillDate || (oLocalLogistics ? oLocalLogistics.EWayBillDate : null));
 			oModel.setProperty("/DCNotes", oData.DCNotes || (oLocalLogistics ? oLocalLogistics.DCNotes : "") || "");
+			oModel.setProperty("/InsuranceRequired", (oData.InsuranceReq || "").toUpperCase() === "YES");
 
 			var aRaw = (oData.OutgateNav && oData.OutgateNav.results) || [];
 			var aMapped = aRaw.map(function (it, i) {
@@ -242,6 +245,7 @@ sap.ui.define([
 					sno: i + 1,
 					ItemNo: it.ItemNo || "",
 					Material: it.Material || "",
+					MaterialDesc: it.MaterialDesc || it.MaterialName || it.Description || it.HSNDesc || "",
 					HSNCode: it.HSNCode || "",
 					HSNDesc: it.HSNDesc || "",
 					UOM: it.UOM || "",
@@ -276,6 +280,40 @@ sap.ui.define([
 			oModel.setProperty("/CommentsList", aComments);
 
 			oModel.refresh(true);
+
+			// Always fetch from GateReqHdrSet to get HODRemarks, StoreRemarks and VendorName
+			if (sReqNo) {
+				this._loadFromReqHdr(sReqNo, oData.GatePassType || "NRGP");
+			}
+		},
+
+		_loadFromReqHdr: function (sReqNo, sGPType) {
+			var oODataModel = this.getOwnerComponent().getModel();
+			var oModel = this.getView().getModel("nrgp");
+			if (!oODataModel || !oModel) { return; }
+
+			oODataModel.read("/GateReqHdrSet", {
+				filters: [
+					new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo),
+					new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, sGPType)
+				],
+				success: function (oData) {
+					var oResult = oData.results && oData.results[0];
+					if (!oResult) { return; }
+					if (oResult.VendorName) {
+						oModel.setProperty("/VendorName", oResult.VendorName);
+						oModel.setProperty("/Vendor", oResult.VendorName);
+					}
+					if (oResult.VendorPerson) {
+						oModel.setProperty("/VendorPerson", oResult.VendorPerson);
+					}
+					if (oResult.CommonDesc) {
+						oModel.setProperty("/CommonDesc", oResult.CommonDesc);
+					}
+					oModel.setProperty("/HODRemarks", oResult.HODRemarks || oResult.HodRemarks || "");
+					oModel.setProperty("/StoreRemarks", oResult.STORERemarks || oResult.StoreRemarks || "");
+				}
+			});
 		},
 
 		_dateToYYYYMMDD: function (sDisplayDate) {
@@ -316,6 +354,19 @@ sap.ui.define([
 		onSelectStatusChange: function () {
 			var oModel = this.getView().getModel("nrgp");
 			oModel.setProperty("/StatusState", this._getStatusState(oModel.getProperty("/GPStatus")));
+		},
+
+		onTransportByChange: function (oEvent) {
+			var iIndex = oEvent.getParameter("selectedIndex");
+			var oModel = this.getView().getModel("nrgp");
+			if (iIndex === 0) {
+				oModel.setProperty("/TransporterName", "MEIL Neyveli Energy Private Limited");
+				oModel.setProperty("/TransporterGST", "33AACCS2753B1ZV");
+			} else {
+				oModel.setProperty("/TransporterName", "");
+				oModel.setProperty("/TransporterGST", "");
+			}
+			oModel.setProperty("/TransportByIndex", iIndex);
 		},
 
 		onAddCommentButtonPress: function () {
@@ -366,12 +417,18 @@ sap.ui.define([
 
 			if (oData.GatePassNo) {
 				var oLogistics = {
+					LRNnumber: oData.LRNnumber || "",
+					VehicleNo: oData.VehicleNo || "",
+					ModeOfTransport: oData.ModeOfTransport || "",
 					TransporterName: oData.TransporterName || "",
 					TransporterGST: oData.TransporterGST || "",
 					EWayBillNo: oData.EWayBillNo || "",
 					EWayBillDate: oData.EWayBillDate || "",
+					ChallanNumber: oData.ChallanNumber || "",
 					DCNotes: oData.DCNotes || "",
-					GPStatus: oData.GPStatus || ""
+					GPStatus: oData.GPStatus || "",
+					VendorPerson: oData.VendorPerson || "",
+					CommonDesc: oData.CommonDesc || ""
 				};
 				localStorage.setItem("logistics_" + String(oData.GatePassNo).trim(), JSON.stringify(oLogistics));
 				if (oData.GatePassreqNo) {
@@ -388,8 +445,8 @@ sap.ui.define([
 				FiscalYear: oData.FiscalYear || String(new Date().getFullYear()),
 				Plant: oData.Plant || "",
 				GatePassNo: sAuthorativeGPNo,
-				Vendor: oData.Vendor || "",
-				VendorName: "",
+				Vendor: oData.VendorCode || oData.Vendor || "",
+				VendorName: oData.VendorName || "",
 				VendorGST: oData.VendorGST || "",
 				VendorPerson: oData.VendorPerson || "",
 				ZipCode: oData.ZipCode || "",
@@ -397,6 +454,9 @@ sap.ui.define([
 				GatePassDate: sToday,
 				PurchasingDoc: oData.PurchasingDoc || "",
 				ChallanDate: sChallanDate,
+				ReturnableDate: "",
+				ExtReturnDate: "",
+				CommonDesc: oData.CommonDesc || "",
 				NoOfPacakages: parseInt(oData.NoOfPacakages || 0),
 				Department: oData.Department || "",
 				ChallanNumber: oData.ChallanNumber || "",
@@ -404,18 +464,23 @@ sap.ui.define([
 				VehicleNo: oData.VehicleNo || "",
 				LRNumber: oData.LRNnumber || "",
 				ModeOfDispatch: oData.ModeOfTransport || "",
-				TransporterName: oData.TransporterName || "",
-				TransporterGST: oData.TransporterGST || "",
 				Remarks: oData.Remarks || "",
 				GPStatus: oData.GPStatus || "",
 				Message: "",
-				// Flat comment fields Comment1-10 / Sno1-10 / cdate1-10
+				GPbase64: "",
+				DCbase64: "",
+				TransporterName: oData.TransporterName || "",
+				TransporterGST: oData.TransporterGST || "",
 				Comment1: "", Comment2: "", Comment3: "", Comment4: "", Comment5: "",
 				Comment6: "", Comment7: "", Comment8: "", Comment9: "", Comment10: "",
 				Sno1: "", Sno2: "", Sno3: "", Sno4: "", Sno5: "",
 				Sno6: "", Sno7: "", Sno8: "", Sno9: "", Sno10: "",
 				cdate1: "", cdate2: "", cdate3: "", cdate4: "", cdate5: "",
 				cdate6: "", cdate7: "", cdate8: "", cdate9: "", cdate10: "",
+				DCNotes: oData.DCNotes || "",
+				InsuranceReq: oData.InsuranceRequired ? "Yes" : "",
+				InsuranceDate: oData.InsuranceDate || "",
+				InsuranceAmount: oData.InsuranceAmount || "0",
 				OutgateNav: (oData.items || []).map(function (it, i) {
 					return {
 						GatePassType: "NRGP",
@@ -452,7 +517,11 @@ sap.ui.define([
 				success: function (oResponse) {
 					sap.ui.core.BusyIndicator.hide();
 					var sMsg = oResponse.Message || "Gate Pass updated successfully!";
-					MessageBox.success(sMsg);
+					MessageBox.success(sMsg, {
+						onClose: function () {
+							this._loadData(sAuthorativeGPNo, "NRGP");
+						}.bind(this)
+					});
 					var oModel = this.getView().getModel("nrgp");
 					oModel.setProperty("/StatusState", this._getStatusState(oData.GPStatus));
 				}.bind(this),
@@ -466,6 +535,62 @@ sap.ui.define([
 					MessageBox.error(sMsg);
 				}
 			});
+		},
+
+		onInsuranceRequiredCheckBoxSelect: function (oEvent) {
+			var bSelected = oEvent.getParameter("selected");
+			var oData = this.getView().getModel("nrgp").getData();
+			if (bSelected) {
+				if (!this._pInsuranceDialog) {
+					this._pInsuranceDialog = sap.ui.core.Fragment.load({
+						id: this.getView().getId(),
+						name: "zgpms.meilpower.com.view.fragments.InwardInsuranceDialog",
+						controller: this
+					}).then(function (oDialog) {
+						this.getView().addDependent(oDialog);
+						oDialog.setModel(new sap.ui.model.json.JSONModel({}), "insurance");
+						return oDialog;
+					}.bind(this));
+				}
+				this._pInsuranceDialog.then(function (oDialog) {
+					oDialog.getModel("insurance").setData({
+						InvoiceNo: oData.GatePassreqNo || "",
+						InsuranceDate: new Date().toLocaleDateString("en-GB").split("/").join("-"),
+						ReceivedDate: new Date().toLocaleDateString("en-GB").split("/").join("-"),
+						Vendor: oData.VendorName || oData.Vendor || "",
+						VendorAddress: oData.VendorAddress || "",
+						ModeOfTransport: oData.ModeOfTransport || "Road",
+						LRNnumber: oData.LRNnumber || "",
+						VehicleNo: oData.VehicleNo || "",
+						InvoiceValue: oData.FinalTotal ? oData.FinalTotal.toString().replace(/,/g, "") : "",
+						RgpDescription: oData.UserRemarks || ""
+					});
+					oDialog.open();
+				}).catch(function (oError) {
+					sap.ui.core.BusyIndicator.hide();
+					sap.m.MessageBox.error("Failed to load Insurance dialog: " + (oError.message || oError));
+				});
+			}
+		},
+
+		onInsuranceSubmit: function () {
+			var oModel = this.getView().getModel("nrgp");
+			this._pInsuranceDialog.then(function (oDialog) {
+				var oInsData = oDialog.getModel("insurance").getData();
+				var sDate = oInsData.InsuranceDate || "";
+				var aParts = sDate.split("-");
+				var sFormatted = (aParts.length === 3) ? aParts[2] + aParts[1] + aParts[0] : sDate;
+				oModel.setProperty("/InsuranceRequired", true);
+				oModel.setProperty("/InsuranceDate", sFormatted);
+				oModel.setProperty("/InsuranceAmount", oInsData.InvoiceValue || "");
+				oDialog.close();
+			});
+			sap.m.MessageToast.show("Insurance details saved.");
+		},
+
+		onInsuranceCancel: function () {
+			this.byId("idInsuranceRequiredNRGPCheckBox").setSelected(false);
+			this._pInsuranceDialog.then(function (oDialog) { oDialog.close(); });
 		},
 
 		onCancelGatePass: function () {
@@ -669,8 +794,14 @@ sap.ui.define([
 			var oModel = this.getView().getModel("nrgp");
 			var oOut = oModel.getData();
 			if (!oOut.ChallanNumber && oOut.GatePassNo) {
-				var sYear = new Date().getFullYear();
-				var sGeneratedDC = "DC/" + sYear + "/" + oOut.GatePassNo;
+				var oNow = new Date();
+				var sDay = String(oNow.getDate()).padStart(2, "0");
+				var sMon = String(oNow.getMonth() + 1).padStart(2, "0");
+				var sYear = String(oNow.getFullYear());
+				var sHrs = String(oNow.getHours()).padStart(2, "0");
+				var sMin = String(oNow.getMinutes()).padStart(2, "0");
+				var sSec = String(oNow.getSeconds()).padStart(2, "0");
+				var sGeneratedDC = "DC/" + sDay + sMon + sYear + "/" + sHrs + sMin + sSec + "/" + oOut.GatePassNo;
 				oModel.setProperty("/ChallanNumber", sGeneratedDC);
 				oOut.ChallanNumber = sGeneratedDC;
 			}

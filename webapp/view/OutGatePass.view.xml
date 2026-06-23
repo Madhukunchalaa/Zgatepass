@@ -295,20 +295,9 @@
 									<Label text="Transporter GST" class="gpmsFieldLabel"/>
 									<Input value="{out>/TransporterGST}" placeholder="Enter Transporter GST" editable="{= ${out>/TransportByIndex} === 1 }" class="gpmsFieldInput" width="100%"/>
 								</VBox>
-								<VBox width="45%">
-									<!-- Space reserved for future field or alignment -->
-								</VBox>
-							</HBox>
-
-							<!-- Row 4 -->
-							<HBox wrap="Wrap" class="sapUiSmallMarginTop">
-								<VBox width="50%" class="sapUiSmallMarginEnd">
-									<Label text="E-Way Bill No" class="gpmsFieldLabel"/>
-									<Input value="{out>/EWayBillNo}" placeholder="Enter E-Way Bill No" class="gpmsFieldInput" width="100%" editable="{= ${out>/DocOptionIndex} === 1 }"/>
-								</VBox>
-								<VBox width="45%">
-									<Label text="E-Way Bill Date" class="gpmsFieldLabel"/>
-									<DatePicker value="{out>/EWayBillDate}" displayFormat="dd-MM-yyyy" class="gpmsFieldInput" width="100%" editable="{= ${out>/DocOptionIndex} === 1 }"/>
+								<VBox width="45%" visible="{= ${out>/DocOptionIndex} === 1}">
+									<Label text="DC / Challan No." class="gpmsFieldLabel"/>
+									<Input value="{out>/ChallanNumber}" placeholder="Auto-filled on Generate DC" class="gpmsFieldInput" width="100%"/>
 								</VBox>
 							</HBox>
 
@@ -326,7 +315,7 @@
 
 							<!-- Insurance Required Checkbox -->
 							<HBox class="sapUiSmallMarginTop" alignItems="Center">
-								<CheckBox id="idInsuranceRequiredCheckBox" text="Insurance Required" select=".onInsuranceRequiredCheckBoxSelect"/>
+								<CheckBox id="idInsuranceRequiredCheckBox" text="Insurance Required" selected="{out>/InsuranceRequired}" select=".onInsuranceRequiredCheckBoxSelect"/>
 							</HBox>
 
 							<!-- Row 7 - Status (Full Width) -->
