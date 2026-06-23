@@ -21,10 +21,11 @@ sap.ui.define([
 		_emptyModel: function () {
 			return {
 				tiles: {
-					total: 0, pending: 0, approved: 0, rejected: 0,
 					nrgpTotal: 0, nrgpPending: 0, nrgpApproved: 0, nrgpRejected: 0,
 					rgpTotal: 0, rgpPending: 0, rgpApproved: 0, rgpRejected: 0,
-					outGatePass: 0, gateEntries: 0, gateEntriesInspected: 0, gateEntriesPendingInsp: 0,
+					outGatePass: 0, outNrgp: 0, outRgp: 0, outPo: 0,
+					gateEntries: 0, gateEntriesInspected: 0, gateEntriesPendingInsp: 0,
+					irgpTotal: 0, irgpOpen: 0, irgpLinked: 0, irgpClosed: 0,
 					scrapRequests: 0, scrapReqApproved: 0, scrapReqPending: 0,
 					scrapGatePasses: 0, ashGatePasses: 0
 				},
@@ -43,11 +44,11 @@ sap.ui.define([
 			var oResult = {
 				nrgpData: [], rgpData: [],
 				outNrgp: [], outRgp: [], outPo: [],
-				gateEntries: [], scrapRequests: [],
-				scrapGP: [], ashGP: []
+				gateEntries: [], irgpData: [],
+				scrapRequests: [], scrapGP: [], ashGP: []
 			};
 
-			var iTotalCalls = 9;
+			var iTotalCalls = 10;
 			var iSettled = 0;
 			sap.ui.core.BusyIndicator.show(0);
 
@@ -92,6 +93,11 @@ sap.ui.define([
 				error: function () { onSettle(); }
 			});
 
+			oODataModel.read("/IRGPHdrSet", {
+				success: function (oData) { oResult.irgpData = oData.results || []; onSettle(); },
+				error: function () { onSettle(); }
+			});
+
 			oODataModel.read("/ScrapReqHdrSet", {
 				filters: [new Filter("GatePassType", FilterOperator.EQ, "NRGP")],
 				success: function (oData) { oResult.scrapRequests = oData.results || []; onSettle(); },
@@ -118,6 +124,13 @@ sap.ui.define([
 			return "Pending";
 		},
 
+		_classifyIRGPStatus: function (item) {
+			var s = (item.Status || "").toString().trim().toUpperCase();
+			if (s.indexOf("CLOSED") !== -1) { return "Closed"; }
+			if (s.indexOf("RESERVATION") !== -1 || s.indexOf("LINKED") !== -1) { return "Linked"; }
+			return "Open";
+		},
+
 		_processData: function (oResult) {
 			var that = this;
 
@@ -140,7 +153,10 @@ sap.ui.define([
 				else { c.rgpRejected++; }
 			});
 
-			var iOutGatePass = oResult.outNrgp.length + oResult.outRgp.length + oResult.outPo.length;
+			var iOutNrgp = oResult.outNrgp.length;
+			var iOutRgp = oResult.outRgp.length;
+			var iOutPo = oResult.outPo.length;
+			var iOutGatePass = iOutNrgp + iOutRgp + iOutPo;
 
 			var iGateEntries = oResult.gateEntries.length;
 			var iInspected = 0;
@@ -149,6 +165,14 @@ sap.ui.define([
 				var sInsp = (item.InspectionStatus || "").trim().toLowerCase();
 				if (sInsp === "completed" || sInsp === "done") { iInspected++; }
 				else { iPendingInsp++; }
+			});
+
+			var irgp = { open: 0, linked: 0, closed: 0 };
+			oResult.irgpData.forEach(function (item) {
+				var s = that._classifyIRGPStatus(item);
+				if (s === "Closed") { irgp.closed++; }
+				else if (s === "Linked") { irgp.linked++; }
+				else { irgp.open++; }
 			});
 
 			var iScrapReq = oResult.scrapRequests.length;
@@ -163,23 +187,19 @@ sap.ui.define([
 			var iScrapGP = oResult.scrapGP.length;
 			var iAshGP = oResult.ashGP.length;
 
-			var iTotalRequests = oResult.nrgpData.length + oResult.rgpData.length;
-
 			var oModel = this.getView().getModel("analytics");
 			oModel.setData({
 				tiles: {
-					total: iTotalRequests,
-					pending: c.nrgpPending + c.rgpPending,
-					approved: c.nrgpApproved + c.rgpApproved,
-					rejected: c.nrgpRejected + c.rgpRejected,
 					nrgpTotal: oResult.nrgpData.length,
 					nrgpPending: c.nrgpPending, nrgpApproved: c.nrgpApproved, nrgpRejected: c.nrgpRejected,
 					rgpTotal: oResult.rgpData.length,
 					rgpPending: c.rgpPending, rgpApproved: c.rgpApproved, rgpRejected: c.rgpRejected,
-					outGatePass: iOutGatePass,
+					outGatePass: iOutGatePass, outNrgp: iOutNrgp, outRgp: iOutRgp, outPo: iOutPo,
 					gateEntries: iGateEntries,
 					gateEntriesInspected: iInspected,
 					gateEntriesPendingInsp: iPendingInsp,
+					irgpTotal: oResult.irgpData.length,
+					irgpOpen: irgp.open, irgpLinked: irgp.linked, irgpClosed: irgp.closed,
 					scrapRequests: iScrapReq,
 					scrapReqApproved: iScrapReqApproved,
 					scrapReqPending: iScrapReqPending,
@@ -201,6 +221,7 @@ sap.ui.define([
 					{ type: "RGP Requests", count: oResult.rgpData.length },
 					{ type: "Out Gate Pass", count: iOutGatePass },
 					{ type: "Gate Entries", count: iGateEntries },
+					{ type: "IRGP", count: oResult.irgpData.length },
 					{ type: "Scrap Requests", count: iScrapReq },
 					{ type: "Scrap Gate Pass", count: iScrapGP },
 					{ type: "Ash Gate Pass", count: iAshGP }
@@ -247,7 +268,7 @@ sap.ui.define([
 					title: { visible: false },
 					legend: { visible: false },
 					plotArea: {
-						colorPalette: ["#6A1B9A", "#00695C", "#1A237E", "#0277BD", "#E65100", "#795548", "#424242"],
+						colorPalette: ["#6A1B9A", "#00695C", "#1A237E", "#0277BD", "#F57C00", "#E65100", "#795548", "#424242"],
 						dataLabel: { visible: true, formatString: "0" }
 					},
 					categoryAxis: { title: { visible: false } },

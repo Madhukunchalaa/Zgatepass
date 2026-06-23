@@ -51,6 +51,7 @@
                         <Title text="Out Gate Pass List" level="H3" />
                         <ToolbarSpacer />
                         <Text id="idNRGPCountText" text="" />
+                        <Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel"/>
                     </Toolbar>
                 </headerToolbar>
 

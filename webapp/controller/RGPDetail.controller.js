@@ -163,6 +163,8 @@ sap.ui.define([
 		},
 
 		_mapData: function (oData) {
+	       console.log("Full GET Data:", oData);
+           console.log("ChallanNumber:", oData.ChallanNumber);
 			var oModel = this.getView().getModel("rgp");
 
 			var sReqNo = oData.GatePassReqNo || oData.GatePassreqNo || "";
@@ -173,13 +175,6 @@ sap.ui.define([
 			try {
 				var oCoreModel = sap.ui.getCore().getModel("selectedRGP");
 				if (oCoreModel) { oNavData = oCoreModel.getData(); }
-			} catch (e) {}
-
-			var oLocalLogistics = null;
-			try {
-				var sLocal = (sCleanGPNo ? localStorage.getItem("logistics_" + sCleanGPNo) : null)
-					|| (sCleanReqNo ? localStorage.getItem("logistics_" + sCleanReqNo) : null);
-				if (sLocal) { oLocalLogistics = JSON.parse(sLocal); }
 			} catch (e) {}
 
 			oModel.setProperty("/GatePassNo", oData.GatePassNo || "");
@@ -193,8 +188,8 @@ sap.ui.define([
 			oModel.setProperty("/VendorName", oData.VendorName || "");
 			oModel.setProperty("/Vendor", oData.VendorName || oData.Vendor || "");
 			oModel.setProperty("/VendorGST", oData.VendorGST || "");
-			oModel.setProperty("/VendorPerson", oData.VendorPerson || (oLocalLogistics ? oLocalLogistics.VendorPerson : "") || "");
-			oModel.setProperty("/CommonDesc", oData.CommonDesc || (oLocalLogistics ? oLocalLogistics.CommonDesc : "") || "");
+			oModel.setProperty("/VendorPerson", oData.VendorPerson || "");
+			oModel.setProperty("/CommonDesc", oData.CommonDesc || "");
 			oModel.setProperty("/City", oData.City || "");
 			oModel.setProperty("/ZipCode", oData.ZipCode || "");
 			oModel.setProperty("/VendorAddress", [oData.City, oData.ZipCode].filter(Boolean).join(", "));
@@ -203,11 +198,11 @@ sap.ui.define([
 			oModel.setProperty("/VehicleNo", oData.VehicleNo || "");
 			oModel.setProperty("/LRNumber", oData.LRNumber || "");
 			oModel.setProperty("/ModeOfTransport", oData.ModeOfDispatch || "Road");
-			var sTransporterName = oData.TransporterName || (oLocalLogistics ? oLocalLogistics.TransporterName : "") || "";
+			var sTransporterName = oData.TransporterName || "";
 			var bIsSelf = (sTransporterName === "MEIL Neyveli Energy Private Limited");
 			oModel.setProperty("/TransportByIndex", bIsSelf ? 0 : 1);
 			oModel.setProperty("/TransporterName", sTransporterName);
-			oModel.setProperty("/TransporterGST", oData.TransporterGST || (oLocalLogistics ? oLocalLogistics.TransporterGST : "") || "");
+			oModel.setProperty("/TransporterGST", oData.TransporterGST || "");
 			oModel.setProperty("/Remarks", oData.Remarks || "");
 			oModel.setProperty("/UserRemarks", oData.Remarks || "");
 			oModel.setProperty("/HODRemarks", oData.HODRemarks || "");
@@ -217,21 +212,12 @@ sap.ui.define([
 			oModel.setProperty("/ChallanNumber", oData.ChallanNumber || "");
 			oModel.setProperty("/GateEntryNo", oData.GateEntryNo || "");
 			oModel.setProperty("/DocOptionIndex", oData.ChallanNumber ? 1 : 0);
-			oModel.setProperty("/EWayBillNo", oData.EWayBillNo || (oLocalLogistics ? oLocalLogistics.EWayBillNo : "") || "");
-			oModel.setProperty("/EWayBillDate", oData.EWayBillDate || (oLocalLogistics ? oLocalLogistics.EWayBillDate : null));
-			oModel.setProperty("/DCNotes", oData.DCNotes || (oLocalLogistics ? oLocalLogistics.DCNotes : "") || "");
+			oModel.setProperty("/EWayBillNo", oData.EWayBillNo || "");
+			oModel.setProperty("/EWayBillDate", oData.EWayBillDate || null);
+			oModel.setProperty("/DCNotes", oData.DCNotes || "");
 			oModel.setProperty("/InsuranceRequired", (oData.InsuranceReq || "").toUpperCase() === "YES");
 
 			var sGPStatus = (oData.GPStatus || "").trim().toUpperCase();
-			if (!sGPStatus && oLocalLogistics && oLocalLogistics.GPStatus) {
-				sGPStatus = oLocalLogistics.GPStatus.trim().toUpperCase();
-			}
-			if (!sGPStatus && sCleanGPNo) {
-				var sFallback = localStorage.getItem("logistics_" + sCleanGPNo);
-				if (sFallback) {
-					try { sGPStatus = JSON.parse(sFallback).GPStatus || ""; } catch (e) {}
-				}
-			}
 			oModel.setProperty("/GPStatus", sGPStatus);
 			oModel.setProperty("/StatusState", this._getStatusState(sGPStatus));
 
@@ -395,23 +381,6 @@ sap.ui.define([
 				return;
 			}
 
-			if (oData.GatePassNo) {
-				var oLogistics = {
-					TransporterName: oData.TransporterName || "",
-					TransporterGST: oData.TransporterGST || "",
-					EWayBillNo: oData.EWayBillNo || "",
-					EWayBillDate: oData.EWayBillDate || "",
-					DCNotes: oData.DCNotes || "",
-					GPStatus: oData.GPStatus || "",
-					VendorPerson: oData.VendorPerson || "",
-					CommonDesc: oData.CommonDesc || ""
-				};
-				localStorage.setItem("logistics_" + String(oData.GatePassNo).trim(), JSON.stringify(oLogistics));
-				if (oData.GatePassreqNo) {
-					localStorage.setItem("logistics_" + String(oData.GatePassreqNo).trim(), JSON.stringify(oLogistics));
-				}
-			}
-
 			var sToday = new Date().toISOString().split("T")[0];
 			var sChallanDate = oData.ChallanDate ? new Date(oData.ChallanDate).toISOString().split("T")[0] : sToday;
 			var sAuthorativeGPNo = this._sCurrentGPNo || oData.GatePassNo || "";
@@ -498,6 +467,7 @@ sap.ui.define([
 							this._loadData(sAuthorativeGPNo);
 						}.bind(this)
 					});
+					console.log("this is payload",oPayload)
 					var oModel = this.getView().getModel("rgp");
 					oModel.setProperty("/StatusState", this._getStatusState(oData.GPStatus));
 				}.bind(this),

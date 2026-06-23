@@ -104,6 +104,30 @@ sap.ui.define([
 			}
 		},
 
+		onDownloadExcel: function () {
+			var oTable = this.getView().byId("scrapRequestTable");
+			var oBinding = oTable.getBinding("items");
+			var aContexts = oBinding ? oBinding.getCurrentContexts() : [];
+			if (!aContexts.length) {
+				sap.m.MessageToast.show("No data to export.");
+				return;
+			}
+			var aRows = aContexts.map(function (oCtx) {
+				var o = oCtx.getObject();
+				return {
+					"Request No": o.requestId || "",
+					"Date": o.requestDateStr || "",
+					"Vehicle No": o.vehicleDetails || "",
+					"Status": o.status || ""
+				};
+			});
+			var ws = XLSX.utils.json_to_sheet(aRows);
+			var wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, "Scrap Request List");
+			XLSX.writeFile(wb, "Scrap_Request_List.xlsx");
+			sap.m.MessageToast.show("Scrap Request List downloaded.");
+		},
+
 		onRowPress: function (oEvent) {
 			var oItem = oEvent.getSource();
 			if (oItem.getMetadata().getName() === "sap.m.Button") {

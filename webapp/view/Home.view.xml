@@ -98,8 +98,22 @@
 						</TileContent>
 					</GenericTile>
 
+					<!-- Ash Gate Pass Request Card -->
+					<GenericTile class="gpmsDashCard ashCard" press=".onPressAshGatePassRequest" header="ASH GP REQUEST" subheader="Ash Gate Pass Request" visible="{= !${user>/IsHodUser} }">
+						<TileContent>
+							<core:Icon src="sap-icon://request" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- Ash Gate Pass Request List Card -->
+					<GenericTile class="gpmsDashCard ashListCard" press=".onPressAshGatePassRequestList" header="ASH GP REQ LIST" subheader="Ash Request Approvals">
+						<TileContent footer="Total Records">
+							<NumericContent value="{hodCounts>/ashGpReqListCount}" withMargin="false" valueColor="Critical"/>
+						</TileContent>
+					</GenericTile>
+
 					<!-- Ash Gate Pass List Card -->
-					<GenericTile class="gpmsDashCard ashListCard" press=".onPressAshGatePassList" header="ASH GP LIST" subheader="Ash Requests &amp; Approvals">
+					<GenericTile class="gpmsDashCard ashListCard" press=".onPressAshGatePassList" header="ASH GP LIST" subheader="Ash Gate Passes">
 						<TileContent footer="Total Records">
 							<NumericContent value="{hodCounts>/ashGpListCount}" withMargin="false" valueColor="Good"/>
 						</TileContent>

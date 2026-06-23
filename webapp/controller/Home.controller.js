@@ -165,6 +165,14 @@ sap.ui.define([
 			this.getRouter().navTo("AshGatePassCreation");
 		},
 
+		onPressAshGatePassRequest: function () {
+			this.getRouter().navTo("AshGatePassRequest");
+		},
+
+		onPressAshGatePassRequestList: function () {
+			this.getRouter().navTo("AshGatePassRequestList");
+		},
+
 		onPressAshGatePassList: function () {
 			this.getRouter().navTo("AshGatePassList");
 		},

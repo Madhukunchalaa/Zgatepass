@@ -110,6 +110,32 @@ sap.ui.define([
 			}
 		},
 
+		onDownloadExcel: function () {
+			var oTable = this.getView().byId("scrapGpTable");
+			var oBinding = oTable.getBinding("items");
+			var aContexts = oBinding ? oBinding.getCurrentContexts() : [];
+			if (!aContexts.length) {
+				sap.m.MessageToast.show("No data to export.");
+				return;
+			}
+			var aRows = aContexts.map(function (oCtx) {
+				var o = oCtx.getObject();
+				return {
+					"Gate Pass No": o.gatePassNo || "",
+					"Req No": o.requestId || "",
+					"Date": o.requestDateStr || "",
+					"Customer": o.customerName || "",
+					"Customer GST": o.customerGst || "",
+					"Vehicle No": o.vehicleNo || ""
+				};
+			});
+			var ws = XLSX.utils.json_to_sheet(aRows);
+			var wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, "Scrap Gate Pass List");
+			XLSX.writeFile(wb, "Scrap_Gate_Pass_List.xlsx");
+			sap.m.MessageToast.show("Scrap Gate Pass List downloaded.");
+		},
+
 		onRowPress: function (oEvent) {
 			var oItem = oEvent.getSource();
 			if (oItem.getMetadata().getName() === "sap.m.Button") {

@@ -1,46 +1,52 @@
 <mvc:View
-	controllerName="zgpms.meilpower.com.controller.AshGatePassList"
+	controllerName="zgpms.meilpower.com.controller.AshGatePassRequestList"
 	xmlns="sap.m"
 	xmlns:mvc="sap.ui.core.mvc"
-	xmlns:core="sap.ui.core"
 	height="100%">
 	<Page
-		title="Ash Gate Pass List"
+		title="Ash Gate Pass Request List"
 		showNavButton="true"
 		navButtonPress=".onNavBack"
 		class="gpmsPage">
 		<content>
 			<VBox class="sapUiSmallMargin">
 				<Table
-					id="ashListTable"
+					id="ashReqListTable"
 					items="{path: '/AshHdrSet', filters: [{path: 'GatePassType', operator: 'EQ', value1: 'NRGP'}]}"
-					noDataText="No Ash Gate Passes found"
+					noDataText="No Ash Gate Pass Requests found"
 					class="gpmsTable"
 					alternateRowColors="true">
 					<headerToolbar>
 						<OverflowToolbar>
-							<Title text="Ash Gate Passes" level="H2"/>
+							<Title text="Ash Gate Pass Requests" level="H2"/>
 							<ToolbarSpacer/>
-							<SearchField width="300px" search=".onSearch" placeholder="Search Gate Pass No..." class="gpmsFieldInput"/>
+							<SearchField width="300px" search=".onSearch" placeholder="Search Request No / Customer..." class="gpmsFieldInput"/>
 							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel"/>
 						</OverflowToolbar>
 					</headerToolbar>
 					<columns>
+						<Column><Text text="Request No" class="gpmsTableHeaderText"/></Column>
 						<Column><Text text="Gate Pass No" class="gpmsTableHeaderText"/></Column>
 						<Column><Text text="Sales Document" class="gpmsTableHeaderText"/></Column>
 						<Column><Text text="Customer Name" class="gpmsTableHeaderText"/></Column>
 						<Column><Text text="Vehicle No" class="gpmsTableHeaderText"/></Column>
 						<Column><Text text="GP Date" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Approval" class="gpmsTableHeaderText"/></Column>
 						<Column hAlign="Center" width="4rem"><Text text="Action" class="gpmsTableHeaderText"/></Column>
 					</columns>
 					<items>
 						<ColumnListItem type="Navigation" press=".onRowPress" class="gpmsTableRow">
 							<cells>
+								<Text text="{GatePassReqNo}" class="gpmsTableText"/>
 								<Text text="{GatePassNo}" class="gpmsTableText"/>
 								<Text text="{SalesDocument}" class="gpmsTableText"/>
 								<Text text="{CustomerName}" class="gpmsTableText"/>
 								<Text text="{VehicleNo}" class="gpmsTableText"/>
 								<Text text="{path: 'GPDate', formatter: '.formatDate'}" class="gpmsTableText"/>
+								<ObjectStatus
+									text="{= ${Approval1} === 'A1' ? 'Approved' : ${Approval1} === 'R' ? 'Rejected' : 'Pending' }"
+									state="{= ${Approval1} === 'A1' ? 'Success' : ${Approval1} === 'R' ? 'Error' : 'Warning' }"
+									icon="{= ${Approval1} === 'A1' ? 'sap-icon://accept' : ${Approval1} === 'R' ? 'sap-icon://cancel' : 'sap-icon://pending' }"/>
 								<Button icon="sap-icon://navigation-right-arrow" type="Transparent" press=".onRowPress" tooltip="Open Details"/>
 							</cells>
 						</ColumnListItem>

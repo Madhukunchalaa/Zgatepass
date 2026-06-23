@@ -31,6 +31,7 @@
 							<Button icon="sap-icon://sort" tooltip="Sort" press=".onSort" type="Transparent"/>
 							<Button icon="sap-icon://filter" tooltip="Filter" press=".onFilter" type="Transparent"/>
 							<Button text="Create Entry" icon="sap-icon://add" type="Emphasized" press=".onAddPCP" />
+							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel"/>
 						</OverflowToolbar>
 					</headerToolbar>
 					<columns>

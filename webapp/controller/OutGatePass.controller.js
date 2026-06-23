@@ -493,14 +493,15 @@ sap.ui.define([
 			oOutModel.setProperty("/FinalTotal", fTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }));
 
 			// Gate pass already exists — show logistics section immediately
-			if (oData.GatePassNo) {
+			if ((oData.GatePassNo || "").trim()) {
 				oOutModel.setProperty("/showLogistics", true);
-				oOutModel.setProperty("/ChallanNumber", oData.ChallanNumber || "");
+				var sChallan = oData.ChallanNumber || (oLocalLogistics ? oLocalLogistics.ChallanNumber : "") || "";
+				oOutModel.setProperty("/ChallanNumber", sChallan);
 				oOutModel.setProperty("/ChallanDate", oData.ChallanDate || null);
 				oOutModel.setProperty("/EWayBillNo", oData.EWayBillNo || "");
 				oOutModel.setProperty("/EWayBillDate", oData.EWayBillDate || null);
 				oOutModel.setProperty("/DCNotes", oData.DCNotes || "");
-				oOutModel.setProperty("/DocOptionIndex", oData.ChallanNumber ? 1 : 0);
+				oOutModel.setProperty("/DocOptionIndex", sChallan ? 1 : 0);
 				var sStatusVal;
 				if (oLocalLogistics && oLocalLogistics.GPStatus) {
 					sStatusVal = oLocalLogistics.GPStatus.trim().toUpperCase();
@@ -534,7 +535,7 @@ sap.ui.define([
 			var oOutModel = this.getView().getModel("out");
 			if (!oODataModel) { return; }
 
-			var aFilters = [new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)];
+			var aFilters = [new sap.ui.model.Filter("GatePassreqNo", sap.ui.model.FilterOperator.EQ, sReqNo)];
 			if (sGPType) {
 				aFilters.push(new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, sGPType));
 			}
@@ -543,8 +544,12 @@ sap.ui.define([
 				filters: aFilters,
 				urlParameters: { "$expand": "OutgateNav" },
 				success: function (oData) {
-					var oGP = oData.results && oData.results[0];
-					if (!oGP || !oGP.GatePassNo) { return; }
+					var aResults = oData.results || [];
+					var oGP = aResults.find(function (r) {
+						return (r.GatePassreqNo || "").trim() === sReqNo.trim();
+					});
+					console.log("[GPMS Debug] _checkExistingGatePass response: matched =", JSON.stringify(oGP ? { GatePassNo: oGP.GatePassNo, GatePassreqNo: oGP.GatePassreqNo } : "none"), "total results =", aResults.length);
+					if (!oGP || !(oGP.GatePassNo || "").trim()) { return; }
 
 					oOutModel.setProperty("/GatePassNo", oGP.GatePassNo);
 					oOutModel.setProperty("/GatePassType", oGP.GatePassType || oOutModel.getProperty("/GatePassType"));
@@ -560,7 +565,6 @@ sap.ui.define([
 					}
 					oOutModel.setProperty("/GatePassDate", sGPDateDisplay || new Date().toLocaleDateString("en-GB").split("/").join("-"));
 					oOutModel.setProperty("/showLogistics", true);
-					oOutModel.setProperty("/ChallanNumber", oGP.ChallanNumber || "");
 					oOutModel.setProperty("/ChallanDate", oGP.ChallanDate || null);
 					var oLocalLogistics2 = null;
 					try {
@@ -1396,7 +1400,7 @@ sap.ui.define([
 						LRNnumber: oOutData.LRNnumber || "",
 						VehicleNo: oOutData.VehicleNo || "",
 						InvoiceValue: oOutData.FinalTotal ? oOutData.FinalTotal.toString().replace(/,/g, "") : "",
-						RgpDescription: oOutData.UserRemarks || ""
+						RgpDescription: oOutData.CommonDesc || ""
 					});
 					oDialog.open();
 				});
@@ -1565,7 +1569,7 @@ sap.ui.define([
 				Vendor: oOut.Vendor || "",
 				VendorName: oOut.VendorName,
 				VendorGST: oOut.VendorGST,
-				VendorPerson: oOut.VendorPerson || "N/A",
+				VendorPerson: oOut.VendorPerson,
 				ZipCode: oOut.ZipCode || "",
 				City: oOut.City || "",
 				GatePassDate: sToday,

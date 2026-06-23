@@ -179,14 +179,24 @@
 					"target": ["TargetPCPList"]
 				},
 				{
+					"name": "AshGatePassRequest",
+					"pattern": "AshGatePassRequest",
+					"target": ["TargetAshGatePassRequest"]
+				},
+				{
 					"name": "AshGatePassCreation",
-					"pattern": "AshGatePassCreation",
+					"pattern": "AshGatePassCreation/:reqNo:",
 					"target": ["TargetAshGatePassCreation"]
 				},
 				{
 					"name": "AshGatePassList",
 					"pattern": "AshGatePassList",
 					"target": ["TargetAshGatePassList"]
+				},
+				{
+					"name": "AshGatePassRequestList",
+					"pattern": "AshGatePassRequestList",
+					"target": ["TargetAshGatePassRequestList"]
 				},
 				{
 					"name": "AshGatePassDetail",
@@ -340,6 +350,11 @@
 					"viewId": "PCPList",
 					"viewName": "PCPList"
 				},
+				"TargetAshGatePassRequest": {
+					"viewType": "XML",
+					"viewId": "AshGatePassRequest",
+					"viewName": "AshGatePassRequest"
+				},
 				"TargetAshGatePassCreation": {
 					"viewType": "XML",
 					"viewId": "AshGatePassCreation",
@@ -349,6 +364,11 @@
 					"viewType": "XML",
 					"viewId": "AshGatePassList",
 					"viewName": "AshGatePassList"
+				},
+				"TargetAshGatePassRequestList": {
+					"viewType": "XML",
+					"viewId": "AshGatePassRequestList",
+					"viewName": "AshGatePassRequestList"
 				},
 				"TargetAshGatePassDetail": {
 					"viewType": "XML",

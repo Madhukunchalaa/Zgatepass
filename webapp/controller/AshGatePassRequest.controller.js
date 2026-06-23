@@ -8,20 +8,15 @@ sap.ui.define([
 ], function (BaseController, JSONModel, Filter, FilterOperator, MessageBox, MessageToast) {
 	"use strict";
 
-	return BaseController.extend("zgpms.meilpower.com.controller.AshGatePassCreation", {
+	return BaseController.extend("zgpms.meilpower.com.controller.AshGatePassRequest", {
 
 		onInit: function () {
 			var oRouter = this.getRouter();
-			oRouter.getRoute("AshGatePassCreation").attachMatched(this._onRouteMatched, this);
+			oRouter.getRoute("AshGatePassRequest").attachMatched(this._onRouteMatched, this);
 		},
 
 		_onRouteMatched: function (oEvent) {
 			this._initModel();
-			var oArgs = oEvent.getParameter("arguments");
-			var sReqNo = oArgs.reqNo ? decodeURIComponent(oArgs.reqNo) : "";
-			if (sReqNo) {
-				this._loadRequest(sReqNo);
-			}
 		},
 
 		_initModel: function () {
@@ -38,7 +33,7 @@ sap.ui.define([
 				City: "",
 				Remarks: "",
 				VehicleNo: "",
-				ModeOfDispatch: "",
+				ModeOfDispatch: "ROAD",
 				TransporterName: "",
 				TransporterGst: "",
 				DCNotes: "",
@@ -53,112 +48,7 @@ sap.ui.define([
 			};
 
 			var oModel = new JSONModel(oData);
-			this.getView().setModel(oModel, "ash");
-		},
-
-		_loadRequest: function (sReqNo) {
-			var oODataModel = this.getOwnerComponent().getModel();
-			var that = this;
-
-			if (!oODataModel) {
-				MessageBox.error("SAP system is not connected.");
-				return;
-			}
-
-			sap.ui.core.BusyIndicator.show(0);
-			oODataModel.read("/AshHdrSet", {
-				filters: [
-					new Filter("GatePassReqNo", FilterOperator.EQ, sReqNo)
-				],
-				urlParameters: { "$expand": "ASHItmNav" },
-				success: function (oData) {
-					sap.ui.core.BusyIndicator.hide();
-					var oReq = oData.results && oData.results[0];
-					if (!oReq) {
-						MessageToast.show("Request " + sReqNo + " not found.");
-						return;
-					}
-					that._fillFromRequest(oReq, sReqNo);
-				},
-				error: function () {
-					sap.ui.core.BusyIndicator.hide();
-					MessageBox.error("Failed to load request " + sReqNo + ".");
-				}
-			});
-		},
-
-		_parseSAPDate: function (sDate) {
-			if (!sDate) return null;
-			if (sDate instanceof Date) return sDate;
-			if (typeof sDate === "string" && sDate.length === 8 && /^\d{8}$/.test(sDate)) {
-				if (/^0+$/.test(sDate)) return null;
-				return new Date(
-					parseInt(sDate.substr(0, 4), 10),
-					parseInt(sDate.substr(4, 2), 10) - 1,
-					parseInt(sDate.substr(6, 2), 10)
-				);
-			}
-			return null;
-		},
-
-		_fillFromRequest: function (oReq, sReqNo) {
-			var oModel = this.getView().getModel("ash");
-
-			var oGPDate = this._parseSAPDate(oReq.GPDate);
-			if (oGPDate) {
-				oModel.setProperty("/GPDate", oGPDate);
-			}
-
-			oModel.setProperty("/GatePassReqNo", oReq.GatePassReqNo || sReqNo);
-			oModel.setProperty("/SalesDocument", oReq.SalesDocument || "");
-			oModel.setProperty("/SoldToParty", oReq.SoldToParty || "");
-			oModel.setProperty("/CustomerName", oReq.CustomerName || "");
-			oModel.setProperty("/CustomerGst", oReq.CustomerGst || "");
-			oModel.setProperty("/City", oReq.City || "");
-			oModel.setProperty("/ZipCode", oReq.ZipCode || "");
-			oModel.setProperty("/Remarks", oReq.Remarks || "");
-			oModel.setProperty("/VehicleNo", oReq.VehicleNo || "");
-			oModel.setProperty("/ModeOfDispatch", oReq.ModeOfDispatch || "");
-			oModel.setProperty("/TransporterName", oReq.TransporterName || "");
-			oModel.setProperty("/TransporterGst", oReq.TransporterGst || "");
-			oModel.setProperty("/DCNotes", oReq.DCNotes || "");
-			oModel.setProperty("/DCNumber", oReq.DCNumber || "");
-			var sDCDate = oReq.DCDate || "";
-			if (sDCDate === "00000000") { sDCDate = ""; }
-			oModel.setProperty("/DCDate", sDCDate);
-			oModel.setProperty("/WBTicketNo", oReq.WBTicketNo || "");
-			oModel.setProperty("/Approval1", oReq.Approval1 || "");
-
-			var aItemsRaw = [];
-			if (oReq.ASHItmNav) {
-				if (Array.isArray(oReq.ASHItmNav)) {
-					aItemsRaw = oReq.ASHItmNav;
-				} else if (oReq.ASHItmNav.results) {
-					aItemsRaw = oReq.ASHItmNav.results;
-				}
-			}
-
-			var aItems = aItemsRaw.map(function (item, idx) {
-				var fPrice = parseFloat(item.ItemNetPrice || 0);
-				var fQty = parseFloat(item.RequestedQuantity || 0);
-				return {
-					SalesDocument: item.SalesDocument || oReq.SalesDocument || "",
-					GatePasstype: "NRGP",
-					ItemNo: item.ItemNo || String((idx + 1) * 10).padStart(6, '0'),
-					Material: item.Material || "",
-					MaterialDescription: item.MaterialDescription || "",
-					HSNCode: item.HSNCode || "",
-					RequestedQuantity: String(fQty.toFixed(3)),
-					UOM: item.UOM || "MT",
-					ItemNetPrice: fPrice.toFixed(2),
-					Totalvalue: (fQty * fPrice).toFixed(2),
-					GatePassNo: "",
-					GatePassReqNo: item.GatePassReqNo || sReqNo
-				};
-			});
-
-			oModel.setProperty("/ASHItmNav", aItems);
-			this.calculateTotal();
+			this.getView().setModel(oModel, "ashReq");
 		},
 
 		onNavBack: function () {
@@ -381,7 +271,7 @@ sap.ui.define([
 		},
 
 		_fillFromSaleOrder: function (oSelectedSO) {
-			var oModel = this.getView().getModel("ash");
+			var oModel = this.getView().getModel("ashReq");
 			oModel.setProperty("/SalesDocument", oSelectedSO.saleOrder);
 			oModel.setProperty("/SoldToParty", oSelectedSO.vendor);
 			oModel.setProperty("/CustomerName", oSelectedSO.vendorName);
@@ -395,7 +285,7 @@ sap.ui.define([
 		},
 
 		_clearForm: function () {
-			var oModel = this.getView().getModel("ash");
+			var oModel = this.getView().getModel("ashReq");
 			oModel.setProperty("/SalesDocument", "");
 			oModel.setProperty("/SoldToParty", "");
 			oModel.setProperty("/CustomerName", "");
@@ -408,17 +298,14 @@ sap.ui.define([
 		},
 
 		calculateTotal: function (oEvent) {
-			var oModel = this.getView().getModel("ash");
+			var oModel = this.getView().getModel("ashReq");
 
-			// If triggered by a liveChange event, write the current typed value
-			// into the model immediately (before two-way binding flushes on blur)
 			if (oEvent && oEvent.getSource) {
 				var oInput = oEvent.getSource();
 				var sLiveValue = oEvent.getParameter("value") || "";
-				var oCtx = oInput.getBindingContext("ash");
+				var oCtx = oInput.getBindingContext("ashReq");
 				if (oCtx) {
 					var sPath = oCtx.getPath();
-					// Determine which field changed: ItemNetPrice or RequestedQuantity
 					if (oInput.getBinding("value") && oInput.getBinding("value").getPath() === "ItemNetPrice") {
 						oModel.setProperty(sPath + "/ItemNetPrice", sLiveValue);
 					} else {
@@ -441,12 +328,11 @@ sap.ui.define([
 		},
 
 		onSubmit: function () {
-			var oModel = this.getView().getModel("ash");
+			var oModel = this.getView().getModel("ashReq");
 			var oData = oModel.getData();
 			var oODataModel = this.getOwnerComponent().getModel();
 			var that = this;
-			
-			// Validation
+
 			if (!oData.SalesDocument) { MessageBox.error("Please select a Sales Document."); return; }
 			if (!oData.VehicleNo) { MessageBox.error("Please enter Vehicle No."); return; }
 			if (!oData.ASHItmNav || oData.ASHItmNav.length === 0) {
@@ -488,7 +374,7 @@ sap.ui.define([
 				GatePassNo: "",
 				WBTicketNo: oData.WBTicketNo,
 				Message: "",
-				Approval1: oData.GatePassReqNo ? "A1" : "",
+				Approval1: "",
 				ASHItmNav: oData.ASHItmNav.map(function(item) {
 					return {
 						SalesDocument: item.SalesDocument || oData.SalesDocument,
@@ -517,110 +403,25 @@ sap.ui.define([
 				success: function (oResponse) {
 					sap.ui.core.BusyIndicator.hide();
 					var sGPNo = oResponse.GatePassNo || "";
-					var sMsg = oResponse.Message || "Gate Pass created successfully.";
+					var sMsg = oResponse.Message || "Ash Gate Pass Request submitted successfully.";
 					var sDisplayMsg = sMsg;
 					if (sGPNo && sMsg.indexOf(sGPNo) === -1) {
 						sDisplayMsg += "\nGate Pass Number: " + sGPNo;
 					}
 					MessageBox.success(sDisplayMsg, {
 						onClose: function () {
-							that.getRouter().navTo("AshGatePassList");
+							that.getRouter().navTo("AshGatePassRequestList");
 						}
 					});
 				},
 				error: function (oError) {
 					sap.ui.core.BusyIndicator.hide();
-					var sErrMsg = "Failed to create Ash Gate Pass.";
+					var sErrMsg = "Failed to submit Ash Gate Pass Request.";
 					try {
 						var oErrBody = JSON.parse(oError.responseText);
 						sErrMsg = (oErrBody.error && oErrBody.error.message && oErrBody.error.message.value) ? oErrBody.error.message.value : sErrMsg;
 					} catch (e) {}
 					MessageBox.error(sErrMsg);
-				}
-			});
-		},
-
-		onApprove: function () {
-			var oModel = this.getView().getModel("ash");
-			var oData = oModel.getData();
-			var oODataModel = this.getOwnerComponent().getModel();
-			var that = this;
-
-			if (!oData.GatePassReqNo) {
-				MessageBox.error("No request number found to approve.");
-				return;
-			}
-
-			if (!oODataModel) {
-				MessageBox.error("SAP system is not connected. Please contact your administrator.");
-				return;
-			}
-
-			MessageBox.confirm("Are you sure you want to approve request " + oData.GatePassReqNo + "?", {
-				onClose: function (oAction) {
-					if (oAction !== MessageBox.Action.OK) { return; }
-
-					var oPayload = {
-						GatePassType: "NRGP",
-						SalesDocument: oData.SalesDocument,
-						GatePassReqNo: oData.GatePassReqNo,
-						GPDate: that._formatDateToYYYYMMDD(oData.GPDate),
-						SoldToParty: oData.SoldToParty,
-						CustomerName: oData.CustomerName,
-						CustomerGst: oData.CustomerGst,
-						ZipCode: oData.ZipCode,
-						City: oData.City,
-						Remarks: oData.Remarks,
-						VehicleNo: oData.VehicleNo,
-						ModeOfDispatch: oData.ModeOfDispatch,
-						TransporterName: oData.TransporterName,
-						TransporterGst: oData.TransporterGst,
-						DCNotes: oData.DCNotes,
-						DCNumber: oData.DCNumber,
-						DCDate: oData.DCDate,
-						GatePassNo: "",
-						WBTicketNo: oData.WBTicketNo,
-						Message: "",
-						Approval1: "A1",
-						ASHItmNav: oData.ASHItmNav.map(function(item) {
-							return {
-								SalesDocument: item.SalesDocument || oData.SalesDocument,
-								GatePasstype: "NRGP",
-								ItemNo: item.ItemNo,
-								Material: item.Material,
-								MaterialDescription: item.MaterialDescription,
-								HSNCode: item.HSNCode,
-								RequestedQuantity: String(parseFloat(item.RequestedQuantity).toFixed(3)),
-								UOM: item.UOM,
-								ItemNetPrice: String(parseFloat(item.ItemNetPrice).toFixed(2)),
-								Totalvalue: String(parseFloat(item.Totalvalue).toFixed(2)),
-								GatePassNo: "",
-								GatePassReqNo: item.GatePassReqNo || oData.GatePassReqNo
-							};
-						})
-					};
-
-					sap.ui.core.BusyIndicator.show(0);
-					oODataModel.create("/AshHdrSet", oPayload, {
-						success: function (oResponse) {
-							sap.ui.core.BusyIndicator.hide();
-							var sMsg = oResponse.Message || "Request " + oData.GatePassReqNo + " approved successfully.";
-							MessageBox.success(sMsg, {
-								onClose: function () {
-									that.getRouter().navTo("AshGatePassRequestList");
-								}
-							});
-						},
-						error: function (oError) {
-							sap.ui.core.BusyIndicator.hide();
-							var sErrMsg = "Failed to approve request.";
-							try {
-								var oErrBody = JSON.parse(oError.responseText);
-								sErrMsg = (oErrBody.error && oErrBody.error.message && oErrBody.error.message.value) ? oErrBody.error.message.value : sErrMsg;
-							} catch (e) {}
-							MessageBox.error(sErrMsg);
-						}
-					});
 				}
 			});
 		},

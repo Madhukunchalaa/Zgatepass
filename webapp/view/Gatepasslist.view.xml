@@ -50,6 +50,7 @@
                         <Title text="Gate Pass Request List" level="H3" />
                         <ToolbarSpacer />
                         <Text id="idItemCountText" text="" />
+                        <Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcelButtonPress" tooltip="Export to Excel"/>
                     </Toolbar>
                 </headerToolbar>
 

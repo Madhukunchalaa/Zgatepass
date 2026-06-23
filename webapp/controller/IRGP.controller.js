@@ -806,6 +806,40 @@ sap.ui.define([
 			this._getRouter().navTo("IRGP", { step: "CREATE", gpNo: "NEW" });
 		},
 
+		onDownloadExcel: function () {
+			var oTable = this.byId("idIRGPListTable");
+			var oBinding = oTable.getBinding("items");
+			var aContexts = oBinding ? oBinding.getCurrentContexts() : [];
+			if (!aContexts.length) {
+				MessageToast.show("No data to export.");
+				return;
+			}
+
+			var STATUS_LABELS = {
+				"PENDING_RESERVATION": "Pending Reservation",
+				"PENDING_RECEIPT": "Completed Reservation",
+				"CLOSED": "Closed & Archived"
+			};
+
+			var aRows = aContexts.map(function (oCtx) {
+				var o = oCtx.getObject();
+				return {
+					"Gate Pass No": o.IRGPNo || "",
+					"Request Date": o.GEDate || "",
+					"Department": o.Department || "",
+					"Requested User": o.RequestUser || "",
+					"Contract Employee": o.ContractEmployeeName || "",
+					"Status": STATUS_LABELS[o.StatusCode] || o.StatusCode || ""
+				};
+			});
+
+			var ws = XLSX.utils.json_to_sheet(aRows);
+			var wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, "IRGP List");
+			XLSX.writeFile(wb, "IRGP_List.xlsx");
+			MessageToast.show("IRGP List downloaded.");
+		},
+
 		onFilterIRGPList: function (oEvent) {
 			var sKey = oEvent.getParameter("key");
 			var oTable = this.byId("idIRGPListTable");

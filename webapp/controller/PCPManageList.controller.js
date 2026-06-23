@@ -135,6 +135,32 @@ sap.ui.define([
 			this._storeAndNavigate(oItem, "PRINT");
 		},
 
+		onDownloadExcel: function () {
+			var aData = this.getView().getModel("pcpManageList").getProperty("/results") || [];
+			if (!aData.length) {
+				sap.m.MessageToast.show("No data to export.");
+				return;
+			}
+			var aRows = aData.map(function (o) {
+				return {
+					"PCP No": o.GatepassNo || "",
+					"PCP Date": o.PCPDate || "",
+					"Entry": o.EntryPoint || "",
+					"GE No": o.GateEntryNo || "",
+					"GE Date": o.GEDate || "",
+					"Supplier": o.VendorDesc || "",
+					"Items": o.FirstItemDesc || "",
+					"DC/INV No": o.DCNumber || "",
+					"Status": o.GatepassNo ? "Closed" : "Pending"
+				};
+			});
+			var ws = XLSX.utils.json_to_sheet(aRows);
+			var wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, "PCP List");
+			XLSX.writeFile(wb, "PCP_List.xlsx");
+			sap.m.MessageToast.show("PCP List downloaded.");
+		},
+
 		onCreateNew: function () {
 			this._storeAndNavigate(null, "CREATE");
 		},

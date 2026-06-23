@@ -100,6 +100,33 @@ sap.ui.define([
 
 		onFilter: function () {},
 
+		onDownloadExcel: function () {
+			var aData = this.getView().getModel("inspList").getProperty("/results") || [];
+			if (!aData.length) {
+				sap.m.MessageToast.show("No data to export.");
+				return;
+			}
+			var aRows = aData.map(function (o) {
+				return {
+					"GE Date": o.GEDate || "",
+					"GE No": o.GateEntryNo || "",
+					"Supplier": o.VendorDesc || "",
+					"Source Type": o.SourceType || "",
+					"Dept": o.Department || "",
+					"RGP No": o.RGPNumber || "",
+					"Inv No": o.DCNumber || "",
+					"RR No": o.RRNo || "",
+					"Gate Pass No": o.GatepassNo || "",
+					"Inspection Status": o.InspectionStatus || ""
+				};
+			});
+			var ws = XLSX.utils.json_to_sheet(aRows);
+			var wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, "Inspection List");
+			XLSX.writeFile(wb, "Inspection_List.xlsx");
+			sap.m.MessageToast.show("Inspection List downloaded.");
+		},
+
 		onViewEntry: function (oEvent) {
 			var oItem = oEvent.getSource().getBindingContext("inspList").getObject();
 			var sGEDate = this._toSAPDate(oItem.GEDateRaw || oItem.GEDate || "");

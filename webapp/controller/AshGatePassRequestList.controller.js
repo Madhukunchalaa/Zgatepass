@@ -6,14 +6,14 @@ sap.ui.define([
 ], function (BaseController, JSONModel, Filter, FilterOperator) {
 	"use strict";
 
-	return BaseController.extend("zgpms.meilpower.com.controller.AshGatePassList", {
+	return BaseController.extend("zgpms.meilpower.com.controller.AshGatePassRequestList", {
 
 		onInit: function () {
 			var oRouter = this.getRouter();
-			oRouter.getRoute("AshGatePassList").attachMatched(this._onRouteMatched, this);
+			oRouter.getRoute("AshGatePassRequestList").attachMatched(this._onRouteMatched, this);
 		},
 
-		_onRouteMatched: function (oEvent) {
+		_onRouteMatched: function () {
 			this._loadList();
 		},
 
@@ -30,12 +30,11 @@ sap.ui.define([
 
 		onSearch: function (oEvent) {
 			var sQuery = oEvent.getParameter("query") || oEvent.getParameter("newValue");
-			var oTable = this.getView().byId("ashListTable");
+			var oTable = this.getView().byId("ashReqListTable");
 			var oBinding = oTable.getBinding("items");
-			
+
 			var aFilters = [];
-			
-			// Always apply GatePassType eq 'NRGP' filter when using OData
+
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (oODataModel && oBinding && oBinding.getModel() === oODataModel) {
 				aFilters.push(new Filter("GatePassType", FilterOperator.EQ, "NRGP"));
@@ -44,13 +43,14 @@ sap.ui.define([
 			if (sQuery) {
 				var oSearchFilter = new Filter({
 					filters: [
+						new Filter("GatePassReqNo", FilterOperator.Contains, sQuery),
 						new Filter("GatePassNo", FilterOperator.Contains, sQuery),
 						new Filter("SalesDocument", FilterOperator.Contains, sQuery),
 						new Filter("CustomerName", FilterOperator.Contains, sQuery)
 					],
 					and: false
 				});
-				
+
 				if (aFilters.length > 0) {
 					aFilters.push(oSearchFilter);
 					oBinding.filter([new Filter({ filters: aFilters, and: true })]);
@@ -63,7 +63,7 @@ sap.ui.define([
 		},
 
 		onDownloadExcel: function () {
-			var oTable = this.getView().byId("ashListTable");
+			var oTable = this.getView().byId("ashReqListTable");
 			var oBinding = oTable.getBinding("items");
 			var aContexts = oBinding ? oBinding.getCurrentContexts() : [];
 			if (!aContexts.length) {
@@ -73,19 +73,22 @@ sap.ui.define([
 			var that = this;
 			var aRows = aContexts.map(function (oCtx) {
 				var o = oCtx.getObject();
+				var sApproval = o.Approval1 === "A" ? "Approved" : o.Approval1 === "R" ? "Rejected" : "Pending";
 				return {
+					"Request No": o.GatePassReqNo || "",
 					"Gate Pass No": o.GatePassNo || "",
 					"Sales Document": o.SalesDocument || "",
 					"Customer Name": o.CustomerName || "",
 					"Vehicle No": o.VehicleNo || "",
-					"GP Date": that.formatDate(o.GPDate) || ""
+					"GP Date": that.formatDate(o.GPDate) || "",
+					"Approval": sApproval
 				};
 			});
 			var ws = XLSX.utils.json_to_sheet(aRows);
 			var wb = XLSX.utils.book_new();
-			XLSX.utils.book_append_sheet(wb, ws, "Ash Gate Pass List");
-			XLSX.writeFile(wb, "Ash_Gate_Pass_List.xlsx");
-			sap.m.MessageToast.show("Ash Gate Pass List downloaded.");
+			XLSX.utils.book_append_sheet(wb, ws, "Ash GP Request List");
+			XLSX.writeFile(wb, "Ash_GP_Request_List.xlsx");
+			sap.m.MessageToast.show("Ash GP Request List downloaded.");
 		},
 
 		onRowPress: function (oEvent) {
@@ -94,17 +97,17 @@ sap.ui.define([
 				oItem = oItem.getParent();
 			}
 			var oContext = oItem.getBindingContext();
-			var sGPNo = oContext.getProperty("GatePassNo") || oContext.getProperty("requestId") || "";
-			
-			this.getRouter().navTo("AshGatePassDetail", {
-				gpNo: encodeURIComponent(sGPNo)
+			var sReqNo = oContext.getProperty("GatePassReqNo") || "";
+
+			this.getRouter().navTo("AshGatePassCreation", {
+				reqNo: encodeURIComponent(sReqNo)
 			});
 		},
 
 		formatDate: function (vDate) {
 			if (!vDate) return "";
 			if (vDate instanceof Date) {
-				return vDate.toLocaleDateString('en-GB'); // dd/mm/yyyy
+				return vDate.toLocaleDateString('en-GB');
 			}
 			if (typeof vDate === "string") {
 				if (vDate.length === 8 && !vDate.includes("-")) {

@@ -211,6 +211,36 @@ sap.ui.define([
 			}
 		},
 
+		onDownloadExcel: function () {
+			var oTable = this.byId("idItemsNRGPTable");
+			var oBinding = oTable.getBinding("items");
+			var aContexts = oBinding ? oBinding.getCurrentContexts() : [];
+			if (!aContexts.length) {
+				sap.m.MessageToast.show("No data to export.");
+				return;
+			}
+			var aRows = aContexts.map(function (oCtx) {
+				var o = oCtx.getObject();
+				return {
+					"GP No": o.GatePassNo || "",
+					"Req No": o.GatePassreqNo || "",
+					"Type": o.GatePassType || "",
+					"Date": o.GatePassDate || "",
+					"Plant": o.Plant || "",
+					"Department": o.Department || "",
+					"Vendor GST": o.VendorGST || "",
+					"Vehicle No": o.VehicleNo || "",
+					"Items": o.NoOfItems || 0,
+					"Status": o.GPStatusText || o.GPStatus || ""
+				};
+			});
+			var ws = XLSX.utils.json_to_sheet(aRows);
+			var wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, "Out Gate Pass List");
+			XLSX.writeFile(wb, "Out_Gate_Pass_List.xlsx");
+			sap.m.MessageToast.show("Out Gate Pass List downloaded.");
+		},
+
 		onColumnListItemPress: function (oEvent) {
 			var oItem = oEvent.getSource().getBindingContext("nrgpList").getObject();
 			if (oItem.GatePassType === "PO") {

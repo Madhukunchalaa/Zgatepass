@@ -340,6 +340,40 @@ sap.ui.define([
 			return "Warning";
 		},
 
+		onDownloadExcelButtonPress: function () {
+			var oTable = this.byId("idItemsGatePassTable");
+			var oBinding = oTable.getBinding("items");
+			var aContexts = oBinding ? oBinding.getCurrentContexts() : [];
+			if (!aContexts.length) {
+				sap.m.MessageToast.show("No data to export.");
+				return;
+			}
+			var aRows = aContexts.map(function (oCtx) {
+				var o = oCtx.getObject();
+				var sDate = "";
+				if (o.GatePassDate) {
+					var d = new Date(o.GatePassDate);
+					sDate = d.getDate().toString().padStart(2, "0") + "-" +
+						(d.getMonth() + 1).toString().padStart(2, "0") + "-" +
+						d.getFullYear();
+				}
+				return {
+					"Request No": o.GatePassReqNo || "",
+					"Type": o.GatePassType || "",
+					"Date": sDate,
+					"Status": o.Status || "",
+					"Plant": o.Plant || "",
+					"Vendor Name": o.VendorName || "",
+					"Department": o.Department || ""
+				};
+			});
+			var ws = XLSX.utils.json_to_sheet(aRows);
+			var wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, "Gate Pass Requests");
+			XLSX.writeFile(wb, "Gate_Pass_Requests.xlsx");
+			sap.m.MessageToast.show("Gate Pass Requests downloaded.");
+		},
+
 		showApproveBtn: function (sStatus, sApproval1, sApproval2, sApprovalReq, sStoreRemarks, sStoreAmmend) {
 			var sDerived = this.formatStatus(sStatus, sApproval1, sApproval2, sApprovalReq, sStoreRemarks, sStoreAmmend);
 			var oUserModel = sap.ui.getCore().getModel("user");

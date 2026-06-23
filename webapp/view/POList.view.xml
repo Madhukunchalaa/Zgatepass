@@ -26,6 +26,7 @@
 							<Title text="PO List" level="H3" class="gpmsSectionBarLabel"/>
 							<ToolbarSpacer/>
 							<SearchField placeholder="Search PO..." liveChange="onSearch" width="300px"/>
+							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" type="Default" tooltip="Export to Excel"/>
 						</Toolbar>
 					</headerToolbar>
 					<content>

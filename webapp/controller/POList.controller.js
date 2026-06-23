@@ -97,6 +97,29 @@ sap.ui.define([
 
 		onNavHome: function () {
 			this.getRouter().navTo("home");
+		},
+
+		onDownloadExcel: function () {
+			var aData = this.getView().getModel("poModel").getProperty("/results") || [];
+			if (!aData.length) {
+				sap.m.MessageToast.show("No data to export.");
+				return;
+			}
+			var aRows = aData.map(function (o) {
+				return {
+					"PO Number": o.PurchaseOrder || "",
+					"Gate Pass No": o.GatePassNo || "",
+					"Plant": o.Plant || "",
+					"Vendor": o.Vendor || "",
+					"Vendor Name": o.VendorDesc || "",
+					"GE Date": o.GEDateFormatted || ""
+				};
+			});
+			var ws = XLSX.utils.json_to_sheet(aRows);
+			var wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, "PO List");
+			XLSX.writeFile(wb, "PO_List.xlsx");
+			sap.m.MessageToast.show("PO List downloaded.");
 		}
 
 	});

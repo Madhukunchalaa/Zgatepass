@@ -22,6 +22,7 @@
 							<Title text="Scrap Requests" level="H2"/>
 							<ToolbarSpacer/>
 							<SearchField width="300px" search=".onSearch" placeholder="Search Request No..." class="gpmsFieldInput"/>
+							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel"/>
 						</OverflowToolbar>
 					</headerToolbar>
 					<columns>

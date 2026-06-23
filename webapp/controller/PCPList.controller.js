@@ -228,6 +228,33 @@ sap.ui.define([
 			this._oFilterDialog.open();
 		},
 
+		onDownloadExcel: function () {
+			var aData = this.getView().getModel("pcpList").getProperty("/results") || [];
+			if (!aData.length) {
+				sap.m.MessageToast.show("No data to export.");
+				return;
+			}
+			var aRows = aData.map(function (o) {
+				return {
+					"GE Date": o.GEDate || "",
+					"GE No": o.GateEntryNo || "",
+					"Supplier": o.VendorDesc || "",
+					"Source Type": o.SourceType || "",
+					"Dept": o.Department || "",
+					"RGP No": o.RGPNumber || "",
+					"Inv No": o.DCNumber || "",
+					"RR No": o.RRNo || "",
+					"Gate Pass No": o.GatepassNo || "",
+					"Inspection Status": o.InspectionStatus || ""
+				};
+			});
+			var ws = XLSX.utils.json_to_sheet(aRows);
+			var wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, "Gate Entry List");
+			XLSX.writeFile(wb, "Gate_Entry_List.xlsx");
+			sap.m.MessageToast.show("Gate Entry List downloaded.");
+		},
+
 		// ==========================================================
 		// POPUP LOGIC
 		// ==========================================================

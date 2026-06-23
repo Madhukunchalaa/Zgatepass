@@ -1179,13 +1179,39 @@
 .gpmsKpiScrapGP   { background: linear-gradient(135deg, #4E342E, #795548) !important; }
 .gpmsKpiAsh       { background: linear-gradient(135deg, #37474F, #546E7A) !important; }
 
+.gpmsKpiIrgp      { background: linear-gradient(135deg, #E65100, #F57C00) !important; }
+
 .gpmsKpiOutGP .gpmsKpiIcon,
 .gpmsKpiGateEntry .gpmsKpiIcon,
 .gpmsKpiScrapReq .gpmsKpiIcon,
 .gpmsKpiScrapGP .gpmsKpiIcon,
-.gpmsKpiAsh .gpmsKpiIcon {
+.gpmsKpiAsh .gpmsKpiIcon,
+.gpmsKpiIrgp .gpmsKpiIcon {
     color: rgba(255,255,255,0.85) !important;
 }
+
+/* ─── Analytics — Section Headers ─────────── */
+.gpmsAnalyticsSectionHdr {
+    margin: 1.2rem 0 0.5rem 0 !important;
+    padding: 0 0.2rem !important;
+    gap: 0.6rem !important;
+    align-items: center !important;
+}
+.gpmsAnalyticsSectionIcon.sapUiIcon {
+    font-size: 1.3rem !important;
+}
+.gpmsAnalyticsSectionTitle.sapMTitle {
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.3px !important;
+}
+.gpmsClrNrgp      { color: #6A1B9A !important; }
+.gpmsClrRgp       { color: #00695C !important; }
+.gpmsClrOutGP     { color: #1A237E !important; }
+.gpmsClrGateEntry { color: #0277BD !important; }
+.gpmsClrIrgp      { color: #E65100 !important; }
+.gpmsClrScrap     { color: #BF360C !important; }
+.gpmsClrAsh       { color: #37474F !important; }
 
 /* ─── Analytics — Slide-up & Fade-in Animations ─────────── */
 @keyframes gpmsAnimFadeIn {
