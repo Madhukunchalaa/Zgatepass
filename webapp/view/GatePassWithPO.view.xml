@@ -38,13 +38,15 @@
 						<VBox class="sapUiSmallMargin">
 							<Label text="Source Type" required="true" class="gpmsFieldLabel"/>
 							<Select id="idSourceType" selectedKey="{gpo>/SourceType}" width="100%" class="gpmsFieldInput" change=".onSourceTypeChange" enabled="{= !${gpo>/isExisting} }">
-								<core:Item key="" text="Select Type (PO/PCP/RGP/FREE)"/>
-								<core:Item key="PO_RGP" text="Purchase Order (PO) / Returnable GatePass (RGP)"/>
-								<core:Item key="PO" text="Only Purchase Order (PO)"/>
-								<core:Item key="PettyCash" text="Petty Cash Purchase(PCP)"/>
-								<core:Item key="FREE" text="FREE/SAMPLEs"/>
-								<core:Item key="SERVICE" text="SERVICE"/>
-								<core:Item key="STAFF_WELFARE" text="STAFF WELFARE"/>
+								<items>
+									<core:Item key="" text="Select Type (PO/PCP/RGP/FREE)"/>
+									<core:Item key="PO_RGP" text="Purchase Order (PO) / Returnable GatePass (RGP)"/>
+									<core:Item key="PO" text="Only Purchase Order (PO)"/>
+									<core:Item key="PettyCash" text="Petty Cash Purchase(PCP)"/>
+									<core:Item key="FREE" text="FREE/SAMPLEs"/>
+									<core:Item key="SERVICE" text="SERVICE"/>
+									<core:Item key="STAFF_WELFARE" text="STAFF WELFARE"/>
+								</items>
 							</Select>
 						</VBox>
 
@@ -77,22 +79,24 @@
 							<Select selectedKey="{gpo>/Department}" class="gpmsFieldInput" width="100%"
 								visible="{= ${gpo>/SourceType} !== 'PO' &amp;&amp; ${gpo>/SourceType} !== 'PO_RGP' }"
 								enabled="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }">
-								<core:Item key="" text="Select Department"/>
-								<core:Item key="ADMIN" text="ADMIN"/>
-								<core:Item key="C And I" text="C And I"/>
-								<core:Item key="CHEMICAL" text="CHEMICAL"/>
-								<core:Item key="CIVIL" text="CIVIL"/>
-								<core:Item key="ELECTRICAL" text="ELECTRICAL"/>
-								<core:Item key="PERFORMANCE" text="PERFORMANCE"/>
-								<core:Item key="IT" text="IT"/>
-								<core:Item key="MECHANICAL" text="MECHANICAL"/>
-								<core:Item key="OPERATION" text="OPERATION"/>
-								<core:Item key="SAFETY" text="SAFETY"/>
-								<core:Item key="STORES" text="STORES"/>
-								<core:Item key="FUEL" text="FUEL"/>
-								<core:Item key="ENVIRONMENT" text="ENVIRONMENT"/>
-								<core:Item key="F&amp;A" text="F&amp;A"/>
-								<core:Item key="PURCHASE" text="PURCHASE"/>
+								<items>
+									<core:Item key="" text="Select Department"/>
+									<core:Item key="ADMIN" text="ADMIN"/>
+									<core:Item key="C And I" text="C And I"/>
+									<core:Item key="CHEMICAL" text="CHEMICAL"/>
+									<core:Item key="CIVIL" text="CIVIL"/>
+									<core:Item key="ELECTRICAL" text="ELECTRICAL"/>
+									<core:Item key="PERFORMANCE" text="PERFORMANCE"/>
+									<core:Item key="IT" text="IT"/>
+									<core:Item key="MECHANICAL" text="MECHANICAL"/>
+									<core:Item key="OPERATION" text="OPERATION"/>
+									<core:Item key="SAFETY" text="SAFETY"/>
+									<core:Item key="STORES" text="STORES"/>
+									<core:Item key="FUEL" text="FUEL"/>
+									<core:Item key="ENVIRONMENT" text="ENVIRONMENT"/>
+									<core:Item key="F&amp;A" text="F&amp;A"/>
+									<core:Item key="PURCHASE" text="PURCHASE"/>
+								</items>
 							</Select>
 						</VBox>
  
@@ -141,9 +145,11 @@
 						<VBox class="sapUiSmallMargin" visible="true">
 							<Label text="Inspection Status" class="gpmsFieldLabel"/>
 							<Select id="idInspectionStatus" selectedKey="{gpo>/InspectionStatus}" width="100%" class="gpmsFieldInput" enabled="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }">
-								<core:Item key="Open" text="Open"/>
-								<core:Item key="Pending" text="Pending"/>
-								<core:Item key="Completed" text="Completed"/>
+								<items>
+									<core:Item key="Open" text="Open"/>
+									<core:Item key="Pending" text="Pending"/>
+									<core:Item key="Completed" text="Completed"/>
+								</items>
 							</Select>
 						</VBox>
 
@@ -257,29 +263,31 @@
 									<Input value="{gpo>RecievedQuantity}" placeholder="0.00" type="Number" textAlign="Right" class="gpmsTableInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 									<Select selectedKey="{gpo>UOM}" class="gpmsTableInput" width="100%"
 										enabled="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }">
-										<core:Item key="NOS" text="Number"/>
-										<core:Item key="FT"  text="Feet"/>
-										<core:Item key="KG"  text="Kilogram"/>
-										<core:Item key="LEN" text="Length"/>
-										<core:Item key="L"   text="Litre"/>
-										<core:Item key="LOD" text="Load"/>
-										<core:Item key="LOT" text="Lot"/>
-										<core:Item key="M"   text="Meters"/>
-										<core:Item key="MT"  text="Metric Tons"/>
-										<core:Item key="PAR" text="Pair"/>
-										<core:Item key="ROL" text="Roll"/>
-										<core:Item key="SET" text="Set"/>
-										<core:Item key="SHT" text="Sheet"/>
-										<core:Item key="SFT" text="Square Feet"/>
-										<core:Item key="M2"  text="Square Meter"/>
-										<core:Item key="EA"  text="Item"/>
-										<core:Item key="PCK" text="Pack"/>
-										<core:Item key="DAY" text="Days"/>
-										<core:Item key="PKT" text="Pocket"/>
-										<core:Item key="REA" text="Ream"/>
-										<core:Item key="TON" text="Tons"/>
-										<core:Item key="UN"  text="Unit"/>
-										<core:Item key="MON" text="Month"/>
+										<items>
+											<core:Item key="Number" text="Number"/>
+											<core:Item key="Feet" text="Feet"/>
+											<core:Item key="Kilogram" text="Kilogram"/>
+											<core:Item key="Length" text="Length"/>
+											<core:Item key="Litre" text="Litre"/>
+											<core:Item key="Load" text="Load"/>
+											<core:Item key="Lot" text="Lot"/>
+											<core:Item key="Meters" text="Meters"/>
+											<core:Item key="Metric Tons" text="Metric Tons"/>
+											<core:Item key="Pair" text="Pair"/>
+											<core:Item key="Roll" text="Roll"/>
+											<core:Item key="Set" text="Set"/>
+											<core:Item key="Sheet" text="Sheet"/>
+											<core:Item key="Square Feet" text="Square Feet"/>
+											<core:Item key="Square Meter" text="Square Meter"/>
+											<core:Item key="Item" text="Item"/>
+											<core:Item key="Pack" text="Pack"/>
+											<core:Item key="Days" text="Days"/>
+											<core:Item key="Pocket" text="Pocket"/>
+											<core:Item key="Ream" text="Ream"/>
+											<core:Item key="Tons" text="Tons"/>
+											<core:Item key="Unit" text="Unit"/>
+											<core:Item key="Month" text="Month"/>
+										</items>
 									</Select>
 									<Button icon="sap-icon://delete" type="Transparent" press=".onDeleteItem" class="gpmsDeleteBtn" visible="{= !${gpo>/isExisting} }"/>
 								</cells>

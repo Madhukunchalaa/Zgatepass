@@ -2,8 +2,9 @@ sap.ui.define([
 	"./BaseController",
 	"sap/ui/model/Filter",
 	"sap/ui/model/FilterOperator",
-	"sap/ui/model/json/JSONModel"
-], function (BaseController, Filter, FilterOperator, JSONModel) {
+	"sap/ui/model/json/JSONModel",
+	"zgpms/meilpower/com/utils/ExcelExport"
+], function (BaseController, Filter, FilterOperator, JSONModel, ExcelExport) {
 	"use strict";
 
 	return BaseController.extend("zgpms.meilpower.com.controller.GatePassList", {
@@ -99,8 +100,19 @@ sap.ui.define([
 								Status: that.formatStatus(oItem.Status, oItem.Approval1, oItem.Approval2, oItem.ApprovalReq, oItem.STORERemarks || oItem.StoreRemarks, oItem.StoreAmmend),
 								Plant: oItem.Plant ? String(oItem.Plant).trim() : "",
 								VendorName: oItem.VendorName ? String(oItem.VendorName).trim() : "",
+								Vendor: oItem.Vendor || "",
+								VendorGST: oItem.VendorGST || "",
+								City: oItem.City || "",
+								ZipCode: oItem.ZipCode || "",
 								Department: oItem.Department ? String(oItem.Department).trim() : "",
 								VehicleNo: oItem.VehicleNo ? String(oItem.VehicleNo).trim() : "",
+								ModeOfDispatch: oItem.ModeOfDispatch || "",
+								LRNumber: oItem.LRNumber || oItem.LRNnumber || "",
+								TransporterName: oItem.TransporterName || "",
+								ChallanNumber: oItem.ChallanNumber || "",
+								ChallanDate: oItem.ChallanDate || "",
+								Remarks: oItem.Remarks || "",
+								HODRemarks: oItem.HODRemarks || "",
 								GatePassDate: oItem.GatePassDate || null,
 								Approval1: oItem.Approval1 || "",
 								Approval2: oItem.Approval2 || "",
@@ -341,15 +353,16 @@ sap.ui.define([
 		},
 
 		onDownloadExcelButtonPress: function () {
-			var oTable = this.byId("idItemsGatePassTable");
-			var oBinding = oTable.getBinding("items");
-			var aContexts = oBinding ? oBinding.getCurrentContexts() : [];
-			if (!aContexts.length) {
+			var aObjects = this.getView().getModel("gatePassList").getProperty("/items") || [];
+			var dFrom = this.byId("idExcelFromDate").getDateValue();
+			var dTo = this.byId("idExcelToDate").getDateValue();
+			aObjects = ExcelExport.filterByDate(aObjects, "GatePassDate", dFrom, dTo);
+			if (!aObjects.length) {
 				sap.m.MessageToast.show("No data to export.");
 				return;
 			}
-			var aRows = aContexts.map(function (oCtx) {
-				var o = oCtx.getObject();
+			var aRows = [];
+			aObjects.forEach(function (o) {
 				var sDate = "";
 				if (o.GatePassDate) {
 					var d = new Date(o.GatePassDate);
@@ -357,21 +370,62 @@ sap.ui.define([
 						(d.getMonth() + 1).toString().padStart(2, "0") + "-" +
 						d.getFullYear();
 				}
-				return {
+				var oHeader = {
 					"Request No": o.GatePassReqNo || "",
+					"Gate Pass No": o.GatePassNo || "",
 					"Type": o.GatePassType || "",
 					"Date": sDate,
 					"Status": o.Status || "",
 					"Plant": o.Plant || "",
+					"Vendor Code": o.Vendor || "",
 					"Vendor Name": o.VendorName || "",
-					"Department": o.Department || ""
+					"Vendor GST": o.VendorGST || "",
+					"City": o.City || "",
+					"Zip Code": o.ZipCode || "",
+					"Department": o.Department || "",
+					"Vehicle No": o.VehicleNo || "",
+					"Mode of Dispatch": o.ModeOfDispatch || "",
+					"LR Number": o.LRNumber || "",
+					"Transporter": o.TransporterName || "",
+					"Challan No": o.ChallanNumber || "",
+					"Challan Date": o.ChallanDate || "",
+					"Remarks": o.Remarks || "",
+					"HOD Remarks": o.HODRemarks || "",
+					"Store Remarks": o.STORERemarks || "",
+					"Store Amend": o.StoreAmmend || ""
 				};
+				var aItems = (o.GateReqItmNav && o.GateReqItmNav.results) || (Array.isArray(o.GateReqItmNav) ? o.GateReqItmNav : []);
+				if (aItems.length > 0) {
+					aItems.forEach(function (itm) {
+						var oRow = Object.assign({}, oHeader);
+						oRow["Item No"] = itm.ItemNo || "";
+						oRow["Material"] = itm.Material || "";
+						oRow["Material Desc"] = itm.MaterialDesc || itm.Description || "";
+						oRow["HSN Code"] = itm.HSNCode || "";
+						oRow["Quantity"] = itm.Quantity || "";
+						oRow["Item UOM"] = itm.UOM || "";
+						aRows.push(oRow);
+					});
+				} else {
+					oHeader["Item No"] = "";
+					oHeader["Material"] = "";
+					oHeader["Material Desc"] = "";
+					oHeader["HSN Code"] = "";
+					oHeader["Quantity"] = "";
+					oHeader["Item UOM"] = "";
+					aRows.push(oHeader);
+				}
 			});
-			var ws = XLSX.utils.json_to_sheet(aRows);
-			var wb = XLSX.utils.book_new();
-			XLSX.utils.book_append_sheet(wb, ws, "Gate Pass Requests");
-			XLSX.writeFile(wb, "Gate_Pass_Requests.xlsx");
-			sap.m.MessageToast.show("Gate Pass Requests downloaded.");
+			var sType = this.byId("idTypeFilterSelect").getSelectedKey();
+			var sStatus = this.byId("idStatusFilterSelect").getSelectedKey();
+			var aParts = ["Gate_Pass"];
+			if (sType) { aParts.push(sType.replace(/\s+/g, "_")); }
+			if (sStatus) { aParts.push(sStatus.replace(/\s+/g, "_")); }
+			if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
+			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
+			var sFileName = aParts.join("_") + ".xlsx";
+			var sSheetName = aParts.join(" ");
+			ExcelExport.download(aRows, sSheetName, sFileName, 22);
 		},
 
 		showApproveBtn: function (sStatus, sApproval1, sApproval2, sApprovalReq, sStoreRemarks, sStoreAmmend) {

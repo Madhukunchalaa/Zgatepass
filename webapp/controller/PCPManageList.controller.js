@@ -3,8 +3,9 @@ sap.ui.define([
 	"sap/ui/model/json/JSONModel",
 	"sap/ui/model/Filter",
 	"sap/ui/model/FilterOperator",
-	"sap/m/MessageBox"
-], function (BaseController, JSONModel, Filter, FilterOperator, MessageBox) {
+	"sap/m/MessageBox",
+	"zgpms/meilpower/com/utils/ExcelExport"
+], function (BaseController, JSONModel, Filter, FilterOperator, MessageBox, ExcelExport) {
 	"use strict";
 
 	return BaseController.extend("zgpms.meilpower.com.controller.PCPManageList", {
@@ -137,12 +138,16 @@ sap.ui.define([
 
 		onDownloadExcel: function () {
 			var aData = this.getView().getModel("pcpManageList").getProperty("/results") || [];
+			var dFrom = this.byId("idExcelFromDate").getDateValue();
+			var dTo = this.byId("idExcelToDate").getDateValue();
+			aData = ExcelExport.filterByDate(aData, "GEDate", dFrom, dTo);
 			if (!aData.length) {
 				sap.m.MessageToast.show("No data to export.");
 				return;
 			}
-			var aRows = aData.map(function (o) {
-				return {
+			var aRows = [];
+			aData.forEach(function (o) {
+				var oHeader = {
 					"PCP No": o.GatepassNo || "",
 					"PCP Date": o.PCPDate || "",
 					"Entry": o.EntryPoint || "",
@@ -151,14 +156,46 @@ sap.ui.define([
 					"Supplier": o.VendorDesc || "",
 					"Items": o.FirstItemDesc || "",
 					"DC/INV No": o.DCNumber || "",
-					"Status": o.GatepassNo ? "Closed" : "Pending"
+					"Status": o.GatepassNo ? "Closed" : "Pending",
+					"Plant": o.Plant || "",
+					"Vendor": o.Vendor || "",
+					"Department": o.Department || "",
+					"Source Type": o.SourceType || "",
+					"RGP No": o.RGPNumber || "",
+					"RR No": o.RRNo || "",
+					"Budget Code": o.BudgetCode || "",
+					"Total Cost": o.TotalCost || "",
+					"Remarks": o.Remarks || "",
+					"Inspection Status": o.InspectionStatus || "",
+					"Inspected Date": o.Inspectiondate || "",
+					"DC Date": o.DCdate || ""
 				};
+				var aItems = (o.PCPItmNav && (Array.isArray(o.PCPItmNav) ? o.PCPItmNav : o.PCPItmNav.results)) || [];
+				if (aItems.length === 0) {
+					oHeader["Item No"] = "";
+					oHeader["Item Description"] = "";
+					oHeader["Order Qty"] = "";
+					oHeader["Received Qty"] = "";
+					oHeader["Item UOM"] = "";
+					oHeader["Item Total Cost"] = "";
+					aRows.push(oHeader);
+				} else {
+					aItems.forEach(function (item) {
+						var oRow = Object.assign({}, oHeader);
+						oRow["Item No"] = item.ItemNo || "";
+						oRow["Item Description"] = item.ItemDescription || "";
+						oRow["Order Qty"] = item.OrderQuantity || "";
+						oRow["Received Qty"] = item.RecievedQuantity || "";
+						oRow["Item UOM"] = item.UOM || "";
+						oRow["Item Total Cost"] = item.TotalCost || "";
+						aRows.push(oRow);
+					});
+				}
 			});
-			var ws = XLSX.utils.json_to_sheet(aRows);
-			var wb = XLSX.utils.book_new();
-			XLSX.utils.book_append_sheet(wb, ws, "PCP List");
-			XLSX.writeFile(wb, "PCP_List.xlsx");
-			sap.m.MessageToast.show("PCP List downloaded.");
+			var aParts = ["PCP_List"];
+			if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
+			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
+			ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx", 21);
 		},
 
 		onCreateNew: function () {

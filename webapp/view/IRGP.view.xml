@@ -21,6 +21,8 @@
 						<HBox>
 							<Button text="Create New IRGP" icon="sap-icon://add" type="Emphasized" press="onPressCreateNewIRGP" class="sapUiSmallMarginEnd"
 							visible="{= !${user>/IsGatepassUserOnly} }"/>
+							<DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px"/>
+							<DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px"/>
 							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel" class="sapUiSmallMarginEnd"/>
 							<Button icon="sap-icon://home" press="onNavHome" type="Default" tooltip="Go to Dashboard"/>
 						</HBox>

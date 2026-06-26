@@ -209,15 +209,21 @@
 						<VBox class="sapUiSmallMargin">
 							<Label text="Mode of Transport" class="gpmsFieldLabel"/>
 							<Select selectedKey="{inward>/InsuranceModeOfTransport}" width="100%" class="gpmsFieldInput">
-								<core:Item key="Road" text="Road"/>
-								<core:Item key="Rail" text="Rail"/>
-								<core:Item key="Air" text="Air"/>
-								<core:Item key="Courier" text="Courier"/>
+								<items>
+									<core:Item key="Road" text="Road"/>
+									<core:Item key="Rail" text="Rail"/>
+									<core:Item key="Air" text="Air"/>
+									<core:Item key="Courier" text="Courier"/>
+								</items>
 							</Select>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
-							<Label text="LR / Vehicle No" class="gpmsFieldLabel"/>
-							<Input value="{inward>/InsuranceVehicleNo}" class="gpmsFieldInput"/>
+							<Label text="Outward LR No." class="gpmsFieldLabel"/>
+							<Input value="{inward>/InsuranceLRNumber}" placeholder="Enter LR Number" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="Outward Vehicle No." class="gpmsFieldLabel"/>
+							<Input value="{inward>/InsuranceVehicleNo}" placeholder="Enter Vehicle No" class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="Invoice Value (Rs)" class="gpmsFieldLabel"/>

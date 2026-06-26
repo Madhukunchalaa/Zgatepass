@@ -26,6 +26,8 @@
 								search=".onSearch"
 								placeholder="Search Gate Pass No..."
 								class="gpmsFieldInput"/>
+							<DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px"/>
+							<DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px"/>
 							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel"/>
 						</OverflowToolbar>
 					</headerToolbar>

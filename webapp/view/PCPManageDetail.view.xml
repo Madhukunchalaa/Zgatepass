@@ -22,24 +22,16 @@
 					</headerToolbar>
 					<layout:Grid defaultSpan="XL4 L4 M6 S12" vSpacing="1">
 
-						<!-- Row 1: Entry Point | PCP Date | GE No -->
+						<!-- Row 1: GE Date | GE No | Entry Point -->
 						<VBox class="sapUiSmallMargin">
-							<Label text="Entry Point" required="true" class="gpmsFieldLabel"/>
-							<Input id="idEntryPoint"
-								value="{pcpDetail>/EntryPoint}"
-								placeholder="PLANT / OTHERS"
-								width="100%" class="gpmsFieldInput"
-								enabled="{pcpDetail>/editable}"/>
-						</VBox>
-
-						<VBox class="sapUiSmallMargin">
-							<Label text="PCP Date" required="true" class="gpmsFieldLabel"/>
-							<DatePicker id="idPCPDate"
-								value="{pcpDetail>/PCPDate}"
+							<Label text="GE Date" required="true" class="gpmsFieldLabel"/>
+							<DatePicker id="idPCPGEDate"
+								value="{pcpDetail>/GEDate}"
 								displayFormat="dd-MM-yyyy"
 								valueFormat="yyyy-MM-dd"
 								width="100%" class="gpmsFieldInput"
-								enabled="{pcpDetail>/editable}"/>
+								enabled="{pcpDetail>/editable}"
+								change=".onGEDateChange"/>
 						</VBox>
 
 						<VBox class="sapUiSmallMargin">
@@ -52,7 +44,32 @@
 								change=".onGENoChange"/>
 						</VBox>
 
-						<!-- Row 2: Supplier | GE Date | Department -->
+						<VBox class="sapUiSmallMargin">
+							<Label text="Entry Point" required="true" class="gpmsFieldLabel"/>
+							<Select id="idEntryPoint"
+								selectedKey="{pcpDetail>/EntryPoint}"
+								width="100%"
+								enabled="{pcpDetail>/editable}"
+								class="gpmsFieldInput">
+								<items>
+									<core:Item key="" text="Select Entry Point"/>
+									<core:Item key="PLANT" text="PLANT"/>
+									<core:Item key="OTHERS" text="OTHERS"/>
+								</items>
+							</Select>
+						</VBox>
+
+						<!-- Row 2: PCP Date | Supplier | Department -->
+						<VBox class="sapUiSmallMargin">
+							<Label text="PCP Date" required="true" class="gpmsFieldLabel"/>
+							<DatePicker id="idPCPDate"
+								value="{pcpDetail>/PCPDate}"
+								displayFormat="dd-MM-yyyy"
+								valueFormat="yyyy-MM-dd"
+								width="100%" class="gpmsFieldInput"
+								enabled="{pcpDetail>/editable}"/>
+						</VBox>
+
 						<VBox class="sapUiSmallMargin">
 							<Label text="Supplier" class="gpmsFieldLabel"/>
 							<Input id="idSupplier"
@@ -60,17 +77,6 @@
 								placeholder="Supplier name"
 								width="100%" class="gpmsFieldInput"
 								enabled="{pcpDetail>/editable}"/>
-						</VBox>
-
-						<VBox class="sapUiSmallMargin">
-							<Label text="GE Date" class="gpmsFieldLabel"/>
-							<DatePicker id="idPCPGEDate"
-								value="{pcpDetail>/GEDate}"
-								displayFormat="dd-MM-yyyy"
-								valueFormat="yyyy-MM-dd"
-								width="100%" class="gpmsFieldInput"
-								enabled="{pcpDetail>/editable}"
-								change=".onGEDateChange"/>
 						</VBox>
 
 						<VBox class="sapUiSmallMargin">
@@ -111,36 +117,6 @@
 								enabled="{pcpDetail>/editable}"/>
 						</VBox>
 
-						<!-- Row 4: Item Description | Qty | UOM -->
-						<VBox class="sapUiSmallMargin">
-							<Label text="Item Description" required="true" class="gpmsFieldLabel"/>
-							<Input id="idItemDesc"
-								value="{pcpDetail>/ItemDescription}"
-								placeholder="Item Description"
-								width="100%" class="gpmsFieldInput"
-								enabled="{pcpDetail>/editable}"/>
-						</VBox>
-
-						<VBox class="sapUiSmallMargin">
-							<Label text="Qty" required="true" class="gpmsFieldLabel"/>
-							<Input id="idQty"
-								value="{pcpDetail>/RecievedQuantity}"
-								placeholder="0.000"
-								type="Number"
-								width="100%" class="gpmsFieldInput"
-								enabled="{pcpDetail>/editable}"/>
-						</VBox>
-
-						<VBox class="sapUiSmallMargin">
-							<Label text="UOM" required="true" class="gpmsFieldLabel"/>
-							<Input id="idUOM"
-								value="{pcpDetail>/UOM}"
-								placeholder="NOS / KG / MT / EA"
-								width="100%" class="gpmsFieldInput"
-								enabled="{pcpDetail>/editable}"/>
-						</VBox>
-
-						<!-- Row 5: Total Cost -->
 						<VBox class="sapUiSmallMargin">
 							<Label text="Total Cost (in Rs)" required="true" class="gpmsFieldLabel"/>
 							<Input id="idPCPTotalCost"
@@ -152,6 +128,65 @@
 						</VBox>
 
 					</layout:Grid>
+				</Panel>
+
+				<!-- Items Table -->
+				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginBottom">
+					<headerToolbar>
+						<Toolbar height="3rem">
+							<core:Icon src="sap-icon://table-view" class="sapUiSmallMarginEnd"/>
+							<Title text="LINE ITEMS" level="H3"/>
+							<ToolbarSpacer/>
+							<Button text="Add Row" icon="sap-icon://add" type="Emphasized" press=".onAddItem"
+								visible="{pcpDetail>/editable}" class="sapUiTinyMarginEnd"/>
+						</Toolbar>
+					</headerToolbar>
+					<Table items="{pcpDetail>/items}" class="gpmsItemTable" alternateRowColors="true">
+						<columns>
+							<Column width="3rem" hAlign="Center"><Text text="#" class="gpmsHeaderText"/></Column>
+							<Column><Text text="Item Description" class="gpmsHeaderText"/></Column>
+							<Column width="8rem" hAlign="Right"><Text text="Qty" class="gpmsHeaderText"/></Column>
+							<Column width="7rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
+							<Column width="4rem" hAlign="Center" visible="{pcpDetail>/editable}"><Text text="" class="gpmsHeaderText"/></Column>
+						</columns>
+						<items>
+							<ColumnListItem>
+								<cells>
+									<Text text="{pcpDetail>sno}"/>
+									<Input value="{pcpDetail>ItemDescription}" placeholder="Item Description" class="gpmsTableInput" editable="{pcpDetail>/editable}"/>
+									<Input value="{pcpDetail>RecievedQuantity}" type="Number" textAlign="Right" class="gpmsTableInput" editable="{pcpDetail>/editable}"/>
+									<Select selectedKey="{pcpDetail>UOM}" class="gpmsTableInput" width="100%" enabled="{pcpDetail>/editable}">
+										<items>
+											<core:Item key="Number" text="Number"/>
+											<core:Item key="Feet" text="Feet"/>
+											<core:Item key="Kilogram" text="Kilogram"/>
+											<core:Item key="Length" text="Length"/>
+											<core:Item key="Litre" text="Litre"/>
+											<core:Item key="Load" text="Load"/>
+											<core:Item key="Lot" text="Lot"/>
+											<core:Item key="Meters" text="Meters"/>
+											<core:Item key="Metric Tons" text="Metric Tons"/>
+											<core:Item key="Pair" text="Pair"/>
+											<core:Item key="Roll" text="Roll"/>
+											<core:Item key="Set" text="Set"/>
+											<core:Item key="Sheet" text="Sheet"/>
+											<core:Item key="Square Feet" text="Square Feet"/>
+											<core:Item key="Square Meter" text="Square Meter"/>
+											<core:Item key="Item" text="Item"/>
+											<core:Item key="Pack" text="Pack"/>
+											<core:Item key="Days" text="Days"/>
+											<core:Item key="Pocket" text="Pocket"/>
+											<core:Item key="Ream" text="Ream"/>
+											<core:Item key="Tons" text="Tons"/>
+											<core:Item key="Unit" text="Unit"/>
+											<core:Item key="Month" text="Month"/>
+										</items>
+									</Select>
+									<Button icon="sap-icon://delete" type="Transparent" press=".onDeleteItem" class="gpmsDeleteBtn" visible="{pcpDetail>/editable}"/>
+								</cells>
+							</ColumnListItem>
+						</items>
+					</Table>
 				</Panel>
 
 				<!-- Generated GP No banner -->

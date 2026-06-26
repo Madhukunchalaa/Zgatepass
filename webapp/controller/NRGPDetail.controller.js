@@ -49,7 +49,7 @@ sap.ui.define([
 				City: "",
 				ZipCode: "",
 				VendorAddress: "",
-				PurchasingDoc: "",
+				// PurchasingDoc: "null",
 				NoOfPacakages: 0,
 				LRNnumber: "",
 				VehicleNo: "",
@@ -73,7 +73,8 @@ sap.ui.define([
 				InsuranceRequired: false,
 				items: [],
 				CommentsList: [],
-				FinalTotal: "0.00"
+				FinalTotal: "0.00",
+				isEditable: true
 			};
 			var oModel = this.getView().getModel("nrgp");
 			if (oModel) {
@@ -226,6 +227,7 @@ sap.ui.define([
 			}
 			oModel.setProperty("/GPStatus", sGPStatus);
 			oModel.setProperty("/StatusState", this._getStatusState(sGPStatus));
+			oModel.setProperty("/isEditable", sGPStatus !== "CLOSED" && sGPStatus !== "CANCELLED");
 			
 			oModel.setProperty("/ChallanNumber", oData.ChallanNumber || (oLocalLogistics ? oLocalLogistics.ChallanNumber : "") || "");
 			oModel.setProperty("/GateEntryNo", oData.GateEntryNo || "");
@@ -353,7 +355,9 @@ sap.ui.define([
 
 		onSelectStatusChange: function () {
 			var oModel = this.getView().getModel("nrgp");
-			oModel.setProperty("/StatusState", this._getStatusState(oModel.getProperty("/GPStatus")));
+			var sStatus = oModel.getProperty("/GPStatus");
+			oModel.setProperty("/StatusState", this._getStatusState(sStatus));
+			oModel.setProperty("/isEditable", sStatus !== "CLOSED" && sStatus !== "CANCELLED");
 		},
 
 		onTransportByChange: function (oEvent) {
@@ -452,7 +456,7 @@ sap.ui.define([
 				ZipCode: oData.ZipCode || "",
 				City: oData.City || "",
 				GatePassDate: sToday,
-				PurchasingDoc: oData.PurchasingDoc || "",
+				// PurchasingDoc: oData.PurchasingDoc || "",
 				ChallanDate: sChallanDate,
 				ReturnableDate: "",
 				ExtReturnDate: "",

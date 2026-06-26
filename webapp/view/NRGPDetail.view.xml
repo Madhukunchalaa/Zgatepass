@@ -57,7 +57,7 @@
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="Vendor Person" class="gpmsFieldLabel"/>
-							<Input value="{nrgp>/VendorPerson}" placeholder="Enter contact person" class="gpmsFieldInput"/>
+							<Input value="{nrgp>/VendorPerson}" placeholder="Enter contact person" class="gpmsFieldInput" editable="{nrgp>/isEditable}"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<layoutData>
@@ -133,7 +133,7 @@
 									<Input value="{path: 'nrgp>RecievedQuantity', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}"
 										textAlign="Right" valueLiveUpdate="true" width="100%"
 										liveChange=".onRecievedQuantityInputLiveChange" class="gpmsTableInput"
-										editable="{= ${nrgp>/GPStatus} === 'AM' || ${nrgp>/GPStatus} === 'AMENDMENT' || ${nrgp>/GPStatus} === 'OPEN' }"/>
+										editable="{nrgp>/isEditable}"/>
 									<Text text="{path: 'nrgp>BalanceQuantity', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" textAlign="Right" wrapping="false" class="gpmsBoldText"/>
 									<Text text="{path: 'nrgp>Totalvalue', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}" textAlign="Right" wrapping="false"/>
 									<Text text="{nrgp>Remarks}" wrapping="true"/>
@@ -176,7 +176,7 @@
 						</Toolbar>
 					</headerToolbar>
 					<VBox class="sapUiMediumMargin">
-						<RadioButtonGroup columns="2" selectedIndex="{nrgp>/DocOptionIndex}">
+						<RadioButtonGroup columns="2" selectedIndex="{nrgp>/DocOptionIndex}" enabled="{nrgp>/isEditable}">
 							<RadioButton text="DC Not Required" />
 							<RadioButton text="DC Required" />
 						</RadioButtonGroup>
@@ -186,15 +186,15 @@
 							<HBox wrap="Wrap" class="sapUiTinyMarginBottom">
 								<VBox width="25%" class="sapUiSmallMarginEnd">
 									<Label text="LR Number" class="gpmsFieldLabel"/>
-									<Input value="{nrgp>/LRNnumber}" placeholder="Enter LR Number" class="gpmsFieldInput" width="100%"/>
+									<Input value="{nrgp>/LRNnumber}" placeholder="Enter LR Number" class="gpmsFieldInput" width="100%" editable="{nrgp>/isEditable}"/>
 								</VBox>
 								<VBox width="25%" class="sapUiSmallMarginEnd">
 									<Label text="Vehicle No." class="gpmsFieldLabel"/>
-									<Input value="{nrgp>/VehicleNo}" placeholder="Enter Vehicle No" class="gpmsFieldInput" width="100%"/>
+									<Input value="{nrgp>/VehicleNo}" placeholder="Enter Vehicle No" class="gpmsFieldInput" width="100%" editable="{nrgp>/isEditable}"/>
 								</VBox>
 								<VBox width="45%">
 									<Label text="Transport By" class="gpmsFieldLabel"/>
-									<RadioButtonGroup columns="2" selectedIndex="{nrgp>/TransportByIndex}" select=".onTransportByChange" class="sapUiTinyMarginTop">
+									<RadioButtonGroup columns="2" selectedIndex="{nrgp>/TransportByIndex}" select=".onTransportByChange" class="sapUiTinyMarginTop" enabled="{nrgp>/isEditable}">
 										<RadioButton text="Self" />
 										<RadioButton text="Vendor" />
 									</RadioButtonGroup>
@@ -205,7 +205,7 @@
 							<HBox wrap="Wrap" class="sapUiSmallMarginTop">
 								<VBox width="50%" class="sapUiSmallMarginEnd">
 									<Label text="Mode of Transport" class="gpmsFieldLabel"/>
-									<Select selectedKey="{nrgp>/ModeOfTransport}" width="100%" class="gpmsFieldInput">
+									<Select selectedKey="{nrgp>/ModeOfTransport}" width="100%" class="gpmsFieldInput" enabled="{nrgp>/isEditable}">
 										<core:Item key="Road" text="By Road"/>
 										<core:Item key="Rail" text="By Rail"/>
 										<core:Item key="Air" text="By Air"/>
@@ -213,7 +213,7 @@
 								</VBox>
 								<VBox width="45%">
 									<Label text="Transporter Name" class="gpmsFieldLabel"/>
-									<Input value="{nrgp>/TransporterName}" placeholder="Enter Transporter Name" class="gpmsFieldInput" width="100%"/>
+									<Input value="{nrgp>/TransporterName}" placeholder="Enter Transporter Name" class="gpmsFieldInput" width="100%" editable="{nrgp>/isEditable}"/>
 								</VBox>
 							</HBox>
 
@@ -221,23 +221,23 @@
 							<HBox wrap="Wrap" class="sapUiSmallMarginTop">
 								<VBox width="50%" class="sapUiSmallMarginEnd">
 									<Label text="Transporter GST" class="gpmsFieldLabel"/>
-									<Input value="{nrgp>/TransporterGST}" placeholder="Enter Transporter GST" class="gpmsFieldInput" width="100%"/>
+									<Input value="{nrgp>/TransporterGST}" placeholder="Enter Transporter GST" class="gpmsFieldInput" width="100%" editable="{nrgp>/isEditable}"/>
 								</VBox>
 								<VBox width="45%">
 									<Label text="Challan No." class="gpmsFieldLabel"/>
-									<Input value="{nrgp>/ChallanNumber}" placeholder="Enter Challan No" class="gpmsFieldInput" width="100%"/>
+									<Input value="{nrgp>/ChallanNumber}" placeholder="Enter Challan No" class="gpmsFieldInput" width="100%" editable="{nrgp>/isEditable}"/>
 								</VBox>
 							</HBox>
 
 							<!-- Row 5: DC Notes (only when Required) -->
 							<VBox class="sapUiSmallMarginTop" visible="{= ${nrgp>/DocOptionIndex} === 1}">
 								<Label text="DC / DF Notes" class="gpmsFieldLabel"/>
-								<TextArea value="{nrgp>/DCNotes}" width="100%" rows="2" class="gpmsTextArea"/>
+								<TextArea value="{nrgp>/DCNotes}" width="100%" rows="2" class="gpmsTextArea" editable="{nrgp>/isEditable}"/>
 							</VBox>
 
 							<!-- Insurance Required Checkbox -->
 							<HBox class="sapUiSmallMarginTop" alignItems="Center">
-								<CheckBox id="idInsuranceRequiredNRGPCheckBox" text="Insurance Required" selected="{nrgp>/InsuranceRequired}" select=".onInsuranceRequiredCheckBoxSelect"/>
+								<CheckBox id="idInsuranceRequiredNRGPCheckBox" text="Insurance Required" selected="{nrgp>/InsuranceRequired}" select=".onInsuranceRequiredCheckBoxSelect" enabled="{nrgp>/isEditable}"/>
 							</HBox>
 
 							<!-- Row 6: Gate Pass Status -->
@@ -255,13 +255,13 @@
 							<!-- Row 7: Remarks -->
 							<VBox class="sapUiSmallMarginTop">
 								<Label text="Remarks" class="gpmsFieldLabel"/>
-								<TextArea value="{nrgp>/Remarks}" width="100%" rows="2" class="gpmsTextArea"/>
+								<TextArea value="{nrgp>/Remarks}" width="100%" rows="2" class="gpmsTextArea" editable="{nrgp>/isEditable}"/>
 							</VBox>
 						</VBox>
 
 						<!-- Comments Table -->
 						<VBox class="sapUiMediumMarginTop">
-							<Button text="Add Comment" icon="sap-icon://add" press=".onAddCommentButtonPress" class="gpmsAddBtn sapUiSmallMarginBottom"/>
+							<Button text="Add Comment" icon="sap-icon://add" press=".onAddCommentButtonPress" class="gpmsAddBtn sapUiSmallMarginBottom" enabled="{nrgp>/isEditable}"/>
 							<Table items="{nrgp>/CommentsList}" class="gpmsItemTable small">
 								<columns>
 									<Column><Text text="Comments" class="gpmsHeaderText"/></Column>

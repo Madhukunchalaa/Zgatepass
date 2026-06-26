@@ -47,7 +47,7 @@ sap.ui.define([
 				City: "",
 				ZipCode: "",
 				VendorAddress: "",
-				PurchasingDoc: "",
+				// PurchasingDoc: "",
 				NoOfPacakages: 0,
 				VehicleNo: "",
 				LRNumber: "",
@@ -73,7 +73,8 @@ sap.ui.define([
 				InsuranceRequired: false,
 				items: [],
 				CommentsList: [],
-				FinalTotal: "0.00"
+				FinalTotal: "0.00",
+				isEditable: true
 			};
 			var oModel = this.getView().getModel("rgp");
 			if (oModel) {
@@ -220,6 +221,7 @@ sap.ui.define([
 			var sGPStatus = (oData.GPStatus || "").trim().toUpperCase();
 			oModel.setProperty("/GPStatus", sGPStatus);
 			oModel.setProperty("/StatusState", this._getStatusState(sGPStatus));
+			oModel.setProperty("/isEditable", sGPStatus !== "CLOSED" && sGPStatus !== "CANCELLED");
 
 			var aRaw = (oData.OutgateNav && oData.OutgateNav.results) || [];
 			var aMapped = aRaw.map(function (it, i) {
@@ -339,7 +341,9 @@ sap.ui.define([
 
 		onSelectStatusChange: function () {
 			var oModel = this.getView().getModel("rgp");
-			oModel.setProperty("/StatusState", this._getStatusState(oModel.getProperty("/GPStatus")));
+			var sStatus = oModel.getProperty("/GPStatus");
+			oModel.setProperty("/StatusState", this._getStatusState(sStatus));
+			oModel.setProperty("/isEditable", sStatus !== "CLOSED" && sStatus !== "CANCELLED");
 		},
 
 		onAddCommentButtonPress: function () {
@@ -397,7 +401,7 @@ sap.ui.define([
 				ZipCode: oData.ZipCode || "",
 				City: oData.City || "",
 				GatePassDate: sToday,
-				PurchasingDoc: oData.PurchasingDoc || "",
+				// PurchasingDoc: oData.PurchasingDoc || "",
 				ChallanDate: sChallanDate,
 				ReturnableDate: this._dateToYYYYMMDD(oData.ReturnableDate) || "",
 				ExtReturnDate: this._dateToYYYYMMDD(oData.ExtReturnDate) || "",

@@ -2,8 +2,9 @@ sap.ui.define([
 	"./BaseController",
 	"sap/ui/model/Filter",
 	"sap/ui/model/FilterOperator",
-	"sap/ui/model/json/JSONModel"
-], function (BaseController, Filter, FilterOperator, JSONModel) {
+	"sap/ui/model/json/JSONModel",
+	"zgpms/meilpower/com/utils/ExcelExport"
+], function (BaseController, Filter, FilterOperator, JSONModel, ExcelExport) {
 	"use strict";
 
 	return BaseController.extend("zgpms.meilpower.com.controller.NRGPList", {
@@ -62,7 +63,25 @@ sap.ui.define([
 						GPStatus: sRawStatus,
 						GPStatusText: sDisplayStatus,
 						StatusState: that._getStatusState(sRawStatus),
-						NoOfItems: (oItem.OutgateNav && oItem.OutgateNav.results) ? oItem.OutgateNav.results.length : 0
+						NoOfItems: (oItem.OutgateNav && oItem.OutgateNav.results) ? oItem.OutgateNav.results.length : 0,
+						OutgateNav: oItem.OutgateNav || null,
+						VendorName: oItem.VendorName || "",
+						Vendor: oItem.Vendor || "",
+						ZipCode: oItem.ZipCode || "",
+						LRNumber: oItem.LRNumber || "",
+						ModeOfDispatch: oItem.ModeOfDispatch || "",
+						TransporterName: oItem.TransporterName || "",
+						TransporterGST: oItem.TransporterGST || "",
+						ChallanNumber: oItem.ChallanNumber || "",
+						ChallanDate: oItem.ChallanDate || "",
+						// PurchasingDoc: oItem.PurchasingDoc || "",
+						CommonDesc: oItem.CommonDesc || "",
+						NoOfPacakages: oItem.NoOfPacakages || "",
+						Remarks: oItem.Remarks || "",
+						InsuranceReq: oItem.InsuranceReq || "",
+						InsuranceDate: oItem.InsuranceDate || "",
+						InsuranceAmount: oItem.InsuranceAmount || "",
+						FiscalYear: oItem.FiscalYear || ""
 					};
 				});
 			}
@@ -110,7 +129,25 @@ sap.ui.define([
 							VehicleNo: oItem.VehicleNo || "",
 							GPStatus: oItem.GPStatus || "Pending",
 							StatusState: that._getStatusState(oItem.GPStatus || "Pending"),
-							NoOfItems: (oItem.OutgateNav && oItem.OutgateNav.results) ? oItem.OutgateNav.results.length : 0
+							NoOfItems: (oItem.OutgateNav && oItem.OutgateNav.results) ? oItem.OutgateNav.results.length : 0,
+							OutgateNav: oItem.OutgateNav || null,
+							VendorName: oItem.VendorName || "",
+							Vendor: oItem.Vendor || "",
+							ZipCode: oItem.ZipCode || "",
+							LRNumber: oItem.LRNumber || "",
+							ModeOfDispatch: oItem.ModeOfDispatch || "",
+							TransporterName: oItem.TransporterName || "",
+							TransporterGST: oItem.TransporterGST || "",
+							ChallanNumber: oItem.ChallanNumber || "",
+							ChallanDate: oItem.ChallanDate || "",
+							// PurchasingDoc: oItem.PurchasingDoc || "",
+							CommonDesc: oItem.CommonDesc || "",
+							NoOfPacakages: oItem.NoOfPacakages || "",
+							Remarks: oItem.Remarks || "",
+							InsuranceReq: oItem.InsuranceReq || "",
+							InsuranceDate: oItem.InsuranceDate || "",
+							InsuranceAmount: oItem.InsuranceAmount || "",
+							FiscalYear: oItem.FiscalYear || ""
 						};
 					});
 					aAllResults = aAllResults.concat(aPoResults);
@@ -212,16 +249,17 @@ sap.ui.define([
 		},
 
 		onDownloadExcel: function () {
-			var oTable = this.byId("idItemsNRGPTable");
-			var oBinding = oTable.getBinding("items");
-			var aContexts = oBinding ? oBinding.getCurrentContexts() : [];
-			if (!aContexts.length) {
+			var aObjects = this.getView().getModel("nrgpList").getProperty("/items") || [];
+			var dFrom = this.byId("idNRGPFromDatePicker").getDateValue();
+			var dTo = this.byId("idNRGPToDatePicker").getDateValue();
+			aObjects = ExcelExport.filterByDate(aObjects, "GatePassDate", dFrom, dTo);
+			if (!aObjects.length) {
 				sap.m.MessageToast.show("No data to export.");
 				return;
 			}
-			var aRows = aContexts.map(function (oCtx) {
-				var o = oCtx.getObject();
-				return {
+			var aRows = [];
+			aObjects.forEach(function (o) {
+				var oHeader = {
 					"GP No": o.GatePassNo || "",
 					"Req No": o.GatePassreqNo || "",
 					"Type": o.GatePassType || "",
@@ -231,14 +269,66 @@ sap.ui.define([
 					"Vendor GST": o.VendorGST || "",
 					"Vehicle No": o.VehicleNo || "",
 					"Items": o.NoOfItems || 0,
-					"Status": o.GPStatusText || o.GPStatus || ""
+					"Status": o.GPStatusText || o.GPStatus || "",
+					"Vendor Name": o.VendorName || "",
+					"Vendor Code": o.Vendor || "",
+					"City": o.City || "",
+					"Zip Code": o.ZipCode || "",
+					"LR Number": o.LRNumber || "",
+					"Mode of Dispatch": o.ModeOfDispatch || "",
+					"Transporter": o.TransporterName || "",
+					"Transporter GST": o.TransporterGST || "",
+					"Challan No": o.ChallanNumber || "",
+					"Challan Date": o.ChallanDate || "",
+					"Purchasing Doc": o.PurchasingDoc || "",
+					"Description": o.CommonDesc || "",
+					"No of Packages": o.NoOfPacakages || "",
+					"Remarks": o.Remarks || "",
+					"Insurance Required": o.InsuranceReq || "",
+					"Insurance Date": o.InsuranceDate || "",
+					"Insurance Amount": o.InsuranceAmount || "",
+					"Fiscal Year": o.FiscalYear || ""
 				};
+				var aItems = (o.OutgateNav && o.OutgateNav.results) || (Array.isArray(o.OutgateNav) ? o.OutgateNav : []);
+				if (aItems.length > 0) {
+					aItems.forEach(function (itm) {
+						var oRow = Object.assign({}, oHeader);
+						oRow["Item No"] = itm.ItemNo || "";
+						oRow["Material"] = itm.Material || "";
+						oRow["Material Desc"] = itm.MaterialDesc || itm.Description || "";
+						oRow["HSN Code"] = itm.HSNCode || "";
+						oRow["Sent Qty"] = itm.SentQuantity || itm.Quantity || "";
+						oRow["Received Qty"] = itm.RecievedQuantity || "";
+						oRow["Balance Qty"] = itm.BalanceQuantity || "";
+						oRow["Item UOM"] = itm.UOM || "";
+						oRow["Item Net Price"] = itm.ItemNetPrice || "";
+						oRow["Total Value"] = itm.Totalvalue || "";
+						aRows.push(oRow);
+					});
+				} else {
+					oHeader["Item No"] = "";
+					oHeader["Material"] = "";
+					oHeader["Material Desc"] = "";
+					oHeader["HSN Code"] = "";
+					oHeader["Sent Qty"] = "";
+					oHeader["Received Qty"] = "";
+					oHeader["Balance Qty"] = "";
+					oHeader["Item UOM"] = "";
+					oHeader["Item Net Price"] = "";
+					oHeader["Total Value"] = "";
+					aRows.push(oHeader);
+				}
 			});
-			var ws = XLSX.utils.json_to_sheet(aRows);
-			var wb = XLSX.utils.book_new();
-			XLSX.utils.book_append_sheet(wb, ws, "Out Gate Pass List");
-			XLSX.writeFile(wb, "Out_Gate_Pass_List.xlsx");
-			sap.m.MessageToast.show("Out Gate Pass List downloaded.");
+			var sType = this.byId("idNRGPTypeSelect").getSelectedKey();
+			var sStatus = this.byId("idNRGPStatusSelect").getSelectedKey();
+			var aParts = ["Out_Gate_Pass"];
+			if (sType) { aParts.push(sType.replace(/\s+/g, "_")); }
+			if (sStatus) { aParts.push(sStatus.replace(/\s+/g, "_")); }
+			if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
+			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
+			var sFileName = aParts.join("_") + ".xlsx";
+			var sSheetName = aParts.join(" ");
+			ExcelExport.download(aRows, sSheetName, sFileName, 28);
 		},
 
 		onColumnListItemPress: function (oEvent) {

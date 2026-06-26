@@ -10,7 +10,7 @@
 						<Title text="Form" class="gpmsPrimaryToolbarText" level="H3"/>
 					</Toolbar>
 				</headerToolbar>
-				<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" class="sapUiSmallMarginTop">
+				<layout:Grid defaultSpan="XL4 L4 M6 S12" vSpacing="0" class="sapUiSmallMarginTop">
 					
 					<!-- Row 1: 2 columns -->
 					<VBox class="sapUiSmallMargin">
@@ -26,16 +26,22 @@
 					<VBox class="sapUiSmallMargin">
 						<Label text="Outward Mode of Transport" class="gpmsFieldLabel"/>
 						<Select selectedKey="{insurance>/ModeOfTransport}" forceSelection="false" width="100%" class="gpmsFieldInput">
-							<core:Item key="" text="Select Mode of transport" />
-							<core:Item key="Road" text="Road" />
-							<core:Item key="Rail" text="Rail" />
-							<core:Item key="Air" text="Air" />
-							<core:Item key="Courier" text="Courier" />
+							<items>
+								<core:Item key="" text="Select Mode of transport" />
+								<core:Item key="Road" text="Road" />
+								<core:Item key="Rail" text="Rail" />
+								<core:Item key="Air" text="Air" />
+								<core:Item key="Courier" text="Courier" />
+							</items>
 						</Select>
 					</VBox>
 					<VBox class="sapUiSmallMargin">
-						<Label text="Outward L.R/Vehicle No." class="gpmsFieldLabel"/>
-						<Input value="{insurance>/VehicleNo}" placeholder="Enter LR or Vehicle No" class="gpmsFieldInput"/>
+						<Label text="Outward Vehicle No." class="gpmsFieldLabel"/>
+						<Input value="{insurance>/VehicleNo}" placeholder="Enter Vehicle No" class="gpmsFieldInput"/>
+					</VBox>
+					<VBox class="sapUiSmallMargin">
+						<Label text="Outward LR No." class="gpmsFieldLabel"/>
+						<Input value="{insurance>/LRNumber}" placeholder="Enter LR Number" class="gpmsFieldInput"/>
 					</VBox>
 
 					<!-- Row 4 -->

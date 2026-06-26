@@ -191,7 +191,7 @@ sap.ui.define([
 					DCdate: parseDate(oRaw.DCdate),
 					PCPNo: safeTrim(oRaw.GatepassNo || oRaw.PCPNo || oRaw.PcpNo || oRaw.GatePassNo),
 					BudgetCode: safeTrim(oRaw.BudgetCode),
-					TotalCost: safeTrim(oRaw.TotalCost || "0.00"),
+					TotalCost: (aExistingItems.length > 0 && aExistingItems[0].TotalCost) ? safeTrim(aExistingItems[0].TotalCost) : safeTrim(oRaw.TotalCost || "0.00"),
 					RRNo: safeTrim(oRaw.RRNo),
 					InspectionStatus: safeTrim(oRaw.InspectionStatus),
 					Inspectiondate: parseDate(oRaw.Inspectiondate),
@@ -200,7 +200,7 @@ sap.ui.define([
 					GatePassNo: safeTrim(oRaw.GatepassNo || oRaw.GatePassNo || oRaw.PCPNo || oRaw.PcpNo),
 					GateInPoNav: aMapped,
 					isExisting: true,
-					isEditMode: sMode === "EDIT"
+					isEditMode: sMode === "EDIT" && safeTrim(oRaw.InspectionStatus) !== "Completed"
 				});
 
 				// If RRNo is missing from gate entry data, fetch it from the PO header without touching items
@@ -544,7 +544,11 @@ sap.ui.define([
 					oModel.setProperty("/SourceType", oResult.SourceType || oModel.getProperty("/SourceType") || "");
 					oModel.setProperty("/PurchaseOrder", oResult.PurchaseOrder || "");
 					oModel.setProperty("/BudgetCode", oResult.BudgetCode || "");
-					oModel.setProperty("/TotalCost", oResult.TotalCost || "");
+					var sItemTotalCost = "";
+					if (oResult.PCPItmNav && oResult.PCPItmNav.results && oResult.PCPItmNav.results.length > 0) {
+						sItemTotalCost = oResult.PCPItmNav.results[0].TotalCost || "";
+					}
+					oModel.setProperty("/TotalCost", sItemTotalCost || oResult.TotalCost || "");
 					oModel.setProperty("/RRNo", oResult.RRNo || "");
 					oModel.setProperty("/Remarks", oResult.Remarks || "");
 					oModel.setProperty("/GatePassNo", oResult.GatepassNo || oResult.GatePassNo || "");
@@ -980,8 +984,8 @@ sap.ui.define([
 				DCdate: sDCDateSAP,
 				BudgetCode: oData.BudgetCode || "",
 				EntryPoint: "",
-				InspectionStatus: oData.InspectionStatus || "",
-				Inspectiondate: oData.Inspectiondate ? this._formatDateToSAP(oData.Inspectiondate) : "",
+				InspectionStatus: "Completed",
+				Inspectiondate: this._formatDateToSAP(oData.Inspectiondate || new Date().toISOString().split("T")[0]),
 				Remarks: oData.Remarks || "",
 				Message: "",
 				PCPItmNav: aNavItems

@@ -4,8 +4,9 @@ sap.ui.define([
 	"sap/ui/model/Filter",
 	"sap/ui/model/FilterOperator",
 	"sap/m/MessageBox",
-	"sap/ui/core/Fragment"
-], function (BaseController, JSONModel, Filter, FilterOperator, MessageBox, Fragment) {
+	"sap/ui/core/Fragment",
+	"zgpms/meilpower/com/utils/ExcelExport"
+], function (BaseController, JSONModel, Filter, FilterOperator, MessageBox, Fragment, ExcelExport) {
 	"use strict";
 
 	return BaseController.extend("zgpms.meilpower.com.controller.POList", {
@@ -101,25 +102,59 @@ sap.ui.define([
 
 		onDownloadExcel: function () {
 			var aData = this.getView().getModel("poModel").getProperty("/results") || [];
+			var dFrom = this.byId("idExcelFromDate").getDateValue();
+			var dTo = this.byId("idExcelToDate").getDateValue();
+			aData = ExcelExport.filterByDate(aData, "GEDateFormatted", dFrom, dTo);
 			if (!aData.length) {
 				sap.m.MessageToast.show("No data to export.");
 				return;
 			}
-			var aRows = aData.map(function (o) {
-				return {
+			var aRows = [];
+			aData.forEach(function (o) {
+				var oHeader = {
 					"PO Number": o.PurchaseOrder || "",
 					"Gate Pass No": o.GatePassNo || "",
 					"Plant": o.Plant || "",
 					"Vendor": o.Vendor || "",
 					"Vendor Name": o.VendorDesc || "",
-					"GE Date": o.GEDateFormatted || ""
+					"GE Date": o.GEDateFormatted || "",
+					"Department": o.Department || "",
+					"Source Type": o.SourceType || "",
+					"GE No": o.GateEntryNo || "",
+					"DC No": o.DCNumber || "",
+					"RR No": o.RRNo || "",
+					"Budget Code": o.BudgetCode || "",
+					"Total Cost": o.TotalCost || "",
+					"Inspection Status": o.InspectionStatus || ""
 				};
+				var aItems = (o.GateInPoNav && (Array.isArray(o.GateInPoNav) ? o.GateInPoNav : o.GateInPoNav.results)) || [];
+				if (aItems.length === 0) {
+					oHeader["Item No"] = "";
+					oHeader["Material"] = "";
+					oHeader["Item Description"] = "";
+					oHeader["Order Qty"] = "";
+					oHeader["Received Qty"] = "";
+					oHeader["Balance Qty"] = "";
+					oHeader["Item UOM"] = "";
+					aRows.push(oHeader);
+				} else {
+					aItems.forEach(function (item) {
+						var oRow = Object.assign({}, oHeader);
+						oRow["Item No"] = item.ItemNo || "";
+						oRow["Material"] = item.Material || "";
+						oRow["Item Description"] = item.ItemDescription || "";
+						oRow["Order Qty"] = item.OrderQuantity || "";
+						oRow["Received Qty"] = item.RecievedQuantity || "";
+						oRow["Balance Qty"] = item.BalanceQuantity || "";
+						oRow["Item UOM"] = item.UOM || "";
+						aRows.push(oRow);
+					});
+				}
 			});
-			var ws = XLSX.utils.json_to_sheet(aRows);
-			var wb = XLSX.utils.book_new();
-			XLSX.utils.book_append_sheet(wb, ws, "PO List");
-			XLSX.writeFile(wb, "PO_List.xlsx");
-			sap.m.MessageToast.show("PO List downloaded.");
+			var aParts = ["PO_List"];
+			if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
+			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
+			ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx", 14);
 		}
 
 	});

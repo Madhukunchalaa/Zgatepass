@@ -51,10 +51,11 @@ sap.ui.define([
 				TransporterName: "",
 				TransporterGST: "",
 				DCNotes: "",
+				LRNumber: "",
 				VehicleNo: "",
-				ModeOfTransport: "Road",
+				ModeOfTransport: "",
 				TransportByIndex: 1,
-				GateEntryNo: "",
+				// GateEntryNo: "",
 				EWayBillNo: "",
 				EWayBillDate: null,
 				InsuranceRequired: false,
@@ -66,6 +67,7 @@ sap.ui.define([
 				InsuranceVendor: "",
 				InsuranceVendorAddress: "",
 				InsuranceModeOfTransport: "Road",
+				InsuranceLRNumber: "",
 				InsuranceVehicleNo: "",
 				InsuranceDescription: "",
 				FinalTotal: "0.00"
@@ -78,18 +80,6 @@ sap.ui.define([
 			}
 		},
 
-
-		_formatDateForPayload: function (sDate) {
-			if (!sDate) { return ""; }
-			// If already YYYY-MM-DD
-			if (/^\d{4}-\d{2}-\d{2}$/.test(sDate)) { return sDate; }
-			// If DD-MM-YYYY, convert to YYYY-MM-DD
-			if (/^\d{2}-\d{2}-\d{4}$/.test(sDate)) {
-				var parts = sDate.split("-");
-				return parts[2] + "-" + parts[1] + "-" + parts[0];
-			}
-			return sDate;
-		},
 
 		onSearchRGP: function (oEvent) {
 			var sQuery = oEvent.getParameter("query");
@@ -212,6 +202,9 @@ sap.ui.define([
 			oModel.setProperty("/UserRemarks",    oData.Remarks || "");
 			oModel.setProperty("/HODRemarks",     oData.HODRemarks || "");
 			oModel.setProperty("/StoreRemarks",   oData.STORERemarks || oData.StoreRemarks || "");
+			oModel.setProperty("/LRNumber",          oData.LRNumber || oData.LRNnumber || "");
+			oModel.setProperty("/VehicleNo",         oData.VehicleNo || "");
+			oModel.setProperty("/ModeOfTransport",   oData.ModeOfDispatch || "Road");
 			oModel.setProperty("/InsuranceRequired", (oData.InsuranceReq || "").toLowerCase() === "yes");
 			oModel.setProperty("/InsuranceDate", oData.InsuranceDate || "");
 			oModel.setProperty("/InsuranceAmount", oData.InsuranceAmount || "");
@@ -238,6 +231,9 @@ sap.ui.define([
 				success: function (oData) {
 					var oResult = oData.results && oData.results[0];
 					if (!oResult) { return; }
+					if (oResult.VendorName && !oModel.getProperty("/VendorName")) {
+						oModel.setProperty("/VendorName", oResult.VendorName);
+					}
 					oModel.setProperty("/UserRemarks", oResult.Remarks || oModel.getProperty("/UserRemarks") || "");
 					oModel.setProperty("/HODRemarks", oResult.HODRemarks || oResult.HodRemarks || "");
 					oModel.setProperty("/StoreRemarks", oResult.STORERemarks || oResult.StoreRemarks || "");
@@ -337,14 +333,12 @@ sap.ui.define([
 					GatePassNo:         sGatePassNo,
 					ItemNo:             it._itemNo,
 					Material:           it.material,
-					Description:        (it.materialName || "").substring(0, 40),
 					UOM:                it.uom,
 					ItemNetPrice:       it._itemNetPrice,
 					SentQuantity:       parseFloat(it.sentQty).toFixed(3),
 					RecievedQuantity:   parseFloat(it.recvdQty).toFixed(3),
 					BalanceQuantity:    parseFloat(it.balQty).toFixed(3),
 					Totalvalue:         it._totalValue,
-					GatePassReqNo:      it._gatePassReqNo,
 					Remarks:            it._itemRemarks
 				};
 			});
@@ -355,23 +349,7 @@ sap.ui.define([
 				Plant:           oHdr.Plant           || "",
 				Vendor:          oHdr.Vendor          || "",
 				VendorName:      oHdr.VendorName      || "",
-				ZipCode:         oHdr.ZipCode         || "",
-				City:            oHdr.City            || "",
-				// GatePassDate:    oHdr.GatePassDate    || "",
-				PurchasingDoc:   oHdr.PurchasingDoc   || "",
-				ChallanDate:     oHdr.ChallanDate     || "",
-				GateEntryNo:     oHdr.GateEntryNo     || "",
-				Extreturndate:   this._formatDateForPayload(oModel.getProperty("/ExtReturnDate")) || "",
-				RecievedDate:    this._formatDateForPayload(oModel.getProperty("/ReceivedDate")) || "",
-				ReturnableDate:  oHdr.ReturnableDate  || "",
 				Department:      oHdr.Department      || "",
-				ChallanNumber:   "",
-				GateExitdate:    oHdr.GateExitdate    || "",
-				ReqEmpID:        oHdr.ReqEmpID        || "",
-				FinanceHODId:    oHdr.FinanceHODId    || "",
-				PlantHODId:      oHdr.PlantHODId      || "",
-				StoreHODId:      oHdr.StoreHODId      || "",
-				HODEmpID:        oHdr.HODEmpID        || "",
 				Remarks:         oModel.getProperty("/UserRemarks") || oModel.getProperty("/DCNotes") || oHdr.Remarks || "",
 				VehicleNo:       oModel.getProperty("/VehicleNo") || "",
 				ModeOfDispatch:  oModel.getProperty("/ModeOfTransport") || "",
@@ -644,6 +622,7 @@ sap.ui.define([
 				oModel.setProperty("/InsuranceVendor", oData.VendorName || "");
 				oModel.setProperty("/InsuranceVendorAddress", "");
 				oModel.setProperty("/InsuranceModeOfTransport", oData.ModeOfTransport || "Road");
+				oModel.setProperty("/InsuranceLRNumber", oData.LRNumber || "");
 				oModel.setProperty("/InsuranceVehicleNo", oData.VehicleNo || "");
 				oModel.setProperty("/InsuranceAmount", oData.FinalTotal ? oData.FinalTotal.toString().replace(/,/g, "") : "");
 				oModel.setProperty("/InsuranceDescription", oData.UserRemarks || "");

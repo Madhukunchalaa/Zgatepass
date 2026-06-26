@@ -445,7 +445,7 @@ sap.ui.define([
 			oOutModel.setProperty("/UserRemarks", oData.Remarks || "");
 			oOutModel.setProperty("/HODRemarks", oData.HODRemarks || "");
 			oOutModel.setProperty("/StoreRemarks", oData.STORERemarks || "");
-			oOutModel.setProperty("/LRNnumber", oData.LRNnumber || "");
+			oOutModel.setProperty("/LRNnumber", oData.LRNumber || oData.LRNnumber || "");
 			oOutModel.setProperty("/VehicleNo", oData.VehicleNo || "");
 			oOutModel.setProperty("/ModeOfTransport", oData.ModeOfDispatch || "");
 			oOutModel.setProperty("/Plant", oData.Plant || oData.Werks || "");
@@ -597,7 +597,7 @@ sap.ui.define([
 					}
 					console.log("[GPMS Debug] _checkExistingGatePass: setting /Status =", sGPStatusVal);
 					oOutModel.setProperty("/Status", sGPStatusVal);
-					oOutModel.setProperty("/LRNnumber", oGP.LRNnumber || oOutModel.getProperty("/LRNnumber"));
+					oOutModel.setProperty("/LRNnumber", oGP.LRNumber || oGP.LRNnumber || oOutModel.getProperty("/LRNnumber"));
 					oOutModel.setProperty("/VehicleNo", oGP.VehicleNo || oOutModel.getProperty("/VehicleNo"));
 					oOutModel.setProperty("/ModeOfTransport", oGP.ModeOfDispatch || oOutModel.getProperty("/ModeOfTransport"));
 					oOutModel.setProperty("/TransporterName", oGP.TransporterName || (oLocalLogistics2 ? oLocalLogistics2.TransporterName : "") || oOutModel.getProperty("/TransporterName"));
@@ -1397,7 +1397,7 @@ sap.ui.define([
 						Vendor: oOutData.VendorName || "",
 						VendorAddress: oOutData.VendorAddress || "",
 						ModeOfTransport: oOutData.ModeOfTransport || "Road",
-						LRNnumber: oOutData.LRNnumber || "",
+						LRNumber: oOutData.LRNnumber || "",
 						VehicleNo: oOutData.VehicleNo || "",
 						InvoiceValue: oOutData.FinalTotal ? oOutData.FinalTotal.toString().replace(/,/g, "") : "",
 						RgpDescription: oOutData.CommonDesc || ""
@@ -1573,7 +1573,7 @@ sap.ui.define([
 				ZipCode: oOut.ZipCode || "",
 				City: oOut.City || "",
 				GatePassDate: sToday,
-				PurchasingDoc: oOut.PurchasingDoc || "",
+				// PurchasingDoc: oOut.PurchasingDoc || "",
 				ChallanDate: sChallanDate,
 				CommonDesc: oOut.CommonDesc || "",
 				NoOfPacakages: parseInt(oOut.NoOfPackages || 0),
@@ -1716,7 +1716,7 @@ sap.ui.define([
 				ZipCode: oOut.ZipCode || "",
 				City: oOut.City || "",
 				GatePassDate: sToday,
-				PurchasingDoc: oOut.PurchasingDoc || "",
+				// PurchasingDoc: oOut.PurchasingDoc || "",
 				ChallanDate: fnFormatDate(oOut.ChallanDate) || sToday,
 				ReturnableDate: fnFormatDate(oOut.ReturnableDate) || "",
 				ExtReturnDate: fnFormatDate(oOut.ExtendedReturnableDate) || "",

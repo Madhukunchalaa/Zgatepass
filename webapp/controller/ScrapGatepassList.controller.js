@@ -3,8 +3,9 @@ sap.ui.define([
 	"sap/ui/model/json/JSONModel",
 	"sap/ui/model/Filter",
 	"sap/ui/model/FilterOperator",
-	"sap/m/MessageBox"
-], function (BaseController, JSONModel, Filter, FilterOperator, MessageBox) {
+	"sap/m/MessageBox",
+	"zgpms/meilpower/com/utils/ExcelExport"
+], function (BaseController, JSONModel, Filter, FilterOperator, MessageBox, ExcelExport) {
 	"use strict";
 
 	return BaseController.extend("zgpms.meilpower.com.controller.ScrapGatepassList", {
@@ -71,6 +72,9 @@ sap.ui.define([
 							customerGst: oItem.CustomerGst || "",
 							vehicleNo: oItem.VehicleNo || "",
 							remarks: oItem.Remarks || "",
+							modeOfDispatch: oItem.ModeOfDispatch || "",
+							transporterName: oItem.TransporterName || "",
+							weighmentSlipNo: oItem.WBTicketNo || oItem.WeighmentTicket || "",
 							items: aItems
 						};
 					});
@@ -111,29 +115,60 @@ sap.ui.define([
 		},
 
 		onDownloadExcel: function () {
-			var oTable = this.getView().byId("scrapGpTable");
-			var oBinding = oTable.getBinding("items");
-			var aContexts = oBinding ? oBinding.getCurrentContexts() : [];
-			if (!aContexts.length) {
+			var aObjects = this.getView().getModel("scrapGpList").getData() || [];
+			var dFrom = this.byId("idExcelFromDate").getDateValue();
+			var dTo = this.byId("idExcelToDate").getDateValue();
+			aObjects = ExcelExport.filterByDate(aObjects, "requestDateStr", dFrom, dTo);
+			if (!aObjects.length) {
 				sap.m.MessageToast.show("No data to export.");
 				return;
 			}
-			var aRows = aContexts.map(function (oCtx) {
-				var o = oCtx.getObject();
-				return {
+			var aRows = [];
+			aObjects.forEach(function (o) {
+				var oHeader = {
 					"Gate Pass No": o.gatePassNo || "",
 					"Req No": o.requestId || "",
+					"Sales Document": o.salesDocument || "",
 					"Date": o.requestDateStr || "",
+					"Sold To Party": o.customerNo || "",
 					"Customer": o.customerName || "",
+					"City": o.city || "",
+					"Postal Code": o.postalCode || "",
 					"Customer GST": o.customerGst || "",
-					"Vehicle No": o.vehicleNo || ""
+					"Vehicle No": o.vehicleNo || "",
+					"Remarks": o.remarks || "",
+					"Mode of Dispatch": o.modeOfDispatch || "",
+					"Transporter": o.transporterName || "",
+					"Weighment Ticket": o.weighmentSlipNo || ""
 				};
+				var aItems = o.items || [];
+				if (aItems.length === 0) {
+					oHeader["Item SNo"] = "";
+					oHeader["Item No"] = "";
+					oHeader["Item Material"] = "";
+					oHeader["Item Description"] = "";
+					oHeader["Item Order Qty"] = "";
+					oHeader["Item Sendout Qty"] = "";
+					oHeader["Item UOM"] = "";
+					aRows.push(oHeader);
+				} else {
+					aItems.forEach(function (item) {
+						var oRow = Object.assign({}, oHeader);
+						oRow["Item SNo"] = item.sno || "";
+						oRow["Item No"] = item.itemNo || "";
+						oRow["Item Material"] = item.material || "";
+						oRow["Item Description"] = item.description || "";
+						oRow["Item Order Qty"] = item.orderQty || "";
+						oRow["Item Sendout Qty"] = item.sendoutQty || "";
+						oRow["Item UOM"] = item.uom || "";
+						aRows.push(oRow);
+					});
+				}
 			});
-			var ws = XLSX.utils.json_to_sheet(aRows);
-			var wb = XLSX.utils.book_new();
-			XLSX.utils.book_append_sheet(wb, ws, "Scrap Gate Pass List");
-			XLSX.writeFile(wb, "Scrap_Gate_Pass_List.xlsx");
-			sap.m.MessageToast.show("Scrap Gate Pass List downloaded.");
+			var aParts = ["Scrap_Gate_Pass"];
+			if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
+			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
+			ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx", 14);
 		},
 
 		onRowPress: function (oEvent) {

@@ -21,6 +21,8 @@
 							<Title text="Ash Gate Pass Requests" level="H2"/>
 							<ToolbarSpacer/>
 							<SearchField width="300px" search=".onSearch" placeholder="Search Request No / Customer..." class="gpmsFieldInput"/>
+							<DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px"/>
+							<DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px"/>
 							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel"/>
 						</OverflowToolbar>
 					</headerToolbar>

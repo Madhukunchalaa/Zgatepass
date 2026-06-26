@@ -283,43 +283,43 @@
 
 									<Select selectedKey="{gp>uom}" class="gpmsTableInput" width="100%">
 										<core:Item key="" text="-- Select --"/>
-										<core:Item key="AMP" text="Amps"/>
-										<core:Item key="BAG" text="Bag"/>
-										<core:Item key="BBL" text="Barrel"/>
-										<core:Item key="BOT" text="Bottle"/>
-										<core:Item key="BOX" text="Box"/>
-										<core:Item key="BDL" text="Bundle"/>
-										<core:Item key="CAN" text="Can"/>
-										<core:Item key="CTN" text="Carton"/>
-										<core:Item key="CTG" text="Cartridge"/>
-										<core:Item key="COI" text="Coil"/>
-										<core:Item key="CFT" text="Cubic Feet"/>
-										<core:Item key="M3"  text="Cubic Meter"/>
-										<core:Item key="CYL" text="Cylinder"/>
-										<core:Item key="DRM" text="Drum"/>
-										<core:Item key="FT"  text="Feet"/>
-										<core:Item key="KG"  text="Kilogram"/>
-										<core:Item key="LEN" text="Length"/>
-										<core:Item key="L"   text="Litre"/>
-										<core:Item key="LOD" text="Load"/>
-										<core:Item key="LOT" text="Lot"/>
-										<core:Item key="M"   text="Meters"/>
-										<core:Item key="MT"  text="Metric Tons"/>
-										<core:Item key="MON" text="Month"/>
-										<core:Item key="NOS" text="Number"/>
-										<core:Item key="PAR" text="Pair"/>
-										<core:Item key="ROL" text="Roll"/>
-										<core:Item key="SET" text="Set"/>
-										<core:Item key="SHT" text="Sheet"/>
-										<core:Item key="SFT" text="Square Feet"/>
-										<core:Item key="M2"  text="Square Meter"/>
-										<core:Item key="EA"  text="Item"/>
-										<core:Item key="PCK" text="Pack"/>
-										<core:Item key="DAY" text="Days"/>
-										<core:Item key="PKT" text="Pocket"/>
-										<core:Item key="REA" text="Ream"/>
-										<core:Item key="TON" text="Tons"/>
-										<core:Item key="UN"  text="Unit"/>
+										<core:Item key="Amps" text="Amps"/>
+										<core:Item key="Bag" text="Bag"/>
+										<core:Item key="Barrel" text="Barrel"/>
+										<core:Item key="Bottle" text="Bottle"/>
+										<core:Item key="Box" text="Box"/>
+										<core:Item key="Bundle" text="Bundle"/>
+										<core:Item key="Can" text="Can"/>
+										<core:Item key="Carton" text="Carton"/>
+										<core:Item key="Cartridge" text="Cartridge"/>
+										<core:Item key="Coil" text="Coil"/>
+										<core:Item key="Cubic Feet" text="Cubic Feet"/>
+										<core:Item key="Cubic Meter" text="Cubic Meter"/>
+										<core:Item key="Cylinder" text="Cylinder"/>
+										<core:Item key="Drum" text="Drum"/>
+										<core:Item key="Feet" text="Feet"/>
+										<core:Item key="Kilogram" text="Kilogram"/>
+										<core:Item key="Length" text="Length"/>
+										<core:Item key="Litre" text="Litre"/>
+										<core:Item key="Load" text="Load"/>
+										<core:Item key="Lot" text="Lot"/>
+										<core:Item key="Meters" text="Meters"/>
+										<core:Item key="Metric Tons" text="Metric Tons"/>
+										<core:Item key="Month" text="Month"/>
+										<core:Item key="Number" text="Number"/>
+										<core:Item key="Pair" text="Pair"/>
+										<core:Item key="Roll" text="Roll"/>
+										<core:Item key="Set" text="Set"/>
+										<core:Item key="Sheet" text="Sheet"/>
+										<core:Item key="Square Feet" text="Square Feet"/>
+										<core:Item key="Square Meter" text="Square Meter"/>
+										<core:Item key="Item" text="Item"/>
+										<core:Item key="Pack" text="Pack"/>
+										<core:Item key="Days" text="Days"/>
+										<core:Item key="Pocket" text="Pocket"/>
+										<core:Item key="Ream" text="Ream"/>
+										<core:Item key="Tons" text="Tons"/>
+										<core:Item key="Unit" text="Unit"/>
 									</Select>
 
 									<Input value="{gp>rate}" textAlign="Right" liveChange=".onQtyRateChange" class="gpmsTableInput"/>

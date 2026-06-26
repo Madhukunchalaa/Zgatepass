@@ -62,28 +62,71 @@ sap.ui.define([
 				Plant:            oRow.Plant             || "",
 				BudgetCode:       oRow.BudgetCode        || "",
 				GatepassNo:       (oRow.GatepassNo       || "").trim(),
-				ItemDescription:  oRow.ItemDescription   || "",
-				RecievedQuantity: parseFloat(oRow.RecievedQuantity || 0),
-				UOM:              oRow.UOM               || "",
-				TotalCost:        oRow.TotalCost         || "",
 				Remarks:          oRow.Remarks           || "",
 				InspectionStatus: oRow.InspectionStatus  || "",
 				Inspectiondate:   this._toYMD(oRow.Inspectiondate || ""),
-				ItemNo:           oRow.ItemNo            || "00010",
-				PCPItmNav:        oRow.PCPItmNav         || { results: [] }
+				items:            this._mapItems(oRow.PCPItmNav)
 			});
 		},
 
-		// ── Auto-fetch when GE No changes ────────────────────────────────
+		_mapItems: function (oPCPItmNav) {
+				var aRaw = (oPCPItmNav && oPCPItmNav.results) || [];
+				if (aRaw.length === 0) {
+					return [{ sno: 1, ItemNo: "00010", ItemDescription: "", RecievedQuantity: "0", UOM: "", TotalCost: "" }];
+				}
+				return aRaw.map(function (it, i) {
+					return {
+						sno: i + 1,
+						ItemNo: it.ItemNo || String((i + 1) * 10).padStart(5, "0"),
+						ItemDescription: it.ItemDescription || "",
+						RecievedQuantity: it.RecievedQuantity || "0",
+						UOM: it.UOM || "",
+						TotalCost: it.TotalCost || ""
+					};
+				});
+			},
+
+			onAddItem: function () {
+				var oModel = this.getView().getModel("pcpDetail");
+				var aItems = oModel.getProperty("/items") || [];
+				aItems.push({
+					sno: aItems.length + 1,
+					ItemNo: String((aItems.length + 1) * 10).padStart(5, "0"),
+					ItemDescription: "",
+					RecievedQuantity: "0",
+					UOM: "",
+					TotalCost: ""
+				});
+				oModel.setProperty("/items", aItems);
+			},
+
+			onDeleteItem: function (oEvent) {
+				var oCtx = oEvent.getSource().getBindingContext("pcpDetail");
+				var oModel = this.getView().getModel("pcpDetail");
+				var aItems = oModel.getProperty("/items");
+				var iIdx = parseInt(oCtx.getPath().split("/").pop(), 10);
+				aItems.splice(iIdx, 1);
+				aItems.forEach(function (it, i) { it.sno = i + 1; });
+				oModel.setProperty("/items", aItems);
+			},
+
+			// ── Auto-fetch when GE No changes ────────────────────────────────
 		onGENoChange: function () {
-			var oModel  = this.getView().getModel("pcpDetail");
-			var sGENo   = (oModel.getProperty("/GateEntryNo") || "").trim();
-			if (sGENo) { this._fetchGEDetails(sGENo); }
+			this._tryFetchGEDetails();
 		},
 
 		onGEDateChange: function () {
-			var oModel  = this.getView().getModel("pcpDetail");
-			var sGENo   = (oModel.getProperty("/GateEntryNo") || "").trim();
+			this._tryFetchGEDetails();
+		},
+
+		_tryFetchGEDetails: function () {
+			var oModel = this.getView().getModel("pcpDetail");
+			var sGENo = (oModel.getProperty("/GateEntryNo") || "").trim();
+			var sGEDate = (oModel.getProperty("/GEDate") || "").trim();
+			if (!sGEDate) {
+				sap.m.MessageToast.show("Please select GE Date first.");
+				return;
+			}
 			if (sGENo) { this._fetchGEDetails(sGENo); }
 		},
 
@@ -106,7 +149,8 @@ sap.ui.define([
 					sap.ui.core.BusyIndicator.hide();
 					var aResults = oData.results || [];
 					if (aResults.length === 0) {
-						MessageBox.warning("No Gate Entry found for GE No: " + sGENo + " on date " + sGEDateSAP);
+						var sDisplayDate = that.getView().getModel("pcpDetail").getProperty("/GEDate") || "";
+						MessageBox.error("Gate Entry No " + sGENo + " not found on date " + sDisplayDate + ".");
 						return;
 					}
 					var oItem = aResults[0];
@@ -122,21 +166,10 @@ sap.ui.define([
 					oModel.setProperty("/GatepassNo",  (oItem.GatepassNo || "").trim());
 					oModel.setProperty("/GEDateRaw",   oItem.GEDate      || "");
 					oModel.setProperty("/EntryPoint",  oItem.EntryPoint  || "");
-					oModel.setProperty("/PCPItmNav",   oItem.PCPItmNav   || { results: [] });
-					
-
 					var sDC = that._toYMD(oItem.DCdate || "");
 					if (sDC) { oModel.setProperty("/DCdate", sDC); }
 
-					// Fill first item fields
-					if (oItem.PCPItmNav && oItem.PCPItmNav.results && oItem.PCPItmNav.results.length > 0) {
-						var oItm = oItem.PCPItmNav.results[0];
-						oModel.setProperty("/ItemDescription",  oItm.ItemDescription  || "");
-						oModel.setProperty("/RecievedQuantity", parseFloat(oItm.RecievedQuantity || 0));
-						oModel.setProperty("/UOM",              oItm.UOM              || "");
-						oModel.setProperty("/TotalCost",        oItm.TotalCost        || "");
-						oModel.setProperty("/ItemNo",           oItm.ItemNo           || "00010");
-					}
+					oModel.setProperty("/items", that._mapItems(oItem.PCPItmNav));
 
 					MessageToast.show("Gate Entry details loaded.");
 				},
@@ -156,13 +189,18 @@ sap.ui.define([
 			if (!oData.PCPDate)                 { MessageBox.warning("Please select PCP Date.");             return; }
 			if (!(oData.GateEntryNo || "").trim()) { MessageBox.warning("Please enter GE No.");             return; }
 			if (!oData.Department)              { MessageBox.warning("Please select Department.");           return; }
-			if (!(oData.ItemDescription || "").trim()) { MessageBox.warning("Please enter Item Description."); return; }
-			if (!oData.UOM)                     { MessageBox.warning("Please select UOM.");                  return; }
 			if (!oData.BudgetCode)              { MessageBox.warning("Please select Budget Code.");          return; }
 
-			var fCost = parseFloat(oData.TotalCost || 0);
-			if (!oData.TotalCost || fCost <= 0)  { MessageBox.warning("Please enter Total Cost greater than 0."); return; }
-			if (fCost > 5000) { MessageBox.error("Total Cost for Petty Cash Purchase cannot be exceed 5000."); return; }
+			var fTotalCost = parseFloat(oData.TotalCost || 0);
+			if (!oData.TotalCost || fTotalCost <= 0) { MessageBox.warning("Please enter Total Cost greater than 0."); return; }
+			if (fTotalCost > 5000) { MessageBox.error("Total Cost for Petty Cash Purchase cannot exceed 5000."); return; }
+
+			var aItems = oData.items || [];
+			if (aItems.length === 0) { MessageBox.warning("Please add at least one line item."); return; }
+			var bInvalid = aItems.some(function (it) {
+				return !(it.ItemDescription || "").trim() || !it.UOM;
+			});
+			if (bInvalid) { MessageBox.warning("Please fill Item Description and UOM for all items."); return; }
 
 			var oToday = new Date();
 			var sTodaySAP = oToday.getFullYear() + "-" +
@@ -208,18 +246,20 @@ sap.ui.define([
 				Inspectiondate:   (oData.Inspectiondate || "").replace(/-/g, ""),
 				Remarks:      oData.Remarks     || "",
 				Message:      "",
-				PCPItmNav: [{
-					SourceType:       "PettyCash",
-					ItemNo:           oData.ItemNo || "00010",
-					ItemDescription:  oData.ItemDescription || "",
-					RecievedQuantity: String(parseFloat(oData.RecievedQuantity || 0).toFixed(3)),
-					UOM:              oData.UOM || "",
-					TotalCost:        String(parseFloat(oData.TotalCost || 0).toFixed(2)),
-					GateEntryNo:      oData.GateEntryNo || "",
-					RRNo:             oData.RRNo        || "",
-					PurchaseOrder:    "",
-					Plant:            oData.Plant       || ""
-				}]
+				PCPItmNav: (oData.items || []).map(function (it, i) {
+					return {
+						SourceType:       "PettyCash",
+						ItemNo:           it.ItemNo || String((i + 1) * 10).padStart(5, "0"),
+						ItemDescription:  it.ItemDescription || "",
+						RecievedQuantity: String(parseFloat(it.RecievedQuantity || 0).toFixed(3)),
+						UOM:              it.UOM || "",
+						TotalCost:        String(parseFloat(oData.TotalCost || 0).toFixed(2)),
+						GateEntryNo:      oData.GateEntryNo || "",
+						RRNo:             oData.RRNo        || "",
+						PurchaseOrder:    "",
+						Plant:            oData.Plant       || ""
+					};
+				})
 			};
 
 			var that = this;
@@ -294,10 +334,7 @@ sap.ui.define([
 				DCNumber:         oData.DCNumber          || "",
 				DCdate:           fnFmt(oData.DCdate),
 				BudgetCode:       oData.BudgetCode        || "",
-				ItemDescription:  oData.ItemDescription   || "",
-				RecievedQuantity: oData.RecievedQuantity  || "0.000",
-				UOM:              oData.UOM               || "",
-				TotalCost:        oData.TotalCost         || "0.00"
+				items:            oData.items             || []
 			};
 		},
 
@@ -386,13 +423,19 @@ sap.ui.define([
 
 			// ── Items table ───────────────────────────────────────────────
 			var tableY = y + 27;
-			var fQty   = parseFloat(oData.RecievedQuantity || 0);
-			var fAmt   = parseFloat(oData.TotalCost        || 0);
+			var aItems = oData.items || [];
+			var tableBody = aItems.map(function (it, i) {
+				var fQty = parseFloat(it.RecievedQuantity || 0);
+				var fAmt = parseFloat(it.TotalCost || 0);
+				return [i + 1, it.ItemDescription || "", it.UOM || "", fQty.toFixed(2), fAmt.toFixed(2)];
+			});
+			if (tableBody.length === 0) { tableBody = [["", "", "", "", ""]]; }
+			var fAmt = aItems.reduce(function (sum, it) { return sum + parseFloat(it.TotalCost || 0); }, 0);
 
 			doc.autoTable({
 				startY: tableY,
 				head: [["S.No", "DESCRIPTION", "UOM", "QTY", "Amount"]],
-				body: [["1", oData.ItemDescription || "", oData.UOM || "", fQty.toFixed(2), fAmt.toFixed(2)]],
+				body: tableBody,
 				theme: "grid",
 				headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: "normal", lineWidth: 0.3, lineColor: [0, 0, 0] },
 				bodyStyles: { textColor: [0, 0, 0], lineWidth: 0.3, lineColor: [0, 0, 0], cellPadding: 3 },

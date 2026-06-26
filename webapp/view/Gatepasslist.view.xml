@@ -50,6 +50,8 @@
                         <Title text="Gate Pass Request List" level="H3" />
                         <ToolbarSpacer />
                         <Text id="idItemCountText" text="" />
+                        <DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px"/>
+                        <DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px"/>
                         <Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcelButtonPress" tooltip="Export to Excel"/>
                     </Toolbar>
                 </headerToolbar>

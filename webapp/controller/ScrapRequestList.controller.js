@@ -3,8 +3,9 @@ sap.ui.define([
 	"sap/ui/model/json/JSONModel",
 	"sap/ui/model/Filter",
 	"sap/ui/model/FilterOperator",
-	"sap/m/MessageBox"
-], function (BaseController, JSONModel, Filter, FilterOperator, MessageBox) {
+	"sap/m/MessageBox",
+	"zgpms/meilpower/com/utils/ExcelExport"
+], function (BaseController, JSONModel, Filter, FilterOperator, MessageBox, ExcelExport) {
 	"use strict";
 
 	return BaseController.extend("zgpms.meilpower.com.controller.ScrapRequestList", {
@@ -62,14 +63,21 @@ sap.ui.define([
 							requestDate: oItem.RequestDate || null,
 							requestDateStr: sDateStr,
 							vehicleDetails: oItem.VehicleNo || oItem.VehicleDetails || "",
-							collectArea: oItem.CollectArea || "",
+							collectArea: oItem.CollectArea || oItem.ScrapArea || "",
 							remarks: oItem.Remarks || "",
 							status: sStatus,
-							weighmentSlipNo: oItem.WeighmentSlipNo || "",
-							challanDateTime: oItem.ChallanDateTime || "",
+							weighmentSlipNo: oItem.WeighmentSlipNo || oItem.WeighmentTicket || "",
+							challanDateTime: oItem.ChallanDateTime || oItem.ChallanDate || "",
 							items: aItems,
 							Approval1: oItem.Approval1 || "",
-							Approval2: oItem.Approval2 || ""
+							Approval2: oItem.Approval2 || "",
+							salesDocument: oItem.SalesDocument || "",
+							soldToParty: oItem.SoldToParty || "",
+							customerName: oItem.CustomerName || "",
+							customerGst: oItem.CustomerGst || "",
+							city: oItem.City || "",
+							postalCode: oItem.PostalCode || "",
+							approvalReq: oItem.ApprovalReq || ""
 						};
 					});
 
@@ -105,27 +113,59 @@ sap.ui.define([
 		},
 
 		onDownloadExcel: function () {
-			var oTable = this.getView().byId("scrapRequestTable");
-			var oBinding = oTable.getBinding("items");
-			var aContexts = oBinding ? oBinding.getCurrentContexts() : [];
-			if (!aContexts.length) {
+			var aObjects = this.getView().getModel("scrapList").getData() || [];
+			var dFrom = this.byId("idExcelFromDate").getDateValue();
+			var dTo = this.byId("idExcelToDate").getDateValue();
+			aObjects = ExcelExport.filterByDate(aObjects, "requestDateStr", dFrom, dTo);
+			if (!aObjects.length) {
 				sap.m.MessageToast.show("No data to export.");
 				return;
 			}
-			var aRows = aContexts.map(function (oCtx) {
-				var o = oCtx.getObject();
-				return {
+			var aRows = [];
+			aObjects.forEach(function (o) {
+				var oHeader = {
 					"Request No": o.requestId || "",
 					"Date": o.requestDateStr || "",
 					"Vehicle No": o.vehicleDetails || "",
-					"Status": o.status || ""
+					"Status": o.status || "",
+					"Sales Document": o.salesDocument || "",
+					"Sold To Party": o.soldToParty || "",
+					"Customer Name": o.customerName || "",
+					"Customer GST": o.customerGst || "",
+					"City": o.city || "",
+					"Postal Code": o.postalCode || "",
+					"Approval Required": o.approvalReq || "",
+					"Approval 1": o.Approval1 || "",
+					"Approval 2": o.Approval2 || "",
+					"Weighment Ticket": o.weighmentSlipNo || "",
+					"Scrap Area": o.collectArea || "",
+					"Challan Date": o.challanDateTime || "",
+					"Remarks": o.remarks || ""
 				};
+				var aItems = o.items || [];
+				if (aItems.length === 0) {
+					oHeader["Item SNo"] = "";
+					oHeader["Item Type"] = "";
+					oHeader["Item Description"] = "";
+					oHeader["Item Quantity"] = "";
+					oHeader["Item UOM"] = "";
+					aRows.push(oHeader);
+				} else {
+					aItems.forEach(function (item) {
+						var oRow = Object.assign({}, oHeader);
+						oRow["Item SNo"] = item.sno || "";
+						oRow["Item Type"] = item.type || "";
+						oRow["Item Description"] = item.description || "";
+						oRow["Item Quantity"] = item.quantity || "";
+						oRow["Item UOM"] = item.uom || "";
+						aRows.push(oRow);
+					});
+				}
 			});
-			var ws = XLSX.utils.json_to_sheet(aRows);
-			var wb = XLSX.utils.book_new();
-			XLSX.utils.book_append_sheet(wb, ws, "Scrap Request List");
-			XLSX.writeFile(wb, "Scrap_Request_List.xlsx");
-			sap.m.MessageToast.show("Scrap Request List downloaded.");
+			var aParts = ["Scrap_Request"];
+			if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
+			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
+			ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx", 17);
 		},
 
 		onRowPress: function (oEvent) {

@@ -2,8 +2,9 @@ sap.ui.define([
 	"sap/ui/core/mvc/Controller",
 	"sap/ui/model/json/JSONModel",
 	"sap/m/MessageBox",
-	"sap/m/MessageToast"
-], function (Controller, JSONModel, MessageBox, MessageToast) {
+	"sap/m/MessageToast",
+	"zgpms/meilpower/com/utils/ExcelExport"
+], function (Controller, JSONModel, MessageBox, MessageToast, ExcelExport) {
 	"use strict";
 
 	// OData Status  →  internal StatusCode used by the view's filters/bindings
@@ -158,8 +159,13 @@ sap.ui.define([
 					it.PrevBalance = fBal;
 
 					if (sStep === "STORE_CLOSE") {
-						it.RecievedQuantity = "0";
-						it.BalanceQuantity = String(fBal);
+						if (oData.RequestType === "Tools") {
+							it.RecievedQuantity = String(fBal);
+							it.BalanceQuantity = "0";
+						} else {
+							it.RecievedQuantity = "0";
+							it.BalanceQuantity = String(fBal);
+						}
 					}
 				});
 			}
@@ -620,7 +626,6 @@ sap.ui.define([
 				if (bHasMRN || this._sanitizeMRN(oData.MRNumber) !== "") {
 					sMappedStatus = "PENDING_RECEIPT";
 				}
-				// Tools request type skips MRN linking entirely
 				if (oData.RequestType === "Tools") {
 					sMappedStatus = "PENDING_RECEIPT";
 				}
@@ -807,10 +812,11 @@ sap.ui.define([
 		},
 
 		onDownloadExcel: function () {
-			var oTable = this.byId("idIRGPListTable");
-			var oBinding = oTable.getBinding("items");
-			var aContexts = oBinding ? oBinding.getCurrentContexts() : [];
-			if (!aContexts.length) {
+			var aObjects = this.getOwnerComponent().getModel("irgpGlobal").getProperty("/documents") || [];
+			var dFrom = this.byId("idExcelFromDate").getDateValue();
+			var dTo = this.byId("idExcelToDate").getDateValue();
+			aObjects = ExcelExport.filterByDate(aObjects, "GEDate", dFrom, dTo);
+			if (!aObjects.length) {
 				MessageToast.show("No data to export.");
 				return;
 			}
@@ -821,23 +827,67 @@ sap.ui.define([
 				"CLOSED": "Closed & Archived"
 			};
 
-			var aRows = aContexts.map(function (oCtx) {
-				var o = oCtx.getObject();
-				return {
+			var aRows = [];
+			aObjects.forEach(function (o) {
+				var oHeader = {
 					"Gate Pass No": o.IRGPNo || "",
 					"Request Date": o.GEDate || "",
 					"Department": o.Department || "",
 					"Requested User": o.RequestUser || "",
 					"Contract Employee": o.ContractEmployeeName || "",
-					"Status": STATUS_LABELS[o.StatusCode] || o.StatusCode || ""
+					"Status": STATUS_LABELS[o.StatusCode] || o.StatusCode || "",
+					"Due Date": o.DueDate || "",
+					"Revised Due Date": o.RevisedDueDate || "",
+					"Returned Date": o.ReturnedDate || "",
+					"Return User": o.ReturnUser || "",
+					"Contract Name": o.ContractName || "",
+					"Request Type": o.RequestType || "",
+					"Remarks": o.Remarks || "",
+					"MR Number": o.MRNumber || ""
 				};
+				var aItems = o.items || [];
+				if (aItems.length === 0) {
+					oHeader["Item SNo"] = "";
+					oHeader["Item No"] = "";
+					oHeader["Item Code"] = "";
+					oHeader["Item Description"] = "";
+					oHeader["Sent Quantity"] = "";
+					oHeader["Received Quantity"] = "";
+					oHeader["Balance Quantity"] = "";
+					oHeader["Item UOM"] = "";
+					oHeader["Item MR Number"] = "";
+					oHeader["Item Location"] = "";
+					oHeader["Mp2 Item Code"] = "";
+					oHeader["Default Bin"] = "";
+					aRows.push(oHeader);
+				} else {
+					aItems.forEach(function (item) {
+						var oRow = Object.assign({}, oHeader);
+						oRow["Item SNo"] = item.SNo || "";
+						oRow["Item No"] = item.ItemNo || "";
+						oRow["Item Code"] = item.ItemCode || "";
+						oRow["Item Description"] = item.ItemDescription || "";
+						oRow["Sent Quantity"] = item.SentQuantity || "";
+						oRow["Received Quantity"] = item.RecievedQuantity || "";
+						oRow["Balance Quantity"] = item.BalanceQuantity || "";
+						oRow["Item UOM"] = item.UOM || "";
+						oRow["Item MR Number"] = item.MRNumber || "";
+						oRow["Item Location"] = item.Location || "";
+						oRow["Mp2 Item Code"] = item.Mp2ItemCode || "";
+						oRow["Default Bin"] = item.DefaultBin || "";
+						aRows.push(oRow);
+					});
+				}
 			});
 
-			var ws = XLSX.utils.json_to_sheet(aRows);
-			var wb = XLSX.utils.book_new();
-			XLSX.utils.book_append_sheet(wb, ws, "IRGP List");
-			XLSX.writeFile(wb, "IRGP_List.xlsx");
-			MessageToast.show("IRGP List downloaded.");
+			var sTabKey = this.byId("idIRGPIconTabBar").getSelectedKey();
+			var aParts = ["IRGP"];
+			if (sTabKey && sTabKey !== "ALL") { aParts.push(sTabKey.replace(/\s+/g, "_")); }
+			if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
+			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
+			var sFileName = aParts.join("_") + ".xlsx";
+			var sSheetName = aParts.join(" ");
+			ExcelExport.download(aRows, sSheetName, sFileName, 14);
 		},
 
 		onFilterIRGPList: function (oEvent) {
@@ -1321,43 +1371,43 @@ sap.ui.define([
 					{ key: "STORES",          text: "STORES" }
 				],
 				uoms: [
-					{ key: "AMP", text: "Amps" },
-					{ key: "BAG", text: "Bag" },
-					{ key: "BBL", text: "Barrel" },
-					{ key: "BOT", text: "Bottle" },
-					{ key: "BOX", text: "Box" },
-					{ key: "BDL", text: "Bundle" },
-					{ key: "CAN", text: "Can" },
-					{ key: "CTN", text: "Carton" },
-					{ key: "CTG", text: "Cartridge" },
-					{ key: "COI", text: "Coil" },
-					{ key: "CFT", text: "Cubic Feet" },
-					{ key: "M3",  text: "Cubic Meter" },
-					{ key: "CYL", text: "Cylinder" },
-					{ key: "DRM", text: "Drum" },
-					{ key: "FT",  text: "Feet" },
-					{ key: "KG",  text: "Kilogram" },
-					{ key: "LEN", text: "Length" },
-					{ key: "L",   text: "Litre" },
-					{ key: "LOD", text: "Load" },
-					{ key: "LOT", text: "Lot" },
-					{ key: "M",   text: "Meters" },
-					{ key: "MT",  text: "Metric Tons" },
-					{ key: "MON", text: "Month" },
-					{ key: "NOS", text: "Number" },
-					{ key: "PAR", text: "Pair" },
-					{ key: "ROL", text: "Roll" },
-					{ key: "SET", text: "Set" },
-					{ key: "SHT", text: "Sheet" },
-					{ key: "SFT", text: "Square Feet" },
-					{ key: "M2",  text: "Square Meter" },
-					{ key: "EA",  text: "Item" },
-					{ key: "PCK", text: "Pack" },
-					{ key: "DAY", text: "Days" },
-					{ key: "PKT", text: "Pocket" },
-					{ key: "REA", text: "Ream" },
-					{ key: "TON", text: "Tons" },
-					{ key: "UN",  text: "Unit" }
+					{ key: "Amps", text: "Amps" },
+					{ key: "Bag", text: "Bag" },
+					{ key: "Barrel", text: "Barrel" },
+					{ key: "Bottle", text: "Bottle" },
+					{ key: "Box", text: "Box" },
+					{ key: "Bundle", text: "Bundle" },
+					{ key: "Can", text: "Can" },
+					{ key: "Carton", text: "Carton" },
+					{ key: "Cartridge", text: "Cartridge" },
+					{ key: "Coil", text: "Coil" },
+					{ key: "Cubic Feet", text: "Cubic Feet" },
+					{ key: "Cubic Meter", text: "Cubic Meter" },
+					{ key: "Cylinder", text: "Cylinder" },
+					{ key: "Drum", text: "Drum" },
+					{ key: "Feet", text: "Feet" },
+					{ key: "Kilogram", text: "Kilogram" },
+					{ key: "Length", text: "Length" },
+					{ key: "Litre", text: "Litre" },
+					{ key: "Load", text: "Load" },
+					{ key: "Lot", text: "Lot" },
+					{ key: "Meters", text: "Meters" },
+					{ key: "Metric Tons", text: "Metric Tons" },
+					{ key: "Month", text: "Month" },
+					{ key: "Number", text: "Number" },
+					{ key: "Pair", text: "Pair" },
+					{ key: "Roll", text: "Roll" },
+					{ key: "Set", text: "Set" },
+					{ key: "Sheet", text: "Sheet" },
+					{ key: "Square Feet", text: "Square Feet" },
+					{ key: "Square Meter", text: "Square Meter" },
+					{ key: "Item", text: "Item" },
+					{ key: "Pack", text: "Pack" },
+					{ key: "Days", text: "Days" },
+					{ key: "Pocket", text: "Pocket" },
+					{ key: "Ream", text: "Ream" },
+					{ key: "Tons", text: "Tons" },
+					{ key: "Unit", text: "Unit" }
 				]
 			};
 		}
