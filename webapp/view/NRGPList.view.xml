@@ -23,6 +23,7 @@
                         <core:Item key="" text="All Status" />
                         <core:Item key="OPEN" text="OPEN" />
                         <core:Item key="AWAITING FOR VENDOR ACKNOWLEDGEMENT" text="Awaiting Acknowledgement" />
+                        <core:Item key="AWAITING_FOR_RETURN" text="Awaiting for Return" />
                         <core:Item key="CLOSED" text="CLOSED" />
                         <core:Item key="CANCELLED" text="CANCELLED" />
                         <core:Item key="Pending" text="Pending" />
@@ -51,60 +52,68 @@
                         <Title text="Out Gate Pass List" level="H3" />
                         <ToolbarSpacer />
                         <Text id="idNRGPCountText" text="" />
-                        <Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel"/>
+                        <Button id="idNRGPDownloadExcelBtn" icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel" class="sapUiTinyMarginEnd"/>
+                        <Button id="idNRGPCopyListBtn" icon="sap-icon://copy" text="Copy" press=".onCopyList" tooltip="Copy list to clipboard" class="sapUiTinyMarginEnd"/>
+                        <Button id="idNRGPPrintListBtn" icon="sap-icon://print" text="Print List" press=".onPrintList" tooltip="Print gate pass list"/>
                     </Toolbar>
                 </headerToolbar>
 
                 <columns>
                     <Column width="9rem">
-                        <Text text="GP No." wrapping="false"/>
+                        <Text text="GP Date" wrapping="false"/>
+                    </Column>
+                    <Column width="11rem">
+                        <Text text="GP No" wrapping="false"/>
                     </Column>
                     <Column width="9rem">
-                        <Text text="Req No." wrapping="false"/>
+                        <Text text="GP Req No" wrapping="false"/>
                     </Column>
                     <Column width="5rem">
-                        <Text text="Type" wrapping="false"/>
+                        <Text text="GP Type" wrapping="false"/>
                     </Column>
-                    <Column width="9rem">
-                        <Text text="Date" wrapping="false"/>
+                    <Column width="8rem" minScreenWidth="Tablet" demandPopin="true">
+                        <Text text="Due Date" wrapping="false"/>
                     </Column>
-                    <Column width="5rem" minScreenWidth="Tablet" demandPopin="true">
-                        <Text text="Plant" wrapping="false"/>
-                    </Column>
-                    <Column width="12rem" minScreenWidth="Desktop" demandPopin="true">
-                        <Text text="Department" wrapping="false"/>
-                    </Column>
-                    <Column width="13rem" minScreenWidth="Desktop" demandPopin="true">
-                        <Text text="Vendor GST" wrapping="false"/>
+                    <Column width="8rem" minScreenWidth="Tablet" demandPopin="true">
+                        <Text text="Ret Date" wrapping="false"/>
                     </Column>
                     <Column width="10rem" minScreenWidth="Desktop" demandPopin="true">
-                        <Text text="Vehicle No." wrapping="false"/>
+                        <Text text="Vendor" wrapping="false"/>
                     </Column>
-                    <Column width="5rem" hAlign="Center" minScreenWidth="Tablet" demandPopin="true">
-                        <Text text="Items" wrapping="false"/>
+                    <Column width="8rem" minScreenWidth="Desktop" demandPopin="true">
+                        <Text text="Req Dept" wrapping="false"/>
                     </Column>
-                    <Column>
+                    <Column minScreenWidth="Desktop" demandPopin="true">
+                        <Text text="Desc" />
+                    </Column>
+                    <Column width="10rem">
                         <Text text="Status" wrapping="false"/>
+                    </Column>
+                    <Column width="7rem" hAlign="Center">
+                        <Text text="Action" wrapping="false"/>
                     </Column>
                 </columns>
 
                 <items>
-                    <ColumnListItem type="Navigation" press=".onColumnListItemPress">
+                    <ColumnListItem type="Inactive" press=".onColumnListItemPress">
                         <cells>
+                            <Text text="{nrgpList>GatePassDate}" wrapping="false"/>
                             <Text text="{nrgpList>GatePassNo}" wrapping="false" class="sapMObjectIdentifierTitle"/>
                             <Text text="{nrgpList>GatePassreqNo}" wrapping="false"/>
                             <ObjectStatus
                                 text="{nrgpList>GatePassType}"
                                 state="{= ${nrgpList>GatePassType} === 'RGP' ? 'Information' : ${nrgpList>GatePassType} === 'PO' ? 'Success' : 'None'}"/>
-                            <Text text="{nrgpList>GatePassDate}" wrapping="false"/>
-                            <Text text="{nrgpList>Plant}" wrapping="false"/>
+                            <Text text="{nrgpList>DueDate}" wrapping="false"/>
+                            <Text text="{nrgpList>ReturnDate}" wrapping="false"/>
+                            <Text text="{nrgpList>VendorName}" wrapping="true"/>
                             <Text text="{nrgpList>Department}" wrapping="false"/>
-                            <Text text="{nrgpList>VendorGST}" wrapping="false"/>
-                            <Text text="{nrgpList>VehicleNo}" wrapping="false"/>
-                            <ObjectNumber number="{nrgpList>NoOfItems}" emphasized="false"/>
+                            <Text text="{nrgpList>CommonDesc}" />
                             <ObjectStatus
                                 text="{= ${nrgpList>GPStatusText} ? ${nrgpList>GPStatusText} : 'Not Set'}"
                                 state="{nrgpList>StatusState}"/>
+                            <HBox justifyContent="Center">
+                                <Button icon="sap-icon://edit" type="Emphasized" press=".onEditRow"/>
+                            </HBox>
                         </cells>
                     </ColumnListItem>
                 </items>

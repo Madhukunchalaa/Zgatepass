@@ -50,7 +50,9 @@ sap.ui.define([], function () {
 		if (typeof v !== "string") { return null; }
 		var m = v.match(/\/Date\((\d+)/);
 		if (m) { return new Date(parseInt(m[1], 10)); }
-		var p = v.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+		var p = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+		if (p) { return new Date(parseInt(p[1], 10), parseInt(p[2], 10) - 1, parseInt(p[3], 10)); }
+		p = v.match(/^(\d{2})-(\d{2})-(\d{4})$/);
 		if (p) { return new Date(parseInt(p[3], 10), parseInt(p[2], 10) - 1, parseInt(p[1], 10)); }
 		p = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
 		if (p) { return new Date(parseInt(p[3], 10), parseInt(p[2], 10) - 1, parseInt(p[1], 10)); }
@@ -85,15 +87,51 @@ sap.ui.define([], function () {
 			d.getFullYear();
 	}
 
+	function _applyStyles(ws, iHeaderFields) {
+		var range = XLSX.utils.decode_range(ws["!ref"]);
+		var totalCols = range.e.c + 1;
+		var headerFieldCount = iHeaderFields || totalCols;
+
+		for (var C = range.s.c; C <= range.e.c; C++) {
+			var addr = XLSX.utils.encode_cell({ r: 0, c: C });
+			if (!ws[addr]) { continue; }
+			ws[addr].s = (C < headerFieldCount) ? HEADER_STYLE : ITEM_HEADER_STYLE;
+		}
+
+		for (var R = 1; R <= range.e.r; R++) {
+			var isEven = (R % 2 === 0);
+			var style = _getDataStyle(isEven);
+			for (var C2 = range.s.c; C2 <= range.e.c; C2++) {
+				var addr2 = XLSX.utils.encode_cell({ r: R, c: C2 });
+				if (!ws[addr2]) { ws[addr2] = { v: "", t: "s" }; }
+				ws[addr2].s = style;
+			}
+		}
+
+		ws["!cols"] = _autoColWidths(ws, range);
+		return ws;
+	}
+
 	return {
 		fmtDate: _fmtDate,
 
-		/**
-		 * @param {Array}  aRows           – flat array of row objects (keys become headers)
-		 * @param {string} sSheetName      – Excel tab name
-		 * @param {string} sFileName       – file.xlsx
-		 * @param {number} [iHeaderFields] – number of header-level columns (rest are item cols, shown in lighter header)
-		 */
+		buildStyledSheet: function (aRows, iHeaderFields) {
+			if (!aRows || !aRows.length) { return null; }
+			var ws = XLSX.utils.json_to_sheet(aRows);
+			return _applyStyles(ws, iHeaderFields);
+		},
+
+		downloadWorkbook: function (aSheets, sFileName) {
+			var wb = XLSX.utils.book_new();
+			aSheets.forEach(function (s) {
+				if (s.ws) {
+					XLSX.utils.book_append_sheet(wb, s.ws, (s.name || "Sheet").substring(0, 31));
+				}
+			});
+			XLSX.writeFile(wb, sFileName);
+			sap.m.MessageToast.show("Report workbook downloaded.");
+		},
+
 		filterByDate: function (aData, sDateField, dFrom, dTo) {
 			if (!dFrom && !dTo) { return aData; }
 			var dToEnd = dTo ? new Date(dTo.getFullYear(), dTo.getMonth(), dTo.getDate(), 23, 59, 59, 999) : null;
@@ -114,34 +152,13 @@ sap.ui.define([], function () {
 			}
 
 			var ws = XLSX.utils.json_to_sheet(aRows);
-			var range = XLSX.utils.decode_range(ws["!ref"]);
-			var totalCols = range.e.c + 1;
-			var headerFieldCount = iHeaderFields || totalCols;
+			_applyStyles(ws, iHeaderFields);
 
-			for (var C = range.s.c; C <= range.e.c; C++) {
-				var addr = XLSX.utils.encode_cell({ r: 0, c: C });
-				if (!ws[addr]) { continue; }
-				ws[addr].s = (C < headerFieldCount) ? HEADER_STYLE : ITEM_HEADER_STYLE;
-			}
-
-			for (var R = 1; R <= range.e.r; R++) {
-				var isEven = (R % 2 === 0);
-				var style = _getDataStyle(isEven);
-				for (var C2 = range.s.c; C2 <= range.e.c; C2++) {
-					var addr2 = XLSX.utils.encode_cell({ r: R, c: C2 });
-					if (!ws[addr2]) {
-						ws[addr2] = { v: "", t: "s" };
-					}
-					ws[addr2].s = style;
-				}
-			}
-
-			ws["!cols"] = _autoColWidths(ws, range);
-
+			var sCleanSheetName = (sSheetName || "Sheet").substring(0, 31);
 			var wb = XLSX.utils.book_new();
-			XLSX.utils.book_append_sheet(wb, ws, sSheetName);
+			XLSX.utils.book_append_sheet(wb, ws, sCleanSheetName);
 			XLSX.writeFile(wb, sFileName);
-			sap.m.MessageToast.show(sSheetName + " downloaded.");
+			sap.m.MessageToast.show(sCleanSheetName + " downloaded.");
 		}
 	};
 });

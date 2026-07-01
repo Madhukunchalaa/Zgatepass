@@ -92,8 +92,7 @@ sap.ui.define([
 
 			oODataModel.read("/OutGatePassSet", {
 				filters: [
-					new sap.ui.model.Filter("GatePassNo", sap.ui.model.FilterOperator.EQ, sGPNo),
-					new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, "RGP")
+					new sap.ui.model.Filter("GatePassNo", sap.ui.model.FilterOperator.EQ, sGPNo)
 				],
 				urlParameters: { "$expand": "OutgateNav" },
 				success: function (oData) {
@@ -108,9 +107,11 @@ sap.ui.define([
 						return (r.GatePassNo || "").trim() === sGPNo.trim();
 					}) || aResults[0];
 
+					var sResolvedGPNo = (oResult.GatePassNo || sGPNo).trim();
+
 					var aCombinedItems = [];
 					aResults.forEach(function (res) {
-						if ((res.GatePassNo || "").trim() !== sGPNo.trim()) { return; }
+						if ((res.GatePassNo || "").trim() !== sResolvedGPNo) { return; }
 						var aItems = (res.OutgateNav && res.OutgateNav.results) || (Array.isArray(res.OutgateNav) ? res.OutgateNav : []);
 						aItems.forEach(function (itm) {
 							var bExists = aCombinedItems.some(function (existing) {
@@ -122,13 +123,20 @@ sap.ui.define([
 
 					if (aCombinedItems.length === 0) {
 						aResults.forEach(function (res) {
-							var aItems = (res.OutgateNav && res.OutgateNav.results) || (Array.isArray(res.OutgateNav) ? res.OutgateNav : []);
-							aItems.forEach(function (itm) {
+							if (res.Material || res.ItemNo) {
 								var bExists = aCombinedItems.some(function (existing) {
-									return existing.ItemNo === itm.ItemNo;
+									return existing.ItemNo === res.ItemNo;
 								});
-								if (!bExists) { aCombinedItems.push(itm); }
-							});
+								if (!bExists) { aCombinedItems.push(res); }
+							} else {
+								var aItems = (res.OutgateNav && res.OutgateNav.results) || (Array.isArray(res.OutgateNav) ? res.OutgateNav : []);
+								aItems.forEach(function (itm) {
+									var bEx = aCombinedItems.some(function (existing) {
+										return existing.ItemNo === itm.ItemNo;
+									});
+									if (!bEx) { aCombinedItems.push(itm); }
+								});
+							}
 						});
 					}
 
@@ -164,18 +172,24 @@ sap.ui.define([
 		},
 
 		_mapData: function (oData) {
-	       console.log("Full GET Data:", oData);
-           console.log("ChallanNumber:", oData.ChallanNumber);
 			var oModel = this.getView().getModel("rgp");
 
 			var sReqNo = oData.GatePassReqNo || oData.GatePassreqNo || "";
-			var sCleanGPNo = (oData.GatePassNo || "").trim();
-			var sCleanReqNo = sReqNo.trim();
 
 			var oNavData = null;
 			try {
 				var oCoreModel = sap.ui.getCore().getModel("selectedRGP");
 				if (oCoreModel) { oNavData = oCoreModel.getData(); }
+			} catch (e) {}
+
+			var oLocalLogistics = null;
+			var sCleanGPNo = (oData.GatePassNo || "").trim();
+			var sCleanReqNo = (oData.GatePassReqNo || oData.GatePassreqNo || "").trim();
+			try {
+				var sLocal = (sCleanGPNo ? localStorage.getItem("logistics_" + sCleanGPNo) : null) || (sCleanReqNo ? localStorage.getItem("logistics_" + sCleanReqNo) : null);
+				if (sLocal) {
+					oLocalLogistics = JSON.parse(sLocal);
+				}
 			} catch (e) {}
 
 			oModel.setProperty("/GatePassNo", oData.GatePassNo || "");
@@ -189,33 +203,34 @@ sap.ui.define([
 			oModel.setProperty("/VendorName", oData.VendorName || "");
 			oModel.setProperty("/Vendor", oData.VendorName || oData.Vendor || "");
 			oModel.setProperty("/VendorGST", oData.VendorGST || "");
-			oModel.setProperty("/VendorPerson", oData.VendorPerson || "");
-			oModel.setProperty("/CommonDesc", oData.CommonDesc || "");
+			oModel.setProperty("/VendorPerson", oData.VendorPerson || (oLocalLogistics ? oLocalLogistics.VendorPerson : "") || "");
+			oModel.setProperty("/CommonDesc", oData.CommonDesc || (oLocalLogistics ? oLocalLogistics.CommonDesc : "") || "");
 			oModel.setProperty("/City", oData.City || "");
 			oModel.setProperty("/ZipCode", oData.ZipCode || "");
 			oModel.setProperty("/VendorAddress", [oData.City, oData.ZipCode].filter(Boolean).join(", "));
 			oModel.setProperty("/PurchasingDoc", oData.PurchasingDoc || "");
 			oModel.setProperty("/NoOfPacakages", oData.NoOfPacakages || 0);
-			oModel.setProperty("/VehicleNo", oData.VehicleNo || "");
-			oModel.setProperty("/LRNumber", oData.LRNumber || "");
-			oModel.setProperty("/ModeOfTransport", oData.ModeOfDispatch || "Road");
-			var sTransporterName = oData.TransporterName || "";
+			oModel.setProperty("/VehicleNo", oData.VehicleNo || (oLocalLogistics ? oLocalLogistics.VehicleNo : "") || "");
+			oModel.setProperty("/LRNumber", oData.LRNumber || oData.LRNnumber || (oLocalLogistics ? oLocalLogistics.LRNnumber : "") || "");
+			oModel.setProperty("/ModeOfTransport", oData.ModeOfDispatch || (oLocalLogistics ? oLocalLogistics.ModeOfTransport : "") || "Road");
+			var sTransporterName = oData.TransporterName || (oLocalLogistics ? oLocalLogistics.TransporterName : "") || "";
 			var bIsSelf = (sTransporterName === "MEIL Neyveli Energy Private Limited");
 			oModel.setProperty("/TransportByIndex", bIsSelf ? 0 : 1);
 			oModel.setProperty("/TransporterName", sTransporterName);
-			oModel.setProperty("/TransporterGST", oData.TransporterGST || "");
+			oModel.setProperty("/TransporterGST", oData.TransporterGST || (oLocalLogistics ? oLocalLogistics.TransporterGST : "") || "");
 			oModel.setProperty("/Remarks", oData.Remarks || "");
 			oModel.setProperty("/UserRemarks", oData.Remarks || "");
 			oModel.setProperty("/HODRemarks", oData.HODRemarks || "");
 			oModel.setProperty("/StoreRemarks", oData.STORERemarks || oData.StoreRemarks || "");
-			oModel.setProperty("/ReturnableDate", this._formatDate(oData.ReturnableDate || oData.DueDate));
-			oModel.setProperty("/ExtReturnDate", this._formatDate(oData.ExtReturnDate || oData.Extreturndate || oData.ExtendedReturnableDate));
-			oModel.setProperty("/ChallanNumber", oData.ChallanNumber || "");
+			oModel.setProperty("/ReturnableDate", this._formatDate(oData.ReturnableDate || oData.Returnabledate || oData.DueDate || oData.Duedate || (oLocalLogistics ? oLocalLogistics.ReturnableDate : "")));
+			oModel.setProperty("/ExtReturnDate", this._formatDate(oData.ExtReturnDate || oData.Extreturndate || oData.ExtendedReturnableDate || oData.ExtendedreturnableDate || (oLocalLogistics ? oLocalLogistics.ExtendedReturnableDate : "")));
+			var sDCVal = oData.ChallanNumber || oData.Challanumber || (oLocalLogistics ? oLocalLogistics.ChallanNumber : "") || "";
+			oModel.setProperty("/ChallanNumber", sDCVal);
 			oModel.setProperty("/GateEntryNo", oData.GateEntryNo || "");
-			oModel.setProperty("/DocOptionIndex", oData.ChallanNumber ? 1 : 0);
+			oModel.setProperty("/DocOptionIndex", sDCVal ? 1 : 0);
 			oModel.setProperty("/EWayBillNo", oData.EWayBillNo || "");
 			oModel.setProperty("/EWayBillDate", oData.EWayBillDate || null);
-			oModel.setProperty("/DCNotes", oData.DCNotes || "");
+			oModel.setProperty("/DCNotes", oData.DCNotes || (oLocalLogistics ? oLocalLogistics.DCNotes : "") || "");
 			oModel.setProperty("/InsuranceRequired", (oData.InsuranceReq || "").toUpperCase() === "YES");
 
 			var sGPStatus = (oData.GPStatus || "").trim().toUpperCase();
@@ -297,9 +312,78 @@ sap.ui.define([
 					if (oResult.CommonDesc) {
 						oModel.setProperty("/CommonDesc", oResult.CommonDesc);
 					}
+					if (!oModel.getProperty("/ReturnableDate")) {
+						var sRetDate = this._formatDate(oResult.ReturnableDate || oResult.DueDate);
+						if (sRetDate) { oModel.setProperty("/ReturnableDate", sRetDate); }
+					}
+					if (!oModel.getProperty("/ExtReturnDate")) {
+						var sExtDate = this._formatDate(oResult.ExtReturnDate || oResult.Extreturndate || oResult.ExtendedReturnableDate);
+						if (sExtDate) { oModel.setProperty("/ExtReturnDate", sExtDate); }
+					}
+					if (!oModel.getProperty("/Remarks") && oResult.Remarks) {
+						oModel.setProperty("/Remarks", oResult.Remarks);
+						oModel.setProperty("/UserRemarks", oResult.Remarks);
+					}
+					if (!oModel.getProperty("/Department") && oResult.Department) {
+						oModel.setProperty("/Department", oResult.Department);
+					}
+					if (!oModel.getProperty("/VendorGST") && oResult.VendorGST) {
+						oModel.setProperty("/VendorGST", oResult.VendorGST);
+					}
+					if (!oModel.getProperty("/City") && oResult.City) {
+						oModel.setProperty("/City", oResult.City);
+						oModel.setProperty("/VendorAddress", [oResult.City, oResult.ZipCode || oModel.getProperty("/ZipCode")].filter(Boolean).join(", "));
+					}
 					oModel.setProperty("/HODRemarks", oResult.HODRemarks || oResult.HodRemarks || "");
 					oModel.setProperty("/StoreRemarks", oResult.STORERemarks || oResult.StoreRemarks || "");
-				}
+				}.bind(this)
+			});
+
+			// Second call: read OutGatePassSet by request number to recover logistics fields
+			// (ChallanNumber, ExtReturnDate, etc.) that may be cleared when queried by GatePassNo after inward
+			oODataModel.read("/OutGatePassSet", {
+				filters: [
+					new sap.ui.model.Filter("GatePassreqNo", sap.ui.model.FilterOperator.EQ, sReqNo),
+					new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, sGPType)
+				],
+				success: function (oData) {
+					var aResults = oData.results || [];
+					if (aResults.length === 0) { return; }
+					var oGP = aResults[0];
+					if (!oModel.getProperty("/ReturnableDate")) {
+						var sRet = this._formatDate(oGP.ReturnableDate || oGP.DueDate);
+						if (sRet) { oModel.setProperty("/ReturnableDate", sRet); }
+					}
+					if (!oModel.getProperty("/ExtReturnDate")) {
+						var sExt = this._formatDate(oGP.ExtReturnDate || oGP.Extreturndate || oGP.ExtendedReturnableDate);
+						if (sExt) { oModel.setProperty("/ExtReturnDate", sExt); }
+					}
+					if (!oModel.getProperty("/ChallanNumber") && oGP.ChallanNumber) {
+						oModel.setProperty("/ChallanNumber", oGP.ChallanNumber);
+						oModel.setProperty("/DocOptionIndex", 1);
+					}
+					if (!oModel.getProperty("/EWayBillNo") && oGP.EWayBillNo) {
+						oModel.setProperty("/EWayBillNo", oGP.EWayBillNo);
+					}
+					if (!oModel.getProperty("/EWayBillDate") && oGP.EWayBillDate) {
+						oModel.setProperty("/EWayBillDate", oGP.EWayBillDate);
+					}
+					if (!oModel.getProperty("/DCNotes") && oGP.DCNotes) {
+						oModel.setProperty("/DCNotes", oGP.DCNotes);
+					}
+					if (!oModel.getProperty("/TransporterName") && oGP.TransporterName) {
+						oModel.setProperty("/TransporterName", oGP.TransporterName);
+						oModel.setProperty("/TransporterGST", oGP.TransporterGST || "");
+						var bSelf = (oGP.TransporterName === "MEIL Neyveli Energy Private Limited");
+						oModel.setProperty("/TransportByIndex", bSelf ? 0 : 1);
+					}
+					if (!oModel.getProperty("/VehicleNo") && oGP.VehicleNo) {
+						oModel.setProperty("/VehicleNo", oGP.VehicleNo);
+					}
+					if (!oModel.getProperty("/LRNumber") && (oGP.LRNumber || oGP.LRNnumber)) {
+						oModel.setProperty("/LRNumber", oGP.LRNumber || oGP.LRNnumber);
+					}
+				}.bind(this)
 			});
 		},
 
@@ -367,7 +451,7 @@ sap.ui.define([
 			oModel.setProperty("/CommentsList", aNew);
 		},
 
-		onSAVEButtonPress: function () {
+		onSAVEButtonPress: async function (bIsGenerateDC) {
 			var oData = this.getView().getModel("rgp").getData();
 			var oODataModel = this.getOwnerComponent().getModel();
 
@@ -389,6 +473,9 @@ sap.ui.define([
 			var sChallanDate = oData.ChallanDate ? new Date(oData.ChallanDate).toISOString().split("T")[0] : sToday;
 			var sAuthorativeGPNo = this._sCurrentGPNo || oData.GatePassNo || "";
 
+			var sGPbase = "";
+			var sDCbase = "";
+
 			var oPayload = {
 				GatePassreqNo: oData.GatePassreqNo || "",
 				FiscalYear: oData.FiscalYear || String(new Date().getFullYear()),
@@ -408,7 +495,8 @@ sap.ui.define([
 				CommonDesc: oData.CommonDesc || "",
 				NoOfPacakages: parseInt(oData.NoOfPacakages || 0),
 				Department: oData.Department || "",
-				ChallanNumber: oData.ChallanNumber || "",
+				Challanumber: bIsGenerateDC === true ? "" : (oData.ChallanNumber || ""),
+				GenerateDC: bIsGenerateDC === true ? "X" : (oData.ChallanNumber ? "X" : ""),
 				GatePassType: "RGP",
 				VehicleNo: oData.VehicleNo || "",
 				LRNumber: oData.LRNumber || "",
@@ -416,8 +504,8 @@ sap.ui.define([
 				Remarks: oData.Remarks || "",
 				GPStatus: oData.GPStatus || "",
 				Message: "",
-				GPbase64: "",
-				DCbase64: "",
+				GPbase64: sGPbase,
+				DCbase64: sDCbase,
 				TransporterName: oData.TransporterName || "",
 				TransporterGST: oData.TransporterGST || "",
 				Comment1: "", Comment2: "", Comment3: "", Comment4: "", Comment5: "",
@@ -465,14 +553,24 @@ sap.ui.define([
 			oODataModel.create("/OutGatePassSet", oPayload, {
 				success: function (oResponse) {
 					sap.ui.core.BusyIndicator.hide();
+					
+					var sDC = oResponse.Challanumber || oResponse.ChallanNumber;
+					var oModel = this.getView().getModel("rgp");
+					if (sDC) {
+						oModel.setProperty("/ChallanNumber", sDC);
+						oModel.setProperty("/DocOptionIndex", 1);
+					}
+					
 					var sMsg = oResponse.Message || "Gate Pass updated successfully!";
 					MessageBox.success(sMsg, {
 						onClose: function () {
 							this._loadData(sAuthorativeGPNo);
+							if (bIsGenerateDC === true && sDC) {
+								this.onGenerateDCButtonPress(false, true);
+							}
 						}.bind(this)
 					});
 					console.log("this is payload",oPayload)
-					var oModel = this.getView().getModel("rgp");
 					oModel.setProperty("/StatusState", this._getStatusState(oData.GPStatus));
 				}.bind(this),
 				error: function (oError) {
@@ -485,6 +583,100 @@ sap.ui.define([
 					MessageBox.error(sMsg);
 				}
 			});
+		},
+
+		// ── Item-wise Print ──────────────────────────────────────────────────
+		onPrintItems: function () {
+			var oModel = this.getView().getModel("rgp");
+			var aItems = oModel ? (oModel.getProperty("/items") || []) : [];
+			var oData  = oModel ? oModel.getData() : {};
+
+			var sGPNo     = oData.GatePassNo     || "";
+			var sVendor   = oData.VendorName     || "";
+			var sDate     = oData.GatePassDate   || "";
+			var sDueDate  = oData.ReturnableDate || "";
+
+			var sHeaders = ["#", "Material", "Description", "HSN Code", "UOM", "Rate (Rs.)", "Sent Qty", "Recv Qty", "Balance Qty", "Total (Rs.)", "Remarks"];
+			var aRows = aItems.map(function (it, i) {
+				return [
+					i + 1,
+					it.Material        || "",
+					it.MaterialDesc    || it.Description || "",
+					it.HSNCode         || "",
+					it.UOM             || "",
+					parseFloat(it.ItemNetPrice  || 0).toFixed(2),
+					parseFloat(it.SentQuantity  || 0).toFixed(3),
+					parseFloat(it.RecievedQuantity || 0).toFixed(3),
+					parseFloat(it.BalanceQuantity  || 0).toFixed(3),
+					parseFloat(it.Totalvalue   || 0).toFixed(2),
+					it.Remarks         || ""
+				];
+			});
+
+			var sTableRows = aRows.map(function (row) {
+				return "<tr>" + row.map(function (cell) { return "<td style='border:1px solid #ccc;padding:4px 8px;'>" + cell + "</td>"; }).join("") + "</tr>";
+			}).join("");
+
+			var sHeaderRow = "<tr>" + sHeaders.map(function (h) {
+				return "<th style='border:1px solid #ccc;padding:4px 8px;background:#1a3a5c;color:#fff;text-align:left;'>" + h + "</th>";
+			}).join("") + "</tr>";
+
+			var sPrintHtml = "<!DOCTYPE html><html><head><title>RGP Items - " + sGPNo + "</title>" +
+				"<style>body{font-family:Arial,sans-serif;font-size:12px;margin:20px;}h2{color:#1a3a5c;}table{border-collapse:collapse;width:100%;}@media print{body{margin:5mm;}}</style>" +
+				"</head><body>" +
+				"<h2>RGP Gate Pass - Items</h2>" +
+				"<p><strong>GP No:</strong> " + sGPNo + " &nbsp;&nbsp; <strong>Vendor:</strong> " + sVendor + " &nbsp;&nbsp; <strong>Date:</strong> " + sDate + " &nbsp;&nbsp; <strong>Due Date:</strong> " + sDueDate + "</p>" +
+				"<table><thead>" + sHeaderRow + "</thead><tbody>" + sTableRows + "</tbody></table>" +
+				"</body></html>";
+
+			var oPrintWindow = window.open("", "_blank", "width=1100,height=700");
+			oPrintWindow.document.write(sPrintHtml);
+			oPrintWindow.document.close();
+			oPrintWindow.focus();
+			oPrintWindow.print();
+		},
+
+		// ── Item-wise Copy to Clipboard ──────────────────────────────────────
+		onCopyItemsToClipboard: function () {
+			var oModel = this.getView().getModel("rgp");
+			var aItems = oModel ? (oModel.getProperty("/items") || []) : [];
+			if (!aItems.length) {
+				sap.m.MessageToast.show("No items to copy.");
+				return;
+			}
+			var sHeaders = ["#", "Material", "Description", "HSN Code", "UOM", "Rate", "Sent Qty", "Recv Qty", "Balance Qty", "Total", "Remarks"];
+			var aLines = [sHeaders.join("\t")];
+			aItems.forEach(function (it, i) {
+				aLines.push([
+					i + 1,
+					it.Material        || "",
+					it.MaterialDesc    || it.Description || "",
+					it.HSNCode         || "",
+					it.UOM             || "",
+					parseFloat(it.ItemNetPrice  || 0).toFixed(2),
+					parseFloat(it.SentQuantity  || 0).toFixed(3),
+					parseFloat(it.RecievedQuantity || 0).toFixed(3),
+					parseFloat(it.BalanceQuantity  || 0).toFixed(3),
+					parseFloat(it.Totalvalue   || 0).toFixed(2),
+					it.Remarks || ""
+				].join("\t"));
+			});
+			var sText = aLines.join("\n");
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(sText).then(function () {
+					sap.m.MessageToast.show("Items copied to clipboard. You can paste in Excel.");
+				}).catch(function () {
+					sap.m.MessageToast.show("Copy failed. Please try manually.");
+				});
+			} else {
+				var el = document.createElement("textarea");
+				el.value = sText;
+				document.body.appendChild(el);
+				el.select();
+				document.execCommand("copy");
+				document.body.removeChild(el);
+				sap.m.MessageToast.show("Items copied to clipboard. You can paste in Excel.");
+			}
 		},
 
 		onInsuranceRequiredCheckBoxSelect: function (oEvent) {
@@ -504,7 +696,7 @@ sap.ui.define([
 				}
 				this._pInsuranceDialog.then(function (oDialog) {
 					oDialog.getModel("insurance").setData({
-						InvoiceNo: oData.GatePassreqNo || "",
+						InvoiceNo: oData.GatePassNo || "",
 						InsuranceDate: new Date().toLocaleDateString("en-GB").split("/").join("-"),
 						ReceivedDate: new Date().toLocaleDateString("en-GB").split("/").join("-"),
 						Vendor: oData.VendorName || oData.Vendor || "",
@@ -563,7 +755,7 @@ sap.ui.define([
 			this.getRouter().navTo("NRGPList");
 		},
 
-		onPRINTGATEPASSButtonPress: async function () {
+		onPRINTGATEPASSButtonPress: async function (bGetBase64) {
 			var oOut = this.getView().getModel("rgp").getData();
 			const { jsPDF } = window.jspdf;
 			var doc = new jsPDF("l", "mm", "a4");
@@ -723,24 +915,24 @@ sap.ui.define([
 			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
 			sigPositions.forEach(function (sx, i) { doc.text(sigLabels[i], sx + sigLineW / 2, sigY + 5, { align: "center" }); });
 
+			if (bGetBase64 === true) {
+				return doc.output('datauristring').split(',')[1];
+			}
 			doc.save("GatePass_RGP_" + (oOut.GatePassNo || "Draft") + ".pdf");
 			MessageToast.show("Gate Pass Printed");
 		},
 
-		onGenerateDCButtonPress: async function () {
+		onGenerateDCButtonPress: async function (bGetBase64, bSkipOData) {
 			var oModel = this.getView().getModel("rgp");
 			var oOut = oModel.getData();
-			if (!oOut.ChallanNumber && oOut.GatePassNo) {
-				var oNow = new Date();
-				var sDay = String(oNow.getDate()).padStart(2, "0");
-				var sMon = String(oNow.getMonth() + 1).padStart(2, "0");
-				var sYear = String(oNow.getFullYear());
-				var sHrs = String(oNow.getHours()).padStart(2, "0");
-				var sMin = String(oNow.getMinutes()).padStart(2, "0");
-				var sSec = String(oNow.getSeconds()).padStart(2, "0");
-				var sGeneratedDC = "DC/" + sDay + sMon + sYear + "/" + sHrs + sMin + sSec + "/" + oOut.GatePassNo;
-				oModel.setProperty("/ChallanNumber", sGeneratedDC);
-				oOut.ChallanNumber = sGeneratedDC;
+
+			if (bSkipOData !== true && bGetBase64 !== true && typeof bGetBase64 !== "boolean") {
+				// User clicked Generate DC button on UI
+				oModel.setProperty("/ChallanNumber", "");
+				oOut.ChallanNumber = "";
+				
+				this.onSAVEButtonPress(true);
+				return;
 			}
 			const { jsPDF } = window.jspdf;
 			var doc = new jsPDF("p", "mm", "a4");
@@ -878,6 +1070,9 @@ sap.ui.define([
 			doc.text("Store In-Charge", pageWidth / 2, sigY + 5, { align: "center" });
 			doc.text("Authorised Signatory", pageWidth - margin - sigLineW / 2, sigY + 5, { align: "center" });
 
+			if (bGetBase64 === true) {
+				return doc.output('datauristring').split(',')[1];
+			}
 			doc.save("DC_" + (oOut.GatePassNo || "Draft") + ".pdf");
 			MessageToast.show("Delivery Challan Downloaded");
 		},
@@ -900,15 +1095,24 @@ sap.ui.define([
 		_getImageBase64: function (url) {
 			return new Promise(function (resolve, reject) {
 				var img = new Image();
+				var timer = setTimeout(function () {
+					img.onload = null;
+					img.onerror = null;
+					reject("Timeout loading image");
+				}, 1000);
 				img.crossOrigin = "Anonymous";
 				img.onload = function () {
+					clearTimeout(timer);
 					var canvas = document.createElement("canvas");
 					canvas.width = img.width;
 					canvas.height = img.height;
 					canvas.getContext("2d").drawImage(img, 0, 0);
 					resolve(canvas.toDataURL("image/png"));
 				};
-				img.onerror = reject;
+				img.onerror = function (err) {
+					clearTimeout(timer);
+					reject(err);
+				};
 				img.src = url;
 			});
 		}

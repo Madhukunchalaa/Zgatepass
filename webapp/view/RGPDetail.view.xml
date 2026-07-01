@@ -86,6 +86,9 @@
 						<Toolbar height="3rem">
 							<core:Icon src="sap-icon://table-view" class="sapUiSmallMarginEnd"/>
 							<Title text="TABLE OF ITEMS" level="H3"/>
+							<ToolbarSpacer/>
+							<Button id="idRGPCopyItemsBtn" icon="sap-icon://copy" text="Copy" press=".onCopyItemsToClipboard" tooltip="Copy items to clipboard" class="sapUiTinyMarginEnd"/>
+							<Button id="idRGPPrintItemsBtn" icon="sap-icon://print" text="Print" press=".onPrintItems" tooltip="Print item table"/>
 						</Toolbar>
 					</headerToolbar>
 					<Table items="{rgp>/items}" class="gpmsItemTable" alternateRowColors="true">

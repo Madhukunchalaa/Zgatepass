@@ -852,9 +852,9 @@ sap.ui.define([
 			aItems.push({
 				ItemNo: sNextItemNo,
 				ItemDescription: "",
-				POQuantity: "0.000",
-				RecievedQuantity: "0.000",
-				BalanceQuantity: "0.000",
+				POQuantity: "",
+				RecievedQuantity: "",
+				BalanceQuantity: "",
 				UOM: "",
 				PurchaseOrder: "",
 				Plant: "",
@@ -984,7 +984,7 @@ sap.ui.define([
 				DCdate: sDCDateSAP,
 				BudgetCode: oData.BudgetCode || "",
 				EntryPoint: "",
-				InspectionStatus: "Completed",
+				InspectionStatus: oData.InspectionStatus || "Pending",
 				Inspectiondate: this._formatDateToSAP(oData.Inspectiondate || new Date().toISOString().split("T")[0]),
 				Remarks: oData.Remarks || "",
 				Message: "",
@@ -1056,13 +1056,19 @@ sap.ui.define([
 							}
 						}
 
+						var sRawText = oError.responseText || "";
 						// Handle standard SAP Gateway "success-error" where entity isn't returned
 						var bIsSuccessError = (sErrMsg && sErrMsg.indexOf("Service provider did not return any business data") !== -1) ||
-											  (sDetailedError && sDetailedError.indexOf("Service provider did not return any business data") !== -1);
+											  (sDetailedError && sDetailedError.indexOf("Service provider did not return any business data") !== -1) ||
+											  (sRawText.indexOf("Service provider did not return any business data") !== -1);
 
 						if (bIsSuccessError) {
-							MessageToast.show("Gate Entry processed successfully.");
-							this._resetModel();
+							MessageBox.success("Gate Entry updated successfully.", {
+								onClose: function () {
+									this._resetModel();
+									this.getRouter().navTo("PCPList");
+								}.bind(this)
+							});
 							return;
 						}
 

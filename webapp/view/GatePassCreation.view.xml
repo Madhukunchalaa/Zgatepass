@@ -128,6 +128,7 @@
 								<core:Item key="Electrical T &amp; D" text="Electrical T &amp; D"/>
 								<core:Item key="Fire Dept." text="Fire Dept."/>
 								<core:Item key="O&amp;E Dept." text="O&amp;E Dept."/>
+								<core:Item key="Others" text="Others"/>
 							</Select>
 						</VBox>
 					</layout:Grid>

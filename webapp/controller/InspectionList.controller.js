@@ -102,7 +102,19 @@ sap.ui.define([
 		onFilter: function () {},
 
 		onDownloadExcel: function () {
-			var aData = this.getView().getModel("inspList").getProperty("/results") || [];
+			var oTable = this.byId("idInspectionTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aData = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) {
+						aData.push(oContext.getObject());
+					}
+				});
+			} else {
+				aData = this.getView().getModel("inspList").getProperty("/results") || [];
+			}
 			var dFrom = this.byId("idExcelFromDate").getDateValue();
 			var dTo = this.byId("idExcelToDate").getDateValue();
 			aData = ExcelExport.filterByDate(aData, "GEDate", dFrom, dTo);

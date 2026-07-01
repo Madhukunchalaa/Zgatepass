@@ -8,8 +8,8 @@
         <subHeader>
             <Bar>
                 <contentLeft>
-                    <SearchField id="idGatePassSearchField" width="16rem"
-                        placeholder="Search by Request No."
+                    <SearchField id="idGatePassSearchField" width="20rem"
+                        placeholder="Search Vendor, GP No, User, Description..."
                         liveChange=".onSearchFieldLiveChange" />
                 </contentLeft>
                 <contentMiddle>
@@ -32,6 +32,8 @@
 
                 </contentMiddle>
                 <contentRight>
+                    <DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" change=".onDateFilterChange" width="9rem"/>
+                    <DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" change=".onDateFilterChange" width="9rem"/>
                     <Button icon="sap-icon://clear-filter" text="Reset" press=".onResetButtonPress" />
                 </contentRight>
             </Bar>
@@ -50,9 +52,9 @@
                         <Title text="Gate Pass Request List" level="H3" />
                         <ToolbarSpacer />
                         <Text id="idItemCountText" text="" />
-                        <DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px"/>
-                        <DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px"/>
-                        <Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcelButtonPress" tooltip="Export to Excel"/>
+                        <Button id="idGPDownloadExcelBtn" icon="sap-icon://download" text="Download Excel" press=".onDownloadExcelButtonPress" tooltip="Export to Excel" class="sapUiTinyMarginEnd"/>
+                        <Button id="idGPCopyListBtn" icon="sap-icon://copy" text="Copy" press=".onCopyList" tooltip="Copy list to clipboard" class="sapUiTinyMarginEnd"/>
+                        <Button id="idGPPrintListBtn" icon="sap-icon://print" text="Print List" press=".onPrintList" tooltip="Print gate pass list"/>
                     </Toolbar>
                 </headerToolbar>
 

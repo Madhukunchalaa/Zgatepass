@@ -119,9 +119,11 @@ sap.ui.define([
 						return;
 					}
 
+					var sResolvedGPNo = (oResult.GatePassNo || sGPNo).trim();
+
 					var aCombinedItems = [];
 					aResults.forEach(function (res) {
-						if ((res.GatePassNo || "").trim() !== sGPNo.trim()) { return; }
+						if ((res.GatePassNo || "").trim() !== sResolvedGPNo) { return; }
 						var aItems = (res.OutgateNav && res.OutgateNav.results) || (Array.isArray(res.OutgateNav) ? res.OutgateNav : []);
 						aItems.forEach(function (itm) {
 							var bExists = aCombinedItems.some(function (existing) {
@@ -130,6 +132,19 @@ sap.ui.define([
 							if (!bExists) { aCombinedItems.push(itm); }
 						});
 					});
+
+					if (aCombinedItems.length === 0) {
+						aResults.forEach(function (res) {
+							if ((res.GatePassNo || "").trim() !== sResolvedGPNo) { return; }
+							if (res.Material || res.ItemNo) {
+								var bExists = aCombinedItems.some(function (existing) {
+									return existing.ItemNo === res.ItemNo;
+								});
+								if (!bExists) { aCombinedItems.push(res); }
+							}
+						});
+					}
+
 					oResult.OutgateNav = { results: aCombinedItems };
 					this._mapData(oResult);
 				}.bind(this),
@@ -346,13 +361,13 @@ sap.ui.define([
 			var oPayload = {
 				GatePassType:    "RGP",
 				GatePassNo:      sGatePassNo,
-				Plant:           oHdr.Plant           || "",
-				Vendor:          oHdr.Vendor          || "",
-				VendorName:      oHdr.VendorName      || "",
-				Department:      oHdr.Department      || "",
+				Plant:           oHdr.Plant            || "",
+				Vendor:          oHdr.Vendor           || "",
+				VendorName:      oHdr.VendorName       || "",
+				Department:      oHdr.Department       || "",
 				Remarks:         oModel.getProperty("/UserRemarks") || oModel.getProperty("/DCNotes") || oHdr.Remarks || "",
-				VehicleNo:       oModel.getProperty("/VehicleNo") || "",
-				ModeOfDispatch:  oModel.getProperty("/ModeOfTransport") || "",
+				VehicleNo:       oModel.getProperty("/VehicleNo") || oHdr.VehicleNo || "",
+				ModeOfDispatch:  oModel.getProperty("/ModeOfTransport") || oHdr.ModeOfDispatch || "",
 				GateRetItmNav:   aNavItems
 			};
 
@@ -361,8 +376,9 @@ sap.ui.define([
 
 			oODataModel.create("/GateRetHdrSet", oPayload, {
 				success: function (oResponse) {
-					sap.ui.core.BusyIndicator.hide();
 					var sMsg = oResponse.Message || "Inward Gate Pass posted successfully!";
+					this._preserveOutGatePass(oODataModel, oHdr, aNavItems, sGatePassNo);
+					sap.ui.core.BusyIndicator.hide();
 					MessageBox.success(sMsg, {
 						onClose: function () {
 							this.getView().getModel("inward").setProperty("/showLogistics", true);
@@ -375,6 +391,80 @@ sap.ui.define([
 					try { sMsg = JSON.parse(oError.responseText).error.message.value; } catch (e) { sMsg = oError.message || "Unknown error"; }
 					MessageBox.error("Failed to post Inward Gate Pass:\n" + sMsg);
 				}
+			});
+		},
+
+		_preserveOutGatePass: function (oODataModel, oHdr, aInwardItems, sGatePassNo) {
+			var aRawItems = (oHdr.OutgateNav && oHdr.OutgateNav.results) || [];
+			var oOutPayload = {
+				GatePassreqNo:   oHdr.GatePassReqNo    || oHdr.GatePassreqNo || "",
+				FiscalYear:      oHdr.FiscalYear       || String(new Date().getFullYear()),
+				Plant:           oHdr.Plant             || "",
+				GatePassNo:      sGatePassNo,
+				Vendor:          oHdr.Vendor            || "",
+				VendorName:      oHdr.VendorName        || "",
+				VendorGST:       oHdr.VendorGST         || "",
+				VendorPerson:    oHdr.VendorPerson      || "",
+				ZipCode:         oHdr.ZipCode           || "",
+				City:            oHdr.City              || "",
+				GatePassDate:    oHdr.GatePassDate      || "",
+				ChallanDate:     oHdr.ChallanDate       || "",
+				ReturnableDate:  oHdr.ReturnableDate    || oHdr.DueDate || "",
+				ExtReturnDate:   oHdr.ExtReturnDate     || oHdr.Extreturndate || oHdr.ExtendedReturnableDate || "",
+				CommonDesc:      oHdr.CommonDesc        || "",
+				NoOfPacakages:   parseInt(oHdr.NoOfPacakages || 0),
+				Department:      oHdr.Department        || "",
+				ChallanNumber:   oHdr.ChallanNumber     || "",
+				GatePassType:    "RGP",
+				VehicleNo:       oHdr.VehicleNo         || "",
+				ModeOfDispatch:  oHdr.ModeOfDispatch    || "",
+				Remarks:         oHdr.Remarks           || "",
+				GPStatus:        oHdr.GPStatus          || "",
+				Message:         "",
+				GPbase64:        "",
+				DCbase64:        "",
+				LRNumber:        oHdr.LRNumber          || oHdr.LRNnumber || "",
+				TransporterName: oHdr.TransporterName   || "",
+				TransporterGST:  oHdr.TransporterGST    || "",
+				DCNotes:         oHdr.DCNotes           || "",
+				InsuranceReq:    oHdr.InsuranceReq      || "",
+				InsuranceDate:   oHdr.InsuranceDate     || "",
+				InsuranceAmount: oHdr.InsuranceAmount   || "0",
+				Comment1: "", Comment2: "", Comment3: "", Comment4: "", Comment5: "",
+				Comment6: "", Comment7: "", Comment8: "", Comment9: "", Comment10: "",
+				Sno1: "", Sno2: "", Sno3: "", Sno4: "", Sno5: "",
+				Sno6: "", Sno7: "", Sno8: "", Sno9: "", Sno10: "",
+				cdate1: "", cdate2: "", cdate3: "", cdate4: "", cdate5: "",
+				cdate6: "", cdate7: "", cdate8: "", cdate9: "", cdate10: "",
+				OutgateNav: aRawItems.map(function (it, i) {
+					var oInward = aInwardItems.find(function (inv) { return inv.ItemNo === it.ItemNo; });
+					return {
+						GatePassType:     "RGP",
+						GatePassNo:       sGatePassNo,
+						ItemNo:           it.ItemNo || String((i + 1) * 10).padStart(5, "0"),
+						Material:         it.Material || "",
+						HSNCode:          it.HSNCode || "",
+						HSNDesc:          it.HSNDesc || "",
+						UOM:              it.UOM || "",
+						ItemNetPrice:     it.ItemNetPrice || "0.00",
+						SentQuantity:     it.SentQuantity || "0.000",
+						RecievedQuantity: oInward ? oInward.RecievedQuantity : (it.RecievedQuantity || "0.000"),
+						BalanceQuantity:  oInward ? oInward.BalanceQuantity : (it.BalanceQuantity || "0.000"),
+						Totalvalue:       it.Totalvalue || "0.00",
+						Remarks:          it.Remarks || ""
+					};
+				})
+			};
+
+			for (var ci = 1; ci <= 10; ci++) {
+				oOutPayload["Comment" + ci] = oHdr["Comment" + ci] || "";
+				oOutPayload["Sno" + ci]     = oHdr["Sno" + ci]     || "";
+				oOutPayload["cdate" + ci]   = oHdr["cdate" + ci]   || "";
+			}
+
+			oODataModel.create("/OutGatePassSet", oOutPayload, {
+				success: function () { },
+				error: function () { }
 			});
 		},
 

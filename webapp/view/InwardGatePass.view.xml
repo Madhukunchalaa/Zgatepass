@@ -218,11 +218,11 @@
 							</Select>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
-							<Label text="Outward LR No." class="gpmsFieldLabel"/>
+							<Label text="Inward LR No." class="gpmsFieldLabel"/>
 							<Input value="{inward>/InsuranceLRNumber}" placeholder="Enter LR Number" class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
-							<Label text="Outward Vehicle No." class="gpmsFieldLabel"/>
+							<Label text="Inward Vehicle No." class="gpmsFieldLabel"/>
 							<Input value="{inward>/InsuranceVehicleNo}" placeholder="Enter Vehicle No" class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">

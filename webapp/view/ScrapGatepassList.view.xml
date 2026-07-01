@@ -21,14 +21,12 @@
 						<OverflowToolbar>
 							<Title text="Scrap Gate Passes" level="H2"/>
 							<ToolbarSpacer/>
-							<SearchField
-								width="300px"
-								search=".onSearch"
-								placeholder="Search Gate Pass No..."
-								class="gpmsFieldInput"/>
-							<DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px"/>
-							<DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px"/>
+							<SearchField width="300px" search=".onSearch" placeholder="Search Gate Pass No..." class="gpmsFieldInput"/>
+							<DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px" change=".onDateFilterChange"/>
+							<DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px" change=".onDateFilterChange"/>
 							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel"/>
+							<Button id="idScrapGpCopyListBtn" icon="sap-icon://copy" text="Copy" press=".onCopyList" tooltip="Copy list to clipboard"/>
+							<Button id="idScrapGpPrintListBtn" icon="sap-icon://print" text="Print List" press=".onPrintList" tooltip="Print list"/>
 						</OverflowToolbar>
 					</headerToolbar>
 					<columns>

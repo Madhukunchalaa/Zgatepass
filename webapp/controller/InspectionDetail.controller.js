@@ -74,6 +74,16 @@ sap.ui.define([
 			var sInspDateSAP = this._toSAPDate(oData.Inspectiondate || "");
 
 			var oPayload = {
+				GateEntryNo:      oData.GateEntryNo,
+				GEDate:           sGeDateRaw,
+				SourceType:       oData.SourceType || "",
+				VendorDesc:       oData.VendorDesc || "",
+				Department:       oData.Department || "",
+				DCNumber:         oData.DCNumber || "",
+				RGPNumber:        oData.RGPNumber || "",
+				RRNo:             oData.RRNo || "",
+				Plant:            oData.Plant || "",
+				BudgetCode:       oData.BudgetCode || "",
 				InspectionStatus: oData.InspectionStatus,
 				Inspectiondate:   sInspDateSAP
 			};

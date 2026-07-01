@@ -3,107 +3,110 @@
 	xmlns="sap.m"
 	xmlns:mvc="sap.ui.core.mvc"
 	xmlns:core="sap.ui.core"
-	xmlns:f="sap.f"
+	xmlns:layout="sap.ui.layout"
 	height="100%">
-	<Page
-		id="reportsPage"
-		title="Gate Pass Reports &amp; Analytics"
-		class="gpmsPage">
-		<headerContent>
-			<Button icon="sap-icon://refresh" press=".onRefresh" type="Transparent"/>
-		</headerContent>
+
+	<Page id="idReportsPage"
+		title="GPMS Reports Download"
+		class="gpmsPage"
+		showNavButton="true"
+		navButtonPress=".onPageReportsNavButtonPress">
+
 		<content>
 			<VBox class="gpmsContentWrapper sapUiMediumMargin">
-				
-				<!-- Summary Cards -->
-				<HBox justifyContent="SpaceBetween" class="sapUiSmallMarginBottom">
-					<f:Card class="gpmsSummaryCard" width="220px">
-						<f:header>
-							<f:CardHeader title="Total Requests" subtitle="All Time" iconSrc="sap-icon://activities"/>
-						</f:header>
-						<f:content>
-							<VBox alignItems="Center" class="sapUiSmallMargin">
-								<Title text="42" level="H1" class="gpmsCardValue"/>
-							</VBox>
-						</f:content>
-					</f:Card>
-					<f:Card class="gpmsSummaryCard" width="220px">
-						<f:header>
-							<f:CardHeader title="Pending Approval" subtitle="Action Required" iconSrc="sap-icon://message-warning"/>
-						</f:header>
-						<f:content>
-							<VBox alignItems="Center" class="sapUiSmallMargin">
-								<Title text="12" level="H1" class="gpmsCardValue warning"/>
-							</VBox>
-						</f:content>
-					</f:Card>
-					<f:Card class="gpmsSummaryCard" width="220px">
-						<f:header>
-							<f:CardHeader title="Approved" subtitle="Ready for Exit" iconSrc="sap-icon://sys-enter-2"/>
-						</f:header>
-						<f:content>
-							<VBox alignItems="Center" class="sapUiSmallMargin">
-								<Title text="25" level="H1" class="gpmsCardValue success"/>
-							</VBox>
-						</f:content>
-					</f:Card>
-					<f:Card class="gpmsSummaryCard" width="220px">
-						<f:header>
-							<f:CardHeader title="Completed" subtitle="Closed Passes" iconSrc="sap-icon://shipping-status"/>
-						</f:header>
-						<f:content>
-							<VBox alignItems="Center" class="sapUiSmallMargin">
-								<Title text="5" level="H1" class="gpmsCardValue info"/>
-							</VBox>
-						</f:content>
-					</f:Card>
-				</HBox>
 
-				<!-- Data Table -->
-				<Table
-					id="reportsTable"
-					items="{path: '/GateReqHdrSet', sorter: {path: 'GatePassReqNo', descending: true}}"
-					growing="true"
-					growingThreshold="20"
-					class="gpmsMainTable sapUiSmallMarginTop">
+				<!-- Date Range Filter Panel -->
+				<Panel expandable="false" class="gpmsPanel sapUiSmallMarginBottom">
+					<headerToolbar>
+						<Toolbar height="3rem">
+							<core:Icon src="sap-icon://filter" class="sapUiSmallMarginEnd"/>
+							<Title text="Date Range Filter" level="H3"/>
+						</Toolbar>
+					</headerToolbar>
+					<layout:Grid defaultSpan="XL3 L3 M6 S12" vSpacing="0">
+						<VBox class="sapUiSmallMargin">
+							<Label text="From Date" class="gpmsFieldLabel"/>
+							<DatePicker id="idReportFromDatePicker"
+								placeholder="Select From Date"
+								displayFormat="dd-MM-yyyy"
+								class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="To Date" class="gpmsFieldLabel"/>
+							<DatePicker id="idReportToDatePicker"
+								placeholder="Select To Date"
+								displayFormat="dd-MM-yyyy"
+								class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin" justifyContent="End">
+							<Button
+								text="Generate All Reports"
+								icon="sap-icon://excel-attachment"
+								type="Emphasized"
+								press=".onGenerateAllReportsButtonPress"
+								class="sapUiSmallMarginTop"/>
+						</VBox>
+					</layout:Grid>
+				</Panel>
+
+				<!-- Reports Index Table -->
+				<Table id="idReportsTable"
+					items="{reportIndex>/reports}"
+					noDataText="No reports available."
+					alternateRowColors="true"
+					sticky="ColumnHeaders,HeaderToolbar">
+
 					<headerToolbar>
 						<OverflowToolbar class="gpmsSectionBar">
-							<core:Icon src="sap-icon://list" class="gpmsSectionBarIcon"/>
-							<Title text="Gate Pass Requests Summary" level="H3"/>
+							<core:Icon src="sap-icon://excel-attachment" class="sapUiSmallMarginEnd"/>
+							<Title text="GPMS Report Index — 16 Sheets" level="H3"/>
 							<ToolbarSpacer/>
-							<SearchField
-								width="250px"
-								placeholder="Search by Request/Vendor..."
-								search=".onSearch"
-								class="gpmsSearchField"/>
-							<Button icon="sap-icon://download" type="Transparent" press=".onExport"/>
+							<Text text="All available reports are generated in one Excel workbook"/>
 						</OverflowToolbar>
 					</headerToolbar>
+
 					<columns>
-						<Column width="10rem"><Text text="Request Number" class="gpmsHeaderText"/></Column>
-						<Column width="8rem"><Text text="Date" class="gpmsHeaderText"/></Column>
-						<Column width="8rem"><Text text="Type" class="gpmsHeaderText"/></Column>
-						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Vendor Name" class="gpmsHeaderText"/></Column>
-						<Column width="10rem" hAlign="Center"><Text text="Status" class="gpmsHeaderText"/></Column>
-						<Column width="5rem" hAlign="Center"><Text text="Action" class="gpmsHeaderText"/></Column>
+						<Column width="3rem" hAlign="Center">
+							<Text text="S.No" class="gpmsHeaderText"/>
+						</Column>
+						<Column width="14rem">
+							<Text text="Report Name" class="gpmsHeaderText"/>
+						</Column>
+						<Column width="18rem" minScreenWidth="Tablet" demandPopin="true">
+							<Text text="Description" class="gpmsHeaderText"/>
+						</Column>
+						<Column width="7rem" hAlign="Center">
+							<Text text="Status" class="gpmsHeaderText"/>
+						</Column>
+						<Column minScreenWidth="Tablet" demandPopin="true">
+							<Text text="How to Download" class="gpmsHeaderText"/>
+						</Column>
 					</columns>
+
 					<items>
-						<ColumnListItem vAlign="Middle" type="Navigation" press=".onItemPress" class="gpmsItemRow">
+						<ColumnListItem vAlign="Middle" class="gpmsItemRow">
 							<cells>
-								<ObjectIdentifier title="{GatePassReqNo}" class="gpmsReqIdText"/>
-								<Text text="{path: 'GatePassDate', type: 'sap.ui.model.type.Date', formatOptions: {pattern: 'dd-MM-yyyy'}}"/>
-								<ObjectStatus text="{GatePassType}" state="{= ${GatePassType} === 'RGP' ? 'Warning' : 'Information'}" class="gpmsBadgeSmall"/>
-								<Text text="{VendorName}" class="gpmsVendorText"/>
+								<Text text="{reportIndex>sno}" class="gpmsTableText"/>
+								<Text text="{reportIndex>name}" class="gpmsTableText"/>
+								<Text text="{reportIndex>desc}" class="gpmsTableText"/>
 								<ObjectStatus
-									text="{GPStatus}"
-									state="{= ${GPStatus} === 'APPROVED' ? 'Success' : (${GPStatus} === 'REJECTED' ? 'Error' : 'Warning')}"
-									icon="{= ${GPStatus} === 'APPROVED' ? 'sap-icon://sys-enter-2' : (${GPStatus} === 'REJECTED' ? 'sap-icon://sys-cancel-2' : 'sap-icon://alert')}"
-									class="gpmsStatusCell"/>
-								<Button icon="sap-icon://display" type="Transparent" press=".onItemPress"/>
+									text="{reportIndex>status}"
+									state="{= ${reportIndex>status} === 'Available' ? 'Success' : 'Warning'}"
+									icon="{= ${reportIndex>status} === 'Available' ? 'sap-icon://sys-enter-2' : 'sap-icon://pending'}"/>
+								<Text text="{reportIndex>howto}" class="gpmsTableText"/>
 							</cells>
 						</ColumnListItem>
 					</items>
 				</Table>
+
+				<!-- Info Message Strip -->
+				<MessageStrip
+					text="Click 'Generate All Reports' to download a single Excel workbook with Index + 16 report sheets. Set From/To dates to filter by date range. Reports marked 'Pending' will have placeholder sheets."
+					type="Information"
+					showIcon="true"
+					showCloseButton="false"
+					class="sapUiSmallMarginTop"/>
+
 			</VBox>
 		</content>
 	</Page>

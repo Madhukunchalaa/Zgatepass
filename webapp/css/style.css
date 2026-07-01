@@ -199,23 +199,44 @@
 }
 
 /* ─── Dashboard Redesign ───────────────────────────────── */
+.gpmsDashboardPage .sapMPageEnableScrolling > .sapMPageScroll {
+    background: transparent !important;
+}
+
 .gpmsDashboardHero {
     position: relative !important;
     min-height: calc(100vh - 60px) !important;
     width: 100% !important;
-    padding: 3rem !important;
-    overflow: hidden !important;
+    padding: 2rem 3rem 3rem !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
 }
 
 .gpmsDashboardHero::before {
     content: "" !important;
-    position: absolute !important;
+    position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    background: linear-gradient(rgba(0, 0, 30, 0.45), rgba(0, 0, 30, 0.35)), url('../assets/img/power_plant.jpg') no-repeat center center !important;
+    background: url('../assets/img/power_plant.jpg') no-repeat center center !important;
     background-size: cover !important;
+    z-index: 0 !important;
+}
+
+.gpmsDashboardHero::after {
+    content: "" !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: linear-gradient(
+        135deg,
+        rgba(26, 35, 126, 0.15) 0%,
+        rgba(0, 0, 30, 0.20) 50%,
+        rgba(26, 35, 126, 0.15) 100%
+    ) !important;
     z-index: 0 !important;
 }
 
@@ -225,81 +246,179 @@
 }
 
 .gpmsHeroTextContainer {
-    margin-bottom: 3rem !important;
+    margin-bottom: 2rem !important;
     text-align: center !important;
+    background: rgba(26, 35, 126, 0.65) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    padding: 1.5rem 3rem !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25) !important;
 }
 
 .gpmsHeroTitle.sapMTitle {
-    color: var(--red) !important;
-    font-size: 2.2rem !important;
+    color: #ffffff !important;
+    font-size: 2rem !important;
     font-weight: 800 !important;
-    letter-spacing: 1px !important;
-    margin-bottom: 0.5rem !important;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7) !important;
+    letter-spacing: 3px !important;
+    margin-bottom: 0.3rem !important;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
 }
 
 .gpmsHeroSubTitle.sapMText {
-    color: #ffffff !important;
-    font-size: 1rem !important;
-    letter-spacing: 1px !important;
+    color: rgba(255,255,255,0.85) !important;
+    font-size: 0.85rem !important;
+    letter-spacing: 2px !important;
     text-transform: uppercase !important;
-    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7) !important;
+    font-weight: 500 !important;
+}
+
+.gpmsContentWrapper .gpmsHeroTitle.sapMTitle {
+    color: #1a4e79 !important;
+    text-shadow: none !important;
+}
+
+.gpmsContentWrapper .gpmsHeroSubTitle.sapMText {
+    color: #5a6b7c !important;
 }
 
 .gpmsDashboardCardsContainer {
-    gap: 1.5rem !important;
+    gap: 0 !important;
+    max-width: 1200px !important;
 }
 
 .gpmsDashCard.sapMGT {
-    background: #ffffff !important;
-    border: 1.5px solid var(--red) !important;
-    border-radius: 10px !important;
-    width: 220px !important;
-    height: 160px !important;
-    margin: 1rem !important;
-    transition: all 0.25s ease !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+    background: rgba(255, 255, 255, 0.88) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid rgba(255,255,255,0.6) !important;
+    border-radius: 14px !important;
+    width: 230px !important;
+    height: 150px !important;
+    margin: 0.6rem !important;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+    border-left: 4px solid var(--red) !important;
 }
 
 .gpmsDashCard.sapMGT:hover {
-    transform: translateY(-5px) !important;
-    border-color: var(--red-d) !important;
-    box-shadow: 0 8px 24px rgba(204,32,32,0.2) !important;
+    transform: translateY(-6px) scale(1.02) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.2) !important;
+    border-left: 4px solid var(--navy) !important;
 }
 
 .gpmsDashCard .sapMGTTitle {
     color: var(--navy) !important;
-    font-weight: 800 !important;
-    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
 }
 
 .gpmsDashCard .sapMGTSubHdr {
-    color: var(--navy) !important;
-    font-size: 0.75rem !important;
+    color: var(--text-m) !important;
+    font-size: 0.72rem !important;
     font-weight: 500 !important;
-    opacity: 0.9 !important;
+    opacity: 0.85 !important;
 }
 
 .gpmsCardIcon.sapUiIcon {
-    font-size: 2.2rem !important;
+    font-size: 2rem !important;
     color: var(--red) !important;
-    margin-top: 10px !important;
+    margin-top: 6px !important;
+    opacity: 0.85 !important;
 }
 
+.gpmsDashCard.sapMGT:hover .gpmsCardIcon.sapUiIcon {
+    color: var(--navy) !important;
+    opacity: 1 !important;
+}
+
+.gpmsDashCard.reportsCard {
+    border-left-color: #2E7D32 !important;
+}
 .gpmsDashCard.reportsCard .sapMGTTitle {
-    color: #4CAF50 !important; /* Green for Analytics */
+    color: #2E7D32 !important;
+}
+.gpmsDashCard.reportsCard .gpmsCardIcon.sapUiIcon {
+    color: #2E7D32 !important;
 }
 
+.gpmsDashCard.inwardCard {
+    border-left-color: #E65100 !important;
+}
 .gpmsDashCard.inwardCard .sapMGTTitle {
-    color: #FF9800 !important; /* Orange for Inward */
+    color: #E65100 !important;
+}
+.gpmsDashCard.inwardCard .gpmsCardIcon.sapUiIcon {
+    color: #E65100 !important;
 }
 
+.gpmsDashCard.poCard {
+    border-left-color: #6A1B9A !important;
+}
 .gpmsDashCard.poCard .sapMGTTitle {
-    color: #7B1FA2 !important; /* Purple for Gate Pass with PO */
+    color: #6A1B9A !important;
+}
+.gpmsDashCard.poCard .gpmsCardIcon.sapUiIcon {
+    color: #6A1B9A !important;
+}
+
+.gpmsDashCard.irgpCard {
+    border-left-color: #00695C !important;
+}
+.gpmsDashCard.irgpCard .sapMGTTitle {
+    color: #00695C !important;
+}
+.gpmsDashCard.irgpCard .gpmsCardIcon.sapUiIcon {
+    color: #00695C !important;
+}
+
+.gpmsDashCard.ashCard, .gpmsDashCard.ashListCard {
+    border-left-color: #795548 !important;
+}
+.gpmsDashCard.ashCard .sapMGTTitle,
+.gpmsDashCard.ashListCard .sapMGTTitle {
+    color: #795548 !important;
+}
+.gpmsDashCard.ashCard .gpmsCardIcon.sapUiIcon,
+.gpmsDashCard.ashListCard .gpmsCardIcon.sapUiIcon {
+    color: #795548 !important;
+}
+
+.gpmsDashCard.pcpCard, .gpmsDashCard.pcpManageCard {
+    border-left-color: #0277BD !important;
+}
+.gpmsDashCard.pcpCard .sapMGTTitle,
+.gpmsDashCard.pcpManageCard .sapMGTTitle {
+    color: #0277BD !important;
+}
+.gpmsDashCard.pcpCard .gpmsCardIcon.sapUiIcon,
+.gpmsDashCard.pcpManageCard .gpmsCardIcon.sapUiIcon {
+    color: #0277BD !important;
+}
+
+.gpmsDashCard.inspectionCard {
+    border-left-color: #F57C00 !important;
+}
+.gpmsDashCard.inspectionCard .sapMGTTitle {
+    color: #F57C00 !important;
+}
+.gpmsDashCard.inspectionCard .gpmsCardIcon.sapUiIcon {
+    color: #F57C00 !important;
 }
 
 .gpmsDashCard .sapMGTHdrContent {
     padding-bottom: 0 !important;
+}
+
+.gpmsDashCard .sapMNCValue {
+    color: var(--navy) !important;
+    font-weight: 800 !important;
+}
+
+.gpmsDashCard .sapMTileCntFtrTxt {
+    color: var(--text-m) !important;
 }
 
 /* ─── Global ────────────────────────────────────────────── */

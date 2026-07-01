@@ -69,6 +69,39 @@
 								</HBox>
 							</VBox>
 						</HBox>
+						<HBox alignItems="Center" class="gpmsAnalyticsSectionHdr sapUiSmallMarginTop">
+							<core:Icon src="sap-icon://shipping-status" class="gpmsAnalyticsSectionIcon gpmsClrNrgp"/>
+							<Title text="NRGP — Out Gate Pass Status" level="H4" class="gpmsAnalyticsSectionTitle"/>
+						</HBox>
+						<HBox wrap="Wrap" class="gpmsKpiRow">
+							<VBox class="gpmsKpiCard gpmsKpiNrgp">
+								<HBox alignItems="Center">
+									<core:Icon src="sap-icon://documents" class="gpmsKpiIcon"/>
+									<VBox class="gpmsKpiTextBox">
+										<Title text="{analytics>/tiles/nrgpGpTotal}" level="H1" class="gpmsKpiNum"/>
+										<Text text="TOTAL GP" class="gpmsKpiLbl"/>
+									</VBox>
+								</HBox>
+							</VBox>
+							<VBox class="gpmsKpiCard gpmsKpiPending">
+								<HBox alignItems="Center">
+									<core:Icon src="sap-icon://open-folder" class="gpmsKpiIcon"/>
+									<VBox class="gpmsKpiTextBox">
+										<Title text="{analytics>/tiles/nrgpGpOpen}" level="H1" class="gpmsKpiNum"/>
+										<Text text="OPEN" class="gpmsKpiLbl"/>
+									</VBox>
+								</HBox>
+							</VBox>
+							<VBox class="gpmsKpiCard gpmsKpiApproved">
+								<HBox alignItems="Center">
+									<core:Icon src="sap-icon://accept" class="gpmsKpiIcon"/>
+									<VBox class="gpmsKpiTextBox">
+										<Title text="{analytics>/tiles/nrgpGpClosed}" level="H1" class="gpmsKpiNum"/>
+										<Text text="CLOSED" class="gpmsKpiLbl"/>
+									</VBox>
+								</HBox>
+							</VBox>
+						</HBox>
 					</VBox>
 
 					<!-- ═══════ SECTION 2: RGP ═══════ -->
@@ -111,6 +144,57 @@
 									<VBox class="gpmsKpiTextBox">
 										<Title text="{analytics>/tiles/rgpRejected}" level="H1" class="gpmsKpiNum"/>
 										<Text text="REJECTED" class="gpmsKpiLbl"/>
+									</VBox>
+								</HBox>
+							</VBox>
+						</HBox>
+						<HBox alignItems="Center" class="gpmsAnalyticsSectionHdr sapUiSmallMarginTop">
+							<core:Icon src="sap-icon://shipping-status" class="gpmsAnalyticsSectionIcon gpmsClrRgp"/>
+							<Title text="RGP — Out Gate Pass Status" level="H4" class="gpmsAnalyticsSectionTitle"/>
+						</HBox>
+						<HBox wrap="Wrap" class="gpmsKpiRow">
+							<VBox class="gpmsKpiCard gpmsKpiRgp">
+								<HBox alignItems="Center">
+									<core:Icon src="sap-icon://documents" class="gpmsKpiIcon"/>
+									<VBox class="gpmsKpiTextBox">
+										<Title text="{analytics>/tiles/rgpGpTotal}" level="H1" class="gpmsKpiNum"/>
+										<Text text="TOTAL GP" class="gpmsKpiLbl"/>
+									</VBox>
+								</HBox>
+							</VBox>
+							<VBox class="gpmsKpiCard gpmsKpiPending">
+								<HBox alignItems="Center">
+									<core:Icon src="sap-icon://open-folder" class="gpmsKpiIcon"/>
+									<VBox class="gpmsKpiTextBox">
+										<Title text="{analytics>/tiles/rgpGpOpen}" level="H1" class="gpmsKpiNum"/>
+										<Text text="OPEN" class="gpmsKpiLbl"/>
+									</VBox>
+								</HBox>
+							</VBox>
+							<VBox class="gpmsKpiCard gpmsKpiApproved">
+								<HBox alignItems="Center">
+									<core:Icon src="sap-icon://accept" class="gpmsKpiIcon"/>
+									<VBox class="gpmsKpiTextBox">
+										<Title text="{analytics>/tiles/rgpGpClosed}" level="H1" class="gpmsKpiNum"/>
+										<Text text="CLOSED" class="gpmsKpiLbl"/>
+									</VBox>
+								</HBox>
+							</VBox>
+							<VBox class="gpmsKpiCard gpmsKpiScrapReq">
+								<HBox alignItems="Center">
+									<core:Icon src="sap-icon://pending" class="gpmsKpiIcon"/>
+									<VBox class="gpmsKpiTextBox">
+										<Title text="{analytics>/tiles/rgpGpAwaitVendor}" level="H1" class="gpmsKpiNum"/>
+										<Text text="AWAITING VENDOR" class="gpmsKpiLbl"/>
+									</VBox>
+								</HBox>
+							</VBox>
+							<VBox class="gpmsKpiCard gpmsKpiIrgp">
+								<HBox alignItems="Center">
+									<core:Icon src="sap-icon://undo" class="gpmsKpiIcon"/>
+									<VBox class="gpmsKpiTextBox">
+										<Title text="{analytics>/tiles/rgpGpAwaitReturn}" level="H1" class="gpmsKpiNum"/>
+										<Text text="AWAITING RETURN" class="gpmsKpiLbl"/>
 									</VBox>
 								</HBox>
 							</VBox>

@@ -749,20 +749,17 @@ sap.ui.define([
 			window.open("https://10.5.18.54:44300/sap/bc/ui2/flp?sap-client=300&sap-language=EN", "_blank");
 		},
 
-		onGenerateDC: async function () {
+		onGenerateDC: async function (bGetBase64, bSkipOData) {
 			var oOutModel = this.getView().getModel("out");
 			var oOut = oOutModel.getData();
-			if (!oOut.ChallanNumber && oOut.GatePassNo) {
-				var oNow = new Date();
-				var sDay = String(oNow.getDate()).padStart(2, "0");
-				var sMon = String(oNow.getMonth() + 1).padStart(2, "0");
-				var sYear = String(oNow.getFullYear());
-				var sHrs = String(oNow.getHours()).padStart(2, "0");
-				var sMin = String(oNow.getMinutes()).padStart(2, "0");
-				var sSec = String(oNow.getSeconds()).padStart(2, "0");
-				var sGeneratedDC = "DC/" + sDay + sMon + sYear + "/" + sHrs + sMin + sSec + "/" + oOut.GatePassNo;
-				oOutModel.setProperty("/ChallanNumber", sGeneratedDC);
-				oOut.ChallanNumber = sGeneratedDC;
+
+			if (bSkipOData !== true && bGetBase64 !== true && typeof bGetBase64 !== "boolean") {
+				// User clicked Generate DC button on UI
+				oOutModel.setProperty("/ChallanNumber", "");
+				oOut.ChallanNumber = "";
+				
+				this.onSaveLogistics(true);
+				return;
 			}
 			const { jsPDF } = window.jspdf;
 			var doc = new jsPDF('p', 'mm', 'a4');
@@ -1578,7 +1575,8 @@ sap.ui.define([
 				CommonDesc: oOut.CommonDesc || "",
 				NoOfPacakages: parseInt(oOut.NoOfPackages || 0),
 				Department: oOut.Department,
-				ChallanNumber: oOut.ChallanNumber || "",
+				Challanumber: oOut.ChallanNumber || "",
+				GenerateDC: oOut.ChallanNumber ? "X" : "",
 				VehicleNo: oOut.VehicleNo,
 				ModeOfDispatch: oOut.ModeOfTransport,
 				Remarks: oOut.UserRemarks,
@@ -1586,9 +1584,9 @@ sap.ui.define([
 				TransporterName: oOut.TransporterName || "",
 				TransporterGST: oOut.TransporterGST || "",
 				DCNotes: oOut.DCNotes || "",
-				InsuranceReq: oOut.InsuranceRequired ? "Yes" : "",
+				InsuranceReq: oOut.InsuranceRequired ? "X" : "",
 				InsuranceDate: oOut.InsuranceDate || "",
-				InsuranceAmount: oOut.InsuranceAmount || "0",
+				InsuranceAmount: String(oOut.InsuranceAmount || "0"),
 				Message: "",
 
 				"OutgateNav": (oOut.items || []).map(function (it, index) {
@@ -1597,9 +1595,10 @@ sap.ui.define([
 						GatePassNo: oOut.GatePassNo || "",
 						ItemNo: String((index + 1) * 10).padStart(5, '0'),
 						Material: it.material || "",
-						HSNCode: it.hsnCode,
+						MaterialDesc: it.materialName || it.hsnDesc || "",
+						HSNCode: it.hsnCode || "",
 						HSNDesc: it.hsnDesc || "",
-						UOM: it.uom,
+						UOM: it.uom || "",
 						ItemNetPrice: String(parseFloat(it.rate || 0).toFixed(2)),
 						SentQuantity: String(parseFloat(it.sentQty || 0).toFixed(3)),
 						RecievedQuantity: String(parseFloat(it.recvdQty || 0).toFixed(3)),
@@ -1661,9 +1660,11 @@ sap.ui.define([
 			});
 		},
 
-		onSaveLogistics: function () {
-			var oOut = this.getView().getModel("out").getData();
+		onSaveLogistics: function (bIsGenerateDC) {
+			var oOutModel = this.getView().getModel("out");
+			var oOut = oOutModel.getData();
 			var oODataModel = this.getModel();
+			var that = this;
 
 			if (!oOut.GatePassNo) {
 				MessageBox.warning("Generate the Gate Pass first before saving logistics.");
@@ -1723,7 +1724,8 @@ sap.ui.define([
 				CommonDesc: oOut.CommonDesc || "",
 				NoOfPacakages: parseInt(oOut.NoOfPackages || 0),
 				Department: oOut.Department || "",
-				ChallanNumber: oOut.ChallanNumber || "",
+				Challanumber: bIsGenerateDC === true ? "" : (oOut.ChallanNumber || ""),
+				GenerateDC: bIsGenerateDC === true ? "X" : (oOut.ChallanNumber ? "X" : ""),
 				GatePassType: oOut.GatePassType || "RGP",
 				VehicleNo: oOut.VehicleNo || "",
 				ModeOfDispatch: oOut.ModeOfTransport || "",
@@ -1742,15 +1744,16 @@ sap.ui.define([
 				cdate1: "", cdate2: "", cdate3: "", cdate4: "", cdate5: "",
 				cdate6: "", cdate7: "", cdate8: "", cdate9: "", cdate10: "",
 				DCNotes: oOut.DCNotes || "",
-				InsuranceReq: oOut.InsuranceRequired ? "Yes" : "",
+				InsuranceReq: oOut.InsuranceRequired ? "X" : "",
 				InsuranceDate: oOut.InsuranceDate || "",
-				InsuranceAmount: oOut.InsuranceAmount || "0",
+				InsuranceAmount: String(oOut.InsuranceAmount || "0"),
 				OutgateNav: (oOut.items || []).map(function (it, index) {
 					return {
 						GatePassType: oOut.GatePassType || "RGP",
-						GatePassNo: oOut.GatePassNo,
+						GatePassNo: oOut.GatePassNo || "",
 						ItemNo: String((index + 1) * 10).padStart(5, "0"),
 						Material: it.material || "",
+						MaterialDesc: it.materialName || it.hsnDesc || "",
 						HSNCode: it.hsnCode || "",
 						HSNDesc: it.hsnDesc || "",
 						UOM: it.uom || "",
@@ -1758,6 +1761,8 @@ sap.ui.define([
 						SentQuantity: String(parseFloat(it.sentQty || 0).toFixed(3)),
 						RecievedQuantity: String(parseFloat(it.recvdQty || 0).toFixed(3)),
 						BalanceQuantity: String(parseFloat(it.balQty || 0).toFixed(3)),
+						Totalvalue: String(parseFloat(it.amount || 0).toFixed(2)),
+						GatePassReqNo: oOut.GatePassreqNo || "",
 						Remarks: it.itemRemarks || ""
 					};
 				})
@@ -1781,8 +1786,19 @@ sap.ui.define([
 			oODataModel.create("/OutGatePassSet", oPayload, {
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
+					
+					var sDC = oData.Challanumber || oData.ChallanNumber;
+					if (sDC) {
+						oOutModel.setProperty("/ChallanNumber", sDC);
+						oOutModel.setProperty("/DocOptionIndex", 1);
+					}
+					
 					var sMsg = oData.Message || "Logistics details saved successfully!";
 					MessageBox.success(sMsg);
+
+					if (bIsGenerateDC === true && sDC) {
+						that.onGenerateDC(false, true);
+					}
 				},
 				error: function (oError) {
 					sap.ui.core.BusyIndicator.hide();

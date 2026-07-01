@@ -90,58 +90,89 @@ sap.ui.define([
 
 			sap.ui.core.BusyIndicator.show(0);
 
-			oODataModel.read("/OutGatePassSet", {
-				filters: [
-					new sap.ui.model.Filter("GatePassNo", sap.ui.model.FilterOperator.EQ, sGPNo),
-					new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, sGPType || "NRGP")
-				],
-				urlParameters: { "$expand": "OutgateNav" },
-				success: function (oData) {
-					sap.ui.core.BusyIndicator.hide();
-					var aResults = oData.results || [];
-					if (aResults.length === 0) {
-						MessageBox.error("No data found for Gate Pass No: " + sGPNo);
-						return;
-					}
+			var that = this;
+			var fnProcessResults = function (aResults, sQueryNo) {
+				sap.ui.core.BusyIndicator.hide();
+				if (aResults.length === 0) {
+					MessageBox.error("No data found for Gate Pass / Request No: " + sQueryNo);
+					return;
+				}
+				var oResult = aResults.find(function (r) {
+					var matchesId = (r.GatePassNo || "").trim() === sGPNo.trim() || (r.GatePassReqNo || "").trim() === sGPNo.trim() || (r.GatePassreqNo || "").trim() === sGPNo.trim();
+					return matchesId && (sGPType ? (r.GatePassType || "") === sGPType : true);
+				}) || aResults.find(function (r) {
+					return (r.GatePassNo || "").trim() === sGPNo.trim() || (r.GatePassReqNo || "").trim() === sGPNo.trim() || (r.GatePassreqNo || "").trim() === sGPNo.trim();
+				}) || aResults[0];
 
-					// Prefer a result whose GatePassNo matches what was requested
-					var oResult = aResults.find(function (r) {
-						return (r.GatePassNo || "").trim() === sGPNo.trim();
-					}) || aResults[0];
+				var aCombinedItems = [];
+				aResults.forEach(function (res) {
+					if ((res.GatePassNo || "").trim() !== sGPNo.trim() && (res.GatePassReqNo || "").trim() !== sGPNo.trim() && (res.GatePassreqNo || "").trim() !== sGPNo.trim()) { return; }
+					var aItems = (res.OutgateNav && res.OutgateNav.results) || (Array.isArray(res.OutgateNav) ? res.OutgateNav : []);
+					aItems.forEach(function (itm) {
+						var bExists = aCombinedItems.some(function (existing) { return existing.ItemNo === itm.ItemNo; });
+						if (!bExists) { aCombinedItems.push(itm); }
+					});
+				});
 
-					// Consolidate OutgateNav items only from results matching the requested GP
-					var aCombinedItems = [];
+				if (aCombinedItems.length === 0) {
 					aResults.forEach(function (res) {
-						if ((res.GatePassNo || "").trim() !== sGPNo.trim()) { return; }
 						var aItems = (res.OutgateNav && res.OutgateNav.results) || (Array.isArray(res.OutgateNav) ? res.OutgateNav : []);
 						aItems.forEach(function (itm) {
-							var bExists = aCombinedItems.some(function (existing) {
-								return existing.ItemNo === itm.ItemNo;
-							});
-							if (!bExists) {
-								aCombinedItems.push(itm);
-							}
+							var bExists = aCombinedItems.some(function (existing) { return existing.ItemNo === itm.ItemNo; });
+							if (!bExists) { aCombinedItems.push(itm); }
 						});
 					});
+				}
 
-					// If no items found for this specific GP, fall back to all items
-					if (aCombinedItems.length === 0) {
-						aResults.forEach(function (res) {
-							var aItems = (res.OutgateNav && res.OutgateNav.results) || (Array.isArray(res.OutgateNav) ? res.OutgateNav : []);
-							aItems.forEach(function (itm) {
-								var bExists = aCombinedItems.some(function (existing) {
-									return existing.ItemNo === itm.ItemNo;
-								});
-								if (!bExists) { aCombinedItems.push(itm); }
-							});
+				oResult.OutgateNav = { results: aCombinedItems };
+				oResult.GatePassNo = sGPNo;
+				that._mapData(oResult);
+			};
+
+			oODataModel.read("/OutGatePassSet", {
+				filters: [new sap.ui.model.Filter("GatePassNo", sap.ui.model.FilterOperator.EQ, sGPNo)],
+				urlParameters: { "$expand": "OutgateNav" },
+				success: function (oData) {
+					var aResults = oData.results || [];
+					if (aResults.length > 0) {
+						fnProcessResults(aResults, sGPNo);
+					} else {
+						// Fallback to GatePassreqNo if GatePassNo returned 0 results
+						oODataModel.read("/OutGatePassSet", {
+							filters: [new sap.ui.model.Filter("GatePassreqNo", sap.ui.model.FilterOperator.EQ, sGPNo)],
+							urlParameters: { "$expand": "OutgateNav" },
+							success: function (oDataReq) {
+								var aReqResults = oDataReq.results || [];
+								if (aReqResults.length > 0) {
+									fnProcessResults(aReqResults, sGPNo);
+								} else {
+									// Final fallback: fetch all and find locally (due to backend filtering bug on unapproved records)
+									oODataModel.read("/OutGatePassSet", {
+										filters: [new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, sGPType || "NRGP")],
+										urlParameters: { "$expand": "OutgateNav" },
+										success: function (oDataAll) {
+											var aAllResults = oDataAll.results || [];
+											var aMatched = aAllResults.filter(function(r) {
+												return (r.GatePassNo || "").trim() === sGPNo.trim() || 
+												       (r.GatePassReqNo || "").trim() === sGPNo.trim() || 
+												       (r.GatePassreqNo || "").trim() === sGPNo.trim();
+											});
+											fnProcessResults(aMatched, sGPNo);
+										},
+										error: function () {
+											sap.ui.core.BusyIndicator.hide();
+											MessageBox.error("Error loading Gate Pass details (final fallback).");
+										}
+									});
+								}
+							},
+							error: function () {
+								sap.ui.core.BusyIndicator.hide();
+								MessageBox.error("Error loading Gate Pass details (fallback).");
+							}
 						});
 					}
-
-					oResult.OutgateNav = { results: aCombinedItems };
-					// Always trust the route parameter as the authoritative GP number
-					oResult.GatePassNo = sGPNo;
-					this._mapData(oResult);
-				}.bind(this),
+				},
 				error: function () {
 					sap.ui.core.BusyIndicator.hide();
 					MessageBox.error("Error loading Gate Pass details.");
@@ -229,9 +260,10 @@ sap.ui.define([
 			oModel.setProperty("/StatusState", this._getStatusState(sGPStatus));
 			oModel.setProperty("/isEditable", sGPStatus !== "CLOSED" && sGPStatus !== "CANCELLED");
 			
-			oModel.setProperty("/ChallanNumber", oData.ChallanNumber || (oLocalLogistics ? oLocalLogistics.ChallanNumber : "") || "");
+			var sDCVal = oData.ChallanNumber || oData.Challanumber || (oLocalLogistics ? oLocalLogistics.ChallanNumber : "") || "";
+			oModel.setProperty("/ChallanNumber", sDCVal);
 			oModel.setProperty("/GateEntryNo", oData.GateEntryNo || "");
-			oModel.setProperty("/DocOptionIndex", oData.ChallanNumber ? 1 : 0);
+			oModel.setProperty("/DocOptionIndex", sDCVal ? 1 : 0);
 			oModel.setProperty("/EWayBillNo", oData.EWayBillNo || (oLocalLogistics ? oLocalLogistics.EWayBillNo : "") || "");
 			oModel.setProperty("/EWayBillDate", oData.EWayBillDate || (oLocalLogistics ? oLocalLogistics.EWayBillDate : null));
 			oModel.setProperty("/DCNotes", oData.DCNotes || (oLocalLogistics ? oLocalLogistics.DCNotes : "") || "");
@@ -410,7 +442,7 @@ sap.ui.define([
 			}
 		},
 
-		onSAVEButtonPress: function () {
+		onSAVEButtonPress: async function (bIsGenerateDC) {
 			var oData = this.getView().getModel("nrgp").getData();
 			var oODataModel = this.getOwnerComponent().getModel();
 
@@ -444,6 +476,26 @@ sap.ui.define([
 			var sChallanDate = oData.ChallanDate ? new Date(oData.ChallanDate).toISOString().split("T")[0] : sToday;
 
 			var sAuthorativeGPNo = this._sCurrentGPNo || oData.GatePassNo || "";
+
+			var sGPbase = "";
+			var sDCbase = "";
+			/* Commented out base64 generation to prevent slow saving
+			if (sAuthorativeGPNo) {
+				try {
+					sGPbase = await this.onPRINTGATEPASSButtonPress(true);
+				} catch (e) {
+					console.error("Error generating GP PDF base64:", e);
+				}
+				try {
+					if (oData.ChallanNumber) {
+						sDCbase = await this.onGenerateDCButtonPress(true);
+					}
+				} catch (e) {
+					console.error("Error generating DC PDF base64:", e);
+				}
+			}
+			*/
+
 			var oPayload = {
 				GatePassreqNo: oData.GatePassreqNo || "",
 				FiscalYear: oData.FiscalYear || String(new Date().getFullYear()),
@@ -456,14 +508,14 @@ sap.ui.define([
 				ZipCode: oData.ZipCode || "",
 				City: oData.City || "",
 				GatePassDate: sToday,
-				// PurchasingDoc: oData.PurchasingDoc || "",
 				ChallanDate: sChallanDate,
 				ReturnableDate: "",
 				ExtReturnDate: "",
 				CommonDesc: oData.CommonDesc || "",
 				NoOfPacakages: parseInt(oData.NoOfPacakages || 0),
 				Department: oData.Department || "",
-				ChallanNumber: oData.ChallanNumber || "",
+				Challanumber: bIsGenerateDC === true ? "" : (oData.ChallanNumber || ""),
+				GenerateDC: bIsGenerateDC === true ? "X" : (oData.ChallanNumber ? "X" : ""),
 				GatePassType: oData.GatePassType || "NRGP",
 				VehicleNo: oData.VehicleNo || "",
 				LRNumber: oData.LRNnumber || "",
@@ -471,10 +523,13 @@ sap.ui.define([
 				Remarks: oData.Remarks || "",
 				GPStatus: oData.GPStatus || "",
 				Message: "",
-				GPbase64: "",
-				DCbase64: "",
+				GPbase64: sGPbase,
+				DCbase64: sDCbase,
 				TransporterName: oData.TransporterName || "",
 				TransporterGST: oData.TransporterGST || "",
+				InsuranceReq: oData.InsuranceRequired ? "X" : "",
+				InsuranceDate: oData.InsuranceDate || "",
+				InsuranceAmount: String(oData.InsuranceAmount || "0"),
 				Comment1: "", Comment2: "", Comment3: "", Comment4: "", Comment5: "",
 				Comment6: "", Comment7: "", Comment8: "", Comment9: "", Comment10: "",
 				Sno1: "", Sno2: "", Sno3: "", Sno4: "", Sno5: "",
@@ -491,6 +546,7 @@ sap.ui.define([
 						GatePassNo: sAuthorativeGPNo,
 						ItemNo: it.ItemNo || String((i + 1) * 10).padStart(5, "0"),
 						Material: it.Material || "",
+						MaterialDesc: it.MaterialDesc || it.HSNDesc || "",
 						HSNCode: it.HSNCode || "",
 						HSNDesc: it.HSNDesc || "",
 						UOM: it.UOM || "",
@@ -520,13 +576,23 @@ sap.ui.define([
 			oODataModel.create("/OutGatePassSet", oPayload, {
 				success: function (oResponse) {
 					sap.ui.core.BusyIndicator.hide();
+					
+					var sDC = oResponse.Challanumber || oResponse.ChallanNumber;
+					var oModel = this.getView().getModel("nrgp");
+					if (sDC) {
+						oModel.setProperty("/ChallanNumber", sDC);
+						oModel.setProperty("/DocOptionIndex", 1);
+					}
+					
 					var sMsg = oResponse.Message || "Gate Pass updated successfully!";
 					MessageBox.success(sMsg, {
 						onClose: function () {
 							this._loadData(sAuthorativeGPNo, "NRGP");
+							if (bIsGenerateDC === true && sDC) {
+								this.onGenerateDCButtonPress(false, true);
+							}
 						}.bind(this)
 					});
-					var oModel = this.getView().getModel("nrgp");
 					oModel.setProperty("/StatusState", this._getStatusState(oData.GPStatus));
 				}.bind(this),
 				error: function (oError) {
@@ -539,6 +605,99 @@ sap.ui.define([
 					MessageBox.error(sMsg);
 				}
 			});
+		},
+
+		// ── Item-wise Print ──────────────────────────────────────────────────
+		onPrintItems: function () {
+			var oModel = this.getView().getModel("nrgp");
+			var aItems = oModel ? (oModel.getProperty("/items") || []) : [];
+			var oData  = oModel ? oModel.getData() : {};
+
+			var sGPNo   = oData.GatePassNo   || "";
+			var sVendor = oData.VendorName   || "";
+			var sDate   = oData.GatePassDate || "";
+
+			var sHeaders = ["#", "Material", "Description", "HSN Code", "UOM", "Rate (Rs.)", "Sent Qty", "Recv Qty", "Balance Qty", "Total (Rs.)", "Remarks"];
+			var aRows = aItems.map(function (it, i) {
+				return [
+					i + 1,
+					it.Material     || "",
+					it.MaterialDesc || it.Description || "",
+					it.HSNCode      || "",
+					it.UOM          || "",
+					parseFloat(it.ItemNetPrice     || 0).toFixed(2),
+					parseFloat(it.SentQuantity     || 0).toFixed(3),
+					parseFloat(it.RecievedQuantity || 0).toFixed(3),
+					parseFloat(it.BalanceQuantity  || 0).toFixed(3),
+					parseFloat(it.Totalvalue       || 0).toFixed(2),
+					it.Remarks || ""
+				];
+			});
+
+			var sTableRows = aRows.map(function (row) {
+				return "<tr>" + row.map(function (cell) { return "<td style='border:1px solid #ccc;padding:4px 8px;'>" + cell + "</td>"; }).join("") + "</tr>";
+			}).join("");
+
+			var sHeaderRow = "<tr>" + sHeaders.map(function (h) {
+				return "<th style='border:1px solid #ccc;padding:4px 8px;background:#1a3a5c;color:#fff;text-align:left;'>" + h + "</th>";
+			}).join("") + "</tr>";
+
+			var sPrintHtml = "<!DOCTYPE html><html><head><title>NRGP Items - " + sGPNo + "</title>" +
+				"<style>body{font-family:Arial,sans-serif;font-size:12px;margin:20px;}h2{color:#1a3a5c;}table{border-collapse:collapse;width:100%;}@media print{body{margin:5mm;}}</style>" +
+				"</head><body>" +
+				"<h2>NRGP Gate Pass - Items</h2>" +
+				"<p><strong>GP No:</strong> " + sGPNo + " &nbsp;&nbsp; <strong>Vendor:</strong> " + sVendor + " &nbsp;&nbsp; <strong>Date:</strong> " + sDate + "</p>" +
+				"<table><thead>" + sHeaderRow + "</thead><tbody>" + sTableRows + "</tbody></table>" +
+				"</body></html>";
+
+			var oPrintWindow = window.open("", "_blank", "width=1100,height=700");
+			oPrintWindow.document.write(sPrintHtml);
+			oPrintWindow.document.close();
+			oPrintWindow.focus();
+			oPrintWindow.print();
+		},
+
+		// ── Item-wise Copy to Clipboard ──────────────────────────────────────
+		onCopyItemsToClipboard: function () {
+			var oModel = this.getView().getModel("nrgp");
+			var aItems = oModel ? (oModel.getProperty("/items") || []) : [];
+			if (!aItems.length) {
+				sap.m.MessageToast.show("No items to copy.");
+				return;
+			}
+			var sHeaders = ["#", "Material", "Description", "HSN Code", "UOM", "Rate", "Sent Qty", "Recv Qty", "Balance Qty", "Total", "Remarks"];
+			var aLines = [sHeaders.join("\t")];
+			aItems.forEach(function (it, i) {
+				aLines.push([
+					i + 1,
+					it.Material     || "",
+					it.MaterialDesc || it.Description || "",
+					it.HSNCode      || "",
+					it.UOM          || "",
+					parseFloat(it.ItemNetPrice     || 0).toFixed(2),
+					parseFloat(it.SentQuantity     || 0).toFixed(3),
+					parseFloat(it.RecievedQuantity || 0).toFixed(3),
+					parseFloat(it.BalanceQuantity  || 0).toFixed(3),
+					parseFloat(it.Totalvalue       || 0).toFixed(2),
+					it.Remarks || ""
+				].join("\t"));
+			});
+			var sText = aLines.join("\n");
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(sText).then(function () {
+					sap.m.MessageToast.show("Items copied to clipboard. You can paste in Excel.");
+				}).catch(function () {
+					sap.m.MessageToast.show("Copy failed. Please try manually.");
+				});
+			} else {
+				var el = document.createElement("textarea");
+				el.value = sText;
+				document.body.appendChild(el);
+				el.select();
+				document.execCommand("copy");
+				document.body.removeChild(el);
+				sap.m.MessageToast.show("Items copied to clipboard. You can paste in Excel.");
+			}
 		},
 
 		onInsuranceRequiredCheckBoxSelect: function (oEvent) {
@@ -558,7 +717,7 @@ sap.ui.define([
 				}
 				this._pInsuranceDialog.then(function (oDialog) {
 					oDialog.getModel("insurance").setData({
-						InvoiceNo: oData.GatePassreqNo || "",
+						InvoiceNo: oData.GatePassNo || "",
 						InsuranceDate: new Date().toLocaleDateString("en-GB").split("/").join("-"),
 						ReceivedDate: new Date().toLocaleDateString("en-GB").split("/").join("-"),
 						Vendor: oData.VendorName || oData.Vendor || "",
@@ -620,7 +779,7 @@ sap.ui.define([
 			this.getRouter().navTo("NRGPList");
 		},
 
-		onPRINTGATEPASSButtonPress: async function () {
+		onPRINTGATEPASSButtonPress: async function (bGetBase64) {
 			var oOut = this.getView().getModel("nrgp").getData();
 			const { jsPDF } = window.jspdf;
 			var doc = new jsPDF("l", "mm", "a4");
@@ -790,24 +949,24 @@ sap.ui.define([
 			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
 			sigPositions.forEach(function (sx, i) { doc.text(sigLabels[i], sx + sigLineW / 2, sigY + 5, { align: "center" }); });
 
+			if (bGetBase64 === true) {
+				return doc.output('datauristring').split(',')[1];
+			}
 			doc.save("GatePass_" + (oOut.GatePassNo || "Draft") + ".pdf");
 			MessageToast.show("Gate Pass Printed");
 		},
 
-		onGenerateDCButtonPress: async function () {
+		onGenerateDCButtonPress: async function (bGetBase64, bSkipOData) {
 			var oModel = this.getView().getModel("nrgp");
 			var oOut = oModel.getData();
-			if (!oOut.ChallanNumber && oOut.GatePassNo) {
-				var oNow = new Date();
-				var sDay = String(oNow.getDate()).padStart(2, "0");
-				var sMon = String(oNow.getMonth() + 1).padStart(2, "0");
-				var sYear = String(oNow.getFullYear());
-				var sHrs = String(oNow.getHours()).padStart(2, "0");
-				var sMin = String(oNow.getMinutes()).padStart(2, "0");
-				var sSec = String(oNow.getSeconds()).padStart(2, "0");
-				var sGeneratedDC = "DC/" + sDay + sMon + sYear + "/" + sHrs + sMin + sSec + "/" + oOut.GatePassNo;
-				oModel.setProperty("/ChallanNumber", sGeneratedDC);
-				oOut.ChallanNumber = sGeneratedDC;
+
+			if (bSkipOData !== true && bGetBase64 !== true && typeof bGetBase64 !== "boolean") {
+				// User clicked Generate DC button on UI
+				oModel.setProperty("/ChallanNumber", "");
+				oOut.ChallanNumber = "";
+				
+				this.onSAVEButtonPress(true);
+				return;
 			}
 			const { jsPDF } = window.jspdf;
 			var doc = new jsPDF("p", "mm", "a4");
@@ -945,6 +1104,9 @@ sap.ui.define([
 			doc.text("Store In-Charge", pageWidth / 2, sigY + 5, { align: "center" });
 			doc.text("Authorised Signatory", pageWidth - margin - sigLineW / 2, sigY + 5, { align: "center" });
 
+			if (bGetBase64 === true) {
+				return doc.output('datauristring').split(',')[1];
+			}
 			doc.save("DC_" + (oOut.GatePassNo || "Draft") + ".pdf");
 			MessageToast.show("Delivery Challan Downloaded");
 		},
@@ -967,15 +1129,24 @@ sap.ui.define([
 		_getImageBase64: function (url) {
 			return new Promise(function (resolve, reject) {
 				var img = new Image();
+				var timer = setTimeout(function () {
+					img.onload = null;
+					img.onerror = null;
+					reject("Timeout loading image");
+				}, 1000);
 				img.crossOrigin = "Anonymous";
 				img.onload = function () {
+					clearTimeout(timer);
 					var canvas = document.createElement("canvas");
 					canvas.width = img.width;
 					canvas.height = img.height;
 					canvas.getContext("2d").drawImage(img, 0, 0);
 					resolve(canvas.toDataURL("image/png"));
 				};
-				img.onerror = reject;
+				img.onerror = function (err) {
+					clearTimeout(timer);
+					reject(err);
+				};
 				img.src = url;
 			});
 		}

@@ -123,8 +123,16 @@
 							<Input value="{ash>/TransporterGst}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
+							<Label text="DC Number" class="gpmsFieldLabel"/>
+							<Input value="{ash>/DCNumber}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
 							<Label text="DC Notes" class="gpmsFieldLabel"/>
 							<Input value="{ash>/DCNotes}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
+							<Label text="WB Ticket No" class="gpmsFieldLabel"/>
+							<Input value="{ash>/WBTicketNo}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
 						</VBox>
 					</layout:Grid>
 				</Panel>

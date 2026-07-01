@@ -144,7 +144,7 @@ sap.ui.define([
 				return {
 					SalesDocument: item.SalesDocument || oReq.SalesDocument || "",
 					GatePasstype: "NRGP",
-					ItemNo: item.ItemNo || String((idx + 1) * 10).padStart(6, '0'),
+					ItemNo: (!item.ItemNo || parseInt(item.ItemNo, 10) === 0) ? String((idx + 1) * 10).padStart(6, '0') : item.ItemNo,
 					Material: item.Material || "",
 					MaterialDescription: item.MaterialDescription || "",
 					HSNCode: item.HSNCode || "",
@@ -204,7 +204,7 @@ sap.ui.define([
 						return {
 							SalesDocument: subItem.SalesDocument || item.SalesDocument || "",
 							GatePasstype: "NRGP",
-							ItemNo: subItem.ItemNo || String((idx + 1) * 10).padStart(6, '0'),
+							ItemNo: (!subItem.ItemNo || parseInt(subItem.ItemNo, 10) === 0) ? String((idx + 1) * 10).padStart(6, '0') : subItem.ItemNo,
 							Material: subItem.Material || "",
 							MaterialDescription: subItem.MaterialDesc || subItem.Arktx || subItem.Description || "",
 							HSNCode: subItem.HSNCode || "",
@@ -345,7 +345,7 @@ sap.ui.define([
 							return {
 								SalesDocument: subItem.SalesDocument || oItem.SalesDocument || "",
 								GatePasstype: "NRGP",
-								ItemNo: subItem.ItemNo || String((idx + 1) * 10).padStart(6, '0'),
+								ItemNo: (!subItem.ItemNo || parseInt(subItem.ItemNo, 10) === 0) ? String((idx + 1) * 10).padStart(6, '0') : subItem.ItemNo,
 								Material: subItem.Material || "",
 								MaterialDescription: subItem.MaterialDesc || subItem.Arktx || subItem.Description || "",
 								HSNCode: subItem.HSNCode || "",

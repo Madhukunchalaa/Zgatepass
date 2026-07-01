@@ -1,0 +1,165 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.AddInwardInsurance"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:layout="sap.ui.layout"
+	xmlns:core="sap.ui.core"
+	xmlns:f="sap.ui.layout.form"
+	displayBlock="true">
+
+	<Page
+		id="idAddInwardInsurancePage"
+		title="{= ${ins>/isReadOnly} ? 'Inward Insurance Details' : 'Add Inward Insurance' }"
+		navButtonPress=".onNavBack"
+		showNavButton="true"
+		class="gpmsPage">
+
+		<content>
+			<VBox class="sapUiMediumMargin">
+
+				<!-- Insurance Form Panel -->
+				<Panel class="gpmsPanel">
+					<headerToolbar>
+						<Toolbar>
+							<Title text="Insurance Details" level="H3" class="gpmsPageTitle"/>
+						</Toolbar>
+					</headerToolbar>
+					<content>
+						<layout:Grid
+							defaultSpan="XL4 L4 M6 S12"
+							class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+
+							<!-- Invoice / RGP No -->
+							<VBox class="sapUiTinyMargin">
+								<Label text="Invoice / RGP No" class="gpmsFieldLabel" required="true"/>
+								<Input id="idInsInvoiceNo" value="{ins>/InvoiceNo}" placeholder="Enter Invoice / RGP No" class="gpmsFieldInput" editable="{= !${ins>/isReadOnly} }"/>
+							</VBox>
+
+							<!-- Insurance Date -->
+							<VBox class="sapUiTinyMargin">
+								<Label text="Insurance Date" class="gpmsFieldLabel" required="true"/>
+								<DatePicker
+									id="idInsInsuranceDate"
+									value="{ins>/InsuranceDate}"
+									valueFormat="dd-MM-yyyy"
+									displayFormat="dd-MM-yyyy"
+									class="gpmsFieldInput"
+									width="100%"
+									editable="{= !${ins>/isReadOnly} }"/>
+							</VBox>
+
+							<!-- Received Date -->
+							<VBox class="sapUiTinyMargin">
+								<Label text="Received Date" class="gpmsFieldLabel"/>
+								<DatePicker
+									id="idInsReceivedDate"
+									value="{ins>/ReceivedDate}"
+									valueFormat="dd-MM-yyyy"
+									displayFormat="dd-MM-yyyy"
+									class="gpmsFieldInput"
+									width="100%"
+									editable="{= !${ins>/isReadOnly} }"/>
+							</VBox>
+
+							<!-- Vendor Dropdown (Read-Only shows as text input) -->
+							<VBox class="sapUiTinyMargin" visible="{= !${ins>/isReadOnly} }">
+								<layoutData>
+									<layout:GridData linebreak="true"/>
+								</layoutData>
+								<Label text="Vendor" class="gpmsFieldLabel"/>
+								<ComboBox
+									id="idInsVendorCombo"
+									width="100%"
+									selectedKey="{ins>/VendorCode}"
+									selectionChange=".onVendorSelect"
+									items="{path: 'vendors>/results', templateShareable: false}"
+									class="gpmsFieldInput"
+									placeholder="Select Vendor">
+									<core:ListItem key="{vendors>Vendor}" text="{vendors>VendorName}" additionalText="{vendors>Vendor}"/>
+								</ComboBox>
+							</VBox>
+
+							<!-- Read-only Vendor Name Display when viewing details -->
+							<VBox class="sapUiTinyMargin" visible="{ins>/isReadOnly}">
+								<layoutData>
+									<layout:GridData linebreak="true"/>
+								</layoutData>
+								<Label text="Vendor Name" class="gpmsFieldLabel"/>
+								<Input value="{ins>/VendorName}" editable="false" class="gpmsFieldInput"/>
+							</VBox>
+
+							<!-- Vendor Address -->
+							<VBox class="sapUiTinyMargin">
+								<Label text="Vendor Address" class="gpmsFieldLabel"/>
+								<Input id="idInsVendorAddress" value="{ins>/VendorAddress}" placeholder="Vendor Address" editable="false" class="gpmsFieldInput"/>
+							</VBox>
+
+							<!-- Inward Mode of Transport -->
+							<VBox class="sapUiTinyMargin">
+								<layoutData>
+									<layout:GridData linebreak="true"/>
+								</layoutData>
+								<Label text="Inward Mode of Transport" class="gpmsFieldLabel"/>
+								<Select id="idInsModeOfTransport" selectedKey="{ins>/ModeOfTransport}" width="100%" class="gpmsFieldInput" enabled="{= !${ins>/isReadOnly} }">
+									<items>
+										<core:Item key="" text="Select Mode of Transport"/>
+										<core:Item key="Road" text="Road"/>
+										<core:Item key="Rail" text="Rail"/>
+										<core:Item key="Air" text="Air"/>
+										<core:Item key="Courier" text="Courier"/>
+									</items>
+								</Select>
+							</VBox>
+
+							<!-- Inward LR No -->
+							<VBox class="sapUiTinyMargin">
+								<Label text="Inward LR No." class="gpmsFieldLabel"/>
+								<Input id="idInsLRNumber" value="{ins>/LRNumber}" placeholder="Enter LR Number" class="gpmsFieldInput" editable="{= !${ins>/isReadOnly} }"/>
+							</VBox>
+
+							<!-- Inward Vehicle No -->
+							<VBox class="sapUiTinyMargin">
+								<Label text="Inward Vehicle No." class="gpmsFieldLabel"/>
+								<Input id="idInsVehicleNo" value="{ins>/VehicleNo}" placeholder="Enter Vehicle No" class="gpmsFieldInput" editable="{= !${ins>/isReadOnly} }"/>
+							</VBox>
+
+							<!-- Invoice Value (Rs) -->
+							<VBox class="sapUiTinyMargin">
+								<layoutData>
+									<layout:GridData linebreak="true"/>
+								</layoutData>
+								<Label text="Invoice Value (in Rs)" class="gpmsFieldLabel"/>
+								<Input id="idInsInvoiceValue" value="{ins>/InvoiceValue}" placeholder="Invoice Value (in Rs)" type="Number" class="gpmsFieldInput" editable="{= !${ins>/isReadOnly} }"/>
+							</VBox>
+
+							<!-- RGP Common Description -->
+							<VBox class="sapUiTinyMargin">
+								<Label text="RGP Common Description" class="gpmsFieldLabel"/>
+								<Input id="idInsRgpDesc" value="{ins>/RgpDescription}" placeholder="RGP Common Description" class="gpmsFieldInput" editable="{= !${ins>/isReadOnly} }"/>
+							</VBox>
+
+						</layout:Grid>
+					</content>
+				</Panel>
+
+				<!-- Action Buttons -->
+				<HBox class="sapUiMediumMarginTop" justifyContent="Start">
+					<Button
+						id="idInsSubmitBtn"
+						text="Submit"
+						type="Emphasized"
+						press=".onSubmit"
+						class="sapUiSmallMarginEnd"
+						visible="{= !${ins>/isReadOnly} }"/>
+					<Button
+						id="idInsCancelBtn"
+						text="Back"
+						press=".onNavBack"/>
+				</HBox>
+
+			</VBox>
+		</content>
+
+	</Page>
+
+</mvc:View>

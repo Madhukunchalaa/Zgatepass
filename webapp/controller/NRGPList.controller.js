@@ -65,7 +65,7 @@ sap.ui.define([
 						StatusState: that._getStatusState(sRawStatus),
 						NoOfItems: (oItem.OutgateNav && oItem.OutgateNav.results) ? oItem.OutgateNav.results.length : 0,
 						OutgateNav: oItem.OutgateNav || null,
-						VendorName: oItem.VendorName || "",
+						VendorName: oItem.VendorName || oItem.VendorDesc || oItem.VendorPerson || oItem.Vendor || "",
 						Vendor: oItem.Vendor || "",
 						ZipCode: oItem.ZipCode || "",
 						LRNumber: oItem.LRNumber || "",
@@ -74,14 +74,16 @@ sap.ui.define([
 						TransporterGST: oItem.TransporterGST || "",
 						ChallanNumber: oItem.ChallanNumber || "",
 						ChallanDate: oItem.ChallanDate || "",
-						// PurchasingDoc: oItem.PurchasingDoc || "",
 						CommonDesc: oItem.CommonDesc || "",
 						NoOfPacakages: oItem.NoOfPacakages || "",
 						Remarks: oItem.Remarks || "",
 						InsuranceReq: oItem.InsuranceReq || "",
 						InsuranceDate: oItem.InsuranceDate || "",
 						InsuranceAmount: oItem.InsuranceAmount || "",
-						FiscalYear: oItem.FiscalYear || ""
+						FiscalYear: oItem.FiscalYear || "",
+						DueDate: oItem.ReturnableDate ? that._formatDate(oItem.ReturnableDate) : "NA",
+						ReturnDate: oItem.ExtReturnDate ? that._formatDate(oItem.ExtReturnDate) : "NA",
+						Requestor: oItem.Requestor || ""
 					};
 				});
 			}
@@ -131,7 +133,7 @@ sap.ui.define([
 							StatusState: that._getStatusState(oItem.GPStatus || "Pending"),
 							NoOfItems: (oItem.OutgateNav && oItem.OutgateNav.results) ? oItem.OutgateNav.results.length : 0,
 							OutgateNav: oItem.OutgateNav || null,
-							VendorName: oItem.VendorName || "",
+							VendorName: oItem.VendorName || oItem.VendorDesc || oItem.VendorPerson || oItem.Vendor || "",
 							Vendor: oItem.Vendor || "",
 							ZipCode: oItem.ZipCode || "",
 							LRNumber: oItem.LRNumber || "",
@@ -140,14 +142,16 @@ sap.ui.define([
 							TransporterGST: oItem.TransporterGST || "",
 							ChallanNumber: oItem.ChallanNumber || "",
 							ChallanDate: oItem.ChallanDate || "",
-							// PurchasingDoc: oItem.PurchasingDoc || "",
 							CommonDesc: oItem.CommonDesc || "",
 							NoOfPacakages: oItem.NoOfPacakages || "",
 							Remarks: oItem.Remarks || "",
 							InsuranceReq: oItem.InsuranceReq || "",
 							InsuranceDate: oItem.InsuranceDate || "",
 							InsuranceAmount: oItem.InsuranceAmount || "",
-							FiscalYear: oItem.FiscalYear || ""
+							FiscalYear: oItem.FiscalYear || "",
+							DueDate: "NA",
+							ReturnDate: "NA",
+							Requestor: oItem.Requestor || ""
 						};
 					});
 					aAllResults = aAllResults.concat(aPoResults);
@@ -190,48 +194,77 @@ sap.ui.define([
 
 		_applyFilters: function () {
 			var oBinding = this.byId("idItemsNRGPTable").getBinding("items");
+			if (!oBinding) { return; }
 			var aFilters = [];
 
+			// ── Search filter: GP No, Req No, Vendor Name, Description, Dept ──
 			var sSearch = this.byId("idNRGPSearchField").getValue().trim();
 			if (sSearch) {
+				var sLow = sSearch.toLowerCase();
+				var fnTest = function(v) { return String(v || "").toLowerCase().indexOf(sLow) !== -1; };
 				aFilters.push(new Filter({
 					filters: [
-						new Filter("GatePassNo", FilterOperator.Contains, sSearch),
-						new Filter("GatePassreqNo", FilterOperator.Contains, sSearch),
-						new Filter("Department", FilterOperator.Contains, sSearch)
+						new Filter({ path: "GatePassNo", test: fnTest }),
+						new Filter({ path: "GatePassreqNo", test: fnTest }),
+						new Filter({ path: "VendorName", test: fnTest }),
+						new Filter({ path: "CommonDesc", test: fnTest }),
+						new Filter({ path: "Department", test: fnTest })
 					],
 					and: false
 				}));
 			}
 
+			// ── Type filter ──
 			var sType = this.byId("idNRGPTypeSelect").getSelectedKey();
 			if (sType) {
 				aFilters.push(new Filter("GatePassType", FilterOperator.EQ, sType));
 			}
 
+			// ── Status filter (special handling for Awaiting for Return vs Awaiting Ack) ──
 			var sStatus = this.byId("idNRGPStatusSelect").getSelectedKey();
 			if (sStatus) {
-				aFilters.push(new Filter("GPStatus", FilterOperator.EQ, sStatus));
+				if (sStatus === "AWAITING_FOR_RETURN") {
+					// RGP records with AWAITING status
+					aFilters.push(new Filter("GPStatus", FilterOperator.EQ, "AWAITING FOR VENDOR ACKNOWLEDGEMENT"));
+					if (!sType) {
+						// Only restrict by type if no type filter is already active
+						aFilters.push(new Filter("GatePassType", FilterOperator.EQ, "RGP"));
+					}
+				} else if (sStatus === "AWAITING FOR VENDOR ACKNOWLEDGEMENT") {
+					// NRGP records with AWAITING status
+					aFilters.push(new Filter("GPStatus", FilterOperator.EQ, "AWAITING FOR VENDOR ACKNOWLEDGEMENT"));
+					if (!sType) {
+						aFilters.push(new Filter("GatePassType", FilterOperator.EQ, "NRGP"));
+					}
+				} else {
+					aFilters.push(new Filter("GPStatus", FilterOperator.EQ, sStatus));
+				}
 			}
 
+			// ── Date filter: GatePassDate is stored as DD-MM-YYYY ──
 			var oFromDate = this.byId("idNRGPFromDatePicker").getDateValue();
-			var oToDate = this.byId("idNRGPToDatePicker").getDateValue();
+			var oToDate   = this.byId("idNRGPToDatePicker").getDateValue();
 			if (oFromDate || oToDate) {
+				var oFrom = oFromDate ? new Date(oFromDate.getFullYear(), oFromDate.getMonth(), oFromDate.getDate()) : null;
+				var oTo   = oToDate   ? new Date(oToDate.getFullYear(),   oToDate.getMonth(),   oToDate.getDate(), 23, 59, 59, 999) : null;
 				aFilters.push(new Filter({
 					path: "GatePassDate",
 					test: function (sDate) {
 						if (!sDate) { return false; }
-						var aParts = sDate.split("-");
-						if (aParts.length !== 3) { return false; }
-						var oItemDate = new Date(parseInt(aParts[2]), parseInt(aParts[1]) - 1, parseInt(aParts[0]));
-						if (oFromDate) {
-							var oFrom = new Date(oFromDate); oFrom.setHours(0, 0, 0, 0);
-							if (oItemDate < oFrom) { return false; }
+						// Support DD-MM-YYYY
+						var p = sDate.split("-");
+						if (p.length !== 3) { return false; }
+						var dd, mm, yyyy;
+						if (p[0].length === 4) {
+							// YYYY-MM-DD
+							yyyy = parseInt(p[0]); mm = parseInt(p[1]); dd = parseInt(p[2]);
+						} else {
+							// DD-MM-YYYY
+							dd = parseInt(p[0]); mm = parseInt(p[1]); yyyy = parseInt(p[2]);
 						}
-						if (oToDate) {
-							var oTo = new Date(oToDate); oTo.setHours(23, 59, 59, 999);
-							if (oItemDate > oTo) { return false; }
-						}
+						var oItem = new Date(yyyy, mm - 1, dd);
+						if (oFrom && oItem < oFrom) { return false; }
+						if (oTo   && oItem > oTo)   { return false; }
 						return true;
 					}
 				}));
@@ -249,90 +282,249 @@ sap.ui.define([
 		},
 
 		onDownloadExcel: function () {
-			var aObjects = this.getView().getModel("nrgpList").getProperty("/items") || [];
+			var oTable = this.byId("idItemsNRGPTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) {
+						aObjects.push(oContext.getObject());
+					}
+				});
+			} else {
+				aObjects = this.getView().getModel("nrgpList").getProperty("/items") || [];
+			}
 			var dFrom = this.byId("idNRGPFromDatePicker").getDateValue();
 			var dTo = this.byId("idNRGPToDatePicker").getDateValue();
 			aObjects = ExcelExport.filterByDate(aObjects, "GatePassDate", dFrom, dTo);
 			if (!aObjects.length) {
-				sap.m.MessageToast.show("No data to export.");
+				sap.m.MessageToast.show("No record found");
 				return;
 			}
-			var aRows = [];
-			aObjects.forEach(function (o) {
-				var oHeader = {
-					"GP No": o.GatePassNo || "",
-					"Req No": o.GatePassreqNo || "",
-					"Type": o.GatePassType || "",
-					"Date": o.GatePassDate || "",
-					"Plant": o.Plant || "",
-					"Department": o.Department || "",
-					"Vendor GST": o.VendorGST || "",
-					"Vehicle No": o.VehicleNo || "",
-					"Items": o.NoOfItems || 0,
-					"Status": o.GPStatusText || o.GPStatus || "",
-					"Vendor Name": o.VendorName || "",
-					"Vendor Code": o.Vendor || "",
-					"City": o.City || "",
-					"Zip Code": o.ZipCode || "",
-					"LR Number": o.LRNumber || "",
-					"Mode of Dispatch": o.ModeOfDispatch || "",
-					"Transporter": o.TransporterName || "",
-					"Transporter GST": o.TransporterGST || "",
-					"Challan No": o.ChallanNumber || "",
-					"Challan Date": o.ChallanDate || "",
-					"Purchasing Doc": o.PurchasingDoc || "",
-					"Description": o.CommonDesc || "",
-					"No of Packages": o.NoOfPacakages || "",
-					"Remarks": o.Remarks || "",
-					"Insurance Required": o.InsuranceReq || "",
-					"Insurance Date": o.InsuranceDate || "",
-					"Insurance Amount": o.InsuranceAmount || "",
-					"Fiscal Year": o.FiscalYear || ""
-				};
-				var aItems = (o.OutgateNav && o.OutgateNav.results) || (Array.isArray(o.OutgateNav) ? o.OutgateNav : []);
-				if (aItems.length > 0) {
-					aItems.forEach(function (itm) {
-						var oRow = Object.assign({}, oHeader);
-						oRow["Item No"] = itm.ItemNo || "";
-						oRow["Material"] = itm.Material || "";
-						oRow["Material Desc"] = itm.MaterialDesc || itm.Description || "";
-						oRow["HSN Code"] = itm.HSNCode || "";
-						oRow["Sent Qty"] = itm.SentQuantity || itm.Quantity || "";
-						oRow["Received Qty"] = itm.RecievedQuantity || "";
-						oRow["Balance Qty"] = itm.BalanceQuantity || "";
-						oRow["Item UOM"] = itm.UOM || "";
-						oRow["Item Net Price"] = itm.ItemNetPrice || "";
-						oRow["Total Value"] = itm.Totalvalue || "";
-						aRows.push(oRow);
-					});
-				} else {
-					oHeader["Item No"] = "";
-					oHeader["Material"] = "";
-					oHeader["Material Desc"] = "";
-					oHeader["HSN Code"] = "";
-					oHeader["Sent Qty"] = "";
-					oHeader["Received Qty"] = "";
-					oHeader["Balance Qty"] = "";
-					oHeader["Item UOM"] = "";
-					oHeader["Item Net Price"] = "";
-					oHeader["Total Value"] = "";
-					aRows.push(oHeader);
-				}
-			});
-			var sType = this.byId("idNRGPTypeSelect").getSelectedKey();
+
+			var sType   = this.byId("idNRGPTypeSelect").getSelectedKey();
 			var sStatus = this.byId("idNRGPStatusSelect").getSelectedKey();
+
+			var aRows = [];
+
+			// ── RGP-specific column format ──────────────────────────────────
+			if (sType === "RGP") {
+				var iSno = 1;
+				aObjects.forEach(function (o) {
+					var aItems = (o.OutgateNav && o.OutgateNav.results) || (Array.isArray(o.OutgateNav) ? o.OutgateNav : []);
+					if (aItems.length === 0) { aItems = [{}]; }
+					aItems.forEach(function (itm) {
+						aRows.push({
+							"Sno":                              iSno++,
+							"GP No":                            o.GatePassNo || "",
+							"Vendor Name":                      o.VendorName || "",
+							"Issue Date":                       o.GatePassDate || "",
+							"Material Description":             o.CommonDesc || "",
+							"Item Name":                        itm.MaterialDesc || itm.Description || itm.HSNDesc || "",
+							"Qty Send":                         itm.SentQuantity || itm.Quantity || "",
+							"Uom":                              itm.UOM || "",
+							"HSN Code":                         itm.HSNCode || "",
+							"Qty Received":                     itm.RecievedQuantity || "",
+							"Balance Qty":                      itm.BalanceQuantity || "",
+							"Due Date":                         o.DueDate || "",
+							"Extend Due Date":                  o.ReturnDate || "",
+							"Returned Date":                    o.ReturnedDate || "",
+							"UOP":                              itm.ItemNetPrice || "",
+							"Amount":                           itm.ItemNetPrice || "",
+							"Total Value":                      itm.Totalvalue || "",
+							"DC No":                            o.ChallanNumber || "",
+							"DC/DF Notes":                      o.CommonDesc || "",
+							"LR/Vehicle No":                    o.LRNumber || o.VehicleNo || "",
+							"EWB No":                           o.EWBNo || o.EWBno || o.EwbNo || "",
+							"Transport Name":                   o.TransporterName || "",
+							"Transporter GST":                  o.TransporterGST || "",
+							"Insurance Yes/ No":                o.InsuranceReq || "NO",
+							"Insurance Value":                  o.InsuranceAmount || "",
+							"Inward Insurance LR/Vehicle No":   o.InwardInsLRV || "",
+							"Inward Insurance Description":     o.InwardInsDesc || "",
+							"Inward Insurance Date":            o.InwardInsDate || "",
+							"Inward Insurance Value":           o.InwardInsValue || "",
+							"GP Req No":                        o.GatePassreqNo || "",
+							"User":                             o.Requestor || "",
+							"Department":                       o.Department || "",
+							"User Remarks":                     o.Remarks || "",
+							"Dept Remarks":                     o.HODRemarks || "",
+							"Store Remarks":                    o.STORERemarks || o.StoreRemarks || "",
+							"Status":                           o.GPStatusText || o.GPStatus || ""
+						});
+					});
+				});
+
+			// ── Generic format for NRGP / PO / All ──────────────────────────
+			} else {
+				aObjects.forEach(function (o) {
+					var oHeader = {
+						"GP No":            o.GatePassNo || "",
+						"Req No":           o.GatePassreqNo || "",
+						"Type":             o.GatePassType || "",
+						"Date":             o.GatePassDate || "",
+						"Plant":            o.Plant || "",
+						"Department":       o.Department || "",
+						"Vendor Name":      o.VendorName || "",
+						"Vendor GST":       o.VendorGST || "",
+						"LR Number":        o.LRNumber || "",
+						"Vehicle No":       o.VehicleNo || "",
+						"Mode of Dispatch": o.ModeOfDispatch || "",
+						"Transporter":      o.TransporterName || "",
+						"Transporter GST":  o.TransporterGST || "",
+						"Challan No":       o.ChallanNumber || "",
+						"Description":      o.CommonDesc || "",
+						"Remarks":          o.Remarks || "",
+						"Insurance Req":    o.InsuranceReq || "",
+						"Insurance Date":   o.InsuranceDate || "",
+						"Insurance Amount": o.InsuranceAmount || "",
+						"Status":           o.GPStatusText || o.GPStatus || "",
+						"Fiscal Year":      o.FiscalYear || ""
+					};
+					var aItems = (o.OutgateNav && o.OutgateNav.results) || (Array.isArray(o.OutgateNav) ? o.OutgateNav : []);
+					if (aItems.length > 0) {
+						aItems.forEach(function (itm) {
+							var oRow = Object.assign({}, oHeader);
+							oRow["Item No"]       = itm.ItemNo || "";
+							oRow["Material"]      = itm.Material || "";
+							oRow["Material Desc"] = itm.MaterialDesc || itm.Description || "";
+							oRow["HSN Code"]      = itm.HSNCode || "";
+							oRow["Sent Qty"]      = itm.SentQuantity || itm.Quantity || "";
+							oRow["Received Qty"]  = itm.RecievedQuantity || "";
+							oRow["Balance Qty"]   = itm.BalanceQuantity || "";
+							oRow["Item UOM"]      = itm.UOM || "";
+							oRow["Unit Price"]    = itm.ItemNetPrice || "";
+							oRow["Total Value"]   = itm.Totalvalue || "";
+							aRows.push(oRow);
+						});
+					} else {
+						oHeader["Item No"] = ""; oHeader["Material"] = ""; oHeader["Material Desc"] = "";
+						oHeader["HSN Code"] = ""; oHeader["Sent Qty"] = ""; oHeader["Received Qty"] = "";
+						oHeader["Balance Qty"] = ""; oHeader["Item UOM"] = ""; oHeader["Unit Price"] = "";
+						oHeader["Total Value"] = "";
+						aRows.push(oHeader);
+					}
+				});
+			}
+
 			var aParts = ["Out_Gate_Pass"];
-			if (sType) { aParts.push(sType.replace(/\s+/g, "_")); }
+			if (sType)   { aParts.push(sType.replace(/\s+/g, "_")); }
 			if (sStatus) { aParts.push(sStatus.replace(/\s+/g, "_")); }
-			if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
-			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
+			if (dFrom)   { aParts.push(ExcelExport.fmtDate(dFrom)); }
+			if (dTo)     { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
 			var sFileName = aParts.join("_") + ".xlsx";
 			var sSheetName = aParts.join(" ");
-			ExcelExport.download(aRows, sSheetName, sFileName, 28);
+			ExcelExport.download(aRows, sSheetName, sFileName, aRows.length ? Object.keys(aRows[0]).length : 28);
+		},
+
+		onPrintList: function () {
+			var oTable = this.byId("idItemsNRGPTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) { aObjects.push(oContext.getObject()); }
+				});
+			} else {
+				aObjects = this.getView().getModel("nrgpList").getProperty("/items") || [];
+			}
+			if (!aObjects.length) {
+				sap.m.MessageToast.show("No record found");
+				return;
+			}
+			var sHtml = "<html><head><title>Out Gate Passes List</title><style>";
+			sHtml += "body { font-family: Arial, sans-serif; padding: 20px; }";
+			sHtml += "h2 { text-align: center; color: #1F4E79; }";
+			sHtml += "table { width: 100%; border-collapse: collapse; margin-top: 20px; }";
+			sHtml += "th, td { border: 1px solid #BDC3C7; padding: 10px; text-align: left; font-size: 12px; }";
+			sHtml += "th { background-color: #F2F4F4; color: #1F4E79; font-weight: bold; }";
+			sHtml += "tr:nth-child(even) { background-color: #F8F9F9; }</style></head><body>";
+			sHtml += "<h2>Out Gate Passes List</h2><table><thead><tr>";
+			sHtml += "<th>GP Date</th><th>GP No.</th><th>GP Req No.</th><th>GP Type</th><th>Due Date</th><th>Ret Date</th><th>Vendor</th><th>Req Dept</th><th>Desc</th><th>Status</th>";
+			sHtml += "</tr></thead><tbody>";
+			aObjects.forEach(function (o) {
+				sHtml += "<tr>";
+				sHtml += "<td>" + (o.GatePassDate || "") + "</td>";
+				sHtml += "<td>" + (o.GatePassNo || "") + "</td>";
+				sHtml += "<td>" + (o.GatePassreqNo || "") + "</td>";
+				sHtml += "<td>" + (o.GatePassType || "") + "</td>";
+				sHtml += "<td>" + (o.DueDate || "") + "</td>";
+				sHtml += "<td>" + (o.ReturnDate || "") + "</td>";
+				sHtml += "<td>" + (o.VendorName || "") + "</td>";
+				sHtml += "<td>" + (o.Department || "") + "</td>";
+				sHtml += "<td>" + (o.CommonDesc || "") + "</td>";
+				sHtml += "<td>" + (o.GPStatusText || o.GPStatus || "") + "</td>";
+				sHtml += "</tr>";
+			});
+			sHtml += "</tbody></table></body></html>";
+			var oWindow = window.open("", "_blank");
+			oWindow.document.write(sHtml);
+			oWindow.document.close();
+			oWindow.focus();
+			setTimeout(function () { oWindow.print(); oWindow.close(); }, 500);
+		},
+
+		onCopyList: function () {
+			var oTable = this.byId("idItemsNRGPTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) { aObjects.push(oContext.getObject()); }
+				});
+			} else {
+				aObjects = this.getView().getModel("nrgpList").getProperty("/items") || [];
+			}
+			if (!aObjects.length) {
+				sap.m.MessageToast.show("No items to copy.");
+				return;
+			}
+			var sHeaders = ["GP Date", "GP No.", "GP Req No.", "GP Type", "Due Date", "Ret Date", "Vendor", "Req Dept", "Desc", "Status"];
+			var aLines = [sHeaders.join("\t")];
+			aObjects.forEach(function (o) {
+				aLines.push([
+					o.GatePassDate || "",
+					o.GatePassNo || "",
+					o.GatePassreqNo || "",
+					o.GatePassType || "",
+					o.DueDate || "",
+					o.ReturnDate || "",
+					o.VendorName || "",
+					o.Department || "",
+					o.CommonDesc || "",
+					o.GPStatusText || o.GPStatus || ""
+				].join("\t"));
+			});
+			var sText = aLines.join("\n");
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(sText).then(function () {
+					sap.m.MessageToast.show("List copied to clipboard.");
+				});
+			} else {
+				var el = document.createElement("textarea");
+				el.value = sText;
+				document.body.appendChild(el);
+				el.select();
+				document.execCommand("copy");
+				document.body.removeChild(el);
+				sap.m.MessageToast.show("List copied to clipboard.");
+			}
 		},
 
 		onColumnListItemPress: function (oEvent) {
 			var oItem = oEvent.getSource().getBindingContext("nrgpList").getObject();
+			this._navigateToDetail(oItem);
+		},
+
+		onEditRow: function (oEvent) {
+			var oItem = oEvent.getSource().getBindingContext("nrgpList").getObject();
+			this._navigateToDetail(oItem);
+		},
+
+		_navigateToDetail: function (oItem) {
 			if (oItem.GatePassType === "PO") {
 				sap.m.MessageBox.information(
 					"Gate Pass No: " + oItem.GatePassNo + "\n" +

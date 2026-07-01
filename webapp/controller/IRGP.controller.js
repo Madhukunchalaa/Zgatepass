@@ -39,11 +39,14 @@ sap.ui.define([
 			if (sStep === "LIST") {
 				this._applyListMode();
 				this._loadList();
-			} else if (sStep === "CREATE") {
-				this._resetFormModel();
-				this._applyCreateMode();
 			} else {
-				this._loadDocument(sStep, sGPNo);
+				this._loadMaterials();
+				if (sStep === "CREATE") {
+					this._resetFormModel();
+					this._applyCreateMode();
+				} else {
+					this._loadDocument(sStep, sGPNo);
+				}
 			}
 		},
 
@@ -593,6 +596,13 @@ sap.ui.define([
 			return "";
 		},
 
+		_formatSAPDateToDisplay: function (vDate) {
+			var sIso = this._formatSAPDate(vDate);
+			if (!sIso) { return ""; }
+			var aParts = sIso.split("-");
+			return aParts[2] + "-" + aParts[1] + "-" + aParts[0];
+		},
+
 		// Format "YYYY-MM-DD" to "YYYYMMDD" for backend SAP payloads
 		_toSAPDate: function (sDate) {
 			if (!sDate) { return ""; }
@@ -633,10 +643,11 @@ sap.ui.define([
 
 			return {
 				IRGPNo:               oData.GatePassNo     || "",
-				GEDate:               this._formatSAPDate(oData.RequestDate),
-				DueDate:              this._formatSAPDate(oData.DueDate),
-				RevisedDueDate:       this._formatSAPDate(oData.RevisedDueDate),
-				ReturnedDate:         this._formatSAPDate(oData.ReturnedDate),
+				GEDate:               this._formatSAPDateToDisplay(oData.RequestDate),
+				GEDateRaw:            this._formatSAPDate(oData.RequestDate),
+				DueDate:              this._formatSAPDateToDisplay(oData.DueDate),
+				RevisedDueDate:       this._formatSAPDateToDisplay(oData.RevisedDueDate),
+				ReturnedDate:         this._formatSAPDateToDisplay(oData.ReturnedDate) || "NA",
 				Department:           oData.Department     || "",
 				RequestUser:          oData.RequestedUser  || "",
 				ReturnUser:           oData.ReturnUser     || "",
@@ -660,6 +671,7 @@ sap.ui.define([
 						RecievedQuantity: it.RecievedQuantity || "0",
 						BalanceQuantity:  it.BalanceQuantity  || "0",
 						UOM:              it.UOM              || "",
+						HSNCode:          it.HSNCode          || "",
 						MRNumber:         this._sanitizeMRN(it.MRNumber),
 						Location:         it.Location         || "",
 						Mp2ItemCode:      it.Mp2ItmCode        || "",
@@ -812,12 +824,26 @@ sap.ui.define([
 		},
 
 		onDownloadExcel: function () {
-			var aObjects = this.getOwnerComponent().getModel("irgpGlobal").getProperty("/documents") || [];
+			var oTable = this.byId("idIRGPListTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) {
+						aObjects.push(oContext.getObject());
+					}
+				});
+			} else {
+				aObjects = this.getOwnerComponent().getModel("irgpGlobal").getProperty("/documents") || [];
+			}
+
 			var dFrom = this.byId("idExcelFromDate").getDateValue();
 			var dTo = this.byId("idExcelToDate").getDateValue();
-			aObjects = ExcelExport.filterByDate(aObjects, "GEDate", dFrom, dTo);
+			aObjects = ExcelExport.filterByDate(aObjects, "GEDateRaw", dFrom, dTo);
+
 			if (!aObjects.length) {
-				MessageToast.show("No data to export.");
+				MessageToast.show("No record found");
 				return;
 			}
 
@@ -829,53 +855,58 @@ sap.ui.define([
 
 			var aRows = [];
 			aObjects.forEach(function (o) {
-				var oHeader = {
-					"Gate Pass No": o.IRGPNo || "",
-					"Request Date": o.GEDate || "",
-					"Department": o.Department || "",
-					"Requested User": o.RequestUser || "",
-					"Contract Employee": o.ContractEmployeeName || "",
-					"Status": STATUS_LABELS[o.StatusCode] || o.StatusCode || "",
-					"Due Date": o.DueDate || "",
-					"Revised Due Date": o.RevisedDueDate || "",
-					"Returned Date": o.ReturnedDate || "",
-					"Return User": o.ReturnUser || "",
-					"Contract Name": o.ContractName || "",
-					"Request Type": o.RequestType || "",
-					"Remarks": o.Remarks || "",
-					"MR Number": o.MRNumber || ""
-				};
 				var aItems = o.items || [];
 				if (aItems.length === 0) {
-					oHeader["Item SNo"] = "";
-					oHeader["Item No"] = "";
-					oHeader["Item Code"] = "";
-					oHeader["Item Description"] = "";
-					oHeader["Sent Quantity"] = "";
-					oHeader["Received Quantity"] = "";
-					oHeader["Balance Quantity"] = "";
-					oHeader["Item UOM"] = "";
-					oHeader["Item MR Number"] = "";
-					oHeader["Item Location"] = "";
-					oHeader["Mp2 Item Code"] = "";
-					oHeader["Default Bin"] = "";
-					aRows.push(oHeader);
+					aRows.push({
+						"IRGP No": o.IRGPNo || "",
+						"Req Date": o.GEDate || "",
+						"Req Type": o.RequestType || "",
+						"Item": "",
+						"Location": "",
+						"Mp2ItemCode": "",
+						"Description": "",
+						"DefaultBin": "",
+						"QTY Issued": "",
+						"Qty Received": "",
+						"Balance Qty": "",
+						"UOM": "",
+						"MRNumber": "",
+						"Due Date": o.DueDate || "",
+						"Extended Due Date": o.RevisedDueDate || "",
+						"Return Date": o.ReturnedDate || "",
+						"Req User": o.RequestUser || "",
+						"Requester Department": o.Department || "",
+						"ContractName": o.ContractName || "",
+						"Contract/MEIL Employee Name": o.ContractEmployeeName || "",
+						"Status": o.StatusCode === "CLOSED" ? "CLOSED" : "OPEN",
+						"Remarks": o.Remarks || ""
+					});
 				} else {
 					aItems.forEach(function (item) {
-						var oRow = Object.assign({}, oHeader);
-						oRow["Item SNo"] = item.SNo || "";
-						oRow["Item No"] = item.ItemNo || "";
-						oRow["Item Code"] = item.ItemCode || "";
-						oRow["Item Description"] = item.ItemDescription || "";
-						oRow["Sent Quantity"] = item.SentQuantity || "";
-						oRow["Received Quantity"] = item.RecievedQuantity || "";
-						oRow["Balance Quantity"] = item.BalanceQuantity || "";
-						oRow["Item UOM"] = item.UOM || "";
-						oRow["Item MR Number"] = item.MRNumber || "";
-						oRow["Item Location"] = item.Location || "";
-						oRow["Mp2 Item Code"] = item.Mp2ItemCode || "";
-						oRow["Default Bin"] = item.DefaultBin || "";
-						aRows.push(oRow);
+						aRows.push({
+							"IRGP No": o.IRGPNo || "",
+							"Req Date": o.GEDate || "",
+							"Req Type": o.RequestType || "",
+							"Item": item.ItemCode || "",
+							"Location": item.Location || "",
+							"Mp2ItemCode": item.Mp2ItemCode || "",
+							"Description": item.ItemDescription || "",
+							"DefaultBin": item.DefaultBin || "",
+							"QTY Issued": item.SentQuantity || "0",
+							"Qty Received": item.RecievedQuantity || "0",
+							"Balance Qty": item.BalanceQuantity || "0",
+							"UOM": item.UOM || "",
+							"MRNumber": item.MRNumber || "",
+							"Due Date": o.DueDate || "",
+							"Extended Due Date": o.RevisedDueDate || "",
+							"Return Date": o.ReturnedDate || "",
+							"Req User": o.RequestUser || "",
+							"Requester Department": o.Department || "",
+							"ContractName": o.ContractName || "",
+							"Contract/MEIL Employee Name": o.ContractEmployeeName || "",
+							"Status": o.StatusCode === "CLOSED" ? "CLOSED" : "OPEN",
+							"Remarks": o.Remarks || ""
+						});
 					});
 				}
 			});
@@ -890,14 +921,207 @@ sap.ui.define([
 			ExcelExport.download(aRows, sSheetName, sFileName, 14);
 		},
 
-		onFilterIRGPList: function (oEvent) {
-			var sKey = oEvent.getParameter("key");
+		onFilterIRGPList: function () {
+			this._applyTableFilters();
+		},
+
+		onDateFilterChange: function () {
+			this._applyTableFilters();
+		},
+
+		onCopyData: function () {
 			var oTable = this.byId("idIRGPListTable");
-			var oBinding = oTable.getBinding("items");
-			var aFilters = [];
-			if (sKey !== "ALL") {
-				aFilters.push(new sap.ui.model.Filter("StatusCode", sap.ui.model.FilterOperator.EQ, sKey));
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) {
+						aObjects.push(oContext.getObject());
+					}
+				});
+			} else {
+				aObjects = this.getOwnerComponent().getModel("irgpGlobal").getProperty("/documents") || [];
 			}
+			if (!aObjects.length) {
+				sap.m.MessageToast.show("No record found");
+				return;
+			}
+			
+			var aHeaders = [
+				"IRGP Date", "IRGP No", "IRGP Type", "Due Date", "Ret Date", "Req User", "Req Dept", "Contract Name", "Contract Employee Name", "Status",
+				"Item SNo", "Item Code", "Item Description", "Sent Qty", "Received Qty", "Balance Qty", "UOM", "Item MRN"
+			];
+			var aLines = [aHeaders.join("\t")];
+			aObjects.forEach(function (o) {
+				var aHeaderFields = [
+					o.GEDate || "",
+					o.IRGPNo || "",
+					o.RequestType || "",
+					o.DueDate || "",
+					o.ReturnedDate || "",
+					o.RequestUser || "",
+					o.Department || "",
+					o.ContractName || "",
+					o.ContractEmployeeName || "",
+					o.StatusCode === "CLOSED" ? "CLOSED" : "OPEN"
+				];
+
+				var aItems = o.items || [];
+				if (aItems.length === 0) {
+					var aRow = aHeaderFields.concat(["", "", "", "", "", "", "", ""]);
+					aLines.push(aRow.join("\t"));
+				} else {
+					aItems.forEach(function (item) {
+						var aRow = aHeaderFields.concat([
+							item.SNo || "",
+							item.ItemCode || "",
+							item.ItemDescription || "",
+							item.SentQuantity || "0",
+							item.RecievedQuantity || "0",
+							item.BalanceQuantity || "0",
+							item.UOM || "",
+							item.MRNumber || ""
+						]);
+						aLines.push(aRow.join("\t"));
+					});
+				}
+			});
+			var sTsv = aLines.join("\n");
+			
+			navigator.clipboard.writeText(sTsv).then(function () {
+				sap.m.MessageToast.show("Data copied to clipboard!");
+			}).catch(function (err) {
+				sap.m.MessageToast.show("Failed to copy data: " + err);
+			});
+		},
+
+		onPrintList: function () {
+			var oTable = this.byId("idIRGPListTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) {
+						aObjects.push(oContext.getObject());
+					}
+				});
+			} else {
+				aObjects = this.getOwnerComponent().getModel("irgpGlobal").getProperty("/documents") || [];
+			}
+			if (!aObjects.length) {
+				sap.m.MessageToast.show("No record found");
+				return;
+			}
+
+			var sHtml = "<html><head><title>Internal Returnable Gate Passes List</title>";
+			sHtml += "<style>";
+			sHtml += "body { font-family: Arial, sans-serif; padding: 20px; }";
+			sHtml += "h2 { text-align: center; color: #1F4E79; }";
+			sHtml += "table { width: 100%; border-collapse: collapse; margin-top: 20px; }";
+			sHtml += "th, td { border: 1px solid #BDC3C7; padding: 10px; text-align: left; font-size: 12px; }";
+			sHtml += "th { background-color: #F2F4F4; color: #1F4E79; font-weight: bold; }";
+			sHtml += "tr:nth-child(even) { background-color: #F8F9F9; }";
+			sHtml += "</style></head><body>";
+			sHtml += "<h2>Internal Returnable Gate Passes List</h2>";
+			sHtml += "<table><thead><tr>";
+			sHtml += "<th>IRGP Date</th><th>IRGP No</th><th>IRGP Type</th><th>Due Date</th><th>Ret Date</th><th>Req User</th><th>Req Dept</th><th>Contract Name</th><th>Contract Employee Name</th><th>Status</th>";
+			sHtml += "<th>Item SNo</th><th>Item Code</th><th>Item Description</th><th>Sent Qty</th><th>Received Qty</th><th>Balance Qty</th><th>UOM</th><th>Item MRN</th>";
+			sHtml += "</tr></thead><tbody>";
+
+			aObjects.forEach(function (o) {
+				var sRowPrefix = "";
+				sRowPrefix += "<td>" + (o.GEDate || "") + "</td>";
+				sRowPrefix += "<td>" + (o.IRGPNo || "") + "</td>";
+				sRowPrefix += "<td>" + (o.RequestType || "") + "</td>";
+				sRowPrefix += "<td>" + (o.DueDate || "") + "</td>";
+				sRowPrefix += "<td>" + (o.ReturnedDate || "") + "</td>";
+				sRowPrefix += "<td>" + (o.RequestUser || "") + "</td>";
+				sRowPrefix += "<td>" + (o.Department || "") + "</td>";
+				sRowPrefix += "<td>" + (o.ContractName || "") + "</td>";
+				sRowPrefix += "<td>" + (o.ContractEmployeeName || "") + "</td>";
+				sRowPrefix += "<td>" + (o.StatusCode === "CLOSED" ? "CLOSED" : "OPEN") + "</td>";
+
+				var aItems = o.items || [];
+				if (aItems.length === 0) {
+					sHtml += "<tr>" + sRowPrefix + "<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";
+				} else {
+					aItems.forEach(function (item) {
+						sHtml += "<tr>";
+						sHtml += sRowPrefix;
+						sHtml += "<td>" + (item.SNo || "") + "</td>";
+						sHtml += "<td>" + (item.ItemCode || "") + "</td>";
+						sHtml += "<td>" + (item.ItemDescription || "") + "</td>";
+						sHtml += "<td>" + (item.SentQuantity || "0") + "</td>";
+						sHtml += "<td>" + (item.RecievedQuantity || "0") + "</td>";
+						sHtml += "<td>" + (item.BalanceQuantity || "0") + "</td>";
+						sHtml += "<td>" + (item.UOM || "") + "</td>";
+						sHtml += "<td>" + (item.MRNumber || "") + "</td>";
+						sHtml += "</tr>";
+					});
+				}
+			});
+
+			sHtml += "</tbody></table></body></html>";
+
+			var oWindow = window.open("", "_blank");
+			oWindow.document.write(sHtml);
+			oWindow.document.close();
+			oWindow.focus();
+			setTimeout(function () {
+				oWindow.print();
+				oWindow.close();
+			}, 500);
+		},
+
+		_applyTableFilters: function () {
+			var oTable = this.byId("idIRGPListTable");
+			if (!oTable) { return; }
+			var oBinding = oTable.getBinding("items");
+			if (!oBinding) { return; }
+
+			var aFilters = [];
+
+			// 1. Status Filter
+			var sTabKey = this.byId("idIRGPIconTabBar").getSelectedKey();
+			if (sTabKey && sTabKey !== "ALL") {
+				aFilters.push(new sap.ui.model.Filter("StatusCode", sap.ui.model.FilterOperator.EQ, sTabKey));
+			}
+
+			// 2. Date Range Filter
+			var dFrom = this.byId("idExcelFromDate").getDateValue();
+			var dTo = this.byId("idExcelToDate").getDateValue();
+			if (dFrom || dTo) {
+				var fnFormat = function (d) {
+					return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0');
+				};
+				if (dFrom && dTo) {
+					aFilters.push(new sap.ui.model.Filter("GEDateRaw", sap.ui.model.FilterOperator.BT, fnFormat(dFrom), fnFormat(dTo)));
+				} else if (dFrom) {
+					aFilters.push(new sap.ui.model.Filter("GEDateRaw", sap.ui.model.FilterOperator.GE, fnFormat(dFrom)));
+				} else if (dTo) {
+					aFilters.push(new sap.ui.model.Filter("GEDateRaw", sap.ui.model.FilterOperator.LE, fnFormat(dTo)));
+				}
+			}
+
+			// 3. Search Filter
+			var sQuery = this.byId("idIRGPSearchField") ? this.byId("idIRGPSearchField").getValue() : "";
+			if (sQuery && sQuery.trim() !== "") {
+				var aSearchFilters = [
+					new sap.ui.model.Filter("IRGPNo", sap.ui.model.FilterOperator.Contains, sQuery),
+					new sap.ui.model.Filter("RequestUser", sap.ui.model.FilterOperator.Contains, sQuery),
+					new sap.ui.model.Filter("ContractEmployeeName", sap.ui.model.FilterOperator.Contains, sQuery),
+					new sap.ui.model.Filter("ContractName", sap.ui.model.FilterOperator.Contains, sQuery),
+					new sap.ui.model.Filter("Department", sap.ui.model.FilterOperator.Contains, sQuery),
+					new sap.ui.model.Filter("RequestType", sap.ui.model.FilterOperator.Contains, sQuery)
+				];
+				aFilters.push(new sap.ui.model.Filter({
+					filters: aSearchFilters,
+					and: false
+				}));
+			}
+
 			oBinding.filter(aFilters);
 		},
 
@@ -988,6 +1212,85 @@ sap.ui.define([
 			oModel.setProperty("/ui/hasPendingChanges", true);
 			MessageToast.show("Row added.");
 		},
+
+		_loadMaterials: function () {
+			var oMaterialsModel = new JSONModel({ results: [] });
+			this.getView().setModel(oMaterialsModel, "materials");
+
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) { return; }
+
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var sPlant = oUserModel ? (oUserModel.getProperty("/plant") || oUserModel.getProperty("/Plant") || "") : "";
+			if (!sPlant) { return; }
+
+			var aFilters = [new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sPlant)];
+
+			oODataModel.read("/ZMaterialSet", {
+				filters: aFilters,
+				success: function (oData) {
+					var aNormalized = (oData.results || []).map(function (m) {
+						return {
+							Material: m.Material || m.Matnr || "",
+							MaterialName: m.Maktx || m.MaterialDesc || m.Description || m.MatDesc || m.Materialtxt || m.Material || "",
+							UOM: m.Meins || m.Uom || m.BaseUOM || m.UOM || ""
+						};
+					});
+					oMaterialsModel.setProperty("/results", aNormalized);
+				},
+				error: function () {}
+			});
+		},
+
+		onMaterialValueHelp: function (oEvent) {
+			this._oInputSource = oEvent.getSource();
+			this._oRowContext = this._oInputSource.getBindingContext("irgp");
+
+			if (!this._pMaterialValueHelp) {
+				this._pMaterialValueHelp = sap.ui.core.Fragment.load({
+					id: this.getView().getId(),
+					name: "zgpms.meilpower.com.view.fragments.MaterialValueHelp",
+					controller: this
+				}).then(function (oDialog) {
+					this.getView().addDependent(oDialog);
+					return oDialog;
+				}.bind(this));
+			}
+
+			this._pMaterialValueHelp.then(function (oDialog) {
+				oDialog.getBinding("items").filter([]);
+				oDialog.open();
+			});
+		},
+
+		onMaterialValueHelpSearch: function (oEvent) {
+			var sValue = oEvent.getParameter("value");
+			var oFilter = new sap.ui.model.Filter({
+				filters: [
+					new sap.ui.model.Filter("Material", sap.ui.model.FilterOperator.Contains, sValue),
+					new sap.ui.model.Filter("MaterialName", sap.ui.model.FilterOperator.Contains, sValue)
+				],
+				and: false
+			});
+			oEvent.getSource().getBinding("items").filter([oFilter]);
+		},
+
+		onMaterialValueHelpConfirm: function (oEvent) {
+			var oSelectedItem = oEvent.getParameter("selectedItem");
+			if (!oSelectedItem) {
+				return;
+			}
+
+			var oSelectedMaterial = oSelectedItem.getBindingContext("materials").getObject();
+			var oModel = this.getView().getModel("irgp");
+			var sPath = this._oRowContext.getPath();
+
+			oModel.setProperty(sPath + "/ItemCode", oSelectedMaterial.Material);
+			oModel.setProperty(sPath + "/ItemDescription", oSelectedMaterial.MaterialName);
+			oModel.setProperty(sPath + "/UOM", oSelectedMaterial.UOM);
+		},
+
+		onMaterialValueHelpCancel: function () {},
 
 		onDeleteItem: function (oEvent) {
 			var oCtx   = oEvent.getSource().getBindingContext("irgp");

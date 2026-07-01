@@ -1,0 +1,66 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.InwardInsuranceList"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:core="sap.ui.core"
+	height="100%">
+	<Page
+		title="Inward Insurance List"
+		showNavButton="true"
+		navButtonPress=".onNavBack"
+		class="gpmsPage">
+		<content>
+			<VBox class="sapUiSmallMargin">
+				<Table
+					id="inwardInsuranceTable"
+					items="{inwardInsuranceList>/results}"
+					noDataText="No Inward Insurance records found"
+					class="gpmsTable"
+					alternateRowColors="true">
+					<headerToolbar>
+						<OverflowToolbar>
+							<Title text="Inward Insurance Records" level="H2"/>
+							<ToolbarSpacer/>
+							<SearchField
+								width="300px"
+								search=".onSearch"
+								placeholder="Search Invoice No or Vendor..."
+								class="gpmsFieldInput"/>
+							<DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px" change=".onDateFilterChange"/>
+							<DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px" change=".onDateFilterChange"/>
+							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel"/>
+							<Button id="idInsCopyListBtn" icon="sap-icon://copy" text="Copy" press=".onCopyList" tooltip="Copy list to clipboard"/>
+							<Button id="idInsPrintListBtn" icon="sap-icon://print" text="Print List" press=".onPrintList" tooltip="Print list"/>
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column><Text text="Invoice Number" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Insurance Date" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Received Date" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Vendor Name" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Mode of Transport" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="LR Number" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Vehicle No" class="gpmsTableHeaderText"/></Column>
+						<Column hAlign="Right"><Text text="Invoice Value" class="gpmsTableHeaderText"/></Column>
+						<Column><Text text="Description" class="gpmsTableHeaderText"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem type="Navigation" press=".onRowPress" class="gpmsTableRow">
+							<cells>
+								<Text text="{inwardInsuranceList>InvoiceNumber}" class="gpmsTableText"/>
+								<Text text="{path: 'inwardInsuranceList>InsuranceDate', formatter: '.formatDate'}" class="gpmsTableText"/>
+								<Text text="{path: 'inwardInsuranceList>RecievedDate', formatter: '.formatDate'}" class="gpmsTableText"/>
+								<Text text="{inwardInsuranceList>VendorName}" class="gpmsTableText"/>
+								<Text text="{inwardInsuranceList>ModeOfTransport}" class="gpmsTableText"/>
+								<Text text="{inwardInsuranceList>LRNumber}" class="gpmsTableText"/>
+								<Text text="{inwardInsuranceList>VehicleNo}" class="gpmsTableText"/>
+								<Text text="{path: 'inwardInsuranceList>InvoiceValue', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}" class="gpmsTableText" textAlign="Right"/>
+								<Text text="{inwardInsuranceList>RGPCoomonDesc}" class="gpmsTableText"/>
+							</cells>
+						</ColumnListItem>
+					</items>
+				</Table>
+			</VBox>
+		</content>
+	</Page>
+</mvc:View>

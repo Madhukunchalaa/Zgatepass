@@ -13,20 +13,23 @@
 				<!-- ─── IRGP LIST VIEW (LIST Mode) ─── -->
 				<VBox visible="{= ${irgp>/ui/currentStep} === 'LIST' }">
 					<!-- Hero Banner for List -->
-					<HBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMarginBottom">
-						<VBox>
+					<FlexBox wrap="Wrap" alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMarginBottom">
+						<VBox class="sapUiSmallMarginBottom">
 							<Title text="Internal Returnable Gate Passes" level="H2" class="gpmsHeroTitle"/>
 							<Text text="Track Internal Returnable Gate Passes across multi-persona store and user cycles" class="gpmsHeroSubTitle sapUiTinyMarginTop"/>
 						</VBox>
-						<HBox>
-							<Button text="Create New IRGP" icon="sap-icon://add" type="Emphasized" press="onPressCreateNewIRGP" class="sapUiSmallMarginEnd"
+						<FlexBox wrap="Wrap" alignItems="Center">
+							<Button text="Create New IRGP" icon="sap-icon://add" type="Emphasized" press="onPressCreateNewIRGP" class="sapUiSmallMarginEnd sapUiTinyMarginBottom"
 							visible="{= !${user>/IsGatepassUserOnly} }"/>
-							<DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px"/>
-							<DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px"/>
-							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel" class="sapUiSmallMarginEnd"/>
-							<Button icon="sap-icon://home" press="onNavHome" type="Default" tooltip="Go to Dashboard"/>
-						</HBox>
-					</HBox>
+							<DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px" change="onDateFilterChange" class="sapUiSmallMarginEnd sapUiTinyMarginBottom"/>
+							<DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px" change="onDateFilterChange" class="sapUiSmallMarginEnd sapUiTinyMarginBottom"/>
+							<SearchField id="idIRGPSearchField" placeholder="Search..." width="250px" search="onDateFilterChange" liveChange="onDateFilterChange" class="sapUiSmallMarginEnd sapUiTinyMarginBottom"/>
+							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel" class="sapUiSmallMarginEnd sapUiTinyMarginBottom"/>
+							<Button icon="sap-icon://copy" text="Copy" press="onCopyData" tooltip="Copy List to Clipboard" class="sapUiSmallMarginEnd sapUiTinyMarginBottom"/>
+							<Button icon="sap-icon://print" text="Print List" press="onPrintList" tooltip="Print Filtered List" class="sapUiSmallMarginEnd sapUiTinyMarginBottom"/>
+							<Button icon="sap-icon://home" press="onNavHome" type="Default" tooltip="Go to Dashboard" class="sapUiTinyMarginBottom"/>
+						</FlexBox>
+					</FlexBox>
 
 					<!-- Segmented IconTabBar to filter by Workflow Stage -->
 					<IconTabBar id="idIRGPIconTabBar" select="onFilterIRGPList" class="sapUiMediumMarginTop gpmsIconTabBar" expandable="false">
@@ -40,42 +43,57 @@
 							<!-- Gorgeous Fiori Table for IRGPs -->
 							<Table id="idIRGPListTable" items="{irgpGlobal>/documents}" noDataText="No Internal Returnable Gate Pass records found." alternateRowColors="true" growing="true" class="sapUiSizeCompact gpmsItemTable">
 								<columns>
+									<Column width="110px">
+										<Text text="IRGP Date" class="gpmsHeaderText"/>
+									</Column>
 									<Column width="160px">
-										<Text text="Gate Pass No" class="gpmsHeaderText"/>
+										<Text text="IRGP No" class="gpmsHeaderText"/>
+									</Column>
+									<Column width="120px">
+										<Text text="IRGP Type" class="gpmsHeaderText"/>
 									</Column>
 									<Column width="110px">
-										<Text text="Request Date" class="gpmsHeaderText"/>
+										<Text text="Due Date" class="gpmsHeaderText"/>
+									</Column>
+									<Column width="100px">
+										<Text text="Ret Date" class="gpmsHeaderText"/>
 									</Column>
 									<Column width="130px">
-										<Text text="Department" class="gpmsHeaderText"/>
+										<Text text="Req User" class="gpmsHeaderText"/>
 									</Column>
-									<Column minScreenWidth="Tablet" demandPopin="true">
-										<Text text="Requested User" class="gpmsHeaderText"/>
+									<Column width="130px">
+										<Text text="Req Dept" class="gpmsHeaderText"/>
 									</Column>
-									<Column minScreenWidth="Tablet" demandPopin="true">
-										<Text text="Contract Employee" class="gpmsHeaderText"/>
+									<Column width="150px">
+										<Text text="Contract Name" class="gpmsHeaderText"/>
 									</Column>
 									<Column width="180px">
+										<Text text="Contract Employee Name" class="gpmsHeaderText"/>
+									</Column>
+									<Column width="100px">
 										<Text text="Status" class="gpmsHeaderText"/>
 									</Column>
 									<Column width="260px" hAlign="Right">
-										<Text text="Actions" class="gpmsHeaderText"/>
+										<Text text="Action" class="gpmsHeaderText"/>
 									</Column>
 								</columns>
 								<items>
 									<ColumnListItem>
 										<cells>
-											<ObjectIdentifier title="{irgpGlobal>IRGPNo}" class="gpmsSnoText"/>
 											<Text text="{irgpGlobal>GEDate}"/>
-											<Text text="{irgpGlobal>Department}"/>
+											<ObjectIdentifier title="{irgpGlobal>IRGPNo}" class="gpmsSnoText"/>
+											<Text text="{irgpGlobal>RequestType}"/>
+											<Text text="{irgpGlobal>DueDate}"/>
+											<Text text="{irgpGlobal>ReturnedDate}"/>
 											<Text text="{irgpGlobal>RequestUser}"/>
+											<Text text="{irgpGlobal>Department}"/>
+											<Text text="{irgpGlobal>ContractName}"/>
 											<Text text="{irgpGlobal>ContractEmployeeName}"/>
 											
-											<!-- Gorgeous Workflow Status Mappings -->
+											<!-- Workflow Status Mappings -->
 											<ObjectStatus
-												text="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' ? 'Pending Reservation' : ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' ? 'Completed Reservation' : 'Closed &amp; Archived' }"
-												state="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' ? 'Warning' : ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' ? 'Information' : 'Success' }"
-												icon="{= ${irgpGlobal>StatusCode} === 'PENDING_RESERVATION' ? 'sap-icon://workflow-tasks' : ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' ? 'sap-icon://task' : 'sap-icon://accept' }"/>
+												text="{= ${irgpGlobal>StatusCode} === 'CLOSED' ? 'CLOSED' : 'OPEN' }"
+												state="{= ${irgpGlobal>StatusCode} === 'CLOSED' ? 'Success' : 'Warning' }"/>
 
 											<!-- Dynamic Actions matching stage -->
 											<HBox justifyContent="End" alignItems="Center" wrap="Wrap">
@@ -269,7 +287,7 @@
 									<layout:GridData span="XL3 L3 M3 S12"/>
 								</layoutData>
 								<Label text="MR Number" class="gpmsFieldLabel"/>
-								<Input value="{irgp>/header/MRNumber}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+								<Input value="{irgp>/header/MRNumber}" editable="{= ${irgp>/ui/currentStep} === 'USER_UPDATE' || ${irgp>/ui/currentStep} === 'EDIT' }" class="gpmsFieldInput" placeholder="Enter MR Number" width="100%"/>
 							</VBox>
 
 							<!-- Requested User -->
@@ -364,9 +382,11 @@
 									<t:template>
 										<Input value="{irgp>ItemCode}"
 											editable="{irgp>/ui/itemsEditable}"
-											placeholder="e.g. MAT100001"
+											placeholder="Select or enter item"
 											class="{= ${irgp>/ui/itemsEditable} ? 'gpmsTableInput' : 'gpmsTableInput gpmsFieldInputReadonly' }"
-											width="100%"/>
+											width="100%"
+											showValueHelp="true"
+											valueHelpRequest=".onMaterialValueHelp"/>
 									</t:template>
 								</t:Column>
 
@@ -435,7 +455,7 @@
 								<t:Column width="160px" visible="{= ${irgp>/ui/currentStep} !== 'CREATE' &amp;&amp; ${irgp>/header/RequestType} !== 'Tools' }">
 									<Label text="MRNumber" class="gpmsHeaderText"/>
 									<t:template>
-										<Input value="{irgp>MRNumber}" editable="{= ${user>/IsStoreUser} &amp;&amp; ${irgp>/ui/currentStep} !== 'CLOSED' &amp;&amp; ${irgp>/ui/currentStep} !== 'LIST' }" placeholder="Enter MR Number" maxLength="10" class="gpmsTableInput"/>
+										<Input value="{irgp>MRNumber}" editable="{= (${user>/IsStoreUser} || ${irgp>/ui/currentStep} === 'USER_UPDATE' || ${irgp>/ui/currentStep} === 'EDIT') &amp;&amp; ${irgp>/ui/currentStep} !== 'CLOSED' &amp;&amp; ${irgp>/ui/currentStep} !== 'LIST' }" placeholder="Enter MR Number" maxLength="10" class="gpmsTableInput"/>
 									</t:template>
 								</t:Column>
 

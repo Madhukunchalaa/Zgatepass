@@ -96,6 +96,7 @@
 									<core:Item key="ENVIRONMENT" text="ENVIRONMENT"/>
 									<core:Item key="F&amp;A" text="F&amp;A"/>
 									<core:Item key="PURCHASE" text="PURCHASE"/>
+									<core:Item key="OTHERS" text="OTHERS"/>
 								</items>
 							</Select>
 						</VBox>
@@ -199,9 +200,9 @@
 
 				</Panel>
 
-				<!-- Items Panel (PO / PO_RGP) -->
+				<!-- Items Panel (PO only) -->
 				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginBottom"
-					visible="{= ${gpo>/SourceType} === 'PO' || ${gpo>/SourceType} === 'PO_RGP' || !${gpo>/SourceType} }">
+					visible="{= ${gpo>/SourceType} === 'PO' || !${gpo>/SourceType} }">
 					<headerToolbar>
 						<Toolbar height="3rem">
 							<core:Icon src="sap-icon://list" class="sapUiSmallMarginEnd"/>
@@ -238,9 +239,9 @@
 					</Table>
 				</Panel>
 
-				<!-- Items Panel (Non-PO: PettyCash, FREE, SERVICE, STAFF_WELFARE) -->
+				<!-- Items Panel (Non-PO: PO_RGP, PettyCash, FREE, SERVICE, STAFF_WELFARE) -->
 				<Panel expandable="true" expanded="true" class="gpmsPanel sapUiSmallMarginBottom"
-					visible="{= ${gpo>/SourceType} !== 'PO' &amp;&amp; ${gpo>/SourceType} !== 'PO_RGP' &amp;&amp; !!${gpo>/SourceType} }">
+					visible="{= ${gpo>/SourceType} !== 'PO' &amp;&amp; !!${gpo>/SourceType} }">
 					<headerToolbar>
 						<Toolbar height="3rem">
 							<core:Icon src="sap-icon://list" class="sapUiSmallMarginEnd"/>

@@ -52,6 +52,7 @@
 								<tnt:NavigationListItem text="RGP Request"            icon="sap-icon://shipping-status"             key="rgp"                  visible="{= !${user>/IsHodUser} }"/>
 								<tnt:NavigationListItem text="Out Gate Pass"          icon="sap-icon://open-folder"                 key="OutGatePass"           visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }"/>
 								<tnt:NavigationListItem text="Inward Gate Pass"       icon="sap-icon://down-back"                   key="InwardGatePass"        visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }"/>
+								<tnt:NavigationListItem text="Add Inward Insurance"   icon="sap-icon://add-insurance"               key="AddInwardInsurance"    visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }"/>
 								<tnt:NavigationListItem text="Gate Pass Request List" icon="sap-icon://list"                        key="GatePassList"/>
 								<tnt:NavigationListItem text="Gate Pass List"         icon="sap-icon://document-text"               key="NRGPList"               visible="{= !${user>/IsGatepassUserOnly} }"/>
 								<tnt:NavigationListItem text="Gate Pass with PO/Petty Cash" icon="sap-icon://supplier"              key="GatePassWithPO"        visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }"/>

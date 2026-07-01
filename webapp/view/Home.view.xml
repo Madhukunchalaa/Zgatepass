@@ -29,9 +29,16 @@
 					</GenericTile>
 
 					<!-- Analytics Card -->
-					<GenericTile class="gpmsDashCard reportsCard" press=".onGenericTileAnalyticsPress" header="REPORTS" subheader="View Statistics &amp; Logs" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }">
+					<GenericTile class="gpmsDashCard reportsCard" press=".onGenericTileAnalyticsPress" header="Analytics" subheader="View Statistics &amp; Logs" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }">
 						<TileContent>
 							<core:Icon src="sap-icon://business-objects-experience" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- Excel Reports Download Card -->
+					<GenericTile class="gpmsDashCard reportsCard" press=".onGenericTileExcelReportsPress" header="EXCEL REPORTS" subheader="Download All Reports" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }">
+						<TileContent>
+							<core:Icon src="sap-icon://excel-attachment" class="gpmsCardIcon"/>
 						</TileContent>
 					</GenericTile>
 
@@ -39,6 +46,20 @@
 					<GenericTile class="gpmsDashCard inwardCard" press=".onPressInward" header="INWARD GATE PASS" subheader="Return Items (RGP)" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }">
 						<TileContent>
 							<core:Icon src="sap-icon://down-back" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- Add Inward Insurance Card -->
+					<GenericTile class="gpmsDashCard insuranceCard" press=".onPressAddInwardInsurance" header="ADD INWARD INSURANCE" subheader="Insurance Details" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }">
+						<TileContent>
+							<core:Icon src="sap-icon://insurance-car" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- Inward Insurance List Card -->
+					<GenericTile class="gpmsDashCard poListCard" press=".onPressInwardInsuranceList" header="INWARD INSURANCE LIST" subheader="View Insurance Records" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }">
+						<TileContent>
+							<core:Icon src="sap-icon://list" class="gpmsCardIcon"/>
 						</TileContent>
 					</GenericTile>
 
@@ -134,7 +155,7 @@
 					</GenericTile>
 
 					<!-- Scrap Entity List Card -->
-					<GenericTile class="gpmsDashCard" press=".onPressScrapInventory" header="SCRAP ENTITY LIST" subheader="Scrap Stock Inventory">
+					<GenericTile class="gpmsDashCard" press=".onPressScrapInventory" header="SCRAP 	INVENTORY LIST" subheader="Scrap Stock Inventory">
 						<TileContent>
 							<core:Icon src="sap-icon://inventory" class="gpmsCardIcon"/>
 						</TileContent>
@@ -167,6 +188,7 @@
 							<core:Icon src="sap-icon://inspection" class="gpmsCardIcon"/>
 						</TileContent>
 					</GenericTile>
+					
 				</HBox>
 			</VBox>
 		</content>

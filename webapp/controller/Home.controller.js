@@ -129,12 +129,24 @@ sap.ui.define([
 			this.getRouter().navTo("InwardGatePass");
 		},
 
+		onPressAddInwardInsurance: function () {
+			this.getRouter().navTo("AddInwardInsurance");
+		},
+
+		onPressInwardInsuranceList: function () {
+			this.getRouter().navTo("InwardInsuranceList");
+		},
+
 		onPressOutGatePass: function () {
 			this.getRouter().navTo("OutGatePass");
 		},
 
 		onGenericTileAnalyticsPress: function () {
 			this.getRouter().navTo("analytics");
+		},
+
+		onGenericTileExcelReportsPress: function () {
+			this.getRouter().navTo("reports");
 		},
 
 		onPressNRGPList: function () {

@@ -66,22 +66,81 @@ sap.ui.define([
 			});
 		},
 
-		onSearch: function (oEvent) {
-			var sQuery = oEvent.getParameter("query") || oEvent.getParameter("newValue");
-			var oTable = this.getView().byId("pcpTable");
-			var oBinding = oTable.getBinding("items");
+		onSearch: function () {
+			this._applyFilters();
+		},
+
+		onStatusFilterChange: function () {
+			this._applyFilters();
+		},
+
+		onDateFilter: function () {
+			this._applyFilters();
+		},
+
+		_applyFilters: function () {
+			var oTable = this.byId("pcpTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			if (!oBinding) { return; }
+
+			var aFilters = [];
+
+			// 1. Text Search Filter
+			var sQuery = this.byId("pcpTable").getHeaderToolbar().getContent().find(function (c) {
+				return c.getMetadata().getName() === "sap.m.SearchField";
+			}).getValue().trim();
 
 			if (sQuery) {
-				var aFilters = [
-					new Filter("GateEntryNo", FilterOperator.Contains, sQuery),
-					new Filter("VendorDesc", FilterOperator.Contains, sQuery),
-					new Filter("DCNumber", FilterOperator.Contains, sQuery)
-				];
-				var oFilter = new Filter({ filters: aFilters, and: false });
-				oBinding.filter([oFilter]);
-			} else {
-				oBinding.filter([]);
+				aFilters.push(new Filter({
+					filters: [
+						new Filter("GateEntryNo", FilterOperator.Contains, sQuery),
+						new Filter("VendorDesc", FilterOperator.Contains, sQuery),
+						new Filter("DCNumber", FilterOperator.Contains, sQuery),
+						new Filter("RGPNumber", FilterOperator.Contains, sQuery),
+						new Filter("GatepassNo", FilterOperator.Contains, sQuery)
+					],
+					and: false
+				}));
 			}
+
+			// 2. Dropdown Inspection Status Filter
+			var sStatus = this.byId("idInspectionStatusFilter").getSelectedKey();
+			if (sStatus) {
+				aFilters.push(new Filter("InspectionStatus", FilterOperator.EQ, sStatus));
+			}
+
+			// 3. Date Range Filter
+			var sFrom = this.byId("idFilterFromDate").getDateValue();
+			var sTo = this.byId("idFilterToDate").getDateValue();
+			if (sFrom || sTo) {
+				var oFrom = sFrom ? new Date(sFrom.getFullYear(), sFrom.getMonth(), sFrom.getDate()) : null;
+				var oTo = sTo ? new Date(sTo.getFullYear(), sTo.getMonth(), sTo.getDate(), 23, 59, 59, 999) : null;
+				aFilters.push(new Filter({
+					path: "GEDate",
+					test: function (sValue) {
+						if (!sValue) return false;
+						var aParts = sValue.split("-");
+						if (aParts.length !== 3) return false;
+						var dVal = new Date(parseInt(aParts[2]), parseInt(aParts[1], 10) - 1, parseInt(aParts[0]));
+						if (oFrom && dVal < oFrom) return false;
+						if (oTo && dVal > oTo) return false;
+						return true;
+					}
+				}));
+			}
+
+			oBinding.filter(aFilters);
+		},
+
+		onClearDateFilter: function () {
+			this.byId("idFilterFromDate").setDateValue(null);
+			this.byId("idFilterToDate").setDateValue(null);
+			this.byId("idInspectionStatusFilter").setSelectedKey("");
+			var oSearchField = this.byId("pcpTable").getHeaderToolbar().getContent().find(function (c) {
+				return c.getMetadata().getName() === "sap.m.SearchField";
+			});
+			if (oSearchField) { oSearchField.setValue(""); }
+			this._applyFilters();
 		},
 
 		_formatSAPDateToDisplay: function (vDate) {
@@ -106,60 +165,6 @@ sap.ui.define([
 					dDate.getFullYear();
 			}
 			return vDate;
-		},
-
-		onDateFilter: function () {
-			var oFromDP = this.byId("idFilterFromDate");
-			var oToDP = this.byId("idFilterToDate");
-			var sFrom = oFromDP.getDateValue();
-			var sTo = oToDP.getDateValue();
-
-			if (!sFrom && !sTo) {
-				MessageToast.show("Please select at least one date.");
-				return;
-			}
-
-			var oTable = this.byId("pcpTable");
-			var oBinding = oTable.getBinding("items");
-			var aFilters = [];
-
-			if (sFrom) {
-				var sFromStr = String(sFrom.getDate()).padStart(2, "0") + "-" +
-					String(sFrom.getMonth() + 1).padStart(2, "0") + "-" + sFrom.getFullYear();
-				aFilters.push(new Filter({
-					path: "GEDate",
-					test: function (sValue) {
-						if (!sValue) return false;
-						var aParts = sValue.split("-");
-						if (aParts.length !== 3) return false;
-						var dVal = new Date(aParts[2], parseInt(aParts[1], 10) - 1, aParts[0]);
-						return dVal >= sFrom;
-					}
-				}));
-			}
-			if (sTo) {
-				var dToEnd = new Date(sTo);
-				dToEnd.setHours(23, 59, 59, 999);
-				aFilters.push(new Filter({
-					path: "GEDate",
-					test: function (sValue) {
-						if (!sValue) return false;
-						var aParts = sValue.split("-");
-						if (aParts.length !== 3) return false;
-						var dVal = new Date(aParts[2], parseInt(aParts[1], 10) - 1, aParts[0]);
-						return dVal <= dToEnd;
-					}
-				}));
-			}
-
-			oBinding.filter(aFilters);
-		},
-
-		onClearDateFilter: function () {
-			this.byId("idFilterFromDate").setDateValue(null);
-			this.byId("idFilterToDate").setDateValue(null);
-			var oTable = this.byId("pcpTable");
-			oTable.getBinding("items").filter([]);
 		},
 
 		onSort: function () {
@@ -230,12 +235,24 @@ sap.ui.define([
 		},
 
 		onDownloadExcel: function () {
-			var aData = this.getView().getModel("pcpList").getProperty("/results") || [];
+			var oTable = this.byId("pcpTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aData = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) {
+						aData.push(oContext.getObject());
+					}
+				});
+			} else {
+				aData = this.getView().getModel("pcpList").getProperty("/results") || [];
+			}
 			var dFrom = this.byId("idFilterFromDate").getDateValue();
 			var dTo = this.byId("idFilterToDate").getDateValue();
 			aData = ExcelExport.filterByDate(aData, "GEDate", dFrom, dTo);
 			if (!aData.length) {
-				sap.m.MessageToast.show("No data to export.");
+				sap.m.MessageToast.show("No record found");
 				return;
 			}
 			var aRows = [];

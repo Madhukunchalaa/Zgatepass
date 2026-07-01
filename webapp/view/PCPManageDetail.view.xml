@@ -155,8 +155,9 @@
 									<Text text="{pcpDetail>sno}"/>
 									<Input value="{pcpDetail>ItemDescription}" placeholder="Item Description" class="gpmsTableInput" editable="{pcpDetail>/editable}"/>
 									<Input value="{pcpDetail>RecievedQuantity}" type="Number" textAlign="Right" class="gpmsTableInput" editable="{pcpDetail>/editable}"/>
-									<Select selectedKey="{pcpDetail>UOM}" class="gpmsTableInput" width="100%" enabled="{pcpDetail>/editable}">
+									<Select selectedKey="{pcpDetail>UOM}" class="gpmsTableInput" width="100%" enabled="{pcpDetail>/editable}" forceSelection="false">
 										<items>
+											<core:Item key="" text="Select UOM"/>
 											<core:Item key="Number" text="Number"/>
 											<core:Item key="Feet" text="Feet"/>
 											<core:Item key="Kilogram" text="Kilogram"/>

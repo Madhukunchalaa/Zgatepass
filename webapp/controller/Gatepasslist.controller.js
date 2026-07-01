@@ -58,11 +58,19 @@ sap.ui.define([
 				if (iDone === iTarget) {
 					sap.ui.core.BusyIndicator.hide();
 					
-					// Client-side sort by GatePassDate descending
+					// Client-side sort by original backend Date object or fallback
 					aAllResults.sort(function (a, b) {
-						var dA = a.GatePassDate ? new Date(a.GatePassDate) : new Date(0);
-						var dB = b.GatePassDate ? new Date(b.GatePassDate) : new Date(0);
-						return dB - dA;
+						var parseDt = function(o) {
+							if (!o.GatePassDate) return new Date(0);
+							if (o.GatePassDate instanceof Date) return o.GatePassDate;
+							var p = String(o.GatePassDate).split("-");
+							if (p.length === 3) {
+								if (p[0].length === 4) return new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+								return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+							}
+							return new Date(o.GatePassDate);
+						};
+						return parseDt(b) - parseDt(a);
 					});
 
 					that.getView().getModel("gatePassList").setProperty("/items", aAllResults);
@@ -105,6 +113,8 @@ sap.ui.define([
 								City: oItem.City || "",
 								ZipCode: oItem.ZipCode || "",
 								Department: oItem.Department ? String(oItem.Department).trim() : "",
+								Requestor: oItem.Requestor || oItem.RequestedUser || "",
+								CommonDesc: oItem.CommonDesc || "",
 								VehicleNo: oItem.VehicleNo ? String(oItem.VehicleNo).trim() : "",
 								ModeOfDispatch: oItem.ModeOfDispatch || "",
 								LRNumber: oItem.LRNumber || oItem.LRNnumber || "",
@@ -132,6 +142,23 @@ sap.ui.define([
 			});
 		},
 
+		onDatePickerChange: function () {
+			this._applyClientFilters();
+		},
+
+		onDateFilterChange: function () {
+			this._applyClientFilters();
+		},
+
+		onResetButtonPress: function () {
+			this.byId("idGatePassSearchField").setValue("");
+			this.byId("idStatusFilterSelect").setSelectedKey("");
+			this.byId("idTypeFilterSelect").setSelectedKey("");
+			this.byId("idExcelFromDate").setValue("");
+			this.byId("idExcelToDate").setValue("");
+			this._getData();
+		},
+
 		_applyClientFilters: function () {
 			var oTable = this.byId("idItemsGatePassTable");
 			var oBinding = oTable.getBinding("items");
@@ -139,36 +166,96 @@ sap.ui.define([
 				return;
 			}
 
-			var aFilters = [];
+			var aAllItems = this.getView().getModel("gatePassList").getProperty("/items") || [];
 			var sSearch = this.byId("idGatePassSearchField").getValue().trim();
-			if (sSearch) {
-				aFilters.push(new Filter({
-					filters: [
-						new Filter("GatePassReqNo", FilterOperator.Contains, sSearch),
-						new Filter("VendorName", FilterOperator.Contains, sSearch),
-						new Filter("Department", FilterOperator.Contains, sSearch),
-						new Filter("Plant", FilterOperator.Contains, sSearch)
-					],
-					and: false
-				}));
-			}
-
 			var sSelectedStatus = this.byId("idStatusFilterSelect").getSelectedKey();
-			if (sSelectedStatus) {
-				var that = this;
+			var oFromDate = this.byId("idExcelFromDate").getDateValue();
+			var oToDate = this.byId("idExcelToDate").getDateValue();
+
+			var sLow = sSearch.toLowerCase();
+			var oFrom = oFromDate ? new Date(oFromDate.getFullYear(), oFromDate.getMonth(), oFromDate.getDate()) : null;
+			var oTo = oToDate ? new Date(oToDate.getFullYear(), oToDate.getMonth(), oToDate.getDate(), 23, 59, 59, 999) : null;
+
+			var aFiltered = aAllItems.filter(function (o) {
+				// 1. Text search
+				if (sSearch) {
+					var sReq  = o.GatePassReqNo ? String(o.GatePassReqNo).trim() : "";
+					var sGP   = o.GatePassNo    ? String(o.GatePassNo).trim()    : "";
+					var sVend = o.VendorName     ? String(o.VendorName).trim()    : "";
+					var sUser = o.Requestor      ? String(o.Requestor).trim()     : "";
+					var sDesc = o.CommonDesc     ? String(o.CommonDesc).trim()    : "";
+					var sRem  = o.Remarks        ? String(o.Remarks).trim()       : "";
+					var sDept = o.Department     ? String(o.Department).trim()    : "";
+					var matched = [sReq, sGP, sVend, sUser, sDesc, sRem, sDept]
+						.some(function (f) { return f.toLowerCase().indexOf(sLow) !== -1; });
+					if (!matched) { return false; }
+				}
+
+				// 2. Status filter
+				if (sSelectedStatus && o.Status !== sSelectedStatus) { return false; }
+
+				// 3. Date filter
+				if (oFrom || oTo) {
+					var vDate = o.GatePassDate;
+					if (!vDate) { return false; }
+					var oItemDate = new Date(vDate);
+					if (isNaN(oItemDate.getTime())) {
+						var p = String(vDate).split("-");
+						if (p.length === 3) {
+							oItemDate = p[0].length === 4
+								? new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]))
+								: new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+						}
+					}
+					if (isNaN(oItemDate.getTime())) { return false; }
+					if (oFrom && oItemDate < oFrom) { return false; }
+					if (oTo   && oItemDate > oTo)   { return false; }
+				}
+
+				return true;
+			});
+
+			// Set filtered results into a temporary model property and rebind
+			this.getView().getModel("gatePassList").setProperty("/filtered", aFiltered);
+			oTable.bindItems({
+				path: "gatePassList>/filtered",
+				template: oTable.getBindingInfo("items").template,
+				templateShareable: true
+			});
+
+			this._updateCount();
+		},
+
+		_rawApplyFilters_UNUSED: function () {
+			// Kept as reference – not used
+			// Date wise filter
+			var oFromDate = this.byId("idExcelFromDate").getDateValue();
+			var oToDate = this.byId("idExcelToDate").getDateValue();
+			if (oFromDate || oToDate) {
+				var oFrom = oFromDate ? new Date(oFromDate.getFullYear(), oFromDate.getMonth(), oFromDate.getDate()) : null;
+				var oTo = oToDate ? new Date(oToDate.getFullYear(), oToDate.getMonth(), oToDate.getDate(), 23, 59, 59, 999) : null;
 				aFilters.push(new Filter({
 					path: "",
-					test: function (oRow) {
-						if (!oRow) return false;
-						var sDerived = that.formatStatus(
-							oRow.Status,
-							oRow.Approval1,
-							oRow.Approval2,
-							oRow.ApprovalReq,
-							oRow.STORERemarks || oRow.StoreRemarks,
-							oRow.StoreAmmend
-						);
-						return sDerived === sSelectedStatus;
+					test: function (v, oContext) {
+						var oRow = oContext ? oContext.getObject() : null;
+						var vDate = oRow ? oRow.GatePassDate : null;
+						if (!vDate) { return false; }
+						var oItemDate = new Date(vDate);
+						if (isNaN(oItemDate.getTime())) {
+							// Try parsing DD-MM-YYYY
+							var p = String(vDate).split("-");
+							if (p.length === 3) {
+								if (p[0].length === 4) {
+									oItemDate = new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+								} else {
+									oItemDate = new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+								}
+							}
+						}
+						if (isNaN(oItemDate.getTime())) { return false; }
+						if (oFrom && oItemDate < oFrom) { return false; }
+						if (oTo && oItemDate > oTo) { return false; }
+						return true;
 					}
 				}));
 			}
@@ -180,7 +267,114 @@ sap.ui.define([
 		_updateCount: function () {
 			var oBinding = this.byId("idItemsGatePassTable").getBinding("items");
 			if (oBinding) {
-				this.byId("idItemCountText").setText(oBinding.getLength() + " Items");
+				var n = oBinding.getLength();
+				// For JSONModel, getLength() may not be stable right after rebindItems
+				// so also check the filtered array directly
+				var aFiltered = this.getView().getModel("gatePassList").getProperty("/filtered");
+				if (Array.isArray(aFiltered)) { n = aFiltered.length; }
+				this.byId("idItemCountText").setText(n + " Items");
+			}
+		},
+
+		onPrintList: function () {
+			var oTable = this.byId("idItemsGatePassTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) { aObjects.push(oContext.getObject()); }
+				});
+			} else {
+				aObjects = this.getView().getModel("gatePassList").getProperty("/items") || [];
+			}
+			if (!aObjects.length) {
+				sap.m.MessageToast.show("No record found");
+				return;
+			}
+			var sHtml = "<html><head><title>Gate Pass Requests List</title><style>";
+			sHtml += "body { font-family: Arial, sans-serif; padding: 20px; }";
+			sHtml += "h2 { text-align: center; color: #1F4E79; }";
+			sHtml += "table { width: 100%; border-collapse: collapse; margin-top: 20px; }";
+			sHtml += "th, td { border: 1px solid #BDC3C7; padding: 10px; text-align: left; font-size: 12px; }";
+			sHtml += "th { background-color: #F2F4F4; color: #1F4E79; font-weight: bold; }";
+			sHtml += "tr:nth-child(even) { background-color: #F8F9F9; }</style></head><body>";
+			sHtml += "<h2>Gate Pass Requests List</h2><table><thead><tr>";
+			sHtml += "<th>Request No.</th><th>Type</th><th>Date</th><th>Status</th><th>Plant</th><th>Vendor Name</th><th>Department</th><th>Gate Pass Created</th>";
+			sHtml += "</tr></thead><tbody>";
+			aObjects.forEach(function (o) {
+				var sDate = "";
+				if (o.GatePassDate) {
+					var d = new Date(o.GatePassDate);
+					sDate = d.getDate().toString().padStart(2, "0") + "-" + (d.getMonth() + 1).toString().padStart(2, "0") + "-" + d.getFullYear();
+				}
+				sHtml += "<tr>";
+				sHtml += "<td>" + (o.GatePassReqNo || "") + "</td>";
+				sHtml += "<td>" + (o.GatePassType || "") + "</td>";
+				sHtml += "<td>" + sDate + "</td>";
+				sHtml += "<td>" + (o.Status || "") + "</td>";
+				sHtml += "<td>" + (o.Plant || "") + "</td>";
+				sHtml += "<td>" + (o.VendorName || "") + "</td>";
+				sHtml += "<td>" + (o.Department || "") + "</td>";
+				sHtml += "<td>" + (o.GatePassNo || "") + "</td>";
+				sHtml += "</tr>";
+			});
+			sHtml += "</tbody></table></body></html>";
+			var oWindow = window.open("", "_blank");
+			oWindow.document.write(sHtml);
+			oWindow.document.close();
+			oWindow.focus();
+			setTimeout(function () { oWindow.print(); oWindow.close(); }, 500);
+		},
+
+		onCopyList: function () {
+			var oTable = this.byId("idItemsGatePassTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) { aObjects.push(oContext.getObject()); }
+				});
+			} else {
+				aObjects = this.getView().getModel("gatePassList").getProperty("/items") || [];
+			}
+			if (!aObjects.length) {
+				sap.m.MessageToast.show("No items to copy.");
+				return;
+			}
+			var sHeaders = ["Request No.", "Type", "Date", "Status", "Plant", "Vendor Name", "Department", "Gate Pass Created"];
+			var aLines = [sHeaders.join("\t")];
+			aObjects.forEach(function (o) {
+				var sDate = "";
+				if (o.GatePassDate) {
+					var d = new Date(o.GatePassDate);
+					sDate = d.getDate().toString().padStart(2, "0") + "-" + (d.getMonth() + 1).toString().padStart(2, "0") + "-" + d.getFullYear();
+				}
+				aLines.push([
+					o.GatePassReqNo || "",
+					o.GatePassType || "",
+					sDate,
+					o.Status || "",
+					o.Plant || "",
+					o.VendorName || "",
+					o.Department || "",
+					o.GatePassNo || ""
+				].join("\t"));
+			});
+			var sText = aLines.join("\n");
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(sText).then(function () {
+					sap.m.MessageToast.show("List copied to clipboard.");
+				});
+			} else {
+				var el = document.createElement("textarea");
+				el.value = sText;
+				document.body.appendChild(el);
+				el.select();
+				document.execCommand("copy");
+				document.body.removeChild(el);
+				sap.m.MessageToast.show("List copied to clipboard.");
 			}
 		},
 
@@ -210,6 +404,10 @@ sap.ui.define([
 		onObjectIdentifierReqNoTitlePress: function (oEvent) {
 			var oItem = oEvent.getSource().getBindingContext("gatePassList").getObject();
 			if (!oItem || oItem.GatePassType === "GP with PO") {
+				return;
+			}
+			if (oItem.GatePassNo) {
+				sap.m.MessageBox.information("Gate Pass " + oItem.GatePassNo + " has already been created for this request.");
 				return;
 			}
 			
@@ -247,6 +445,11 @@ sap.ui.define([
 
 		onColumnListItemPress: function (oEvent) {
 			var oItem = oEvent.getSource().getBindingContext("gatePassList").getObject();
+			if (!oItem) { return; }
+			if (oItem.GatePassNo) {
+				sap.m.MessageBox.information("Gate Pass " + oItem.GatePassNo + " has already been created for this request.");
+				return;
+			}
 			var oUserModel = sap.ui.getCore().getModel("user");
 			var bIsStoreUser = oUserModel ? oUserModel.getProperty("/IsStoreUser") : false;
 			var bIsHodUser   = oUserModel ? oUserModel.getProperty("/IsHodUser")   : false;
@@ -353,12 +556,24 @@ sap.ui.define([
 		},
 
 		onDownloadExcelButtonPress: function () {
-			var aObjects = this.getView().getModel("gatePassList").getProperty("/items") || [];
+			var oTable = this.byId("idItemsGatePassTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) {
+						aObjects.push(oContext.getObject());
+					}
+				});
+			} else {
+				aObjects = this.getView().getModel("gatePassList").getProperty("/items") || [];
+			}
 			var dFrom = this.byId("idExcelFromDate").getDateValue();
 			var dTo = this.byId("idExcelToDate").getDateValue();
 			aObjects = ExcelExport.filterByDate(aObjects, "GatePassDate", dFrom, dTo);
 			if (!aObjects.length) {
-				sap.m.MessageToast.show("No data to export.");
+				sap.m.MessageToast.show("No record found");
 				return;
 			}
 			var aRows = [];

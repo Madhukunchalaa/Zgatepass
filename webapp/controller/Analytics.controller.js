@@ -22,7 +22,9 @@ sap.ui.define([
 			return {
 				tiles: {
 					nrgpTotal: 0, nrgpPending: 0, nrgpApproved: 0, nrgpRejected: 0,
+					nrgpGpTotal: 0, nrgpGpOpen: 0, nrgpGpClosed: 0,
 					rgpTotal: 0, rgpPending: 0, rgpApproved: 0, rgpRejected: 0,
+					rgpGpTotal: 0, rgpGpOpen: 0, rgpGpClosed: 0, rgpGpAwaitVendor: 0, rgpGpAwaitReturn: 0,
 					outGatePass: 0, outNrgp: 0, outRgp: 0, outPo: 0,
 					gateEntries: 0, gateEntriesInspected: 0, gateEntriesPendingInsp: 0,
 					irgpTotal: 0, irgpOpen: 0, irgpLinked: 0, irgpClosed: 0,
@@ -158,6 +160,22 @@ sap.ui.define([
 			var iOutPo = oResult.outPo.length;
 			var iOutGatePass = iOutNrgp + iOutRgp + iOutPo;
 
+			var nrgpGp = { open: 0, closed: 0 };
+			oResult.outNrgp.forEach(function (item) {
+				var s = (item.GPStatus || "").trim().toUpperCase();
+				if (s === "CLOSED") { nrgpGp.closed++; }
+				else { nrgpGp.open++; }
+			});
+
+			var rgpGp = { open: 0, closed: 0, awaitVendor: 0, awaitReturn: 0 };
+			oResult.outRgp.forEach(function (item) {
+				var s = (item.GPStatus || "").trim().toUpperCase();
+				if (s === "CLOSED") { rgpGp.closed++; }
+				else if (s === "AWAITING FOR VENDOR ACKNOWLEDGEMENT") { rgpGp.awaitVendor++; }
+				else if (s === "AWAITING FOR RETURN" || s === "AWAIT RETN") { rgpGp.awaitReturn++; }
+				else { rgpGp.open++; }
+			});
+
 			var iGateEntries = oResult.gateEntries.length;
 			var iInspected = 0;
 			var iPendingInsp = 0;
@@ -192,8 +210,11 @@ sap.ui.define([
 				tiles: {
 					nrgpTotal: oResult.nrgpData.length,
 					nrgpPending: c.nrgpPending, nrgpApproved: c.nrgpApproved, nrgpRejected: c.nrgpRejected,
+					nrgpGpTotal: iOutNrgp, nrgpGpOpen: nrgpGp.open, nrgpGpClosed: nrgpGp.closed,
 					rgpTotal: oResult.rgpData.length,
 					rgpPending: c.rgpPending, rgpApproved: c.rgpApproved, rgpRejected: c.rgpRejected,
+					rgpGpTotal: iOutRgp, rgpGpOpen: rgpGp.open, rgpGpClosed: rgpGp.closed,
+					rgpGpAwaitVendor: rgpGp.awaitVendor, rgpGpAwaitReturn: rgpGp.awaitReturn,
 					outGatePass: iOutGatePass, outNrgp: iOutNrgp, outRgp: iOutRgp, outPo: iOutPo,
 					gateEntries: iGateEntries,
 					gateEntriesInspected: iInspected,

@@ -99,16 +99,155 @@ sap.ui.define([
 			this.getRouter().navTo("home");
 		},
 
+		onDateFilterChange: function () {
+			this._applyFilters();
+		},
+
 		onSearch: function (oEvent) {
-			var sQuery = oEvent.getParameter("query") || oEvent.getParameter("newValue");
-			var oTable = this.getView().byId("scrapRequestTable");
-			var oBinding = oTable.getBinding("items");
-			
-			if (sQuery) {
-				var oFilter = new Filter("requestId", FilterOperator.Contains, sQuery);
-				oBinding.filter([oFilter]);
+			this._applyFilters();
+		},
+
+		_applyFilters: function () {
+			var oTable = this.byId("scrapRequestTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			if (!oBinding) { return; }
+
+			var aFilters = [];
+
+			// 1. Text Search Filter
+			var sSearch = this.byId("scrapRequestTable").getHeaderToolbar().getContent().find(function(c) {
+				return c.getMetadata().getName() === "sap.m.SearchField";
+			}).getValue().trim();
+
+			if (sSearch) {
+				var sLow = sSearch.toLowerCase();
+				aFilters.push(new Filter({
+					path: "requestId",
+					test: function(v, oContext) {
+						var o = oContext ? oContext.getObject() : {};
+						return [
+							(o.requestId || ""),
+							(o.vehicleDetails || ""),
+							(o.status || ""),
+							(o.customerName || "")
+						].some(function(f) { return String(f).toLowerCase().indexOf(sLow) !== -1; });
+					}
+				}));
+			}
+
+			// 2. Date Filter
+			var oFromDate = this.byId("idExcelFromDate").getDateValue();
+			var oToDate = this.byId("idExcelToDate").getDateValue();
+			if (oFromDate || oToDate) {
+				var oFrom = oFromDate ? new Date(oFromDate.getFullYear(), oFromDate.getMonth(), oFromDate.getDate()) : null;
+				var oTo = oToDate ? new Date(oToDate.getFullYear(), oToDate.getMonth(), oToDate.getDate(), 23, 59, 59, 999) : null;
+				aFilters.push(new Filter({
+					path: "requestDate",
+					test: function(vDate) {
+						if (!vDate) { return false; }
+						var oItemDate = new Date(vDate);
+						if (isNaN(oItemDate.getTime())) {
+							var p = String(vDate).split("-");
+							if (p.length === 3) {
+								if (p[0].length === 4) {
+									oItemDate = new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+								} else {
+									oItemDate = new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+								}
+							}
+						}
+						if (isNaN(oItemDate.getTime())) { return false; }
+						if (oFrom && oItemDate < oFrom) { return false; }
+						if (oTo && oItemDate > oTo) { return false; }
+						return true;
+					}
+				}));
+			}
+
+			oBinding.filter(aFilters);
+		},
+
+		onPrintList: function () {
+			var oTable = this.byId("scrapRequestTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) { aObjects.push(oContext.getObject()); }
+				});
 			} else {
-				oBinding.filter([]);
+				aObjects = this.getView().getModel("scrapList").getData() || [];
+			}
+			if (!aObjects.length) {
+				sap.m.MessageToast.show("No record found");
+				return;
+			}
+			var sHtml = "<html><head><title>Scrap Requests List</title><style>";
+			sHtml += "body { font-family: Arial, sans-serif; padding: 20px; }";
+			sHtml += "h2 { text-align: center; color: #1F4E79; }";
+			sHtml += "table { width: 100%; border-collapse: collapse; margin-top: 20px; }";
+			sHtml += "th, td { border: 1px solid #BDC3C7; padding: 10px; text-align: left; font-size: 12px; }";
+			sHtml += "th { background-color: #F2F4F4; color: #1F4E79; font-weight: bold; }";
+			sHtml += "tr:nth-child(even) { background-color: #F8F9F9; }</style></head><body>";
+			sHtml += "<h2>Scrap Requests List</h2><table><thead><tr>";
+			sHtml += "<th>Request No</th><th>Date</th><th>Vehicle No</th><th>Status</th>";
+			sHtml += "</tr></thead><tbody>";
+			aObjects.forEach(function (o) {
+				sHtml += "<tr>";
+				sHtml += "<td>" + (o.requestId || "") + "</td>";
+				sHtml += "<td>" + (o.requestDateStr || "") + "</td>";
+				sHtml += "<td>" + (o.vehicleDetails || "") + "</td>";
+				sHtml += "<td>" + (o.status || "") + "</td>";
+				sHtml += "</tr>";
+			});
+			sHtml += "</tbody></table></body></html>";
+			var oWindow = window.open("", "_blank");
+			oWindow.document.write(sHtml);
+			oWindow.document.close();
+			oWindow.focus();
+			setTimeout(function () { oWindow.print(); oWindow.close(); }, 500);
+		},
+
+		onCopyList: function () {
+			var oTable = this.byId("scrapRequestTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) { aObjects.push(oContext.getObject()); }
+				});
+			} else {
+				aObjects = this.getView().getModel("scrapList").getData() || [];
+			}
+			if (!aObjects.length) {
+				sap.m.MessageToast.show("No items to copy.");
+				return;
+			}
+			var sHeaders = ["Request No", "Date", "Vehicle No", "Status"];
+			var aLines = [sHeaders.join("\t")];
+			aObjects.forEach(function (o) {
+				aLines.push([
+					o.requestId || "",
+					o.requestDateStr || "",
+					o.vehicleDetails || "",
+					o.status || ""
+				].join("\t"));
+			});
+			var sText = aLines.join("\n");
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(sText).then(function () {
+					sap.m.MessageToast.show("List copied to clipboard.");
+				});
+			} else {
+				var el = document.createElement("textarea");
+				el.value = sText;
+				document.body.appendChild(el);
+				el.select();
+				document.execCommand("copy");
+				document.body.removeChild(el);
+				sap.m.MessageToast.show("List copied to clipboard.");
 			}
 		},
 

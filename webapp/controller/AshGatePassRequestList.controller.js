@@ -65,54 +65,54 @@ sap.ui.define([
 
 		onDownloadExcel: function () {
 			var that = this;
+			var oTable = this.byId("ashReqListTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) {
+						aObjects.push(oContext.getObject());
+					}
+				});
+			}
+
 			var dFrom = this.byId("idExcelFromDate").getDateValue();
 			var dTo = this.byId("idExcelToDate").getDateValue();
-			var oODataModel = this.getOwnerComponent().getModel();
-			sap.ui.core.BusyIndicator.show(0);
-			oODataModel.read("/AshHdrSet", {
-				filters: [new Filter("GatePassType", FilterOperator.EQ, "NRGP")],
-				success: function (oData) {
-					sap.ui.core.BusyIndicator.hide();
-					var aObjects = oData.results || [];
-					aObjects = ExcelExport.filterByDate(aObjects, "GPDate", dFrom, dTo);
-					if (!aObjects.length) {
-						sap.m.MessageToast.show("No data to export.");
-						return;
-					}
-					var aRows = aObjects.map(function (o) {
-						var sApproval = o.Approval1 === "A" ? "Approved" : o.Approval1 === "R" ? "Rejected" : "Pending";
-						return {
-							"Request No": o.GatePassReqNo || "",
-							"Gate Pass No": o.GatePassNo || "",
-							"Type": o.GatePassType || "",
-							"Sales Document": o.SalesDocument || "",
-							"Sold To Party": o.SoldToParty || "",
-							"Customer Name": o.CustomerName || "",
-							"Customer GST": o.CustomerGst || "",
-							"City": o.City || "",
-							"Zip Code": o.ZipCode || "",
-							"Vehicle No": o.VehicleNo || "",
-							"Mode of Dispatch": o.ModeOfDispatch || "",
-							"Transporter": o.TransporterName || "",
-							"Transporter GST": o.TransporterGst || "",
-							"DC Number": o.DCNumber || "",
-							"DC Date": that.formatDate(o.DCDate) || "",
-							"WB Ticket No": o.WBTicketNo || "",
-							"GP Date": that.formatDate(o.GPDate) || "",
-							"Remarks": o.Remarks || "",
-							"Approval": sApproval
-						};
-					});
-					var aParts = ["Ash_GP_Request"];
-					if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
-					if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
-					ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx");
-				},
-				error: function () {
-					sap.ui.core.BusyIndicator.hide();
-					sap.m.MessageToast.show("Failed to fetch data for export.");
-				}
+			aObjects = ExcelExport.filterByDate(aObjects, "GPDate", dFrom, dTo);
+
+			if (!aObjects.length) {
+				sap.m.MessageToast.show("No record found");
+				return;
+			}
+			var aRows = aObjects.map(function (o) {
+				var sApproval = o.Approval1 === "A" ? "Approved" : o.Approval1 === "R" ? "Rejected" : "Pending";
+				return {
+					"Request No": o.GatePassReqNo || "",
+					"Gate Pass No": o.GatePassNo || "",
+					"Type": o.GatePassType || "",
+					"Sales Document": o.SalesDocument || "",
+					"Sold To Party": o.SoldToParty || "",
+					"Customer Name": o.CustomerName || "",
+					"Customer GST": o.CustomerGst || "",
+					"City": o.City || "",
+					"Zip Code": o.ZipCode || "",
+					"Vehicle No": o.VehicleNo || "",
+					"Mode of Dispatch": o.ModeOfDispatch || "",
+					"Transporter": o.TransporterName || "",
+					"Transporter GST": o.TransporterGst || "",
+					"DC Number": o.DCNumber || "",
+					"DC Date": that.formatDate(o.DCDate) || "",
+					"WB Ticket No": o.WBTicketNo || "",
+					"GP Date": that.formatDate(o.GPDate) || "",
+					"Remarks": o.Remarks || "",
+					"Approval": sApproval
+				};
 			});
+			var aParts = ["Ash_GP_Request"];
+			if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
+			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
+			ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx");
 		},
 
 		onRowPress: function (oEvent) {

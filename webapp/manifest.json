@@ -139,6 +139,20 @@
 					]
 				},
 				{
+					"name": "AddInwardInsurance",
+					"pattern": "AddInwardInsurance/:invoiceNo:",
+					"target": [
+						"TargetAddInwardInsurance"
+					]
+				},
+				{
+					"name": "InwardInsuranceList",
+					"pattern": "InwardInsuranceList",
+					"target": [
+						"TargetInwardInsuranceList"
+					]
+				},
+				{
 					"name": "analytics",
 					"pattern": "analytics",
 					"target": ["TargetAnalytics"]
@@ -319,6 +333,16 @@
 					"viewType": "XML",
 					"viewId": "InwardGatePass",
 					"viewName": "InwardGatePass"
+				},
+				"TargetAddInwardInsurance": {
+					"viewType": "XML",
+					"viewId": "AddInwardInsurance",
+					"viewName": "AddInwardInsurance"
+				},
+				"TargetInwardInsuranceList": {
+					"viewType": "XML",
+					"viewId": "InwardInsuranceList",
+					"viewName": "InwardInsuranceList"
 				},
 				"TargetAnalytics": {
 					"viewType": "XML",

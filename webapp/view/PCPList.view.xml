@@ -27,7 +27,15 @@
 						<OverflowToolbar>
 							<Title text="Gate Entry List" level="H2"/>
 							<ToolbarSpacer />
-							<SearchField width="300px" search=".onSearch" placeholder="Search..." class="gpmsFieldInput"/>
+							<SearchField width="220px" search=".onSearch" placeholder="Search..." class="gpmsFieldInput"/>
+							<Select id="idInspectionStatusFilter" width="150px" change=".onStatusFilterChange" class="gpmsFieldInput">
+								<items>
+									<core:Item key="" text="All Statuses"/>
+									<core:Item key="Open" text="Open"/>
+									<core:Item key="Pending" text="Pending"/>
+									<core:Item key="Completed" text="Completed"/>
+								</items>
+							</Select>
 							<Button icon="sap-icon://sort" tooltip="Sort" press=".onSort" type="Transparent"/>
 							<Button icon="sap-icon://filter" tooltip="Filter" press=".onFilter" type="Transparent"/>
 							<Button text="Create Entry" icon="sap-icon://add" type="Emphasized" press=".onAddPCP" />
