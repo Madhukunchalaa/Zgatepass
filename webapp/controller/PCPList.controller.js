@@ -91,15 +91,30 @@ sap.ui.define([
 			}).getValue().trim();
 
 			if (sQuery) {
+				var sLow = sQuery.toLowerCase();
 				aFilters.push(new Filter({
-					filters: [
-						new Filter("GateEntryNo", FilterOperator.Contains, sQuery),
-						new Filter("VendorDesc", FilterOperator.Contains, sQuery),
-						new Filter("DCNumber", FilterOperator.Contains, sQuery),
-						new Filter("RGPNumber", FilterOperator.Contains, sQuery),
-						new Filter("GatepassNo", FilterOperator.Contains, sQuery)
-					],
-					and: false
+					path: "",
+					test: function (oValue, oContext) {
+						var o = oContext ? oContext.getObject() : oValue;
+						if (!o) return false;
+						for (var key in o) {
+							if (o.hasOwnProperty(key) && o[key] !== null && o[key] !== undefined) {
+								if (typeof o[key] === "string" || typeof o[key] === "number" || typeof o[key] === "boolean") {
+									if (String(o[key]).toLowerCase().indexOf(sLow) !== -1) {
+										return true;
+									}
+								} else if (typeof o[key] === "object") {
+									try {
+										var sObjStr = JSON.stringify(o[key]).toLowerCase();
+										if (sObjStr.indexOf(sLow) !== -1) {
+											return true;
+										}
+									} catch (e) {}
+								}
+							}
+						}
+						return false;
+					}
 				}));
 			}
 
@@ -819,6 +834,102 @@ sap.ui.define([
 			str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
 			str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
 			return str;
+		},
+
+		onPrintList: function () {
+			var oTable = this.byId("pcpTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) { aObjects.push(oContext.getObject()); }
+				});
+			} else {
+				aObjects = this.getView().getModel("pcpList").getProperty("/results") || [];
+			}
+			if (!aObjects.length) {
+				sap.m.MessageToast.show("No record found");
+				return;
+			}
+			var sHtml = "<html><head><title>Gate Entry List</title><style>";
+			sHtml += "body { font-family: Arial, sans-serif; padding: 20px; }";
+			sHtml += "h2 { text-align: center; color: #1F4E79; }";
+			sHtml += "table { width: 100%; border-collapse: collapse; margin-top: 20px; }";
+			sHtml += "th, td { border: 1px solid #BDC3C7; padding: 10px; text-align: left; font-size: 12px; }";
+			sHtml += "th { background-color: #F2F4F4; color: #1F4E79; font-weight: bold; }";
+			sHtml += "tr:nth-child(even) { background-color: #F8F9F9; }</style></head><body>";
+			sHtml += "<h2>Gate Entry List</h2><table><thead><tr>";
+			sHtml += "<th>GE Date</th><th>GE No</th><th>Supplier</th><th>Source Type</th><th>Dept</th><th>RGP No</th><th>Inv No</th><th>RR No</th><th>Gate Pass No</th><th>Inspection Status</th>";
+			sHtml += "</tr></thead><tbody>";
+			aObjects.forEach(function (o) {
+				sHtml += "<tr>";
+				sHtml += "<td>" + (o.GEDate || "") + "</td>";
+				sHtml += "<td>" + (o.GateEntryNo || "") + "</td>";
+				sHtml += "<td>" + (o.VendorDesc || "") + "</td>";
+				sHtml += "<td>" + (o.SourceType || "") + "</td>";
+				sHtml += "<td>" + (o.Department || "") + "</td>";
+				sHtml += "<td>" + (o.RGPNumber || "") + "</td>";
+				sHtml += "<td>" + (o.DCNumber || "") + "</td>";
+				sHtml += "<td>" + (o.RRNo || "") + "</td>";
+				sHtml += "<td>" + (o.GatepassNo || "") + "</td>";
+				sHtml += "<td>" + (o.InspectionStatus || "") + "</td>";
+				sHtml += "</tr>";
+			});
+			sHtml += "</tbody></table></body></html>";
+			var oWindow = window.open("", "_blank");
+			oWindow.document.write(sHtml);
+			oWindow.document.close();
+			oWindow.focus();
+			setTimeout(function () { oWindow.print(); oWindow.close(); }, 500);
+		},
+
+		onCopyList: function () {
+			var oTable = this.byId("pcpTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) { aObjects.push(oContext.getObject()); }
+				});
+			} else {
+				aObjects = this.getView().getModel("pcpList").getProperty("/results") || [];
+			}
+			if (!aObjects.length) {
+				sap.m.MessageToast.show("No items to copy.");
+				return;
+			}
+			var sHeaders = ["GE Date", "GE No", "Supplier", "Source Type", "Dept", "RGP No", "Inv No", "RR No", "Gate Pass No", "Inspection Status"];
+			var aLines = [sHeaders.join("\t")];
+			aObjects.forEach(function (o) {
+				aLines.push([
+					o.GEDate || "",
+					o.GateEntryNo || "",
+					o.VendorDesc || "",
+					o.SourceType || "",
+					o.Department || "",
+					o.RGPNumber || "",
+					o.DCNumber || "",
+					o.RRNo || "",
+					o.GatepassNo || "",
+					o.InspectionStatus || ""
+				].join("\t"));
+			});
+			var sText = aLines.join("\n");
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(sText).then(function () {
+					sap.m.MessageToast.show("List copied to clipboard.");
+				});
+			} else {
+				var textArea = document.createElement("textarea");
+				textArea.value = sText;
+				document.body.appendChild(textArea);
+				textArea.select();
+				document.execCommand("copy");
+				document.body.removeChild(textArea);
+				sap.m.MessageToast.show("List copied to clipboard.");
+			}
 		}
 
 	});

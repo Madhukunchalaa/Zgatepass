@@ -177,17 +177,27 @@ sap.ui.define([
 			var oTo = oToDate ? new Date(oToDate.getFullYear(), oToDate.getMonth(), oToDate.getDate(), 23, 59, 59, 999) : null;
 
 			var aFiltered = aAllItems.filter(function (o) {
-				// 1. Text search
+				// 1. Text search - search anything
 				if (sSearch) {
-					var sReq  = o.GatePassReqNo ? String(o.GatePassReqNo).trim() : "";
-					var sGP   = o.GatePassNo    ? String(o.GatePassNo).trim()    : "";
-					var sVend = o.VendorName     ? String(o.VendorName).trim()    : "";
-					var sUser = o.Requestor      ? String(o.Requestor).trim()     : "";
-					var sDesc = o.CommonDesc     ? String(o.CommonDesc).trim()    : "";
-					var sRem  = o.Remarks        ? String(o.Remarks).trim()       : "";
-					var sDept = o.Department     ? String(o.Department).trim()    : "";
-					var matched = [sReq, sGP, sVend, sUser, sDesc, sRem, sDept]
-						.some(function (f) { return f.toLowerCase().indexOf(sLow) !== -1; });
+					var matched = false;
+					for (var key in o) {
+						if (o.hasOwnProperty(key) && o[key] !== null && o[key] !== undefined) {
+							if (typeof o[key] === "string" || typeof o[key] === "number" || typeof o[key] === "boolean") {
+								if (String(o[key]).toLowerCase().indexOf(sLow) !== -1) {
+									matched = true;
+									break;
+								}
+							} else if (typeof o[key] === "object") {
+								try {
+									var sObjStr = JSON.stringify(o[key]).toLowerCase();
+									if (sObjStr.indexOf(sLow) !== -1) {
+										matched = true;
+										break;
+									}
+								} catch (e) {}
+							}
+						}
+					}
 					if (!matched) { return false; }
 				}
 

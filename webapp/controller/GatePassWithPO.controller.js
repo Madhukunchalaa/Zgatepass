@@ -66,9 +66,10 @@ sap.ui.define([
 							ItemNo: sItemNo,
 							ItemDescription: item.ItemDescription || "",
 							POQuantity: item.OrderQuantity || item.POQuantity || "0.000",
-							RecievedQuantity: item.RecievedQuantity || "0.000",
+							RecievedQuantity: (item.RecievedQuantity && parseFloat(item.RecievedQuantity) !== 0) ? item.RecievedQuantity : "",
 							BalanceQuantity: item.BalanceQuantity || "0.000",
 							UOM: item.UOM || "",
+							UnitPrice: item.UnitPrice || item.NetPrice || item.Netprice || item.Netpr || item.ItemNetPrice || item.Price || "0.00",
 							PurchaseOrder: item.PurchaseOrder || sPoNumber,
 							Plant: item.Plant || sPlant,
 							GatePassNo: item.GatepassNo || item.GatePassNo || ""
@@ -141,9 +142,10 @@ sap.ui.define([
 									ItemNo: sItemNo,
 									ItemDescription: item.ItemDescription || "",
 									POQuantity: item.OrderQuantity || item.POQuantity || "0.000",
-									RecievedQuantity: item.RecievedQuantity || "0.000",
+									RecievedQuantity: (item.RecievedQuantity && parseFloat(item.RecievedQuantity) !== 0) ? item.RecievedQuantity : "",
 									BalanceQuantity: item.BalanceQuantity || "0.000",
 									UOM: item.UOM || "",
+									UnitPrice: item.UnitPrice || item.NetPrice || item.Netprice || item.Netpr || item.ItemNetPrice || item.Price || "0.00",
 									PurchaseOrder: item.PurchaseOrder || sPO,
 									Plant: item.Plant || sPlant,
 									GatePassNo: item.GatepassNo || item.GatePassNo || ""
@@ -173,6 +175,7 @@ sap.ui.define([
 						RecievedQuantity: it.RecievedQuantity || "0.000",
 						BalanceQuantity: it.BalanceQuantity || "0.000",
 						UOM: it.UOM || "",
+						UnitPrice: it.UnitPrice || "0.00",
 						PurchaseOrder: it.PurchaseOrder || sPO,
 						GatePassNo: it.GatepassNo || it.GatePassNo || ""
 					};
@@ -242,6 +245,7 @@ sap.ui.define([
 											RecievedQuantity: it.RecievedQuantity || "0.000",
 											BalanceQuantity: it.BalanceQuantity || "0.000",
 											UOM: it.UOM || "",
+											UnitPrice: it.UnitPrice || "0.00",
 											PurchaseOrder: it.PurchaseOrder || sPO,
 											GatePassNo: it.GatepassNo || it.GatePassNo || ""
 										};
@@ -301,6 +305,10 @@ sap.ui.define([
 									};
 								});
 								oModel.setProperty("/GateInPoNav", aMapped);
+
+								// Retrieve saved Total Cost from first item
+								var sTotalCost = aRes[0].PCPItmNav.results[0].TotalCost || "";
+								oModel.setProperty("/TotalCost", sTotalCost);
 							}
 							this._mergePOQuantities();
 						}.bind(this),
@@ -693,9 +701,10 @@ sap.ui.define([
 									ItemNo: sItemNo,
 									ItemDescription: item.ItemDescription || "",
 									POQuantity: item.OrderQuantity || item.POQuantity || "0.000",
-									RecievedQuantity: item.RecievedQuantity || "0.000",
+									RecievedQuantity: (item.RecievedQuantity && parseFloat(item.RecievedQuantity) !== 0) ? item.RecievedQuantity : "",
 									BalanceQuantity: item.BalanceQuantity || "0.000",
 									UOM: item.UOM || "",
+									UnitPrice: item.UnitPrice || item.NetPrice || item.Netprice || item.Netpr || item.ItemNetPrice || item.Price || "0.00",
 									PurchaseOrder: item.PurchaseOrder || sPO,
 									Plant: item.Plant || sPlant,
 									GatePassNo: item.GatepassNo || item.GatePassNo || ""
@@ -828,9 +837,10 @@ sap.ui.define([
 							ItemNo: sItemNo,
 							ItemDescription: item.ItemDescription || "",
 							POQuantity: item.OrderQuantity || item.POQuantity || "0.000",
-							RecievedQuantity: item.RecievedQuantity || "0.000",
+							RecievedQuantity: (item.RecievedQuantity && parseFloat(item.RecievedQuantity) !== 0) ? item.RecievedQuantity : "",
 							BalanceQuantity: item.BalanceQuantity || "0.000",
 							UOM: item.UOM || "",
+							UnitPrice: item.UnitPrice || item.NetPrice || item.Netprice || item.Netpr || item.ItemNetPrice || item.Price || "0.00",
 							PurchaseOrder: item.PurchaseOrder || oSelectedPO.PurchaseOrder,
 							Plant: item.Plant || oSelectedPO.Plant,
 							GatePassNo: item.GatepassNo || item.GatePassNo || ""
@@ -856,6 +866,7 @@ sap.ui.define([
 				RecievedQuantity: "",
 				BalanceQuantity: "",
 				UOM: "",
+				UnitPrice: "",
 				PurchaseOrder: "",
 				Plant: "",
 				GatePassNo: ""
@@ -869,6 +880,26 @@ sap.ui.define([
 			var oModel = this.getView().getModel("gpo");
 			var aItems = oModel.getProperty("/GateInPoNav") || [];
 			aItems.splice(iIndex, 1);
+			oModel.setProperty("/GateInPoNav", aItems.slice());
+		},
+
+		onFullQtyCheck: function (oEvent) {
+			var bSelected = oEvent.getParameter("selected");
+			var oModel = this.getView().getModel("gpo");
+			var aItems = oModel.getProperty("/GateInPoNav") || [];
+
+			// Update all rows at once
+			aItems.forEach(function (oRow) {
+				if (bSelected) {
+					// Fill Received Qty = PO Qty for every item
+					oRow.RecievedQuantity = String(oRow.POQuantity || "0");
+				} else {
+					// Uncheck — clear all Received Qty so user can type manually
+					oRow.RecievedQuantity = "";
+				}
+			});
+
+			oModel.setProperty("/_fullQtyAll", bSelected);
 			oModel.setProperty("/GateInPoNav", aItems.slice());
 		},
 
@@ -958,6 +989,7 @@ sap.ui.define([
 					RecievedQuantity: fRecvdQty.toFixed(3),
 					BalanceQuantity: (fOrderQty - fRecvdQty).toFixed(3),
 					UOM: oItem.UOM || "",
+					UnitPrice: oItem.UnitPrice ? String(parseFloat(oItem.UnitPrice).toFixed(2)) : "0.00",
 					TotalCost: oData.TotalCost ? String(parseFloat(oData.TotalCost).toFixed(2)) : "0.00",
 					GateEntryNo: oData.GateEntryNo || "",
 					PurchaseOrder: oItem.PurchaseOrder || sPO || "",

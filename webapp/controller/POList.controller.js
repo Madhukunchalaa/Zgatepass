@@ -57,19 +57,36 @@ sap.ui.define([
 		},
 
 		onSearch: function (oEvent) {
-			var sQuery = oEvent.getParameter("newValue");
+			var sQuery = oEvent.getParameter("newValue") || oEvent.getParameter("query") || "";
 			var oTable = this.byId("idPOListTable");
-			var oBinding = oTable.getBinding("items");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			if (!oBinding) { return; }
 
-			if (sQuery && sQuery.length > 0) {
+			if (sQuery && sQuery.trim().length > 0) {
+				var sLow = sQuery.trim().toLowerCase();
 				var oFilter = new Filter({
-					filters: [
-						new Filter("PurchaseOrder", FilterOperator.Contains, sQuery),
-						new Filter("Vendor", FilterOperator.Contains, sQuery),
-						new Filter("VendorDesc", FilterOperator.Contains, sQuery),
-						new Filter("Plant", FilterOperator.Contains, sQuery)
-					],
-					and: false
+					path: "",
+					test: function (oValue, oContext) {
+						var o = oContext ? oContext.getObject() : oValue;
+						if (!o) return false;
+						for (var key in o) {
+							if (o.hasOwnProperty(key) && o[key] !== null && o[key] !== undefined) {
+								if (typeof o[key] === "string" || typeof o[key] === "number" || typeof o[key] === "boolean") {
+									if (String(o[key]).toLowerCase().indexOf(sLow) !== -1) {
+										return true;
+									}
+								} else if (typeof o[key] === "object") {
+									try {
+										var sObjStr = JSON.stringify(o[key]).toLowerCase();
+										if (sObjStr.indexOf(sLow) !== -1) {
+											return true;
+										}
+									} catch (e) {}
+								}
+							}
+						}
+						return false;
+					}
 				});
 				oBinding.filter([oFilter]);
 			} else {

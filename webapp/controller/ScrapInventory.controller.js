@@ -40,13 +40,34 @@ sap.ui.define([
 		},
 
 		onSearch: function (oEvent) {
-			var sQuery = oEvent.getParameter("newValue");
+			var sQuery = oEvent.getParameter("newValue") || oEvent.getParameter("query") || "";
 			var oBinding = this.byId("scrapInventoryTable").getBinding("items");
-			var aFilters = [];
-			if (sQuery) {
-				aFilters.push(new Filter("material", FilterOperator.Contains, sQuery));
+			if (!oBinding) { return; }
+			if (sQuery && sQuery.trim().length > 0) {
+				var sLow = sQuery.trim().toLowerCase();
+				var oFilter = new Filter({
+					path: "",
+					test: function (oValue, oContext) {
+						var o = oContext ? oContext.getObject() : oValue;
+						if (!o) return false;
+						for (var key in o) {
+							if (o.hasOwnProperty(key) && o[key] !== null && o[key] !== undefined) {
+								if (typeof o[key] === "string" || typeof o[key] === "number" || typeof o[key] === "boolean") {
+									if (String(o[key]).toLowerCase().indexOf(sLow) !== -1) { return true; }
+								} else if (typeof o[key] === "object") {
+									try {
+										if (JSON.stringify(o[key]).toLowerCase().indexOf(sLow) !== -1) { return true; }
+									} catch (e) {}
+								}
+							}
+						}
+						return false;
+					}
+				});
+				oBinding.filter([oFilter]);
+			} else {
+				oBinding.filter([]);
 			}
-			oBinding.filter(aFilters);
 		},
 
 		onCopy: function () {

@@ -22,9 +22,20 @@
                             <ToolbarSpacer/>
                             <SearchField id="idPCPSearch" width="220px" search=".onSearch" placeholder="Search..." class="gpmsFieldInput"/>
                             <Button text="Add PCP" icon="sap-icon://add" type="Emphasized" press=".onCreateNew"/>
-                            <DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px"/>
-                            <DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px"/>
-                            <Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel"/>
+                            <Select id="idPCPStatusFilter" change=".onApplyFilters" width="150px" class="gpmsFieldInput">
+                                <items>
+                                    <core:Item key="" text="All Statuses"/>
+                                    <core:Item key="Closed" text="Closed"/>
+                                    <core:Item key="Pending" text="Pending"/>
+                                </items>
+                            </Select>
+                            <DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px" class="gpmsFieldInput"/>
+                            <DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px" class="gpmsFieldInput"/>
+                            <Button text="Apply" type="Emphasized" press=".onApplyFilters"/>
+                            <Button text="Clear" press=".onClearFilters"/>
+                            <Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel" class="sapUiTinyMarginEnd"/>
+                            <Button icon="sap-icon://copy" text="Copy" press=".onCopyList" tooltip="Copy list to clipboard" class="sapUiTinyMarginEnd"/>
+                            <Button icon="sap-icon://print" text="Print List" press=".onPrintList" tooltip="Print list"/>
                         </OverflowToolbar>
                     </headerToolbar>
 

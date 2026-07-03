@@ -204,7 +204,7 @@ sap.ui.define([
 		// OData: Create (Submit new IRGP)
 		// =========================================================================
 
-		onSubmit: function () {
+		onSubmit: async function () {
 			var oModel = this.getView().getModel("irgp");
 			var oHeader = oModel.getProperty("/header");
 			var aItems  = oModel.getProperty("/items");
@@ -217,6 +217,26 @@ sap.ui.define([
 
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (!oODataModel) { return; }
+
+			sap.ui.core.BusyIndicator.show(0);
+
+			var sBase64 = "";
+			try {
+				var oPrintHeader = {
+					IRGPNo:               "", // GP number not yet generated
+					GEDate:               oHeader.GEDate || new Date().toISOString().split("T")[0],
+					DueDate:              oHeader.DueDate,
+					Department:           oHeader.Department,
+					RequestType:          oHeader.RequestType || "IRGP",
+					RequestUser:          oHeader.RequestUser || "",
+					ContractName:         oHeader.ContractName,
+					ContractEmployeeName: oHeader.ContractEmployeeName,
+					Remarks:              oHeader.Remarks || ""
+				};
+				sBase64 = await this._printDocument(oPrintHeader, aItems, true);
+			} catch (e) {
+				console.error("Error generating IRGP PDF Base64 string:", e);
+			}
 
 			var oPayload = {
 				GatePassNo:      "",
@@ -234,6 +254,7 @@ sap.ui.define([
 				MRNumber:        "",
 				Status:          oHeader.RequestType === "Tools" ? "Reservation Linked" : "Open",
 				Message:         "",
+				IRGPBase64:      sBase64,
 				IRGPItmNav: aItems.map(function (it, i) {
 					return {
 						GatePassNo:        "",
@@ -252,7 +273,6 @@ sap.ui.define([
 				})
 			};
 
-			sap.ui.core.BusyIndicator.show(0);
 			oODataModel.create("/IRGPHdrSet", oPayload, {
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
@@ -1332,7 +1352,7 @@ sap.ui.define([
 			this._printDocument(oHeader, oItem.items);
 		},
 
-		_printDocument: async function (oHeader, aItems) {
+		_printDocument: async function (oHeader, aItems, bGetBase64) {
 			const { jsPDF } = window.jspdf;
 			// ── Landscape A4 ─────────────────────────────────────────────────────
 			var doc = new jsPDF('l', 'mm', 'a4');
@@ -1536,6 +1556,10 @@ sap.ui.define([
 
 			// ── Draw header once (first page already rendered by autoTable callback) ─
 			// (autoTable calls didDrawPage for each page, so header is already drawn)
+
+			if (bGetBase64 === true) {
+				return doc.output('datauristring').split(',')[1];
+			}
 
 			// ── Open print dialog ────────────────────────────────────────────────
 			doc.autoPrint();

@@ -201,16 +201,24 @@ sap.ui.define([
 			var sSearch = this.byId("idNRGPSearchField").getValue().trim();
 			if (sSearch) {
 				var sLow = sSearch.toLowerCase();
-				var fnTest = function(v) { return String(v || "").toLowerCase().indexOf(sLow) !== -1; };
 				aFilters.push(new Filter({
-					filters: [
-						new Filter({ path: "GatePassNo", test: fnTest }),
-						new Filter({ path: "GatePassreqNo", test: fnTest }),
-						new Filter({ path: "VendorName", test: fnTest }),
-						new Filter({ path: "CommonDesc", test: fnTest }),
-						new Filter({ path: "Department", test: fnTest })
-					],
-					and: false
+					path: "",
+					test: function (oValue, oContext) {
+						var o = oContext ? oContext.getObject() : oValue;
+						if (!o) return false;
+						for (var key in o) {
+							if (o.hasOwnProperty(key) && o[key] !== null && o[key] !== undefined) {
+								if (typeof o[key] === "string" || typeof o[key] === "number" || typeof o[key] === "boolean") {
+									if (String(o[key]).toLowerCase().indexOf(sLow) !== -1) { return true; }
+								} else if (typeof o[key] === "object") {
+									try {
+										if (JSON.stringify(o[key]).toLowerCase().indexOf(sLow) !== -1) { return true; }
+									} catch (e) {}
+								}
+							}
+						}
+						return false;
+					}
 				}));
 			}
 

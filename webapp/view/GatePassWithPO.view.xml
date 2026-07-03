@@ -37,7 +37,7 @@
 
 						<VBox class="sapUiSmallMargin">
 							<Label text="Source Type" required="true" class="gpmsFieldLabel"/>
-							<Select id="idSourceType" selectedKey="{gpo>/SourceType}" width="100%" class="gpmsFieldInput" change=".onSourceTypeChange" enabled="{= !${gpo>/isExisting} }">
+							<Select id="idSourceType" selectedKey="{gpo>/SourceType}" width="100%" class="gpmsFieldInput" change=".onSourceTypeChange" enabled="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }">
 								<items>
 									<core:Item key="" text="Select Type (PO/PCP/RGP/FREE)"/>
 									<core:Item key="PO_RGP" text="Purchase Order (PO) / Returnable GatePass (RGP)"/>
@@ -52,24 +52,24 @@
 
 						<VBox class="sapUiSmallMargin" visible="true">
 							<Label text="PO Number" class="gpmsFieldLabel"/>
-							<Input id="idPurchaseOrder" value="{gpo>/PurchaseOrder}" placeholder="Enter PO Number" class="gpmsFieldInput" showValueHelp="true" valueHelpRequest=".onPOValueHelp" change=".onPOChange" editable="{= !${gpo>/isExisting} }"/>
+							<Input id="idPurchaseOrder" value="{gpo>/PurchaseOrder}" placeholder="Enter PO Number" class="gpmsFieldInput" showValueHelp="true" valueHelpRequest=".onPOValueHelp" change=".onPOChange" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 						</VBox>
 
 						<!-- Standard Vendor Code Input for PO Mode -->
 						<VBox class="sapUiSmallMargin" visible="true">
 							<Label text="Vendor Code" class="gpmsFieldLabel"/>
-							<Input id="idVendor" value="{gpo>/Vendor}" placeholder="Enter Vendor Code" class="gpmsFieldInput" editable="{= !${gpo>/isExisting} }"/>
+							<Input id="idVendor" value="{gpo>/Vendor}" placeholder="Enter Vendor Code" class="gpmsFieldInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 						</VBox>
+   
   
- 
 						<VBox class="sapUiSmallMargin">
 							<Label text="Vendor Name" required="{= ${gpo>/SourceType} === 'PettyCash' }" class="gpmsFieldLabel"/>
-							<Input id="idVendorDesc" value="{gpo>/VendorDesc}" placeholder="Vendor Name" class="gpmsFieldInput" editable="{= !${gpo>/isExisting} }"/>
+							<Input id="idVendorDesc" value="{gpo>/VendorDesc}" placeholder="Vendor Name" class="gpmsFieldInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 						</VBox>
  
 						<VBox class="sapUiSmallMargin">
 							<Label text="Plant" required="true" class="gpmsFieldLabel"/>
-							<Input id="idPlant" value="{gpo>/Plant}" placeholder="Enter Plant" class="gpmsFieldInput" change=".onPlantChange" editable="{= !${gpo>/isExisting} }"/>
+							<Input id="idPlant" value="{gpo>/Plant}" placeholder="Enter Plant" class="gpmsFieldInput" change=".onPlantChange" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 						</VBox>
  
 						<VBox class="sapUiSmallMargin">
@@ -208,6 +208,7 @@
 							<core:Icon src="sap-icon://list" class="sapUiSmallMarginEnd"/>
 							<Title text="ITEMS" level="H3"/>
 							<ToolbarSpacer/>
+							<CheckBox id="idFullQtyCheckBox" text="Fill Full Qty" selected="{gpo>/_fullQtyAll}" select=".onFullQtyCheck" visible="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }" tooltip="Check to fill all items Received Qty = PO Qty"/>
 							<Button text="Add Item" icon="sap-icon://add" press=".onAddItem" type="Transparent" class="gpmsAddBtn" visible="{= !${gpo>/isExisting} }"/>
 						</Toolbar>
 					</headerToolbar>
@@ -219,6 +220,7 @@
 							<Column width="9rem" hAlign="Right"><Text text="Received Qty" class="gpmsHeaderText"/></Column>
 							<Column width="9rem" hAlign="Right"><Text text="Balance Qty" class="gpmsHeaderText"/></Column>
 							<Column width="6rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
+							<Column width="8rem" hAlign="Right"><Text text="Unit Price" class="gpmsHeaderText"/></Column>
 							<Column width="9rem"><Text text="Gate Pass No" class="gpmsHeaderText"/></Column>
 							<Column width="3rem" visible="{= !${gpo>/isExisting} }"/>
 						</columns>
@@ -228,9 +230,10 @@
 									<Input value="{gpo>ItemNo}" placeholder="Item No" class="gpmsTableInput" editable="{= !${gpo>/isExisting} }"/>
 									<Input value="{gpo>ItemDescription}" placeholder="Item Description" class="gpmsTableInput" editable="{= !${gpo>/isExisting} }"/>
 									<Input value="{gpo>POQuantity}" placeholder="0.000" type="Text" textAlign="Right" class="gpmsTableInput" editable="{= !${gpo>/isExisting} }" liveChange=".onPOQuantityInputLiveChange"/>
-									<Input value="{gpo>RecievedQuantity}" placeholder="0.000" type="Text" textAlign="Right" class="gpmsTableInput" editable="{= ${gpo>/isEditMode} }"/>
+									<Input value="{gpo>RecievedQuantity}" placeholder="0.000" type="Text" textAlign="Right" class="gpmsTableInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 									<Text text="{path: 'gpo>BalanceQuantity', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" textAlign="Right"/>
 									<Text text="{gpo>UOM}"/>
+									<Text text="{path: 'gpo>UnitPrice', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}" textAlign="Right"/>
 									<Text text="{gpo>GatePassNo}"/>
 									<Button icon="sap-icon://delete" type="Transparent" press=".onDeleteItem" class="gpmsDeleteBtn" visible="{= !${gpo>/isExisting} }"/>
 								</cells>

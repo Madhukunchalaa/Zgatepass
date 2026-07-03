@@ -74,27 +74,93 @@ sap.ui.define([
 			return sDate;
 		},
 
-		onSearch: function (oEvent) {
-			var sQuery = oEvent.getParameter("query") || oEvent.getParameter("newValue") || "";
+		onSearch: function () {
+			this._applyFilters();
+		},
+
+		onApplyFilters: function () {
+			this._applyFilters();
+		},
+
+		onClearFilters: function () {
+			this.byId("idInspectionStatusFilter").setSelectedKey("");
+			this.byId("idExcelFromDate").setValue("");
+			this.byId("idExcelToDate").setValue("");
 			var oTable = this.byId("idInspectionTable");
-			var oBinding = oTable.getBinding("items");
+			var oSearch = oTable.getHeaderToolbar().getContent().find(function (c) {
+				return c.getMetadata().getName() === "sap.m.SearchField";
+			});
+			if (oSearch) { oSearch.setValue(""); }
+			this._applyFilters();
+		},
+
+		_applyFilters: function () {
+			var oTable = this.byId("idInspectionTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
 			if (!oBinding) return;
 
-			if (!sQuery) {
-				oBinding.filter([]);
-				return;
+			var aFilters = [];
+
+			// 1. Search Filter
+			var oSearch = oTable.getHeaderToolbar().getContent().find(function (c) {
+				return c.getMetadata().getName() === "sap.m.SearchField";
+			});
+			var sQuery = oSearch ? oSearch.getValue().trim() : "";
+			if (sQuery) {
+				var sLow = sQuery.toLowerCase();
+				aFilters.push(new Filter({
+					path: "",
+					test: function (oValue, oContext) {
+						var o = oContext ? oContext.getObject() : oValue;
+						if (!o) return false;
+						for (var key in o) {
+							if (o.hasOwnProperty(key) && o[key] !== null && o[key] !== undefined) {
+								if (typeof o[key] === "string" || typeof o[key] === "number" || typeof o[key] === "boolean") {
+									if (String(o[key]).toLowerCase().indexOf(sLow) !== -1) {
+										return true;
+									}
+								} else if (typeof o[key] === "object") {
+									try {
+										var sObjStr = JSON.stringify(o[key]).toLowerCase();
+										if (sObjStr.indexOf(sLow) !== -1) {
+											return true;
+										}
+									} catch (e) {}
+								}
+							}
+						}
+						return false;
+					}
+				}));
 			}
 
-			oBinding.filter([new Filter({
-				filters: [
-					new Filter("GateEntryNo", FilterOperator.Contains, sQuery),
-					new Filter("VendorDesc",  FilterOperator.Contains, sQuery),
-					new Filter("DCNumber",    FilterOperator.Contains, sQuery),
-					new Filter("Department",  FilterOperator.Contains, sQuery),
-					new Filter("GatepassNo",  FilterOperator.Contains, sQuery)
-				],
-				and: false
-			})]);
+			// 2. Status Filter
+			var sStatus = this.byId("idInspectionStatusFilter").getSelectedKey();
+			if (sStatus) {
+				aFilters.push(new Filter("InspectionStatus", FilterOperator.EQ, sStatus));
+			}
+
+			// 3. Date Range Filter
+			var sFrom = this.byId("idExcelFromDate").getDateValue();
+			var sTo = this.byId("idExcelToDate").getDateValue();
+			if (sFrom || sTo) {
+				var oFrom = sFrom ? new Date(sFrom.getFullYear(), sFrom.getMonth(), sFrom.getDate()) : null;
+				var oTo = sTo ? new Date(sTo.getFullYear(), sTo.getMonth(), sTo.getDate(), 23, 59, 59, 999) : null;
+				aFilters.push(new Filter({
+					path: "GEDate",
+					test: function (sValue) {
+						if (!sValue) return false;
+						var aParts = sValue.split("-");
+						if (aParts.length !== 3) return false;
+						var dVal = new Date(parseInt(aParts[2]), parseInt(aParts[1], 10) - 1, parseInt(aParts[0]));
+						if (oFrom && dVal < oFrom) return false;
+						if (oTo && dVal > oTo) return false;
+						return true;
+					}
+				}));
+			}
+
+			oBinding.filter(aFilters);
 		},
 
 		onSort: function () {},
@@ -184,7 +250,7 @@ sap.ui.define([
 			var oItem = oEvent.getSource().getBindingContext("inspList").getObject();
 			var sGEDate = this._toSAPDate(oItem.GEDateRaw || oItem.GEDate || "");
 
-			sap.ui.getCore().setModel(new JSONModel(oItem), "selectedGateEntry");
+			this._storeNavEntry(oItem, sGEDate);
 
 			this.getRouter().navTo("GatePassWithPOEdit", {
 				gateEntryNo: oItem.GateEntryNo,
@@ -198,7 +264,7 @@ sap.ui.define([
 			var oItem = oEvent.getSource().getBindingContext("inspList").getObject();
 			var sGEDate = this._toSAPDate(oItem.GEDateRaw || oItem.GEDate || "");
 
-			sap.ui.getCore().setModel(new JSONModel(oItem), "selectedGateEntry");
+			this._storeNavEntry(oItem, sGEDate);
 
 			this.getRouter().navTo("GatePassWithPOEdit", {
 				gateEntryNo: oItem.GateEntryNo,
@@ -208,8 +274,137 @@ sap.ui.define([
 			});
 		},
 
+		_storeNavEntry: function (oItem, sGEDateRaw) {
+			var aAllResults = this.getView().getModel("inspList").getProperty("/results") || [];
+			var aMergedItems = [];
+			aAllResults.forEach(function (oRow) {
+				if (oRow.GateEntryNo === oItem.GateEntryNo) {
+					var aRowItems = (oRow.PCPItmNav && oRow.PCPItmNav.results) || [];
+					aRowItems.forEach(function (it) { aMergedItems.push(it); });
+				}
+			});
+
+			sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel({
+				GateEntryNo: oItem.GateEntryNo,
+				GEDate: sGEDateRaw,
+				SourceType: oItem.SourceType || "",
+				Vendor: oItem.Vendor || "",
+				VendorDesc: oItem.VendorDesc || "",
+				Plant: oItem.Plant || "",
+				Department: oItem.Department || "",
+				PurchaseOrder: oItem.PurchaseOrder || "",
+				RGPNumber: oItem.RGPNumber || "",
+				DCNumber: oItem.DCNumber || "",
+				DCdate: oItem.DCdate || "",
+				GatepassNo: oItem.GatepassNo || "",
+				BudgetCode: oItem.BudgetCode || "",
+				TotalCost: oItem.TotalCost || "0.00",
+				RRNo: oItem.RRNo || "",
+				InspectionStatus: oItem.InspectionStatus || "",
+				Inspectiondate: oItem.Inspectiondate || "",
+				Remarks: oItem.Remarks || "",
+				PCPItmNav: { results: aMergedItems.length > 0 ? aMergedItems : ((oItem.PCPItmNav && oItem.PCPItmNav.results) || []) }
+			}), "selectedGateEntry");
+		},
+
 		onNavBack: function () {
 			this.getRouter().navTo("home");
+		},
+
+		onPrintList: function () {
+			var oTable = this.byId("idInspectionTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) { aObjects.push(oContext.getObject()); }
+				});
+			} else {
+				aObjects = this.getView().getModel("inspList").getProperty("/results") || [];
+			}
+			if (!aObjects.length) {
+				sap.m.MessageToast.show("No record found");
+				return;
+			}
+			var sHtml = "<html><head><title>Gate Entry List</title><style>";
+			sHtml += "body { font-family: Arial, sans-serif; padding: 20px; }";
+			sHtml += "h2 { text-align: center; color: #1F4E79; }";
+			sHtml += "table { width: 100%; border-collapse: collapse; margin-top: 20px; }";
+			sHtml += "th, td { border: 1px solid #BDC3C7; padding: 10px; text-align: left; font-size: 12px; }";
+			sHtml += "th { background-color: #F2F4F4; color: #1F4E79; font-weight: bold; }";
+			sHtml += "tr:nth-child(even) { background-color: #F8F9F9; }</style></head><body>";
+			sHtml += "<h2>Gate Entry List</h2><table><thead><tr>";
+			sHtml += "<th>GE Date</th><th>GE No</th><th>Supplier</th><th>Source Type</th><th>Dept</th><th>RGP No</th><th>Inv No</th><th>RR No</th><th>Gate Pass No</th><th>Inspection Status</th>";
+			sHtml += "</tr></thead><tbody>";
+			aObjects.forEach(function (o) {
+				sHtml += "<tr>";
+				sHtml += "<td>" + (o.GEDate || "") + "</td>";
+				sHtml += "<td>" + (o.GateEntryNo || "") + "</td>";
+				sHtml += "<td>" + (o.VendorDesc || "") + "</td>";
+				sHtml += "<td>" + (o.SourceType || "") + "</td>";
+				sHtml += "<td>" + (o.Department || "") + "</td>";
+				sHtml += "<td>" + (o.RGPNumber || "") + "</td>";
+				sHtml += "<td>" + (o.DCNumber || "") + "</td>";
+				sHtml += "<td>" + (o.RRNo || "") + "</td>";
+				sHtml += "<td>" + (o.GatepassNo || "") + "</td>";
+				sHtml += "<td>" + (o.InspectionStatus || "") + "</td>";
+				sHtml += "</tr>";
+			});
+			sHtml += "</tbody></table></body></html>";
+			var oWindow = window.open("", "_blank");
+			oWindow.document.write(sHtml);
+			oWindow.document.close();
+			oWindow.focus();
+			setTimeout(function () { oWindow.print(); oWindow.close(); }, 500);
+		},
+
+		onCopyList: function () {
+			var oTable = this.byId("idInspectionTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) { aObjects.push(oContext.getObject()); }
+				});
+			} else {
+				aObjects = this.getView().getModel("inspList").getProperty("/results") || [];
+			}
+			if (!aObjects.length) {
+				sap.m.MessageToast.show("No items to copy.");
+				return;
+			}
+			var sHeaders = ["GE Date", "GE No", "Supplier", "Source Type", "Dept", "RGP No", "Inv No", "RR No", "Gate Pass No", "Inspection Status"];
+			var aLines = [sHeaders.join("\t")];
+			aObjects.forEach(function (o) {
+				aLines.push([
+					o.GEDate || "",
+					o.GateEntryNo || "",
+					o.VendorDesc || "",
+					o.SourceType || "",
+					o.Department || "",
+					o.RGPNumber || "",
+					o.DCNumber || "",
+					o.RRNo || "",
+					o.GatepassNo || "",
+					o.InspectionStatus || ""
+				].join("\t"));
+			});
+			var sText = aLines.join("\n");
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(sText).then(function () {
+					sap.m.MessageToast.show("List copied to clipboard.");
+				});
+			} else {
+				var textArea = document.createElement("textarea");
+				textArea.value = sText;
+				document.body.appendChild(textArea);
+				textArea.select();
+				document.execCommand("copy");
+				document.body.removeChild(textArea);
+				sap.m.MessageToast.show("List copied to clipboard.");
+			}
 		}
 
 	});

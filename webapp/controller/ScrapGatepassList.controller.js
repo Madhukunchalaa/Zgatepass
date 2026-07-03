@@ -116,15 +116,22 @@ sap.ui.define([
 			if (sSearch) {
 				var sLow = sSearch.toLowerCase();
 				aFilters.push(new Filter({
-					path: "gatePassNo",
-					test: function(v, oContext) {
-						var o = oContext ? oContext.getObject() : {};
-						return [
-							(o.gatePassNo || ""),
-							(o.requestId || ""),
-							(o.customerName || ""),
-							(o.vehicleNo || "")
-						].some(function(f) { return String(f).toLowerCase().indexOf(sLow) !== -1; });
+					path: "",
+					test: function (oValue, oContext) {
+						var o = oContext ? oContext.getObject() : oValue;
+						if (!o) return false;
+						for (var key in o) {
+							if (o.hasOwnProperty(key) && o[key] !== null && o[key] !== undefined) {
+								if (typeof o[key] === "string" || typeof o[key] === "number" || typeof o[key] === "boolean") {
+									if (String(o[key]).toLowerCase().indexOf(sLow) !== -1) { return true; }
+								} else if (typeof o[key] === "object") {
+									try {
+										if (JSON.stringify(o[key]).toLowerCase().indexOf(sLow) !== -1) { return true; }
+									} catch (e) {}
+								}
+							}
+						}
+						return false;
 					}
 				}));
 			}

@@ -1,0 +1,76 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.AshGatePassBulkUpload"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:core="sap.ui.core"
+	xmlns:u="sap.ui.unified"
+	xmlns:layout="sap.ui.layout"
+	height="100%">
+	<Page
+		title="Ash Gate Pass Bulk Upload"
+		showNavButton="true"
+		navButtonPress=".onNavBack"
+		class="gpmsPage">
+		<content>
+			<VBox class="gpmsContentWrapper sapUiMediumMargin">
+				
+				<!-- Instructions & Template Panel -->
+				<Panel class="gpmsSection" headerText="Excel Bulk Upload Instructions" expandable="false">
+					<VBox class="sapUiSmallMargin">
+						<Text text="Use this tool to create multiple Ash Gate Passes directly from an Excel payload. The approval workflow will be bypassed automatically." class="sapUiSmallMarginBottom"/>
+						<Text text="Instructions:" class="sapUiTinyMarginBottom" style="bold"/>
+						<FormattedText htmlText="&lt;ol&gt;&lt;li&gt;Download the template Excel file by clicking the &lt;b&gt;Download Template&lt;/b&gt; button.&lt;/li&gt;&lt;li&gt;Fill in the columns: &lt;b&gt;SalesDocument&lt;/b&gt;, &lt;b&gt;VehicleNo&lt;/b&gt;, &lt;b&gt;RequestedQuantity&lt;/b&gt;, &lt;b&gt;ItemNetPrice&lt;/b&gt;, &lt;b&gt;Remarks&lt;/b&gt;, &lt;b&gt;TransporterName&lt;/b&gt;, &lt;b&gt;TransporterGst&lt;/b&gt;.&lt;/li&gt;&lt;li&gt;Click the &lt;b&gt;Choose File&lt;/b&gt; button, select your completed Excel file, and review the contents in the table below.&lt;/li&gt;&lt;li&gt;Click &lt;b&gt;Create Gate Passes&lt;/b&gt; at the bottom of the page to initiate the creation process.&lt;/li&gt;&lt;/ol&gt;"/>
+						
+						<HBox class="sapUiSmallMarginTop" alignItems="Center">
+							<Button icon="sap-icon://excel-attachment" text="Download Template" press=".onDownloadTemplate" type="Ghost" class="sapUiSmallMarginEnd"/>
+							<u:FileUploader id="excelFileUploader" buttonText="Choose Excel File" fileType="xlsx,xls" change=".onExcelUpload" tooltip="Choose Excel file to import"/>
+						</HBox>
+					</VBox>
+				</Panel>
+
+				<!-- Preview Table Panel -->
+				<Panel class="gpmsSection sapUiSmallMarginTop" headerText="Import Preview" expandable="false">
+					<Table id="idPreviewTable" items="{upload>/rows}" class="gpmsItemTable">
+						<headerToolbar>
+							<OverflowToolbar>
+								<Title text="Parsed Rows" level="H2"/>
+								<ToolbarSpacer/>
+								<Button text="Clear" icon="sap-icon://clear-all" press=".onClear" type="Transparent"/>
+							</OverflowToolbar>
+						</headerToolbar>
+						<columns>
+							<Column><Text text="Row #" class="gpmsHeaderText"/></Column>
+							<Column><Text text="Sales Doc" class="gpmsHeaderText"/></Column>
+							<Column><Text text="Vehicle No" class="gpmsHeaderText"/></Column>
+							<Column><Text text="Quantity" class="gpmsHeaderText"/></Column>
+							<Column><Text text="Rate (Price)" class="gpmsHeaderText"/></Column>
+							<Column><Text text="Transporter" class="gpmsHeaderText"/></Column>
+							<Column><Text text="Status" class="gpmsHeaderText"/></Column>
+						</columns>
+						<items>
+							<ColumnListItem>
+								<cells>
+									<Text text="{upload>Index}" class="gpmsTableText"/>
+									<Text text="{upload>SalesDocument}" class="gpmsTableText"/>
+									<Text text="{upload>VehicleNo}" class="gpmsTableText"/>
+									<Text text="{upload>RequestedQuantity}" class="gpmsTableText"/>
+									<Text text="{upload>ItemNetPrice}" class="gpmsTableText"/>
+									<Text text="{upload>TransporterName}" class="gpmsTableText"/>
+									<ObjectStatus text="{upload>StatusText}" state="{upload>StatusState}"/>
+								</cells>
+							</ColumnListItem>
+						</items>
+					</Table>
+				</Panel>
+
+			</VBox>
+		</content>
+		<footer>
+			<OverflowToolbar class="gpmsFooterBar">
+				<ToolbarSpacer/>
+				<Button text="Cancel" type="Reject" press=".onNavBack"/>
+				<Button text="Create Gate Passes" type="Emphasized" press=".onCreateGatePasses" icon="sap-icon://upload-to-cloud" enabled="{= ${upload>/rows}.length > 0 }"/>
+			</OverflowToolbar>
+		</footer>
+	</Page>
+</mvc:View>

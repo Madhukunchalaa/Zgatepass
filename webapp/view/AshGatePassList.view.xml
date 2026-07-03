@@ -13,7 +13,7 @@
 			<VBox class="sapUiSmallMargin">
 				<Table
 					id="ashListTable"
-					items="{path: '/AshHdrSet', filters: [{path: 'GatePassType', operator: 'EQ', value1: 'NRGP'}]}"
+					items="{path: '/AshHdrSet', operationMode: 'Client', filters: [{path: 'GatePassType', operator: 'EQ', value1: 'NRGP'}]}"
 					noDataText="No Ash Gate Passes found"
 					class="gpmsTable"
 					alternateRowColors="true">

@@ -479,7 +479,6 @@ sap.ui.define([
 
 			var sGPbase = "";
 			var sDCbase = "";
-			/* Commented out base64 generation to prevent slow saving
 			if (sAuthorativeGPNo) {
 				try {
 					sGPbase = await this.onPRINTGATEPASSButtonPress(true);
@@ -494,7 +493,6 @@ sap.ui.define([
 					console.error("Error generating DC PDF base64:", e);
 				}
 			}
-			*/
 
 			var oPayload = {
 				GatePassreqNo: oData.GatePassreqNo || "",
@@ -523,8 +521,8 @@ sap.ui.define([
 				Remarks: oData.Remarks || "",
 				GPStatus: oData.GPStatus || "",
 				Message: "",
-				GPbase64: sGPbase,
-				DCbase64: sDCbase,
+				GPbase64: sGPbase ? (sGPbase.split(',')[1] || sGPbase) : "",
+				DCbase64: sDCbase ? (sDCbase.split(',')[1] || sDCbase) : "",
 				TransporterName: oData.TransporterName || "",
 				TransporterGST: oData.TransporterGST || "",
 				InsuranceReq: oData.InsuranceRequired ? "X" : "",
@@ -1108,7 +1106,111 @@ sap.ui.define([
 				return doc.output('datauristring').split(',')[1];
 			}
 			doc.save("DC_" + (oOut.GatePassNo || "Draft") + ".pdf");
+			
+			// Send base64 to backend silently to trigger email
+			try {
+				var sDCbase = doc.output('datauristring');
+				this._sendBase64ToBackendSilently(null, sDCbase);
+			} catch(e) {
+				console.error("Error sending DC base64 to backend:", e);
+			}
+
 			MessageToast.show("Delivery Challan Downloaded");
+		},
+
+		_sendBase64ToBackendSilently: function(sGPbase, sDCbase) {
+			var oData = this.getView().getModel("nrgp").getData();
+			var oODataModel = this.getOwnerComponent().getModel();
+			var sAuthorativeGPNo = this._sCurrentGPNo || oData.GatePassNo || "";
+			if (!sAuthorativeGPNo) { return; } // can't send without GP No
+
+			var sToday = new Date().toISOString().split("T")[0];
+			var sChallanDate = oData.ChallanDate ? new Date(oData.ChallanDate).toISOString().split("T")[0] : sToday;
+
+			var oPayload = {
+				GatePassreqNo: oData.GatePassreqNo || "",
+				FiscalYear: oData.FiscalYear || String(new Date().getFullYear()),
+				Plant: oData.Plant || "",
+				GatePassNo: sAuthorativeGPNo,
+				Vendor: oData.VendorCode || oData.Vendor || "",
+				VendorName: oData.VendorName || "",
+				VendorGST: oData.VendorGST || "",
+				VendorPerson: oData.VendorPerson || "",
+				ZipCode: oData.ZipCode || "",
+				City: oData.City || "",
+				GatePassDate: sToday,
+				ChallanDate: sChallanDate,
+				ReturnableDate: "",
+				ExtReturnDate: "",
+				CommonDesc: oData.CommonDesc || "",
+				NoOfPacakages: parseInt(oData.NoOfPacakages || 0),
+				Department: oData.Department || "",
+				Challanumber: oData.ChallanNumber || "",
+				GenerateDC: oData.ChallanNumber ? "X" : "",
+				GatePassType: oData.GatePassType || "NRGP",
+				VehicleNo: oData.VehicleNo || "",
+				LRNumber: oData.LRNnumber || "",
+				ModeOfDispatch: oData.ModeOfTransport || "",
+				Remarks: oData.Remarks || "",
+				GPStatus: oData.GPStatus || "",
+				Message: "",
+				GPbase64: sGPbase ? (sGPbase.split(',')[1] || sGPbase) : "",
+				DCbase64: sDCbase ? (sDCbase.split(',')[1] || sDCbase) : "",
+				TransporterName: oData.TransporterName || "",
+				TransporterGST: oData.TransporterGST || "",
+				InsuranceReq: oData.InsuranceRequired ? "X" : "",
+				InsuranceDate: oData.InsuranceDate || "",
+				InsuranceAmount: String(oData.InsuranceAmount || "0"),
+				Comment1: "", Comment2: "", Comment3: "", Comment4: "", Comment5: "",
+				Comment6: "", Comment7: "", Comment8: "", Comment9: "", Comment10: "",
+				Sno1: "", Sno2: "", Sno3: "", Sno4: "", Sno5: "",
+				Sno6: "", Sno7: "", Sno8: "", Sno9: "", Sno10: "",
+				cdate1: "", cdate2: "", cdate3: "", cdate4: "", cdate5: "",
+				cdate6: "", cdate7: "", cdate8: "", cdate9: "", cdate10: "",
+				DCNotes: oData.DCNotes || "",
+				OutgateNav: (oData.items || []).map(function (it, i) {
+					return {
+						GatePassType: "NRGP",
+						GatePassNo: sAuthorativeGPNo,
+						ItemNo: it.ItemNo || String((i + 1) * 10).padStart(5, "0"),
+						Material: it.Material || "",
+						MaterialDesc: it.MaterialDesc || it.HSNDesc || "",
+						HSNCode: it.HSNCode || "",
+						HSNDesc: it.HSNDesc || "",
+						UOM: it.UOM || "",
+						ItemNetPrice: String(parseFloat(it.ItemNetPrice || 0).toFixed(2)),
+						SentQuantity: String(parseFloat(it.SentQuantity || 0).toFixed(3)),
+						RecievedQuantity: "0.000",
+						BalanceQuantity: String(parseFloat(it.SentQuantity || 0).toFixed(3)),
+						Totalvalue: String(parseFloat(it.Totalvalue || 0).toFixed(2)),
+						GatePassReqNo: oData.GatePassreqNo || "",
+						Remarks: it.Remarks || ""
+					};
+				})
+			};
+
+			var aComments = oData.CommentsList || [];
+			for (var iC = 0; iC < 10; iC++) {
+				var oC = aComments[iC];
+				var iIdx = iC + 1;
+				var sRawDate = oC ? (oC.date || "") : "";
+				var sParts = sRawDate.split("-");
+				var sFmtDate = (sParts.length === 3 && sParts[2].length === 4)
+					? (sParts[2] + sParts[1] + sParts[0])
+					: sRawDate; // assuming already YYYYMMDD if coming from backend
+				oPayload["Comment" + iIdx] = oC ? (oC.text || "") : "";
+				oPayload["Sno" + iIdx] = oC ? (oC.sno || String(iIdx)) : "";
+				oPayload["cdate" + iIdx] = sFmtDate || "";
+			}
+
+			oODataModel.create("/OutGatePassSet", oPayload, {
+				success: function () {
+					console.log("[GPMS Debug] Silent Base64 Update Successful.");
+				},
+				error: function (e) {
+					console.error("[GPMS Debug] Silent Base64 Update Failed:", e);
+				}
+			});
 		},
 
 		_numberToWords: function (num) {

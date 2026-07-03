@@ -91,23 +91,95 @@ sap.ui.define([
 			});
 		},
 
-		onSearch: function (oEvent) {
-			var sQuery = (oEvent.getParameter("query") || oEvent.getParameter("newValue") || "").trim();
-			var oBinding = this.byId("idPCPTable").getBinding("items");
-			if (!oBinding) { return; }
+		onSearch: function () {
+			this._applyFilters();
+		},
+
+		onApplyFilters: function () {
+			this._applyFilters();
+		},
+
+		onClearFilters: function () {
+			this.byId("idPCPSearch").setValue("");
+			this.byId("idPCPStatusFilter").setSelectedKey("");
+			this.byId("idExcelFromDate").setValue("");
+			this.byId("idExcelToDate").setValue("");
+			this._applyFilters();
+		},
+
+		_applyFilters: function () {
+			var oTable = this.byId("idPCPTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			if (!oBinding) return;
+
+			var aFilters = [];
+
+			// 1. Search Filter
+			var sQuery = this.byId("idPCPSearch").getValue().trim();
 			if (sQuery) {
-				oBinding.filter([new Filter({
-					filters: [
-						new Filter("GateEntryNo", FilterOperator.Contains, sQuery),
-						new Filter("VendorDesc",  FilterOperator.Contains, sQuery),
-						new Filter("DCNumber",    FilterOperator.Contains, sQuery),
-						new Filter("GatepassNo",  FilterOperator.Contains, sQuery)
-					],
-					and: false
-				})]);
-			} else {
-				oBinding.filter([]);
+				var sLow = sQuery.toLowerCase();
+				aFilters.push(new Filter({
+					path: "",
+					test: function (oValue, oContext) {
+						var o = oContext ? oContext.getObject() : oValue;
+						if (!o) return false;
+						for (var key in o) {
+							if (o.hasOwnProperty(key) && o[key] !== null && o[key] !== undefined) {
+								if (typeof o[key] === "string" || typeof o[key] === "number" || typeof o[key] === "boolean") {
+									if (String(o[key]).toLowerCase().indexOf(sLow) !== -1) {
+										return true;
+									}
+								} else if (typeof o[key] === "object") {
+									try {
+										var sObjStr = JSON.stringify(o[key]).toLowerCase();
+										if (sObjStr.indexOf(sLow) !== -1) {
+											return true;
+										}
+									} catch (e) {}
+								}
+							}
+						}
+						return false;
+					}
+				}));
 			}
+
+			// 2. Status Filter (PCP Status: Closed if has GatepassNo, Pending if GatepassNo is empty)
+			var sStatus = this.byId("idPCPStatusFilter").getSelectedKey();
+			if (sStatus) {
+				aFilters.push(new Filter({
+					path: "GatepassNo",
+					test: function (sVal) {
+						if (sStatus === "Closed") {
+							return !!sVal;
+						} else {
+							return !sVal;
+						}
+					}
+				}));
+			}
+
+			// 3. Date Range Filter
+			var sFrom = this.byId("idExcelFromDate").getDateValue();
+			var sTo = this.byId("idExcelToDate").getDateValue();
+			if (sFrom || sTo) {
+				var oFrom = sFrom ? new Date(sFrom.getFullYear(), sFrom.getMonth(), sFrom.getDate()) : null;
+				var oTo = sTo ? new Date(sTo.getFullYear(), sTo.getMonth(), sTo.getDate(), 23, 59, 59, 999) : null;
+				aFilters.push(new Filter({
+					path: "GEDate",
+					test: function (sValue) {
+						if (!sValue) return false;
+						var aParts = sValue.split("-");
+						if (aParts.length !== 3) return false;
+						var dVal = new Date(parseInt(aParts[2]), parseInt(aParts[1], 10) - 1, parseInt(aParts[0]));
+						if (oFrom && dVal < oFrom) return false;
+						if (oTo && dVal > oTo) return false;
+						return true;
+					}
+				}));
+			}
+
+			oBinding.filter(aFilters);
 		},
 
 		_storeAndNavigate: function (oItem, sMode) {
@@ -204,6 +276,102 @@ sap.ui.define([
 
 		onNavBack: function () {
 			this.getRouter().navTo("home");
+		},
+
+		onPrintList: function () {
+			var oTable = this.byId("idPCPTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) { aObjects.push(oContext.getObject()); }
+				});
+			} else {
+				aObjects = this.getView().getModel("pcpManageList").getProperty("/results") || [];
+			}
+			if (!aObjects.length) {
+				sap.m.MessageToast.show("No record found");
+				return;
+			}
+			var sHtml = "<html><head><title>PCP List</title><style>";
+			sHtml += "body { font-family: Arial, sans-serif; padding: 20px; }";
+			sHtml += "h2 { text-align: center; color: #1F4E79; }";
+			sHtml += "table { width: 100%; border-collapse: collapse; margin-top: 20px; }";
+			sHtml += "th, td { border: 1px solid #BDC3C7; padding: 10px; text-align: left; font-size: 12px; }";
+			sHtml += "th { background-color: #F2F4F4; color: #1F4E79; font-weight: bold; }";
+			sHtml += "tr:nth-child(even) { background-color: #F8F9F9; }</style></head><body>";
+			sHtml += "<h2>PCP List</h2><table><thead><tr>";
+			sHtml += "<th>PCP No</th><th>PCP Date</th><th>Entry</th><th>GE No</th><th>GE Date</th><th>Supplier</th><th>Items</th><th>DC/INV No</th><th>Status</th>";
+			sHtml += "</tr></thead><tbody>";
+			aObjects.forEach(function (o) {
+				var sStatus = o.GatepassNo ? "Closed" : "Pending";
+				sHtml += "<tr>";
+				sHtml += "<td>" + (o.GatepassNo || "") + "</td>";
+				sHtml += "<td>" + (o.PCPDate || "") + "</td>";
+				sHtml += "<td>" + (o.EntryPoint || "") + "</td>";
+				sHtml += "<td>" + (o.GateEntryNo || "") + "</td>";
+				sHtml += "<td>" + (o.GEDate || "") + "</td>";
+				sHtml += "<td>" + (o.VendorDesc || "") + "</td>";
+				sHtml += "<td>" + (o.FirstItemDesc || "") + "</td>";
+				sHtml += "<td>" + (o.DCNumber || "") + "</td>";
+				sHtml += "<td>" + sStatus + "</td>";
+				sHtml += "</tr>";
+			});
+			sHtml += "</tbody></table></body></html>";
+			var oWindow = window.open("", "_blank");
+			oWindow.document.write(sHtml);
+			oWindow.document.close();
+			oWindow.focus();
+			setTimeout(function () { oWindow.print(); oWindow.close(); }, 500);
+		},
+
+		onCopyList: function () {
+			var oTable = this.byId("idPCPTable");
+			var oBinding = oTable ? oTable.getBinding("items") : null;
+			var aObjects = [];
+			if (oBinding) {
+				var aContexts = oBinding.getContexts(0, oBinding.getLength());
+				aContexts.forEach(function (oContext) {
+					if (oContext.getObject()) { aObjects.push(oContext.getObject()); }
+				});
+			} else {
+				aObjects = this.getView().getModel("pcpManageList").getProperty("/results") || [];
+			}
+			if (!aObjects.length) {
+				sap.m.MessageToast.show("No items to copy.");
+				return;
+			}
+			var sHeaders = ["PCP No", "PCP Date", "Entry", "GE No", "GE Date", "Supplier", "Items", "DC/INV No", "Status"];
+			var aLines = [sHeaders.join("\t")];
+			aObjects.forEach(function (o) {
+				var sStatus = o.GatepassNo ? "Closed" : "Pending";
+				aLines.push([
+					o.GatepassNo || "",
+					o.PCPDate || "",
+					o.EntryPoint || "",
+					o.GateEntryNo || "",
+					o.GEDate || "",
+					o.VendorDesc || "",
+					o.FirstItemDesc || "",
+					o.DCNumber || "",
+					sStatus
+				].join("\t"));
+			});
+			var sText = aLines.join("\n");
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(sText).then(function () {
+					sap.m.MessageToast.show("List copied to clipboard.");
+				});
+			} else {
+				var textArea = document.createElement("textarea");
+				textArea.value = sText;
+				document.body.appendChild(textArea);
+				textArea.select();
+				document.execCommand("copy");
+				document.body.removeChild(textArea);
+				sap.m.MessageToast.show("List copied to clipboard.");
+			}
 		}
 
 	});

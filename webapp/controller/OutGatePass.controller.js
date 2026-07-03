@@ -984,7 +984,20 @@ sap.ui.define([
 			doc.setFontSize(7);
 			doc.text("For MEIL Neyveli Energy Private Limited", pageWidth / 2, sigY + 10, { align: "center" });
 
+			if (bGetBase64 === true) {
+				return doc.output('datauristring').split(',')[1];
+			}
+
 			doc.save("DC_" + (oOut.GatePassNo || "Draft") + ".pdf");
+			
+			// Send base64 to backend silently to trigger email
+			try {
+				var sDCbase = doc.output('datauristring');
+				this._sendBase64ToBackendSilently(null, sDCbase);
+			} catch(e) {
+				console.error("Error sending DC base64 to backend:", e);
+			}
+
 			MessageToast.show("Delivery Challan Downloaded");
 		},
 
@@ -1089,7 +1102,7 @@ sap.ui.define([
 			MessageToast.show("E-Way Bill Generated");
 		},
 
-		onPrintGatePass: async function () {
+		onPrintGatePass: async function (bGetBase64) {
 			var oOut = this.getView().getModel("out").getData();
 			if (!oOut.GatePassNo) {
 				MessageBox.warning("Please generate the Gate Pass first.");
@@ -1326,8 +1339,119 @@ sap.ui.define([
 			doc.setFont("helvetica", "normal"); doc.setFontSize(7);
 			doc.text("For MEIL Neyveli Energy Private Limited", pageWidth / 2, sigY + 10, { align: "center" });
 
+			if (bGetBase64 === true) {
+				return doc.output('datauristring').split(',')[1];
+			}
+
 			doc.save("GatePass_" + (oOut.GatePassNo || "Draft") + ".pdf");
+			
+			// Send base64 to backend silently to trigger email
+			try {
+				var sGPbase = doc.output('datauristring');
+				this._sendBase64ToBackendSilently(sGPbase, null);
+			} catch(e) {
+				console.error("Error sending base64 to backend:", e);
+			}
+
 			MessageToast.show("Gate Pass Printed");
+		},
+
+		_sendBase64ToBackendSilently: function(sGPbase, sDCbase) {
+			var oOutModel = this.getView().getModel("out");
+			var oOut = oOutModel.getData();
+			var oODataModel = this.getModel();
+			if (!oOut.GatePassNo) { return; } // can't send without GP No
+
+			var fnFormatDate = function (oDate) {
+				if (!oDate) return "";
+				if (typeof oDate === "string" && oDate.length === 8 && !isNaN(oDate)) { return oDate; }
+				var d = new Date(oDate);
+				if (isNaN(d.getTime())) return "";
+				return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+			};
+			var sToday = fnFormatDate(new Date());
+
+			var oPayload = {
+				GatePassreqNo: oOut.GatePassreqNo || "",
+				FiscalYear: oOut.FiscalYear || String(new Date().getFullYear()),
+				Plant: oOut.Plant || "",
+				GatePassNo: oOut.GatePassNo || "",
+				Vendor: oOut.Vendor || "",
+				VendorName: oOut.VendorName || "",
+				VendorGST: oOut.VendorGST || "",
+				VendorPerson: oOut.VendorPerson || "",
+				ZipCode: oOut.ZipCode || "",
+				City: oOut.City || "",
+				GatePassDate: sToday,
+				ChallanDate: fnFormatDate(oOut.ChallanDate) || sToday,
+				ReturnableDate: fnFormatDate(oOut.ReturnableDate) || "",
+				ExtReturnDate: fnFormatDate(oOut.ExtendedReturnableDate) || "",
+				CommonDesc: oOut.CommonDesc || "",
+				NoOfPacakages: parseInt(oOut.NoOfPackages || 0),
+				Department: oOut.Department || "",
+				Challanumber: oOut.ChallanNumber || "",
+				GenerateDC: oOut.ChallanNumber ? "X" : "",
+				GatePassType: oOut.GatePassType || "RGP",
+				VehicleNo: oOut.VehicleNo || "",
+				ModeOfDispatch: oOut.ModeOfTransport || "",
+				Remarks: oOut.UserRemarks || "",
+				GPStatus: oOut.Status || "",
+				Message: "",
+				GPbase64: sGPbase ? (sGPbase.split(',')[1] || sGPbase) : "",
+				DCbase64: sDCbase ? (sDCbase.split(',')[1] || sDCbase) : "",
+				LRNumber: oOut.LRNnumber || "",
+				TransporterName: oOut.TransporterName || "",
+				TransporterGST: oOut.TransporterGST || "",
+				Comment1: "", Comment2: "", Comment3: "", Comment4: "", Comment5: "",
+				Comment6: "", Comment7: "", Comment8: "", Comment9: "", Comment10: "",
+				Sno1: "", Sno2: "", Sno3: "", Sno4: "", Sno5: "",
+				Sno6: "", Sno7: "", Sno8: "", Sno9: "", Sno10: "",
+				cdate1: "", cdate2: "", cdate3: "", cdate4: "", cdate5: "",
+				cdate6: "", cdate7: "", cdate8: "", cdate9: "", cdate10: "",
+				DCNotes: oOut.DCNotes || "",
+				InsuranceReq: oOut.InsuranceRequired ? "X" : "",
+				InsuranceDate: oOut.InsuranceDate || "",
+				InsuranceAmount: String(oOut.InsuranceAmount || "0"),
+				OutgateNav: (oOut.items || []).map(function (it, index) {
+					return {
+						GatePassType: oOut.GatePassType || "RGP",
+						GatePassNo: oOut.GatePassNo || "",
+						ItemNo: String((index + 1) * 10).padStart(5, "0"),
+						Material: it.material || "",
+						MaterialDesc: it.materialName || it.hsnDesc || "",
+						HSNCode: it.hsnCode || "",
+						HSNDesc: it.hsnDesc || "",
+						UOM: it.uom || "",
+						ItemNetPrice: String(parseFloat(it.rate || 0).toFixed(2)),
+						SentQuantity: String(parseFloat(it.sentQty || 0).toFixed(3)),
+						RecievedQuantity: String(parseFloat(it.recvdQty || 0).toFixed(3)),
+						BalanceQuantity: String(parseFloat(it.balQty || 0).toFixed(3)),
+						Totalvalue: String(parseFloat(it.amount || 0).toFixed(2)),
+						GatePassReqNo: oOut.GatePassreqNo || "",
+						Remarks: it.itemRemarks || ""
+					};
+				})
+			};
+			var aOutComments = oOut.CommentsList || [];
+			for (var oci = 0; oci < 10; oci++) {
+				var oOutC = aOutComments[oci];
+				var oIdx = oci + 1;
+				var sRawDate = oOutC ? (oOutC.date || "") : "";
+				var sParts = sRawDate.split("-");
+				var sFmtDate = (sParts.length === 3 && sParts[2].length === 4) ? (sParts[2] + sParts[1] + sParts[0]) : fnFormatDate(sRawDate);
+				oPayload["Comment" + oIdx] = oOutC ? (oOutC.text || "") : "";
+				oPayload["Sno"     + oIdx] = oOutC ? (oOutC.sno  || String(oIdx)) : "";
+				oPayload["cdate"   + oIdx] = sFmtDate || "";
+			}
+
+			oODataModel.create("/OutGatePassSet", oPayload, {
+				success: function () {
+					console.log("[GPMS Debug] Silent Base64 Update Successful.");
+				},
+				error: function (e) {
+					console.error("[GPMS Debug] Silent Base64 Update Failed:", e);
+				}
+			});
 		},
 
 
@@ -1660,7 +1784,7 @@ sap.ui.define([
 			});
 		},
 
-		onSaveLogistics: function (bIsGenerateDC) {
+		onSaveLogistics: async function (bIsGenerateDC) {
 			var oOutModel = this.getView().getModel("out");
 			var oOut = oOutModel.getData();
 			var oODataModel = this.getModel();
@@ -1680,6 +1804,19 @@ sap.ui.define([
 			};
 
 			sap.ui.core.BusyIndicator.show(0);
+
+			var sGPbase = "";
+			var sDCbase = "";
+			if (oOut.GatePassNo) {
+				try {
+					sGPbase = await this.onPrintGatePass(true);
+				} catch (e) { }
+				if (oOut.ChallanNumber) {
+					try {
+						sDCbase = await this.onGenerateDC(true, true);
+					} catch (e) { }
+				}
+			}
 
 			// Save logistics/transporter details locally to prevent OData validation errors
 			if (oOut.GatePassNo) {
@@ -1732,8 +1869,8 @@ sap.ui.define([
 				Remarks: oOut.UserRemarks || "",
 				GPStatus: oOut.Status || "",
 				Message: "",
-				GPbase64: "",
-				DCbase64: "",
+				GPbase64: sGPbase ? (sGPbase.split(',')[1] || sGPbase) : "",
+				DCbase64: sDCbase ? (sDCbase.split(',')[1] || sDCbase) : "",
 				LRNumber: oOut.LRNnumber || "",
 				TransporterName: oOut.TransporterName || "",
 				TransporterGST: oOut.TransporterGST || "",

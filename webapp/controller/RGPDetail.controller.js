@@ -25,7 +25,29 @@ sap.ui.define([
 			var sGPNo = oArgs.gpNo;
 			this._sCurrentGPNo = sGPNo;
 			if (sGPNo) {
-				this._loadData(sGPNo);
+				// Render immediately from the row the list cached in "selectedRGP",
+				// so the screen works even when the backend's direct GatePassNo filter
+				// returns nothing. Then refresh/enrich from the backend in the background.
+				var bFromCache = this._tryRenderFromCache(sGPNo);
+				this._loadData(sGPNo, bFromCache);
+			}
+		},
+
+		// Use the full row object the list stashed in the "selectedRGP" core model.
+		_tryRenderFromCache: function (sGPNo) {
+			try {
+				var oCoreModel = sap.ui.getCore().getModel("selectedRGP");
+				if (!oCoreModel) { return false; }
+				var oRow = oCoreModel.getData();
+				if (!oRow) { return false; }
+				var sTarget = (sGPNo || "").trim();
+				var bMatch = (oRow.GatePassNo || "").trim() === sTarget ||
+				             (oRow.GatePassreqNo || oRow.GatePassReqNo || "").trim() === sTarget;
+				if (!bMatch) { return false; }
+				this._mapData(JSON.parse(JSON.stringify(oRow)));
+				return true;
+			} catch (e) {
+				return false;
 			}
 		},
 
@@ -84,71 +106,109 @@ sap.ui.define([
 			}
 		},
 
-		_loadData: function (sGPNo) {
+		_loadData: function (sGPNo, bHaveCache) {
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (!oODataModel) { return; }
+			var that = this;
+
+			var fnFail = function (sMsg) {
+				sap.ui.core.BusyIndicator.hide();
+				// If the list already handed us the row (cache render), stay silent —
+				// the screen is already populated and an error box would be misleading.
+				if (!bHaveCache) {
+					MessageBox.error(sMsg || ("No data found for Gate Pass No: " + sGPNo));
+				}
+			};
 
 			sap.ui.core.BusyIndicator.show(0);
 
+			// Tier 1 — direct GatePassNo filter.
 			oODataModel.read("/OutGatePassSet", {
-				filters: [
-					new sap.ui.model.Filter("GatePassNo", sap.ui.model.FilterOperator.EQ, sGPNo)
-				],
+				filters: [new sap.ui.model.Filter("GatePassNo", sap.ui.model.FilterOperator.EQ, sGPNo)],
 				urlParameters: { "$expand": "OutgateNav" },
 				success: function (oData) {
-					sap.ui.core.BusyIndicator.hide();
 					var aResults = oData.results || [];
-					if (aResults.length === 0) {
-						MessageBox.error("No data found for Gate Pass No: " + sGPNo);
-						return;
-					}
+					if (aResults.length > 0) { that._processResults(aResults, sGPNo); return; }
 
-					var oResult = aResults.find(function (r) {
-						return (r.GatePassNo || "").trim() === sGPNo.trim();
-					}) || aResults[0];
+					// Tier 2 — the value may actually be a request number.
+					oODataModel.read("/OutGatePassSet", {
+						filters: [new sap.ui.model.Filter("GatePassreqNo", sap.ui.model.FilterOperator.EQ, sGPNo)],
+						urlParameters: { "$expand": "OutgateNav" },
+						success: function (oDataReq) {
+							var aReq = oDataReq.results || [];
+							if (aReq.length > 0) { that._processResults(aReq, sGPNo); return; }
 
-					var sResolvedGPNo = (oResult.GatePassNo || sGPNo).trim();
+							// Tier 3 — fetch all RGP passes and match locally. Works around
+							// the backend quirk where a direct GatePassNo filter drops the row
+							// (same fallback NRGPDetail already uses).
+							oODataModel.read("/OutGatePassSet", {
+								filters: [new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, "RGP")],
+								urlParameters: { "$expand": "OutgateNav" },
+								success: function (oAll) {
+									var sT = (sGPNo || "").trim();
+									var aMatched = (oAll.results || []).filter(function (r) {
+										return (r.GatePassNo || "").trim() === sT ||
+										       (r.GatePassReqNo || "").trim() === sT ||
+										       (r.GatePassreqNo || "").trim() === sT;
+									});
+									if (aMatched.length > 0) { that._processResults(aMatched, sGPNo); }
+									else { fnFail(); }
+								},
+								error: function () { fnFail("Error loading Gate Pass details."); }
+							});
+						},
+						error: function () { fnFail("Error loading Gate Pass details."); }
+					});
+				},
+				error: function () { fnFail("Error loading Gate Pass details."); }
+			});
+		},
 
-					var aCombinedItems = [];
-					aResults.forEach(function (res) {
-						if ((res.GatePassNo || "").trim() !== sResolvedGPNo) { return; }
+		// Combine expanded items across the matched header rows and hand off to _mapData.
+		_processResults: function (aResults, sFallbackGPNo) {
+			sap.ui.core.BusyIndicator.hide();
+			if (!aResults || aResults.length === 0) { return; }
+
+			var oResult = aResults.find(function (r) {
+				return (r.GatePassNo || "").trim() === (sFallbackGPNo || "").trim();
+			}) || aResults[0];
+
+			var sResolvedGPNo = (oResult.GatePassNo || sFallbackGPNo || "").trim();
+
+			var aCombinedItems = [];
+			aResults.forEach(function (res) {
+				if ((res.GatePassNo || "").trim() !== sResolvedGPNo) { return; }
+				var aItems = (res.OutgateNav && res.OutgateNav.results) || (Array.isArray(res.OutgateNav) ? res.OutgateNav : []);
+				aItems.forEach(function (itm) {
+					var bExists = aCombinedItems.some(function (existing) {
+						return existing.ItemNo === itm.ItemNo;
+					});
+					if (!bExists) { aCombinedItems.push(itm); }
+				});
+			});
+
+			if (aCombinedItems.length === 0) {
+				aResults.forEach(function (res) {
+					if (res.Material || res.ItemNo) {
+						var bExists = aCombinedItems.some(function (existing) {
+							return existing.ItemNo === res.ItemNo;
+						});
+						if (!bExists) { aCombinedItems.push(res); }
+					} else {
 						var aItems = (res.OutgateNav && res.OutgateNav.results) || (Array.isArray(res.OutgateNav) ? res.OutgateNav : []);
 						aItems.forEach(function (itm) {
-							var bExists = aCombinedItems.some(function (existing) {
+							var bEx = aCombinedItems.some(function (existing) {
 								return existing.ItemNo === itm.ItemNo;
 							});
-							if (!bExists) { aCombinedItems.push(itm); }
-						});
-					});
-
-					if (aCombinedItems.length === 0) {
-						aResults.forEach(function (res) {
-							if (res.Material || res.ItemNo) {
-								var bExists = aCombinedItems.some(function (existing) {
-									return existing.ItemNo === res.ItemNo;
-								});
-								if (!bExists) { aCombinedItems.push(res); }
-							} else {
-								var aItems = (res.OutgateNav && res.OutgateNav.results) || (Array.isArray(res.OutgateNav) ? res.OutgateNav : []);
-								aItems.forEach(function (itm) {
-									var bEx = aCombinedItems.some(function (existing) {
-										return existing.ItemNo === itm.ItemNo;
-									});
-									if (!bEx) { aCombinedItems.push(itm); }
-								});
-							}
+							if (!bEx) { aCombinedItems.push(itm); }
 						});
 					}
+				});
+			}
 
-					oResult.OutgateNav = { results: aCombinedItems };
-					oResult.GatePassNo = sGPNo;
-					this._mapData(oResult);
-				}.bind(this),
-				error: function () {
-					sap.ui.core.BusyIndicator.hide();
-					MessageBox.error("Error loading Gate Pass details.");
-				}
-			});
+			oResult.OutgateNav = { results: aCombinedItems };
+			oResult.GatePassNo = sResolvedGPNo || sFallbackGPNo;
+			this._mapData(oResult);
 		},
 
 
@@ -475,6 +535,20 @@ sap.ui.define([
 
 			var sGPbase = "";
 			var sDCbase = "";
+			if (sAuthorativeGPNo) {
+				try {
+					sGPbase = await this.onPRINTGATEPASSButtonPress(true);
+				} catch (e) {
+					console.error("Error generating GP PDF base64:", e);
+				}
+				try {
+					if (oData.ChallanNumber) {
+						sDCbase = await this.onGenerateDCButtonPress(true);
+					}
+				} catch (e) {
+					console.error("Error generating DC PDF base64:", e);
+				}
+			}
 
 			var oPayload = {
 				GatePassreqNo: oData.GatePassreqNo || "",
@@ -504,8 +578,8 @@ sap.ui.define([
 				Remarks: oData.Remarks || "",
 				GPStatus: oData.GPStatus || "",
 				Message: "",
-				GPbase64: sGPbase,
-				DCbase64: sDCbase,
+				GPbase64: sGPbase ? (sGPbase.split(',')[1] || sGPbase) : "",
+				DCbase64: sDCbase ? (sDCbase.split(',')[1] || sDCbase) : "",
 				TransporterName: oData.TransporterName || "",
 				TransporterGST: oData.TransporterGST || "",
 				Comment1: "", Comment2: "", Comment3: "", Comment4: "", Comment5: "",
@@ -919,6 +993,15 @@ sap.ui.define([
 				return doc.output('datauristring').split(',')[1];
 			}
 			doc.save("GatePass_RGP_" + (oOut.GatePassNo || "Draft") + ".pdf");
+			
+			// Send base64 to backend silently to trigger email
+			try {
+				var sGPbase = doc.output('datauristring');
+				this._sendBase64ToBackendSilently(sGPbase, null);
+			} catch(e) {
+				console.error("Error sending base64 to backend:", e);
+			}
+
 			MessageToast.show("Gate Pass Printed");
 		},
 
@@ -1074,7 +1157,118 @@ sap.ui.define([
 				return doc.output('datauristring').split(',')[1];
 			}
 			doc.save("DC_" + (oOut.GatePassNo || "Draft") + ".pdf");
+
+			// Send base64 to backend silently to trigger email
+			try {
+				var sDCbase = doc.output('datauristring');
+				this._sendBase64ToBackendSilently(null, sDCbase);
+			} catch(e) {
+				console.error("Error sending DC base64 to backend:", e);
+			}
+
 			MessageToast.show("Delivery Challan Downloaded");
+		},
+
+		_sendBase64ToBackendSilently: function(sGPbase, sDCbase) {
+			var oData = this.getView().getModel("rgp").getData();
+			var oODataModel = this.getOwnerComponent().getModel();
+			var sAuthorativeGPNo = this._sCurrentGPNo || oData.GatePassNo || "";
+			if (!sAuthorativeGPNo) { return; } // can't send without GP No
+
+			var sToday = new Date().toISOString().split("T")[0];
+			var sChallanDate = oData.ChallanDate ? new Date(oData.ChallanDate).toISOString().split("T")[0] : sToday;
+			var fnFormatDate = function (oDate) {
+				if (!oDate) return "";
+				if (typeof oDate === "string" && oDate.length === 8 && !isNaN(oDate)) { return oDate; }
+				var d = new Date(oDate);
+				if (isNaN(d.getTime())) return "";
+				return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+			};
+
+			var oPayload = {
+				GatePassreqNo: oData.GatePassreqNo || "",
+				FiscalYear: oData.FiscalYear || String(new Date().getFullYear()),
+				Plant: oData.Plant || "",
+				GatePassNo: sAuthorativeGPNo,
+				Vendor: oData.VendorCode || oData.Vendor || "",
+				VendorName: oData.VendorName || "",
+				VendorGST: oData.VendorGST || "",
+				VendorPerson: oData.VendorPerson || "",
+				ZipCode: oData.ZipCode || "",
+				City: oData.City || "",
+				GatePassDate: sToday,
+				ChallanDate: sChallanDate,
+				ReturnableDate: fnFormatDate(oData.ReturnableDate) || "",
+				ExtReturnDate: fnFormatDate(oData.ExtendedReturnableDate) || "",
+				CommonDesc: oData.CommonDesc || "",
+				NoOfPacakages: parseInt(oData.NoOfPacakages || 0),
+				Department: oData.Department || "",
+				Challanumber: oData.ChallanNumber || "",
+				GenerateDC: oData.ChallanNumber ? "X" : "",
+				GatePassType: oData.GatePassType || "RGP",
+				VehicleNo: oData.VehicleNo || "",
+				LRNumber: oData.LRNnumber || "",
+				ModeOfDispatch: oData.ModeOfTransport || "",
+				Remarks: oData.Remarks || "",
+				GPStatus: oData.GPStatus || "",
+				Message: "",
+				GPbase64: sGPbase ? (sGPbase.split(',')[1] || sGPbase) : "",
+				DCbase64: sDCbase ? (sDCbase.split(',')[1] || sDCbase) : "",
+				TransporterName: oData.TransporterName || "",
+				TransporterGST: oData.TransporterGST || "",
+				InsuranceReq: oData.InsuranceRequired ? "X" : "",
+				InsuranceDate: oData.InsuranceDate || "",
+				InsuranceAmount: String(oData.InsuranceAmount || "0"),
+				Comment1: "", Comment2: "", Comment3: "", Comment4: "", Comment5: "",
+				Comment6: "", Comment7: "", Comment8: "", Comment9: "", Comment10: "",
+				Sno1: "", Sno2: "", Sno3: "", Sno4: "", Sno5: "",
+				Sno6: "", Sno7: "", Sno8: "", Sno9: "", Sno10: "",
+				cdate1: "", cdate2: "", cdate3: "", cdate4: "", cdate5: "",
+				cdate6: "", cdate7: "", cdate8: "", cdate9: "", cdate10: "",
+				DCNotes: oData.DCNotes || "",
+				OutgateNav: (oData.items || []).map(function (it, i) {
+					return {
+						GatePassType: "RGP",
+						GatePassNo: sAuthorativeGPNo,
+						ItemNo: it.ItemNo || String((i + 1) * 10).padStart(5, "0"),
+						Material: it.Material || "",
+						MaterialDesc: it.MaterialDesc || it.HSNDesc || "",
+						HSNCode: it.HSNCode || "",
+						HSNDesc: it.HSNDesc || "",
+						UOM: it.UOM || "",
+						ItemNetPrice: String(parseFloat(it.ItemNetPrice || 0).toFixed(2)),
+						SentQuantity: String(parseFloat(it.SentQuantity || 0).toFixed(3)),
+						RecievedQuantity: String(parseFloat(it.RecievedQuantity || 0).toFixed(3)),
+						BalanceQuantity: String(parseFloat(it.SentQuantity || 0).toFixed(3)),
+						Totalvalue: String(parseFloat(it.Totalvalue || 0).toFixed(2)),
+						GatePassReqNo: oData.GatePassreqNo || "",
+						Remarks: it.Remarks || ""
+					};
+				})
+			};
+
+			var aComments = oData.CommentsList || [];
+			for (var iC = 0; iC < 10; iC++) {
+				var oC = aComments[iC];
+				var iIdx = iC + 1;
+				var sRawDate = oC ? (oC.date || "") : "";
+				var sParts = sRawDate.split("-");
+				var sFmtDate = (sParts.length === 3 && sParts[2].length === 4)
+					? (sParts[2] + sParts[1] + sParts[0])
+					: sRawDate; // assuming already YYYYMMDD if coming from backend
+				oPayload["Comment" + iIdx] = oC ? (oC.text || "") : "";
+				oPayload["Sno" + iIdx] = oC ? (oC.sno || String(iIdx)) : "";
+				oPayload["cdate" + iIdx] = sFmtDate || "";
+			}
+
+			oODataModel.create("/OutGatePassSet", oPayload, {
+				success: function () {
+					console.log("[GPMS Debug] Silent Base64 Update Successful.");
+				},
+				error: function (e) {
+					console.error("[GPMS Debug] Silent Base64 Update Failed:", e);
+				}
+			});
 		},
 
 		_numberToWords: function (num) {
