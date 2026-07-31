@@ -4,7 +4,7 @@ sap.ui.define([
 	"sap/ui/model/Filter",
 	"sap/ui/model/FilterOperator",
 	"sap/m/MessageBox",
-	"zgpms/meilpower/com/utils/ExcelExport"
+	"../utils/ExcelExport"
 ], function (BaseController, JSONModel, Filter, FilterOperator, MessageBox, ExcelExport) {
 	"use strict";
 
@@ -91,9 +91,6 @@ sap.ui.define([
 				}
 			});
 		},
-
-
-
 
 		onNavBack: function () {
 			this.getRouter().navTo("home");
@@ -316,28 +313,19 @@ sap.ui.define([
 
 		onRowPress: function (oEvent) {
 			var oItem = oEvent.getSource();
-			if (oItem.getMetadata().getName() === "sap.m.Button") {
+			if (oItem && oItem.getMetadata().getName() === "sap.m.Button") {
 				oItem = oItem.getParent();
 			}
-			var oContext = oItem.getBindingContext("scrapList");
+			var oContext = oItem ? oItem.getBindingContext("scrapList") : null;
+			if (!oContext) { return; }
+
 			var sRequestId = oContext.getProperty("requestId");
 			var sStatus = oContext.getProperty("status");
-
 			var oUserModel = sap.ui.getCore().getModel("user");
-			var bIsHod = oUserModel && oUserModel.getProperty("/IsHodUser");
-			var bIsStoreUser = oUserModel && oUserModel.getProperty("/IsStoreUser");
-			
-			var bApproved = sStatus === "Approved" || sStatus === "APPROVED" || sStatus === "A";
+			var bIsStoreUser = oUserModel ? oUserModel.getProperty("/IsStoreUser") : false;
 
-			if (bIsHod) {
-				this.getRouter().navTo("ScrapRequestDetail", {
-					gpNo: encodeURIComponent(sRequestId)
-				});
-				return;
-			}
-
-			if (bIsStoreUser) {
-				if (bApproved) {
+			if (sRequestId) {
+				if (sStatus === "Approved" && bIsStoreUser) {
 					this.getRouter().navTo("ScrapGatepassCreationWithReq", {
 						reqNo: encodeURIComponent(sRequestId)
 					});
@@ -346,17 +334,16 @@ sap.ui.define([
 						gpNo: encodeURIComponent(sRequestId)
 					});
 				}
-				return;
 			}
+		},
 
-			if (bApproved) {
-				MessageBox.error("Already gate pass created for this request number");
-				return;
-			}
-			
-			this.getRouter().navTo("ScrapGatepassCreationWithReq", {
-				reqNo: encodeURIComponent(sRequestId)
-			});
+		onSort: function () {
+			this._openSortDialog("scrapRequestTable", [
+				{ key: "requestId", text: "Request No", selected: true },
+				{ key: "requestDateStr", text: "Date" },
+				{ key: "vehicleDetails", text: "Vehicle No" },
+				{ key: "status", text: "Status" }
+			]);
 		}
 
 	});

@@ -454,9 +454,66 @@ doc.add_paragraph()
 doc.add_page_break()
 
 # ═══════════════════════════════════════════════════════════════
+#  SCRAP GATE PASS (NRGP) PROCESS
+# ═══════════════════════════════════════════════════════════════
+add_heading("5.  Scrap Non-Returnable Gate Pass (NRGP) Process", 1)
+add_body(
+    "The Scrap Gate Pass module processes outbound dispatches of non-returnable scrap materials "
+    "(such as Metal, Rubber, Waste Oil, Plastic, Copper, Batteries, Spent Oil). "
+    "It follows a two-tier approval workflow (HOD and Store Manager) before the final "
+    "Scrap Gate Pass is generated and stock is deducted from Scrap Inventory."
+)
+doc.add_paragraph()
+
+# Scrap Steps
+add_step_heading("S1", "Create Scrap Request")
+add_body("The Requestor opens the Scrap Request Creation screen to initiate a scrap collection request.")
+add_bullet("URL: http://localhost:8080/index.html#/ScrapRequestCreation")
+add_bullet("Request Date — Auto-filled with current date")
+add_bullet("Material Type — Select category (Metal, Rubber, Oil, Plastic, Copper, Batteries, Spent Oil)")
+add_bullet("Description — Enter text manually or click the F4 / Value Help icon to search and select from the Material Catalog")
+add_bullet("Weighment slip Ticket No — Editable field to enter the weighment slip number")
+add_bullet("Challan Date — Select using the date picker control (dd-MM-yyyy)")
+add_bullet("Vehicle Name & Number — Enter transport vehicle details")
+add_bullet("Scrap Collect From Area — Specify collection location/storage area")
+add_bullet("Remarks — Add any specific notes")
+add_bullet("Click Submit — Request is created with status 'Pending'")
+img_placeholder("Scrap Request Creation — Item Table & F4 Material Description Value Help")
+doc.add_paragraph()
+
+add_step_heading("S2", "Scrap Request Approval (HOD & Store Manager)")
+add_body("Approved scrap requests undergo dual-level approval before gate pass creation.")
+add_bullet("Open Scrap Request List (http://localhost:8080/index.html#/ScrapRequestList)")
+add_bullet("Click any row or navigation icon to open the Scrap Request Detail page")
+add_bullet("Level 1 (HOD): HOD reviews request details, enters HOD Remarks, and clicks Approve (Status -> 'Store Approval Pending')")
+add_bullet("Level 2 (Store Manager): Store Manager reviews details, enters Store Remarks, and clicks Approve (Status -> 'Approved')")
+add_bullet("Inventory Action: Upon Store Approval, material quantities are credited to Scrap Inventory")
+img_placeholder("Scrap Request Detail — Approval Actions (Approve / Reject / Amend)")
+doc.add_paragraph()
+
+add_step_heading("S3", "Scrap Gate Pass Creation")
+add_body("Once the Scrap Request is Approved, the Store User generates the final Scrap Gate Pass.")
+add_bullet("Open Scrap Gatepass Creation (http://localhost:8080/index.html#/ScrapGatepassCreation)")
+add_bullet("Select Approved Scrap Request No — Customer, Vehicle, Weighment Ticket, and Challan Date auto-populate")
+add_bullet("Sendout Qty — System validates sendout qty against available Scrap Inventory stock")
+add_bullet("Click Submit — System generates Scrap Gate Pass (e.g. SGP2024-25-xxxx) and deducts quantities from Scrap Inventory")
+img_placeholder("Scrap Gatepass Creation & Generation Success Dialog")
+doc.add_paragraph()
+
+add_step_heading("S4", "Scrap Gate Pass Detail & Print")
+add_body("The generated Scrap Gate Pass is printed for security gate verification.")
+add_bullet("Open Scrap Gatepass List (http://localhost:8080/index.html#/ScrapGatepassList)")
+add_bullet("Select Gate Pass to view full details")
+add_bullet("Click Print to generate the Non-Returnable Scrap Gate Pass PDF for security exit clearance")
+img_placeholder("Scrap Gate Pass Detail & Printable Document")
+doc.add_paragraph()
+
+doc.add_page_break()
+
+# ═══════════════════════════════════════════════════════════════
 #  STATUS REFERENCE
 # ═══════════════════════════════════════════════════════════════
-add_heading("5.  Status Reference", 1)
+add_heading("6.  Status Reference", 1)
 status_data = [
     ("Pending",   "Warning (Orange)", "Request submitted; waiting for HOD or Store approval"),
     ("Approved",  "Success (Green)",  "Approved by both HOD and Store; ready for Gate Pass generation"),

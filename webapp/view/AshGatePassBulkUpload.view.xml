@@ -19,7 +19,7 @@
 					<VBox class="sapUiSmallMargin">
 						<Text text="Use this tool to create multiple Ash Gate Passes directly from an Excel payload. The approval workflow will be bypassed automatically." class="sapUiSmallMarginBottom"/>
 						<Text text="Instructions:" class="sapUiTinyMarginBottom" style="bold"/>
-						<FormattedText htmlText="&lt;ol&gt;&lt;li&gt;Download the template Excel file by clicking the &lt;b&gt;Download Template&lt;/b&gt; button.&lt;/li&gt;&lt;li&gt;Fill in the columns: &lt;b&gt;SalesDocument&lt;/b&gt;, &lt;b&gt;VehicleNo&lt;/b&gt;, &lt;b&gt;RequestedQuantity&lt;/b&gt;, &lt;b&gt;ItemNetPrice&lt;/b&gt;, &lt;b&gt;Remarks&lt;/b&gt;, &lt;b&gt;TransporterName&lt;/b&gt;, &lt;b&gt;TransporterGst&lt;/b&gt;.&lt;/li&gt;&lt;li&gt;Click the &lt;b&gt;Choose File&lt;/b&gt; button, select your completed Excel file, and review the contents in the table below.&lt;/li&gt;&lt;li&gt;Click &lt;b&gt;Create Gate Passes&lt;/b&gt; at the bottom of the page to initiate the creation process.&lt;/li&gt;&lt;/ol&gt;"/>
+						<FormattedText htmlText="&lt;ol&gt;&lt;li&gt;Download the template Excel file by clicking the &lt;b&gt;Download Template&lt;/b&gt; button.&lt;/li&gt;&lt;li&gt;Fill in the columns: &lt;b&gt;Sales Document&lt;/b&gt;, &lt;b&gt;Vehicle No&lt;/b&gt;, &lt;b&gt;Sent Quantity&lt;/b&gt; (the quantity dispatched per trip — older sheets with &lt;i&gt;Requested Quantity&lt;/i&gt; are also accepted), &lt;b&gt;Item Net Price&lt;/b&gt;, &lt;b&gt;Remarks&lt;/b&gt;, &lt;b&gt;Transporter Name&lt;/b&gt;, &lt;b&gt;Transporter GST&lt;/b&gt;.&lt;/li&gt;&lt;li&gt;Each Excel row creates one gate pass — repeat the vehicle number on multiple rows for multiple trips.&lt;/li&gt;&lt;li&gt;Click the &lt;b&gt;Choose File&lt;/b&gt; button, select your completed Excel file, and review the contents in the table below.&lt;/li&gt;&lt;li&gt;Click &lt;b&gt;Create Gate Passes&lt;/b&gt; at the bottom of the page to initiate the creation process.&lt;/li&gt;&lt;/ol&gt;"/>
 						
 						<HBox class="sapUiSmallMarginTop" alignItems="Center">
 							<Button icon="sap-icon://excel-attachment" text="Download Template" press=".onDownloadTemplate" type="Ghost" class="sapUiSmallMarginEnd"/>
@@ -42,7 +42,7 @@
 							<Column><Text text="Row #" class="gpmsHeaderText"/></Column>
 							<Column><Text text="Sales Doc" class="gpmsHeaderText"/></Column>
 							<Column><Text text="Vehicle No" class="gpmsHeaderText"/></Column>
-							<Column><Text text="Quantity" class="gpmsHeaderText"/></Column>
+							<Column><Text text="Sent Qty" class="gpmsHeaderText"/></Column>
 							<Column><Text text="Rate (Price)" class="gpmsHeaderText"/></Column>
 							<Column><Text text="Transporter" class="gpmsHeaderText"/></Column>
 							<Column><Text text="Status" class="gpmsHeaderText"/></Column>

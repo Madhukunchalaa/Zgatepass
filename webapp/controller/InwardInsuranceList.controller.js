@@ -150,18 +150,19 @@ sap.ui.define([
 				return;
 			}
 			var that = this;
+			var iSno = 1;
 			var aRows = aObjects.map(function (o) {
 				return {
-					"Invoice Number": o.InvoiceNumber || "",
-					"Insurance Date": that.formatDate(o.InsuranceDate) || "",
-					"Received Date": that.formatDate(o.RecievedDate) || "",
-					"Vendor Name": o.VendorName || "",
-					"Vendor Address": o.VendorAddress || "",
-					"Mode of Transport": o.ModeOfTransport || "",
-					"LR Number": o.LRNumber || "",
-					"Vehicle No": o.VehicleNo || "",
+					"Sno": iSno++,
+					"Doc No": o.InvoiceNumber || "",
+					"Ins Date": that.formatDate(o.InsuranceDate) || "",
+					"Sent/ Received Date": that.formatDate(o.RecievedDate) || "",
+					"LRV No": [o.LRNumber, o.VehicleNo].filter(Boolean).join(" / ") || o.LRNumber || o.VehicleNo || "",
+					"From": o.VendorName || "",
+					"To": o.VendorAddress || "",
+					"Mode of Trans": o.ModeOfTransport || "",
 					"Invoice Value": o.InvoiceValue || "0.00",
-					"RGP Common Desc": o.RGPCoomonDesc || ""
+					"Desc of Items": o.RGPCoomonDesc || ""
 				};
 			});
 			var aParts = ["Inward_Insurance"];
@@ -286,6 +287,20 @@ sap.ui.define([
 				}
 			}
 			return vDate;
+		},
+
+		onSort: function () {
+			this._openSortDialog("idInwardInsuranceTable", [
+				{ key: "InvoiceNumber", text: "Invoice Number" },
+				{ key: "InsuranceDate", text: "Insurance Date" },
+				{ key: "RecievedDate", text: "Received Date", selected: true },
+				{ key: "VendorName", text: "Vendor Name" },
+				{ key: "ModeOfTransport", text: "Mode of Transport" },
+				{ key: "LRNumber", text: "LR Number" },
+				{ key: "VehicleNo", text: "Vehicle No" },
+				{ key: "InvoiceValue", text: "Invoice Value" },
+				{ key: "RGPCoomonDesc", text: "Description" }
+			]);
 		}
 
 	});

@@ -2,6 +2,7 @@
 	controllerName="zgpms.meilpower.com.controller.AshGatePassRequestList"
 	xmlns="sap.m"
 	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:core="sap.ui.core"
 	height="100%">
 	<Page
 		title="Ash Gate Pass Request List"
@@ -12,7 +13,7 @@
 			<VBox class="sapUiSmallMargin">
 				<Table
 					id="ashReqListTable"
-					items="{path: '/AshHdrSet', filters: [{path: 'GatePassType', operator: 'EQ', value1: 'NRGP'}]}"
+					items="{ashReqList>/results}"
 					noDataText="No Ash Gate Pass Requests found"
 					class="gpmsTable"
 					alternateRowColors="true">
@@ -34,33 +35,34 @@
 							<Button text="Apply" type="Emphasized" press=".onApplyFilters"/>
 							<Button text="Clear" press=".onClearFilters"/>
 							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel" class="sapUiTinyMarginEnd"/>
+							<Button icon="sap-icon://sort" tooltip="Sort" press=".onSort" type="Transparent" class="sapUiTinyMarginEnd"/>
 							<Button icon="sap-icon://copy" text="Copy" press=".onCopyList" tooltip="Copy list to clipboard" class="sapUiTinyMarginEnd"/>
 							<Button icon="sap-icon://print" text="Print List" press=".onPrintList" tooltip="Print list"/>
 						</OverflowToolbar>
 					</headerToolbar>
 					<columns>
-						<Column><Text text="Request No" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Gate Pass No" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Sales Document" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Customer Name" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Vehicle No" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="GP Date" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Approval" class="gpmsTableHeaderText"/></Column>
+						<Column><Button text="Request No" icon="{= ${sortModel>/GatePassReqNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GatePassReqNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GatePassReqNo"/><core:CustomData key="tableName" value="ashReqListTable"/></customData></Button></Column>
+						<Column><Button text="Gate Pass No" icon="{= ${sortModel>/GatePassNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GatePassNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GatePassNo"/><core:CustomData key="tableName" value="ashReqListTable"/></customData></Button></Column>
+						<Column><Button text="Sales Document" icon="{= ${sortModel>/SalesDocument} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/SalesDocument} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="SalesDocument"/><core:CustomData key="tableName" value="ashReqListTable"/></customData></Button></Column>
+						<Column><Button text="Customer Name" icon="{= ${sortModel>/CustomerName} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/CustomerName} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="CustomerName"/><core:CustomData key="tableName" value="ashReqListTable"/></customData></Button></Column>
+						<Column><Button text="Vehicle No" icon="{= ${sortModel>/VehicleNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/VehicleNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="VehicleNo"/><core:CustomData key="tableName" value="ashReqListTable"/></customData></Button></Column>
+						<Column><Button text="GP Date" icon="{= ${sortModel>/GPDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GPDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GPDate"/><core:CustomData key="tableName" value="ashReqListTable"/></customData></Button></Column>
+						<Column><Button text="Approval" icon="{= ${sortModel>/Status} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/Status} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="Status"/><core:CustomData key="tableName" value="ashReqListTable"/></customData></Button></Column>
 						<Column hAlign="Center" width="4rem"><Text text="Action" class="gpmsTableHeaderText"/></Column>
 					</columns>
 					<items>
 						<ColumnListItem type="Navigation" press=".onRowPress" class="gpmsTableRow">
 							<cells>
-								<Text text="{GatePassReqNo}" class="gpmsTableText"/>
-								<Text text="{GatePassNo}" class="gpmsTableText"/>
-								<Text text="{SalesDocument}" class="gpmsTableText"/>
-								<Text text="{CustomerName}" class="gpmsTableText"/>
-								<Text text="{VehicleNo}" class="gpmsTableText"/>
-								<Text text="{path: 'GPDate', formatter: '.formatDate'}" class="gpmsTableText"/>
+								<Text text="{ashReqList>GatePassReqNo}" class="gpmsTableText"/>
+								<Text text="{ashReqList>GatePassNo}" class="gpmsTableText"/>
+								<Text text="{ashReqList>SalesDocument}" class="gpmsTableText"/>
+								<Text text="{ashReqList>CustomerName}" class="gpmsTableText"/>
+								<Text text="{ashReqList>VehicleNo}" class="gpmsTableText"/>
+								<Text text="{path: 'ashReqList>GPDate', formatter: '.formatDate'}" class="gpmsTableText"/>
 								<ObjectStatus
-									text="{= ${Approval1} === 'A1' ? 'Approved' : ${Approval1} === 'R' ? 'Rejected' : 'Pending' }"
-									state="{= ${Approval1} === 'A1' ? 'Success' : ${Approval1} === 'R' ? 'Error' : 'Warning' }"
-									icon="{= ${Approval1} === 'A1' ? 'sap-icon://accept' : ${Approval1} === 'R' ? 'sap-icon://cancel' : 'sap-icon://pending' }"/>
+									text="{= ${ashReqList>Approval1} === 'A1' ? 'Approved' : ${ashReqList>Approval1} === 'R' ? 'Rejected' : 'Pending' }"
+									state="{= ${ashReqList>Approval1} === 'A1' ? 'Success' : ${ashReqList>Approval1} === 'R' ? 'Error' : 'Warning' }"
+									icon="{= ${ashReqList>Approval1} === 'A1' ? 'sap-icon://accept' : ${ashReqList>Approval1} === 'R' ? 'sap-icon://cancel' : 'sap-icon://pending' }"/>
 								<Button icon="sap-icon://navigation-right-arrow" type="Transparent" press=".onRowPress" tooltip="Open Details"/>
 							</cells>
 						</ColumnListItem>

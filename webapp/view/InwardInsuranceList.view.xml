@@ -29,20 +29,21 @@
 							<DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px" change=".onDateFilterChange"/>
 							<DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px" change=".onDateFilterChange"/>
 							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel"/>
+							<Button icon="sap-icon://sort" tooltip="Sort" press=".onSort" type="Transparent"/>
 							<Button id="idInsCopyListBtn" icon="sap-icon://copy" text="Copy" press=".onCopyList" tooltip="Copy list to clipboard"/>
 							<Button id="idInsPrintListBtn" icon="sap-icon://print" text="Print List" press=".onPrintList" tooltip="Print list"/>
 						</OverflowToolbar>
 					</headerToolbar>
 					<columns>
-						<Column><Text text="Invoice Number" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Insurance Date" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Received Date" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Vendor Name" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Mode of Transport" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="LR Number" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Vehicle No" class="gpmsTableHeaderText"/></Column>
-						<Column hAlign="Right"><Text text="Invoice Value" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Description" class="gpmsTableHeaderText"/></Column>
+						<Column><Button text="Invoice Number" icon="{= ${sortModel>/InvoiceNumber} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/InvoiceNumber} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="InvoiceNumber"/><core:CustomData key="tableName" value="idInwardInsuranceTable"/></customData></Button></Column>
+						<Column><Button text="Insurance Date" icon="{= ${sortModel>/InsuranceDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/InsuranceDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="InsuranceDate"/><core:CustomData key="tableName" value="idInwardInsuranceTable"/></customData></Button></Column>
+						<Column><Button text="Received Date" icon="{= ${sortModel>/RecievedDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/RecievedDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="RecievedDate"/><core:CustomData key="tableName" value="idInwardInsuranceTable"/></customData></Button></Column>
+						<Column><Button text="Vendor Name" icon="{= ${sortModel>/VendorName} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/VendorName} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="VendorName"/><core:CustomData key="tableName" value="idInwardInsuranceTable"/></customData></Button></Column>
+						<Column><Button text="Mode of Transport" icon="{= ${sortModel>/ModeOfTransport} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/ModeOfTransport} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="ModeOfTransport"/><core:CustomData key="tableName" value="idInwardInsuranceTable"/></customData></Button></Column>
+						<Column><Button text="LR Number" icon="{= ${sortModel>/LRNumber} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/LRNumber} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="LRNumber"/><core:CustomData key="tableName" value="idInwardInsuranceTable"/></customData></Button></Column>
+						<Column><Button text="Vehicle No" icon="{= ${sortModel>/VehicleNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/VehicleNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="VehicleNo"/><core:CustomData key="tableName" value="idInwardInsuranceTable"/></customData></Button></Column>
+						<Column hAlign="Right"><Button text="Invoice Value" icon="{= ${sortModel>/InvoiceValue} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/InvoiceValue} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="InvoiceValue"/><core:CustomData key="tableName" value="idInwardInsuranceTable"/></customData></Button></Column>
+						<Column><Button text="Description" icon="{= ${sortModel>/RGPCoomonDesc} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/RGPCoomonDesc} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="RGPCoomonDesc"/><core:CustomData key="tableName" value="idInwardInsuranceTable"/></customData></Button></Column>
 					</columns>
 					<items>
 						<ColumnListItem type="Navigation" press=".onRowPress" class="gpmsTableRow">

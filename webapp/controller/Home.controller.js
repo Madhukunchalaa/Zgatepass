@@ -189,9 +189,6 @@ sap.ui.define([
 			this.getRouter().navTo("AshGatePassList");
 		},
 
-		onPressAshGatePassBulkUpload: function () {
-			this.getRouter().navTo("AshGatePassBulkUpload");
-		},
 
 		onPressScrapRequestCreation: function () {
 			this.getRouter().navTo("ScrapRequestCreation");

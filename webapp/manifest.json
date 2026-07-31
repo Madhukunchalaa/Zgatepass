@@ -291,11 +291,6 @@
 					"name": "InspectionDetail",
 					"pattern": "InspectionDetail/:geNo:/:geDate:",
 					"target": ["TargetInspectionDetail"]
-				},
-				{
-					"name": "AshGatePassBulkUpload",
-					"pattern": "AshGatePassBulkUpload",
-					"target": ["TargetAshGatePassBulkUpload"]
 				}
 			],
 			"targets": {
@@ -403,11 +398,6 @@
 					"viewType": "XML",
 					"viewId": "AshGatePassDetail",
 					"viewName": "AshGatePassDetail"
-				},
-				"TargetAshGatePassBulkUpload": {
-					"viewType": "XML",
-					"viewId": "AshGatePassBulkUpload",
-					"viewName": "AshGatePassBulkUpload"
 				},
 				"TargetScrapRequestCreation": {
 					"viewType": "XML",

@@ -1,0 +1,4 @@
+S.No,Employee Full Name,SAP User ID,Email Address,Department,USER Role (Tick / Yes),HOD Role (Tick / Yes),STORE Role (Tick / Yes),Remarks / Notes
+1,John Doe,JDOE_MM,john.doe@meil.co.in,Mechanical,Yes,,,Needs access to raise requests
+2,Alice Smith,ASMITH_HOD,alice.s@meil.co.in,Electrical,,Yes,,Approver for Electrical department
+3,Bob Johnson,BJOHNSON_ST,bob.j@meil.co.in,Stores,,,Yes,Store executive at Gate 1

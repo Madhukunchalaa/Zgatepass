@@ -110,11 +110,14 @@
 
 						<VBox class="sapUiSmallMargin">
 							<Label text="Budget Code" required="true" class="gpmsFieldLabel"/>
-							<Input id="idPCPBudgetCode"
-								value="{pcpDetail>/BudgetCode}"
-								placeholder="CAPEX / OPEX / PETTY CASH"
+							<ComboBox id="idPCPBudgetCode"
+								selectedKey="{pcpDetail>/BudgetCode}"
+								items="{pcpDetail>/dropdowns/budgetCodes}"
+								placeholder="Select Budget Code"
 								width="100%" class="gpmsFieldInput"
-								enabled="{pcpDetail>/editable}"/>
+								enabled="{pcpDetail>/editable}">
+								<core:Item key="{pcpDetail>WBSElement}" text="{pcpDetail>WBSElement} - {pcpDetail>WBSDesc}"/>
+							</ComboBox>
 						</VBox>
 
 						<VBox class="sapUiSmallMargin">
@@ -155,34 +158,8 @@
 									<Text text="{pcpDetail>sno}"/>
 									<Input value="{pcpDetail>ItemDescription}" placeholder="Item Description" class="gpmsTableInput" editable="{pcpDetail>/editable}"/>
 									<Input value="{pcpDetail>RecievedQuantity}" type="Number" textAlign="Right" class="gpmsTableInput" editable="{pcpDetail>/editable}"/>
-									<Select selectedKey="{pcpDetail>UOM}" class="gpmsTableInput" width="100%" enabled="{pcpDetail>/editable}" forceSelection="false">
-										<items>
-											<core:Item key="" text="Select UOM"/>
-											<core:Item key="Number" text="Number"/>
-											<core:Item key="Feet" text="Feet"/>
-											<core:Item key="Kilogram" text="Kilogram"/>
-											<core:Item key="Length" text="Length"/>
-											<core:Item key="Litre" text="Litre"/>
-											<core:Item key="Load" text="Load"/>
-											<core:Item key="Lot" text="Lot"/>
-											<core:Item key="Meters" text="Meters"/>
-											<core:Item key="Metric Tons" text="Metric Tons"/>
-											<core:Item key="Pair" text="Pair"/>
-											<core:Item key="Roll" text="Roll"/>
-											<core:Item key="Set" text="Set"/>
-											<core:Item key="Sheet" text="Sheet"/>
-											<core:Item key="Square Feet" text="Square Feet"/>
-											<core:Item key="Square Meter" text="Square Meter"/>
-											<core:Item key="Item" text="Item"/>
-											<core:Item key="Pack" text="Pack"/>
-											<core:Item key="Days" text="Days"/>
-											<core:Item key="Pocket" text="Pocket"/>
-											<core:Item key="Ream" text="Ream"/>
-											<core:Item key="Tons" text="Tons"/>
-											<core:Item key="Unit" text="Unit"/>
-											<core:Item key="Month" text="Month"/>
-										</items>
-									</Select>
+									<Input value="{pcpDetail>UOM}" class="gpmsTableInput" width="100%"
+										editable="{pcpDetail>/editable}" placeholder="UOM"/>
 									<Button icon="sap-icon://delete" type="Transparent" press=".onDeleteItem" class="gpmsDeleteBtn" visible="{pcpDetail>/editable}"/>
 								</cells>
 							</ColumnListItem>

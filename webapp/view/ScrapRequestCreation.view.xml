@@ -79,48 +79,9 @@
 										<core:Item key="Batteries" text="Batteries" />
 										<core:Item key="Spent Oil(Barrel Capacity)" text="Spent Oil(Barrel Capacity)" />
 									</Select>
-									<Input value="{scrap>description}" class="gpmsTableInput" placeholder="Enter description"/>
+									<Input value="{scrap>description}" showValueHelp="true" valueHelpRequest=".onDescriptionValueHelp" class="gpmsTableInput" placeholder="Enter description"/>
 									<Input value="{scrap>quantity}" type="Text" class="gpmsTableInput"/>
-									<Select selectedKey="{scrap>uom}" class="gpmsFieldInput" width="100%">
-										<core:Item key="" text="-- Select --"/>
-										<core:Item key="Amps" text="Amps"/>
-										<core:Item key="Bag" text="Bag"/>
-										<core:Item key="Barrel" text="Barrel"/>
-										<core:Item key="Bottle" text="Bottle"/>
-										<core:Item key="Box" text="Box"/>
-										<core:Item key="Bundle" text="Bundle"/>
-										<core:Item key="Can" text="Can"/>
-										<core:Item key="Carton" text="Carton"/>
-										<core:Item key="Cartridge" text="Cartridge"/>
-										<core:Item key="Coil" text="Coil"/>
-										<core:Item key="Cubic Feet" text="Cubic Feet"/>
-										<core:Item key="Cubic Meter" text="Cubic Meter"/>
-										<core:Item key="Cylinder" text="Cylinder"/>
-										<core:Item key="Drum" text="Drum"/>
-										<core:Item key="Feet" text="Feet"/>
-										<core:Item key="Kilogram" text="Kilogram"/>
-										<core:Item key="Length" text="Length"/>
-										<core:Item key="Litre" text="Litre"/>
-										<core:Item key="Load" text="Load"/>
-										<core:Item key="Lot" text="Lot"/>
-										<core:Item key="Meters" text="Meters"/>
-										<core:Item key="Metric Tons" text="Metric Tons"/>
-										<core:Item key="Month" text="Month"/>
-										<core:Item key="Number" text="Number"/>
-										<core:Item key="Pair" text="Pair"/>
-										<core:Item key="Roll" text="Roll"/>
-										<core:Item key="Set" text="Set"/>
-										<core:Item key="Sheet" text="Sheet"/>
-										<core:Item key="Square Feet" text="Square Feet"/>
-										<core:Item key="Square Meter" text="Square Meter"/>
-										<core:Item key="Item" text="Item"/>
-										<core:Item key="Pack" text="Pack"/>
-										<core:Item key="Days" text="Days"/>
-										<core:Item key="Pocket" text="Pocket"/>
-										<core:Item key="Ream" text="Ream"/>
-										<core:Item key="Tons" text="Tons"/>
-										<core:Item key="Unit" text="Unit"/>
-									</Select>
+									<Input value="{scrap>uom}" class="gpmsTableInput" placeholder="UOM"/>
 									<HBox>
 										<Button icon="sap-icon://add" type="Transparent" press=".onAddItem" class="sapUiTinyMarginEnd" />
 										<Button icon="sap-icon://delete" type="Transparent" press=".onRemoveItem" />
@@ -136,11 +97,11 @@
 					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" hSpacing="1">
 						<VBox class="sapUiSmallMargin">
 							<Label text="Weighment slip Ticket No" class="gpmsFieldLabel"/>
-							<Input value="{scrap>/weighmentSlipNo}" placeholder="Weighment slip Ticket No" class="gpmsFieldInput gpmsFieldInputReadonly" editable="false" width="100%"/>
+							<Input value="{scrap>/weighmentSlipNo}" placeholder="Enter Weighment slip Ticket No" class="gpmsFieldInput" editable="true" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
-							<Label text="Challan Date &amp; Time" class="gpmsFieldLabel"/>
-							<Input value="{scrap>/challanDateTime}" placeholder="Enter Challan Date &amp; Time" class="gpmsFieldInput gpmsFieldInputReadonly" editable="false" width="100%"/>
+							<Label text="Challan Date" class="gpmsFieldLabel"/>
+							<DatePicker dateValue="{scrap>/challanDateTime}" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" placeholder="Select Challan Date" class="gpmsFieldInput" editable="true" width="100%"/>
 						</VBox>
 
 						<VBox class="sapUiSmallMargin">

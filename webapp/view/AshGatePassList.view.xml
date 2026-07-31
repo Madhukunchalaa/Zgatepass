@@ -13,7 +13,7 @@
 			<VBox class="sapUiSmallMargin">
 				<Table
 					id="ashListTable"
-					items="{path: '/AshHdrSet', operationMode: 'Client', filters: [{path: 'GatePassType', operator: 'EQ', value1: 'NRGP'}]}"
+					items="{ashList>/results}"
 					noDataText="No Ash Gate Passes found"
 					class="gpmsTable"
 					alternateRowColors="true">
@@ -25,26 +25,27 @@
 							<DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px" change=".onDateFilterChange"/>
 							<DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px" change=".onDateFilterChange"/>
 							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel"/>
+							<Button icon="sap-icon://sort" tooltip="Sort" press=".onSort" type="Transparent"/>
 							<Button id="idAshCopyListBtn" icon="sap-icon://copy" text="Copy" press=".onCopyList" tooltip="Copy list to clipboard"/>
 							<Button id="idAshPrintListBtn" icon="sap-icon://print" text="Print List" press=".onPrintList" tooltip="Print list"/>
 						</OverflowToolbar>
 					</headerToolbar>
 					<columns>
-						<Column><Text text="Gate Pass No" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Sales Document" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Customer Name" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Vehicle No" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="GP Date" class="gpmsTableHeaderText"/></Column>
+						<Column><Button text="Gate Pass No" icon="{= ${sortModel>/GatePassNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GatePassNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GatePassNo"/><core:CustomData key="tableName" value="ashListTable"/></customData></Button></Column>
+						<Column><Button text="Sales Document" icon="{= ${sortModel>/SalesDocument} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/SalesDocument} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="SalesDocument"/><core:CustomData key="tableName" value="ashListTable"/></customData></Button></Column>
+						<Column><Button text="Customer Name" icon="{= ${sortModel>/CustomerName} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/CustomerName} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="CustomerName"/><core:CustomData key="tableName" value="ashListTable"/></customData></Button></Column>
+						<Column><Button text="Vehicle No" icon="{= ${sortModel>/VehicleNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/VehicleNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="VehicleNo"/><core:CustomData key="tableName" value="ashListTable"/></customData></Button></Column>
+						<Column><Button text="GP Date" icon="{= ${sortModel>/GPDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GPDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GPDate"/><core:CustomData key="tableName" value="ashListTable"/></customData></Button></Column>
 						<Column hAlign="Center" width="4rem"><Text text="Action" class="gpmsTableHeaderText"/></Column>
 					</columns>
 					<items>
 						<ColumnListItem type="Navigation" press=".onRowPress" class="gpmsTableRow">
 							<cells>
-								<Text text="{GatePassNo}" class="gpmsTableText"/>
-								<Text text="{SalesDocument}" class="gpmsTableText"/>
-								<Text text="{CustomerName}" class="gpmsTableText"/>
-								<Text text="{VehicleNo}" class="gpmsTableText"/>
-								<Text text="{path: 'GPDate', formatter: '.formatDate'}" class="gpmsTableText"/>
+								<Text text="{ashList>GatePassNo}" class="gpmsTableText"/>
+								<Text text="{ashList>SalesDocument}" class="gpmsTableText"/>
+								<Text text="{ashList>CustomerName}" class="gpmsTableText"/>
+								<Text text="{ashList>VehicleNo}" class="gpmsTableText"/>
+								<Text text="{path: 'ashList>GPDate', formatter: '.formatDate'}" class="gpmsTableText"/>
 								<Button icon="sap-icon://navigation-right-arrow" type="Transparent" press=".onRowPress" tooltip="Open Details"/>
 							</cells>
 						</ColumnListItem>

@@ -31,60 +31,107 @@ sap.ui.define([
 			}
 
 			sap.ui.core.BusyIndicator.show(0);
+
+			var fnProcessItem = function (oItem) {
+				// Format date
+				var sDateStr = that._formatDateSlash(oItem.RequestDate || oItem.ReqDate);
+
+				// Map items
+				var aItems = [];
+				if (oItem.ScrapReqItmNav && oItem.ScrapReqItmNav.results) {
+					aItems = oItem.ScrapReqItmNav.results.map(function(oSubItem, index) {
+						var sUom = that._normalizeUOM(oSubItem.UOM || oSubItem.Uom || "");
+						return {
+							sno: String(index + 1),
+							type: that._mapMaterialType(oSubItem.Material || oSubItem.MaterialType || oSubItem.Type || "", oSubItem.MaterialDesc || oSubItem.Description || ""),
+							description: oSubItem.MaterialDesc || oSubItem.Description || "",
+							quantity: String(oSubItem.OrderQuantity || oSubItem.Quantity || oSubItem.Qty || "0"),
+							uom: sUom
+						};
+					});
+				}
+
+				var sStatus = that._deriveStatus(oItem);
+
+				var oMappedData = {
+					requestId: sRequestId,
+					salesDocument: oItem.SalesDocument || "",
+					requestDate: oItem.RequestDate || null,
+					requestDateStr: sDateStr,
+					vehicleDetails: oItem.VehicleNo || oItem.VehicleDetails || "",
+					collectArea: oItem.CollectArea || "",
+					remarks: oItem.Remarks || "",
+					HODRemarks: oItem.HODRemarks || "",
+					StoreRemarks: oItem.STORERemarks || oItem.StoreRemarks || "",
+					status: sStatus,
+					weighmentSlipNo: oItem.WeighmentSlipNo || "",
+					challanDateTime: oItem.ChallanDateTime || "",
+					items: aItems
+				};
+
+				var oModel = new JSONModel(oMappedData);
+				that.getView().setModel(oModel, "scrap");
+			};
+
+			var fnLoadFromList = function () {
+				oODataModel.read("/ScrapReqHdrSet", {
+					filters: [new Filter("GatePassType", FilterOperator.EQ, "NRGP")],
+					urlParameters: { "$expand": "ScrapReqItmNav" },
+					success: function (oDataAll) {
+						sap.ui.core.BusyIndicator.hide();
+						var aResults = oDataAll.results || [];
+						var oItem = aResults.find(function (r) {
+							return (r.GatePassReqNo === sRequestId) || (r.RequestId === sRequestId);
+						});
+						if (oItem) {
+							fnProcessItem(oItem);
+						} else {
+							MessageBox.error("Request not found.");
+							that.onNavBack();
+						}
+					},
+					error: function () {
+						sap.ui.core.BusyIndicator.hide();
+						MessageBox.error("Failed to load request details.");
+						that.onNavBack();
+					}
+				});
+			};
+
+			// Try 1: Read directly by GatePassReqNo
 			oODataModel.read("/ScrapReqHdrSet", {
 				filters: [new Filter("GatePassReqNo", FilterOperator.EQ, sRequestId)],
 				urlParameters: { "$expand": "ScrapReqItmNav" },
 				success: function (oData) {
-					sap.ui.core.BusyIndicator.hide();
 					var oItem = oData.results && oData.results[0];
-					if (!oItem) {
-						MessageBox.error("Request not found.");
-						that.onNavBack();
-						return;
-					}
-
-					// Format date
-					var sDateStr = that._formatDateSlash(oItem.RequestDate || oItem.ReqDate);
-
-					// Map items
-					var aItems = [];
-					if (oItem.ScrapReqItmNav && oItem.ScrapReqItmNav.results) {
-						aItems = oItem.ScrapReqItmNav.results.map(function(oSubItem, index) {
-							var sUom = that._normalizeUOM(oSubItem.UOM || oSubItem.Uom || "");
-							return {
-								sno: String(index + 1),
-								type: that._mapMaterialType(oSubItem.Material || oSubItem.MaterialType || oSubItem.Type || "", oSubItem.MaterialDesc || oSubItem.Description || ""),
-								description: oSubItem.MaterialDesc || oSubItem.Description || "",
-								quantity: String(oSubItem.OrderQuantity || oSubItem.Quantity || oSubItem.Qty || "0"),
-								uom: sUom
-							};
+					if (oItem) {
+						sap.ui.core.BusyIndicator.hide();
+						fnProcessItem(oItem);
+					} else {
+						// Try 2: Query with both GatePassReqNo and GatePassType="NRGP"
+						oODataModel.read("/ScrapReqHdrSet", {
+							filters: [
+								new Filter("GatePassReqNo", FilterOperator.EQ, sRequestId),
+								new Filter("GatePassType", FilterOperator.EQ, "NRGP")
+							],
+							urlParameters: { "$expand": "ScrapReqItmNav" },
+							success: function (oData2) {
+								var oItem2 = oData2.results && oData2.results[0];
+								if (oItem2) {
+									sap.ui.core.BusyIndicator.hide();
+									fnProcessItem(oItem2);
+								} else {
+									fnLoadFromList();
+								}
+							},
+							error: function () {
+								fnLoadFromList();
+							}
 						});
 					}
-
-					var sStatus = that._deriveStatus(oItem);
-
-					var oMappedData = {
-						requestId: sRequestId,
-						requestDate: oItem.RequestDate || null,
-						requestDateStr: sDateStr,
-						vehicleDetails: oItem.VehicleNo || oItem.VehicleDetails || "",
-						collectArea: oItem.CollectArea || "",
-						remarks: oItem.Remarks || "",
-						HODRemarks: oItem.HODRemarks || "",
-						StoreRemarks: oItem.STORERemarks || oItem.StoreRemarks || "",
-						status: sStatus,
-						weighmentSlipNo: oItem.WeighmentSlipNo || "",
-						challanDateTime: oItem.ChallanDateTime || "",
-						items: aItems
-					};
-
-					var oModel = new JSONModel(oMappedData);
-					that.getView().setModel(oModel, "scrap");
 				},
-				error: function (oError) {
-					sap.ui.core.BusyIndicator.hide();
-					MessageBox.error("Failed to load request details. Please try again.");
-					that.onNavBack();
+				error: function () {
+					fnLoadFromList();
 				}
 			});
 		},
@@ -147,6 +194,7 @@ sap.ui.define([
 			var oODataModel = this.getOwnerComponent().getModel();
 			var oViewModel = this.getView().getModel("scrap");
 			var sRequestId = oViewModel.getProperty("/requestId");
+			var sSalesDoc = oViewModel.getProperty("/salesDocument") || "";
 			var that = this;
 
 			if (!oODataModel) {
@@ -157,19 +205,18 @@ sap.ui.define([
 			sap.ui.core.BusyIndicator.show(0);
 
 			var oPayload = {
-				ApprovalReq: sApprovalCode === "AM" ? "AM" : (sApprovalCode === "R" ? "R" : "A")
+				ApprovalReq: sApprovalCode === "AM" ? "AM" : (sApprovalCode === "R" ? "R" : "A"),
+				Remarks: sRemarks
 			};
 			if (sRole === "HOD") {
 				oPayload.Approval1 = sApprovalCode;
-				oPayload.HODRemarks = sRemarks;
 			} else {
 				oPayload.Approval2 = sApprovalCode;
-				oPayload.STORERemarks = sRemarks;
 			}
 
 			// Refresh CSRF token before update, then perform MERGE (not full PUT)
 			oODataModel.refreshSecurityToken(function () {
-				oODataModel.update("/ScrapReqHdrSet(GatePassReqNo='" + sRequestId + "')", oPayload, {
+				oODataModel.update("/ScrapReqHdrSet(GatePassReqNo='" + sRequestId + "',GatePassType='NRGP',SalesDocument='" + sSalesDoc + "')", oPayload, {
 					merge: true,
 					success: function () {
 						sap.ui.core.BusyIndicator.hide();

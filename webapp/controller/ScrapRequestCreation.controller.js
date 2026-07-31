@@ -11,13 +11,158 @@ sap.ui.define([
 	return BaseController.extend("zgpms.meilpower.com.controller.ScrapRequestCreation", {
 
 		onInit: function () {
+			this._loadMaterials();
 			var oRouter = this.getRouter();
 			oRouter.getRoute("ScrapRequestCreation").attachMatched(this._onRouteMatched, this);
 		},
 
 		_onRouteMatched: function (oEvent) {
 			this._initModel();
+			this._loadMaterials();
 		},
+
+		_loadMaterials: function () {
+			var aDefaultMaterials = [
+				{ Material: "MAT-SCRAP-01", MaterialName: "METAL", UOM: "KILOGRAM" },
+				{ Material: "MAT-SCRAP-02", MaterialName: "RUBBER SCRAP", UOM: "KILOGRAM" },
+				{ Material: "MAT-SCRAP-03", MaterialName: "WASTE OIL", UOM: "LITRE" },
+				{ Material: "MAT-SCRAP-04", MaterialName: "PLASTIC SCRAP", UOM: "KILOGRAM" },
+				{ Material: "MAT-SCRAP-05", MaterialName: "COPPER SCRAP", UOM: "KILOGRAM" },
+				{ Material: "MAT-SCRAP-06", MaterialName: "USED BATTERIES", UOM: "EA" },
+				{ Material: "MAT-SCRAP-07", MaterialName: "320 OIL", UOM: "LITRE" }
+			];
+
+			var oMaterialsModel = this.getView() ? this.getView().getModel("materials") : null;
+			if (!oMaterialsModel) {
+				oMaterialsModel = new JSONModel({ results: aDefaultMaterials });
+				if (this.getView()) {
+					this.getView().setModel(oMaterialsModel, "materials");
+				}
+			} else if (!oMaterialsModel.getProperty("/results") || oMaterialsModel.getProperty("/results").length === 0) {
+				oMaterialsModel.setProperty("/results", aDefaultMaterials);
+			}
+
+			sap.ui.getCore().setModel(oMaterialsModel, "materials");
+
+			if (this.getOwnerComponent()) {
+				this.getOwnerComponent().setModel(oMaterialsModel, "materials");
+			}
+
+			var oODataModel = this.getOwnerComponent() ? this.getOwnerComponent().getModel() : null;
+			if (!oODataModel) {
+				return;
+			}
+
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var sPlant = oUserModel ? (oUserModel.getProperty("/plant") || oUserModel.getProperty("/Plant") || "") : "";
+			var aFilters = sPlant ? [new Filter("Plant", FilterOperator.EQ, sPlant)] : [];
+
+			var that = this;
+			sap.ui.core.BusyIndicator.show(0);
+			oODataModel.read("/ZMaterialSet", {
+				filters: aFilters,
+				success: function (oData) {
+					sap.ui.core.BusyIndicator.hide();
+					var aResults = oData.results || [];
+					if (aResults.length > 0) {
+						var aMapped = aResults.map(function (m) {
+							var sCode = m.Material || m.Matnr || "";
+							var sName = m.MaterialDesc || m.MaterialDescription || m.Maktx || m.MaterialName || m.Description || sCode;
+							var sUom = that._normalizeUOM ? that._normalizeUOM(m.Uom || m.Meins || m.UOM || "KG") : (m.Uom || m.Meins || m.UOM || "KG");
+							return {
+								Material: sCode || sName,
+								MaterialName: sName,
+								UOM: sUom
+							};
+						});
+						oMaterialsModel.setProperty("/results", aMapped);
+					}
+				},
+				error: function () {
+					sap.ui.core.BusyIndicator.hide();
+				}
+			});
+		},
+
+		onDescriptionValueHelp: function (oEvent) {
+			this._oValueHelpInput = oEvent.getSource();
+			this._oValueHelpContext = this._oValueHelpInput.getBindingContext("scrap");
+
+			var oMatModel = (this.getView() ? this.getView().getModel("materials") : null) || sap.ui.getCore().getModel("materials");
+			if (!oMatModel || !oMatModel.getProperty("/results") || oMatModel.getProperty("/results").length === 0) {
+				this._loadMaterials();
+				oMatModel = (this.getView() ? this.getView().getModel("materials") : null) || sap.ui.getCore().getModel("materials");
+			}
+
+			var that = this;
+			if (!this._pDescriptionValueHelp) {
+				this._pDescriptionValueHelp = sap.ui.core.Fragment.load({
+					id: this.getView().getId(),
+					name: "zgpms.meilpower.com.view.fragments.ScrapDescriptionValueHelp",
+					controller: this
+				}).then(function (oDialog) {
+					that.getView().addDependent(oDialog);
+					return oDialog;
+				});
+			}
+
+			this._pDescriptionValueHelp.then(function (oDialog) {
+				if (oMatModel) {
+					oDialog.setModel(oMatModel, "materials");
+				}
+				var oBinding = oDialog.getBinding("items");
+				if (oBinding) {
+					oBinding.filter([]);
+				}
+				oDialog.open();
+			});
+		},
+
+		onDescriptionValueHelpSearch: function (oEvent) {
+			var sValue = oEvent.getParameter("value") || "";
+			var oBinding = oEvent.getSource().getBinding("items");
+			if (!oBinding) { return; }
+
+			if (sValue.trim()) {
+				var oFilter = new Filter({
+					filters: [
+						new Filter("Material", FilterOperator.Contains, sValue),
+						new Filter("MaterialName", FilterOperator.Contains, sValue)
+					],
+					and: false
+				});
+				oBinding.filter([oFilter]);
+			} else {
+				oBinding.filter([]);
+			}
+		},
+
+		onDescriptionValueHelpConfirm: function (oEvent) {
+			var oSelectedItem = oEvent.getParameter("selectedItem");
+			if (!oSelectedItem || !this._oValueHelpContext) { return; }
+
+			var oObj = oSelectedItem.getBindingContext("materials").getObject();
+			var sPath = this._oValueHelpContext.getPath();
+			var oModel = this.getView().getModel("scrap");
+
+			if (oObj) {
+				var sDesc = oObj.MaterialName || oObj.Material || "";
+				var sUom = oObj.UOM || "KG";
+
+				oModel.setProperty(sPath + "/description", sDesc);
+				oModel.setProperty(sPath + "/uom", sUom);
+
+				// Auto-map Material Type if possible
+				if (this._mapMaterialType) {
+					var sMappedType = this._mapMaterialType(oObj.Material || "", sDesc);
+					if (sMappedType) {
+						oModel.setProperty(sPath + "/type", sMappedType);
+					}
+				}
+			}
+		},
+
+		onDescriptionValueHelpCancel: function () {},
 
 		_initModel: function () {
 			var oDate = new Date();
@@ -261,7 +406,14 @@ sap.ui.define([
 				},
 				error: function (oError) {
 					sap.ui.core.BusyIndicator.hide();
-					MessageBox.error("Failed to load Sale Orders. Please try again.");
+					var sMsg = "Failed to load Sale Orders. Please try again.";
+					try {
+						var oErr = JSON.parse(oError.responseText);
+						if (oErr && oErr.error && oErr.error.message) {
+							sMsg = oErr.error.message.value;
+						}
+					} catch (e) { }
+					MessageBox.error(sMsg);
 				}
 			});
 		},

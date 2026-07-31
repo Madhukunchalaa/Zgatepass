@@ -60,16 +60,7 @@ sap.ui.define([
 						});
 					});
 
-					// Fallback: If no items found for matching GatePassNo, check all results
-					if (aItems.length === 0) {
-						aResults.forEach(function (res) {
-							var aNavItems = (res.ASHItmNav && res.ASHItmNav.results) || (Array.isArray(res.ASHItmNav) ? res.ASHItmNav : []);
-							aNavItems.forEach(function (itm) {
-								var bExists = aItems.some(function (ex) { return ex.ItemNo === itm.ItemNo; });
-								if (!bExists) { aItems.push(itm); }
-							});
-						});
-					}
+
 
 					// Set header model
 					var oModel = new JSONModel(oItem);
@@ -111,19 +102,19 @@ sap.ui.define([
 										oModel.setProperty("/ASHItmNav", aFallbackItems);
 										oModel.setProperty("/finalTotal", nTotal.toFixed(2));
 									} else {
-										oModel.setProperty("/ASHItmNav", []);
+										that._loadItemsDirect(sGPNo, sReqNo, oModel);
 									}
 								},
 								error: function (oErr) {
 									sap.ui.core.BusyIndicator.hide();
 									console.log("[ASH] Step 2 ERROR:", oErr.message || oErr.statusCode);
-									oModel.setProperty("/ASHItmNav", []);
+									that._loadItemsDirect(sGPNo, sReqNo, oModel);
 								}
 							});
 						} else {
 							sap.ui.core.BusyIndicator.hide();
-							console.log("[ASH] No GatePassReqNo — cannot load items");
-							oModel.setProperty("/ASHItmNav", []);
+							console.log("[ASH] No GatePassReqNo — trying direct item read");
+							that._loadItemsDirect(sGPNo, "", oModel);
 						}
 					}
 				},
@@ -132,6 +123,36 @@ sap.ui.define([
 					MessageBox.error("Failed to load Ash Gate Pass details. Please try again.");
 					that.onNavBack();
 				}
+			});
+		},
+
+		// Step 3 fallback: read ASHItmSet directly — covers records whose header
+		// $expand association returns nothing (seen with bulk-created gate passes).
+		_loadItemsDirect: function (sGPNo, sReqNo, oModel) {
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) { oModel.setProperty("/ASHItmNav", []); return; }
+
+			var fnApply = function (aItems) {
+				var nTotal = 0;
+				aItems.forEach(function (item) { nTotal += parseFloat(item.Totalvalue || 0); });
+				oModel.setProperty("/ASHItmNav", aItems);
+				oModel.setProperty("/finalTotal", nTotal.toFixed(2));
+				console.log("[ASH] Step 3 direct ASHItmSet items:", aItems.length);
+			};
+
+			oODataModel.read("/ASHItmSet", {
+				filters: [new sap.ui.model.Filter("GatePassNo", sap.ui.model.FilterOperator.EQ, sGPNo)],
+				success: function (oData) {
+					var aItems = oData.results || [];
+					if (aItems.length > 0) { fnApply(aItems); return; }
+					if (!sReqNo) { fnApply([]); return; }
+					oODataModel.read("/ASHItmSet", {
+						filters: [new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)],
+						success: function (oReqItm) { fnApply(oReqItm.results || []); },
+						error: function () { fnApply([]); }
+					});
+				},
+				error: function () { fnApply([]); }
 			});
 		},
 

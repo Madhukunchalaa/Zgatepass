@@ -28,10 +28,10 @@ sap.ui.define([
 	];
 
 	var SHEET_DEFS = [
-		{ sno: 1,  tab: "1.All RGP Report",              hdr: 36 },
-		{ sno: 2,  tab: "2.Pending RGP Report",          hdr: 36 },
-		{ sno: 3,  tab: "3.Closed RGP Report",           hdr: 36 },
-		{ sno: 4,  tab: "4.All NRGP Report",             hdr: 27 },
+		{ sno: 1,  tab: "1.All RGP Report",              hdr: 37 },
+		{ sno: 2,  tab: "2.Pending RGP Report",          hdr: 37 },
+		{ sno: 3,  tab: "3.Closed RGP Report",           hdr: 37 },
+		{ sno: 4,  tab: "4.All NRGP Report",             hdr: 28 },
 		{ sno: 5,  tab: "5.All PCP Report",              hdr: 14 },
 		{ sno: 6,  tab: "6.All Gate Entry Report",       hdr: 18 },
 		{ sno: 7,  tab: "7.Pending Gate Entry Rpt",      hdr: 18 },
@@ -243,7 +243,7 @@ sap.ui.define([
 		//  Row builders — return flat arrays, no download
 		// ═══════════════════════════════════════════════════════════════
 
-		// ── RGP (36 columns) ──
+		// ── RGP (37 columns) ──
 		_buildRGPRows: function (aResults) {
 			var aFlat = [];
 			aResults.forEach(function (o) {
@@ -274,7 +274,8 @@ sap.ui.define([
 						"Total Value":                      it.Totalvalue || "",
 						"DC No":                            o.ChallanNumber || "",
 						"DC/DF Notes":                      o.CommonDesc || "",
-						"LR/Vehicle No":                    o.VehicleNo || "",
+						"LR Number":                        o.LRNumber || o.LRNnumber || "",
+						"Vehicle No":                       o.VehicleNo || "",
 						"EWB No":                           o.EWBNo || o.EWBno || o.EwbNo || "",
 						"Transport Name":                   o.TransporterName || "",
 						"Transporter GST":                  o.TransporterGST || "",
@@ -298,7 +299,7 @@ sap.ui.define([
 			return aFlat;
 		},
 
-		// ── NRGP (27 columns) ──
+		// ── NRGP (28 columns) ──
 		_buildNRGPRows: function (aResults) {
 			var aFlat = [];
 			aResults.forEach(function (o) {
@@ -319,7 +320,8 @@ sap.ui.define([
 						"Total Value":        it.Totalvalue || "",
 						"DC No":              o.ChallanNumber || "",
 						"DC/DF Notes":        o.CommonDesc || "",
-						"LR/Vehicle No":      o.VehicleNo || "",
+						"LR Number":          o.LRNumber || o.LRNnumber || "",
+						"Vehicle No":         o.VehicleNo || "",
 						"EWB No":             o.EWBNo || o.EWBno || o.EwbNo || "",
 						"Transport Name":     o.TransporterName || "",
 						"Transporter GST":    o.TransporterGST || "",

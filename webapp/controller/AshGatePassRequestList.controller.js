@@ -22,7 +22,31 @@ sap.ui.define([
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (!oODataModel) {
 				sap.m.MessageBox.error("SAP system is not connected. Please contact your administrator.");
+				return;
 			}
+			var that = this;
+
+			// Load into a JSON model — the toolbar search/status/date filters use
+			// function-based (client) filters, which OData bindings don't support.
+			sap.ui.core.BusyIndicator.show(0);
+			oODataModel.read("/AshHdrSet", {
+				filters: [new Filter("GatePassType", FilterOperator.EQ, "NRGP")],
+				success: function (oData) {
+					sap.ui.core.BusyIndicator.hide();
+					// AshHdrSet holds both requests and generated gate passes —
+					// this list shows only rows that went through the request flow.
+					var aRequests = (oData.results || []).filter(function (r) {
+						return (r.GatePassReqNo || "").trim() !== "";
+					});
+					that.getView().setModel(new JSONModel({ results: aRequests }), "ashReqList");
+					that._applyFilters();
+				},
+				error: function () {
+					sap.ui.core.BusyIndicator.hide();
+					that.getView().setModel(new JSONModel({ results: [] }), "ashReqList");
+					sap.m.MessageBox.error("Failed to load Ash Gate Pass Requests. Please try again.");
+				}
+			});
 		},
 
 		onNavBack: function () {
@@ -199,8 +223,8 @@ sap.ui.define([
 			if (oItem.getMetadata().getName() === "sap.m.Button") {
 				oItem = oItem.getParent();
 			}
-			var oContext = oItem.getBindingContext();
-			var sReqNo = oContext.getProperty("GatePassReqNo") || "";
+			var oContext = oItem.getBindingContext("ashReqList");
+			var sReqNo = oContext ? (oContext.getProperty("GatePassReqNo") || "") : "";
 
 			this.getRouter().navTo("AshGatePassCreation", {
 				reqNo: encodeURIComponent(sReqNo)
@@ -217,7 +241,7 @@ sap.ui.define([
 					if (oContext.getObject()) { aObjects.push(oContext.getObject()); }
 				});
 			} else {
-				aObjects = this.getView().getModel().getProperty("/results") || [];
+				aObjects = this.getView().getModel("ashReqList").getProperty("/results") || [];
 			}
 			if (!aObjects.length) {
 				sap.m.MessageToast.show("No record found");
@@ -264,7 +288,7 @@ sap.ui.define([
 					if (oContext.getObject()) { aObjects.push(oContext.getObject()); }
 				});
 			} else {
-				aObjects = this.getView().getModel().getProperty("/results") || [];
+				aObjects = this.getView().getModel("ashReqList").getProperty("/results") || [];
 			}
 			if (!aObjects.length) {
 				sap.m.MessageToast.show("No items to copy.");
@@ -318,6 +342,18 @@ sap.ui.define([
 				}
 			}
 			return vDate;
+		},
+
+		onSort: function () {
+			this._openSortDialog("ashReqListTable", [
+				{ key: "GatePassReqNo", text: "Request No" },
+				{ key: "GatePassNo", text: "Gate Pass No" },
+				{ key: "SalesDocument", text: "Sales Document" },
+				{ key: "CustomerName", text: "Customer Name" },
+				{ key: "VehicleNo", text: "Vehicle No" },
+				{ key: "GPDate", text: "GP Date", selected: true },
+				{ key: "Status", text: "Approval" }
+			]);
 		}
 
 	});

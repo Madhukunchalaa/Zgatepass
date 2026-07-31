@@ -19,8 +19,10 @@ sap.ui.define([
 			this._initModel();
 		},
 
+          
 		_initModel: function () {
 			var oDate = new Date();
+			
 			var oData = {
 				GPDate: oDate,
 				SalesDocument: "",
@@ -99,7 +101,11 @@ sap.ui.define([
 							MaterialDescription: subItem.MaterialDesc || subItem.Arktx || subItem.Description || "",
 							HSNCode: subItem.HSNCode || "",
 							RequestedQuantity: String(fQty.toFixed(3)),
-							UOM: subItem.UOM || subItem.Uom || "MT",
+							SOQuantity: String(fQty.toFixed(3)),
+							OpenQuantity: String(parseFloat(subItem.OpenQuantity || fQty).toFixed(3)),
+							SentQuantity: subItem.SentQuantity ? String(parseFloat(subItem.SentQuantity).toFixed(3)) : "",
+							BalanceQuantity: String((parseFloat(subItem.OpenQuantity || fQty) - parseFloat(subItem.SentQuantity || 0)).toFixed(3)),
+							UOM: subItem.UOM || subItem.Uom || "",
 							ItemNetPrice: fPrice.toFixed(2),
 							Totalvalue: (fQty * fPrice).toFixed(2),
 							GatePassNo: "",
@@ -144,7 +150,14 @@ sap.ui.define([
 				},
 				error: function (oError) {
 					sap.ui.core.BusyIndicator.hide();
-					MessageBox.error("Failed to load Sale Orders. Please try again.");
+					var sMsg = "Failed to load Sale Orders. Please try again.";
+					try {
+						var oErr = JSON.parse(oError.responseText);
+						if (oErr && oErr.error && oErr.error.message) {
+							sMsg = oErr.error.message.value;
+						}
+					} catch (e) { }
+					MessageBox.error(sMsg);
 				}
 			});
 		},
@@ -240,7 +253,11 @@ sap.ui.define([
 								MaterialDescription: subItem.MaterialDesc || subItem.Arktx || subItem.Description || "",
 								HSNCode: subItem.HSNCode || "",
 								RequestedQuantity: String(fQty.toFixed(3)),
-								UOM: subItem.UOM || subItem.Uom || "MT",
+								SOQuantity: String(fQty.toFixed(3)),
+								OpenQuantity: String(parseFloat(subItem.OpenQuantity || fQty).toFixed(3)),
+								SentQuantity: subItem.SentQuantity ? String(parseFloat(subItem.SentQuantity).toFixed(3)) : "",
+								BalanceQuantity: String((parseFloat(subItem.OpenQuantity || fQty) - parseFloat(subItem.SentQuantity || 0)).toFixed(3)),
+								UOM: subItem.UOM || subItem.Uom || "",
 								ItemNetPrice: fPrice.toFixed(2),
 								Totalvalue: (fQty * fPrice).toFixed(2),
 								GatePassNo: ""
@@ -327,6 +344,26 @@ sap.ui.define([
 			oModel.setProperty("/finalTotal", nTotal.toFixed(2));
 		},
 
+		calculateBalance: function (oEvent) {
+			var oModel = this.getView().getModel("ashReq");
+
+			// Write the typed Sent Qty into the model immediately (liveChange fires
+			// before two-way binding flushes on blur)
+			if (oEvent && oEvent.getSource) {
+				var oCtx = oEvent.getSource().getBindingContext("ashReq");
+				if (oCtx) {
+					oModel.setProperty(oCtx.getPath() + "/SentQuantity", oEvent.getParameter("value") || "");
+				}
+			}
+
+			var aItems = oModel.getProperty("/ASHItmNav") || [];
+			aItems.forEach(function (oItem, index) {
+				var fOpen = parseFloat(oItem.OpenQuantity) || 0;
+				var fSent = parseFloat(oItem.SentQuantity) || 0;
+				oModel.setProperty("/ASHItmNav/" + index + "/BalanceQuantity", (fOpen - fSent).toFixed(3));
+			});
+		},
+
 		onSubmit: function () {
 			var oModel = this.getView().getModel("ashReq");
 			var oData = oModel.getData();
@@ -353,6 +390,20 @@ sap.ui.define([
 				MessageBox.error("Please enter a valid Rate for all items."); return;
 			}
 
+			// Sent Qty (when entered) must not exceed the sales order's Open Qty
+			var oSentExceeds = oData.ASHItmNav.find(function(item) {
+				return item.SentQuantity !== "" && item.SentQuantity !== undefined &&
+					parseFloat(item.SentQuantity || 0) > parseFloat(item.OpenQuantity || 0);
+			});
+			if (oSentExceeds) {
+				MessageBox.error(
+					"Sent Qty (" + parseFloat(oSentExceeds.SentQuantity).toFixed(3) +
+					") cannot exceed Open Qty (" + parseFloat(oSentExceeds.OpenQuantity || 0).toFixed(3) +
+					") for item " + (oSentExceeds.ItemNo || "") + " — " + (oSentExceeds.MaterialDescription || "") + "."
+				);
+				return;
+			}
+
 			var oPayload = {
 				GatePassType: "NRGP",
 				SalesDocument: oData.SalesDocument,
@@ -376,22 +427,30 @@ sap.ui.define([
 				Message: "",
 				Approval1: "",
 				ASHItmNav: oData.ASHItmNav.map(function(item) {
-					return {
+					// Canonical ASHItm payload — quantities as raw numbers per backend sample
+					var oMappedItem = that._buildAshItemPayload({
 						SalesDocument: item.SalesDocument || oData.SalesDocument,
 						GatePasstype: "NRGP",
 						ItemNo: item.ItemNo,
 						Material: item.Material,
 						MaterialDescription: item.MaterialDescription,
 						HSNCode: item.HSNCode,
-						RequestedQuantity: String(parseFloat(item.RequestedQuantity).toFixed(3)),
+						SOQuantity: item.SOQuantity || item.RequestedQuantity,
+						OpenQuantity: item.OpenQuantity,
+						// SentQuantity is the persisted business qty — default it to Qty*
+						// so the quantity survives even when Sent is left blank.
+						SentQuantity: item.SentQuantity || item.RequestedQuantity || 0,
+						BalanceQuantity: item.BalanceQuantity || 0,
 						UOM: item.UOM,
-						ItemNetPrice: String(parseFloat(item.ItemNetPrice).toFixed(2)),
-						Totalvalue: String(parseFloat(item.Totalvalue).toFixed(2)),
+						ItemNetPrice: item.ItemNetPrice,
+						Totalvalue: item.Totalvalue,
 						GatePassNo: "",
 						GatePassReqNo: ""
-					};
+					});
+					return that._typePayloadForEntity(oODataModel, oMappedItem);
 				})
 			};
+			oPayload = this._typePayloadForEntity(oODataModel, oPayload);
 
 			if (!oODataModel) {
 				MessageBox.error("SAP system is not connected. Please contact your administrator.");

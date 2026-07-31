@@ -22,7 +22,37 @@ sap.ui.define([
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (!oODataModel) {
 				sap.m.MessageBox.error("SAP system is not connected. Please contact your administrator.");
+				return;
 			}
+			var that = this;
+
+			sap.ui.core.BusyIndicator.show(0);
+			oODataModel.read("/AshHdrSet", {
+				filters: [new Filter("GatePassType", FilterOperator.EQ, "NRGP")],
+				urlParameters: { "$expand": "ASHItmNav" },
+				success: function (oData) {
+					sap.ui.core.BusyIndicator.hide();
+					// Only show rows where a gate pass number exists
+					var aPasses = (oData.results || []).filter(function (r) {
+						return (r.GatePassNo || "").trim() !== "";
+					});
+					that.getView().setModel(new JSONModel({ results: aPasses }), "ashList");
+					that._applyFilters();
+				},
+				error: function (oError) {
+					sap.ui.core.BusyIndicator.hide();
+					that.getView().setModel(new JSONModel({ results: [] }), "ashList");
+					
+					var sMsg = "Failed to load Ash Gate Passes. Please try again.";
+					try {
+						var oErr = JSON.parse(oError.responseText);
+						if (oErr && oErr.error && oErr.error.message) {
+							sMsg = oErr.error.message.value;
+						}
+					} catch (e) { }
+					sap.m.MessageBox.error(sMsg);
+				}
+			});
 		},
 
 		onNavBack: function () {
@@ -43,24 +73,20 @@ sap.ui.define([
 			if (!oBinding) { return; }
 
 			var aFilters = [];
-			
-			// Always apply GatePassType eq 'NRGP' filter when using OData
-			var oODataModel = this.getOwnerComponent().getModel();
-			if (oODataModel && oBinding && oBinding.getModel() === oODataModel) {
-				aFilters.push(new Filter("GatePassType", FilterOperator.EQ, "NRGP"));
-			}
 
 			// 1. Text Search Filter
-			var sSearch = this.byId("ashListTable").getHeaderToolbar().getContent().find(function(c) {
+			var oSearchField = this.byId("ashListTable").getHeaderToolbar().getContent().find(function(c) {
 				return c.getMetadata().getName() === "sap.m.SearchField";
-			}).getValue().trim();
+			});
+			var sSearch = oSearchField ? oSearchField.getValue().trim() : "";
 
 			if (sSearch) {
 				var sLow = sSearch.toLowerCase();
 				aFilters.push(new Filter({
-					path: "GatePassNo",
-					test: function(v, oContext) {
-						var o = oContext ? oContext.getObject() : {};
+					path: "",
+					test: function(oValue, oContext) {
+						var o = oContext ? oContext.getObject() : oValue;
+						if (!o) return false;
 						return [
 							(o.GatePassNo || ""),
 							(o.SalesDocument || ""),
@@ -196,9 +222,12 @@ sap.ui.define([
 				var aContexts = oBinding.getContexts(0, oBinding.getLength());
 				aContexts.forEach(function (oContext) {
 					if (oContext.getObject()) {
-						aObjects.push(oContext.getObject());
+						aObjects.push(Object.assign({}, oContext.getObject()));
 					}
 				});
+			} else {
+				var aRaw = this.getView().getModel("ashList").getProperty("/results") || [];
+				aObjects = aRaw.map(function (o) { return Object.assign({}, o); });
 			}
 
 			var dFrom = this.byId("idExcelFromDate").getDateValue();
@@ -209,34 +238,110 @@ sap.ui.define([
 				sap.m.MessageToast.show("No record found");
 				return;
 			}
-			var aRows = aObjects.map(function (o) {
-				var sApproval = o.Approval1 === "A" ? "Approved" : o.Approval1 === "R" ? "Rejected" : "Pending";
-				return {
-					"Gate Pass No": o.GatePassNo || "",
-					"Request No": o.GatePassReqNo || "",
-					"Type": o.GatePassType || "",
-					"Sales Document": o.SalesDocument || "",
-					"Sold To Party": o.SoldToParty || "",
-					"Customer Name": o.CustomerName || "",
-					"Customer GST": o.CustomerGst || "",
-					"City": o.City || "",
-					"Zip Code": o.ZipCode || "",
-					"Vehicle No": o.VehicleNo || "",
-					"Mode of Dispatch": o.ModeOfDispatch || "",
-					"Transporter": o.TransporterName || "",
-					"Transporter GST": o.TransporterGst || "",
-					"DC Number": o.DCNumber || "",
-					"DC Date": that.formatDate(o.DCDate) || "",
-					"WB Ticket No": o.WBTicketNo || "",
-					"GP Date": that.formatDate(o.GPDate) || "",
-					"Remarks": o.Remarks || "",
-					"Approval": sApproval
-				};
+
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) {
+				sap.m.MessageBox.error("OData model not found.");
+				return;
+			}
+
+			sap.ui.core.BusyIndicator.show(0);
+
+			// Read all items from /ASHItmSet in one call to make sure we capture bulk/older items
+			oODataModel.read("/ASHItmSet", {
+				success: function (oItmData) {
+					sap.ui.core.BusyIndicator.hide();
+					var aAllItems = oItmData.results || [];
+
+					// Map all items by GatePassNo
+					var oItemsMap = {};
+					aAllItems.forEach(function (itm) {
+						var sGPNo = (itm.GatePassNo || "").trim();
+						if (sGPNo) {
+							if (!oItemsMap[sGPNo]) {
+								oItemsMap[sGPNo] = [];
+							}
+							oItemsMap[sGPNo].push(itm);
+						}
+					});
+
+					// Build excel rows
+					var aRows = [];
+					var iSno = 1;
+					aObjects.forEach(function (o) {
+						var sApproval = o.Approval1 === "A" ? "CLOSED" : (o.Approval1 === "R" ? "REJECTED" : "OPEN");
+						
+						// Get items either from expanded navigation or from our loaded all-items list
+						var sGPNo = (o.GatePassNo || "").trim();
+						var aItems = (o.ASHItmNav && (o.ASHItmNav.results || o.ASHItmNav)) || [];
+						if (!Array.isArray(aItems)) { aItems = []; }
+						if (aItems.length === 0 && sGPNo && oItemsMap[sGPNo]) {
+							aItems = oItemsMap[sGPNo];
+						}
+
+						if (aItems.length === 0) {
+							aRows.push({
+								"Sno": iSno++,
+								"Issue Date": that.formatDate(o.GPDate) || "",
+								"Ash Gate Pass Number": o.GatePassNo || "",
+								"Vendor Name": o.CustomerName || "",
+								"Item Description": o.MaterialDescription || o.MaterialDesc || o.Description || o.ItemDescription || o.CommonDesc || "",
+								"Qty Send": o.Quantity || "",
+								"Uom": o.UOM || o.uom || o.Uom || "",
+								"HSN Code": o.HSNCode || o.HsnCode || "",
+								"UOP": o.ItemNetPrice || o.UnitPrice || "",
+								"Line Cost Value": o.Totalvalue || o.TotalValue || o.LineCost || o.ItemNetPrice || "",
+								"Total Value": o.TotalValue || o.Totalvalue || o.FinalTotal || o.finalTotal || "",
+								"Gate Pass Remarks": o.Remarks || o.GatePassRemarks || o.UserRemarks || o.StoreRemarks || "",
+								"DC No": o.DCNumber || o.DcNumber || o.DCNo || o.DcNo || "",
+								"DC Notes": o.DCNotes || o.DcNotes || o.Remarks || "",
+								"Vehicle No": o.VehicleNo || o.VehNo || "",
+								"Transport Name": o.TransporterName || o.TransportName || "",
+								"Transporter GST": o.TransporterGst || o.TransporterGST || o.TransGST || "",
+								"Request User Name": o.RequestedUser || o.ReqEmpName || o.UserName || o.User || "",
+								"Approver Name": o.ApproverName || o.HODEmpName || o.Approver || "",
+								"Department": o.Department || o.Dept || o.DeptCode || "",
+								"Status": sApproval
+							});
+						} else {
+							aItems.forEach(function (itm) {
+								aRows.push({
+									"Sno": iSno++,
+									"Issue Date": that.formatDate(o.GPDate) || "",
+									"Ash Gate Pass Number": o.GatePassNo || "",
+									"Vendor Name": o.CustomerName || "",
+									"Item Description": itm.MaterialDescription || itm.MaterialDesc || itm.Description || itm.ItemDescription || o.ItemDescription || o.CommonDesc || "",
+									"Qty Send": itm.SentQuantity || itm.Quantity || o.Quantity || "",
+									"Uom": itm.UOM || itm.uom || itm.Uom || o.UOM || o.uom || o.Uom || "",
+									"HSN Code": itm.HSNCode || itm.HsnCode || o.HSNCode || o.HsnCode || "",
+									"UOP": itm.ItemNetPrice || itm.UnitPrice || o.ItemNetPrice || o.UnitPrice || "",
+									"Line Cost Value": itm.Totalvalue || itm.TotalValue || itm.LineCost || itm.ItemNetPrice || o.LineCost || o.ItemNetPrice || "",
+									"Total Value": o.TotalValue || o.Totalvalue || o.FinalTotal || o.finalTotal || "",
+									"Gate Pass Remarks": o.Remarks || o.GatePassRemarks || o.UserRemarks || o.StoreRemarks || "",
+									"DC No": o.DCNumber || o.DcNumber || o.DCNo || o.DcNo || "",
+									"DC Notes": o.DCNotes || o.DcNotes || o.Remarks || "",
+									"Vehicle No": o.VehicleNo || o.VehNo || "",
+									"Transport Name": o.TransporterName || o.TransportName || "",
+									"Transporter GST": o.TransporterGst || o.TransporterGST || o.TransGST || "",
+									"Request User Name": o.RequestedUser || o.ReqEmpName || o.UserName || o.User || "",
+									"Approver Name": o.ApproverName || o.HODEmpName || o.Approver || "",
+									"Department": o.Department || o.Dept || o.DeptCode || "",
+									"Status": sApproval
+								});
+							});
+						}
+					});
+
+					var aParts = ["Ash_Gate_Pass"];
+					if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
+					if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
+					ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx", 21);
+				},
+				error: function (oErr) {
+					sap.ui.core.BusyIndicator.hide();
+					sap.m.MessageBox.error("Failed to read item details for Excel export.");
+				}
 			});
-			var aParts = ["Ash_Gate_Pass"];
-			if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
-			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
-			ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx");
 		},
 
 		onRowPress: function (oEvent) {
@@ -244,7 +349,7 @@ sap.ui.define([
 			if (oItem.getMetadata().getName() === "sap.m.Button") {
 				oItem = oItem.getParent();
 			}
-			var oContext = oItem.getBindingContext();
+			var oContext = oItem.getBindingContext("ashList");
 			var sGPNo = oContext.getProperty("GatePassNo") || oContext.getProperty("requestId") || "";
 			
 			this.getRouter().navTo("AshGatePassDetail", {
@@ -269,6 +374,16 @@ sap.ui.define([
 				}
 			}
 			return vDate;
+		},
+
+		onSort: function () {
+			this._openSortDialog("ashListTable", [
+				{ key: "GatePassNo", text: "Gate Pass No" },
+				{ key: "SalesDocument", text: "Sales Document" },
+				{ key: "CustomerName", text: "Customer Name" },
+				{ key: "VehicleNo", text: "Vehicle No" },
+				{ key: "GPDate", text: "GP Date", selected: true }
+			]);
 		}
 
 	});

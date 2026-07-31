@@ -25,16 +25,17 @@
 							<DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px" change=".onDateFilterChange"/>
 							<DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px" change=".onDateFilterChange"/>
 							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel"/>
+							<Button icon="sap-icon://sort" tooltip="Sort" press=".onSort" type="Transparent"/>
 							<Button id="idScrapGpCopyListBtn" icon="sap-icon://copy" text="Copy" press=".onCopyList" tooltip="Copy list to clipboard"/>
 							<Button id="idScrapGpPrintListBtn" icon="sap-icon://print" text="Print List" press=".onPrintList" tooltip="Print list"/>
 						</OverflowToolbar>
 					</headerToolbar>
 					<columns>
-						<Column><Text text="Gate Pass No" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Req No" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Date" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Customer" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Vehicle No" class="gpmsTableHeaderText"/></Column>
+						<Column><Button text="GP No" icon="{= ${sortModel>/gatePassNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/gatePassNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="gatePassNo"/><core:CustomData key="tableName" value="idScrapGpTable"/></customData></Button></Column>
+						<Column><Button text="Req No" icon="{= ${sortModel>/requestId} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/requestId} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="requestId"/><core:CustomData key="tableName" value="idScrapGpTable"/></customData></Button></Column>
+						<Column><Button text="Date" icon="{= ${sortModel>/requestDateStr} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/requestDateStr} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="requestDateStr"/><core:CustomData key="tableName" value="idScrapGpTable"/></customData></Button></Column>
+						<Column><Button text="Customer" icon="{= ${sortModel>/customerName} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/customerName} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="customerName"/><core:CustomData key="tableName" value="idScrapGpTable"/></customData></Button></Column>
+						<Column><Button text="Vehicle No" icon="{= ${sortModel>/vehicleNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/vehicleNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="vehicleNo"/><core:CustomData key="tableName" value="idScrapGpTable"/></customData></Button></Column>
 						<Column hAlign="Center"><Text text="Action" class="gpmsTableHeaderText"/></Column>
 					</columns>
 					<items>

@@ -21,7 +21,7 @@
                             <SearchField width="300px" search=".onSearch" placeholder="Search..." class="gpmsFieldInput"/>
                             <Button icon="sap-icon://sort" tooltip="Sort" press=".onSort" type="Transparent"/>
                             <Button icon="sap-icon://filter" tooltip="Filter" press=".onFilter" type="Transparent"/>
-                            <Select id="idInspectionStatusFilter" change=".onApplyFilters" width="150px" class="gpmsFieldInput">
+                            <Select id="idInspectionStatusFilter" change=".onApplyFilters" selectedKey="Pending" width="150px" class="gpmsFieldInput">
                                 <items>
                                     <core:Item key="" text="All Statuses"/>
                                     <core:Item key="Open" text="Open"/>
@@ -40,16 +40,16 @@
                     </headerToolbar>
 
                     <columns>
-                        <Column><Text text="GE Date" class="gpmsTableHeaderText"/></Column>
-                        <Column><Text text="GE No" class="gpmsTableHeaderText"/></Column>
-                        <Column><Text text="Supplier" class="gpmsTableHeaderText"/></Column>
-                        <Column><Text text="Source Type" class="gpmsTableHeaderText"/></Column>
-                        <Column><Text text="Dept" class="gpmsTableHeaderText"/></Column>
-                        <Column><Text text="RGP No" class="gpmsTableHeaderText"/></Column>
-                        <Column><Text text="Inv No" class="gpmsTableHeaderText"/></Column>
-                        <Column><Text text="RR No" class="gpmsTableHeaderText"/></Column>
-                        <Column><Text text="Gate Pass No" class="gpmsTableHeaderText"/></Column>
-                        <Column><Text text="Inspection Status" class="gpmsTableHeaderText"/></Column>
+                        <Column><Button text="GE Date" icon="{= ${sortModel>/GEDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GEDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GEDate"/><core:CustomData key="tableName" value="idInspectionTable"/></customData></Button></Column>
+                        <Column><Button text="GE No" icon="{= ${sortModel>/GateEntryNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GateEntryNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GateEntryNo"/><core:CustomData key="tableName" value="idInspectionTable"/></customData></Button></Column>
+                        <Column><Button text="Supplier" icon="{= ${sortModel>/VendorDesc} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/VendorDesc} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="VendorDesc"/><core:CustomData key="tableName" value="idInspectionTable"/></customData></Button></Column>
+                        <Column><Button text="Source Type" icon="{= ${sortModel>/SourceType} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/SourceType} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="SourceType"/><core:CustomData key="tableName" value="idInspectionTable"/></customData></Button></Column>
+                        <Column><Button text="Dept" icon="{= ${sortModel>/Department} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/Department} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="Department"/><core:CustomData key="tableName" value="idInspectionTable"/></customData></Button></Column>
+                        <Column><Button text="RGP No" icon="{= ${sortModel>/RGPNumber} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/RGPNumber} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="RGPNumber"/><core:CustomData key="tableName" value="idInspectionTable"/></customData></Button></Column>
+                        <Column><Button text="Inv No" icon="{= ${sortModel>/DCNumber} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/DCNumber} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="DCNumber"/><core:CustomData key="tableName" value="idInspectionTable"/></customData></Button></Column>
+                        <Column><Button text="RR No" icon="{= ${sortModel>/RRNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/RRNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="RRNo"/><core:CustomData key="tableName" value="idInspectionTable"/></customData></Button></Column>
+                        <Column><Button text="Gate Pass No" icon="{= ${sortModel>/GatepassNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GatepassNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GatepassNo"/><core:CustomData key="tableName" value="idInspectionTable"/></customData></Button></Column>
+                        <Column><Button text="Inspection Status" icon="{= ${sortModel>/InspectionStatus} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/InspectionStatus} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="InspectionStatus"/><core:CustomData key="tableName" value="idInspectionTable"/></customData></Button></Column>
                         <Column hAlign="Center"><Text text="Action" class="gpmsTableHeaderText"/></Column>
                     </columns>
 

@@ -25,15 +25,16 @@
 							<DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px" change=".onDateFilterChange"/>
 							<DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px" change=".onDateFilterChange"/>
 							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel"/>
+							<Button icon="sap-icon://sort" tooltip="Sort" press=".onSort" type="Transparent"/>
 							<Button id="idScrapReqCopyListBtn" icon="sap-icon://copy" text="Copy" press=".onCopyList" tooltip="Copy list to clipboard"/>
 							<Button id="idScrapReqPrintListBtn" icon="sap-icon://print" text="Print List" press=".onPrintList" tooltip="Print list"/>
 						</OverflowToolbar>
 					</headerToolbar>
 					<columns>
-						<Column><Text text="Request No" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Date" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Vehicle No" class="gpmsTableHeaderText"/></Column>
-						<Column><Text text="Status" class="gpmsTableHeaderText"/></Column>
+						<Column><Button text="Request No" icon="{= ${sortModel>/requestId} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/requestId} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="requestId"/><core:CustomData key="tableName" value="idScrapTable"/></customData></Button></Column>
+						<Column><Button text="Date" icon="{= ${sortModel>/requestDateStr} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/requestDateStr} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="requestDateStr"/><core:CustomData key="tableName" value="idScrapTable"/></customData></Button></Column>
+						<Column><Button text="Vehicle No" icon="{= ${sortModel>/vehicleDetails} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/vehicleDetails} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="vehicleDetails"/><core:CustomData key="tableName" value="idScrapTable"/></customData></Button></Column>
+						<Column><Button text="Status" icon="{= ${sortModel>/status} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/status} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="status"/><core:CustomData key="tableName" value="idScrapTable"/></customData></Button></Column>
 						<Column hAlign="Center"><Text text="Action" class="gpmsTableHeaderText"/></Column>
 					</columns>
 					<items>

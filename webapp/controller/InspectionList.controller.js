@@ -54,6 +54,10 @@ sap.ui.define([
 						return oItem;
 					});
 					that.getView().getModel("inspList").setProperty("/results", aResults);
+					// Default filter is set to Pending in the view, so apply it now
+					setTimeout(function() {
+						that._applyFilters();
+					}, 0);
 				},
 				error: function () {
 					sap.ui.core.BusyIndicator.hide();
@@ -163,7 +167,20 @@ sap.ui.define([
 			oBinding.filter(aFilters);
 		},
 
-		onSort: function () {},
+		onSort: function () {
+			this._openSortDialog("idInspectionTable", [
+				{ key: "GEDate", text: "GE Date", selected: true },
+				{ key: "GateEntryNo", text: "GE No" },
+				{ key: "VendorDesc", text: "Supplier" },
+				{ key: "SourceType", text: "Source Type" },
+				{ key: "Department", text: "Dept" },
+				{ key: "RGPNumber", text: "RGP No" },
+				{ key: "DCNumber", text: "Inv No" },
+				{ key: "RRNo", text: "RR No" },
+				{ key: "GatepassNo", text: "Gate Pass No" },
+				{ key: "InspectionStatus", text: "Inspection Status" }
+			]);
+		},
 
 		onFilter: function () {},
 

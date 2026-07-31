@@ -100,7 +100,7 @@ sap.ui.define([
 							} else if (oItem.GatePassreqNo !== undefined && oItem.GatePassreqNo !== null) {
 								sReqNo = String(oItem.GatePassreqNo).trim();
 							}
-							return {
+							return Object.assign({}, oItem, {
 								GatePassReqNo: sReqNo,
 								GatePassNo: oItem.GatePassNo ? String(oItem.GatePassNo).trim() : "",
 								PurchaseOrder: sReqNo,
@@ -130,7 +130,7 @@ sap.ui.define([
 								STORERemarks: oItem.STORERemarks || oItem.StoreRemarks || "",
 								StoreAmmend: oItem.StoreAmmend || "",
 								GateReqItmNav: oItem.GateReqItmNav || null
-							};
+							});
 						});
 						aAllResults = aAllResults.concat(aResults);
 						onBothDone();
@@ -586,61 +586,66 @@ sap.ui.define([
 				sap.m.MessageToast.show("No record found");
 				return;
 			}
+
+			var formatD = function (v) {
+				if (!v) { return ""; }
+				var d = new Date(v);
+				if (isNaN(d.getTime())) { return ""; }
+				return d.getDate().toString().padStart(2, "0") + "-" +
+					(d.getMonth() + 1).toString().padStart(2, "0") + "-" +
+					d.getFullYear();
+			};
+
 			var aRows = [];
+			var iSno = 1;
 			aObjects.forEach(function (o) {
-				var sDate = "";
-				if (o.GatePassDate) {
-					var d = new Date(o.GatePassDate);
-					sDate = d.getDate().toString().padStart(2, "0") + "-" +
-						(d.getMonth() + 1).toString().padStart(2, "0") + "-" +
-						d.getFullYear();
-				}
-				var oHeader = {
-					"Request No": o.GatePassReqNo || "",
-					"Gate Pass No": o.GatePassNo || "",
-					"Type": o.GatePassType || "",
-					"Date": sDate,
-					"Status": o.Status || "",
-					"Plant": o.Plant || "",
-					"Vendor Code": o.Vendor || "",
-					"Vendor Name": o.VendorName || "",
-					"Vendor GST": o.VendorGST || "",
-					"City": o.City || "",
-					"Zip Code": o.ZipCode || "",
-					"Department": o.Department || "",
-					"Vehicle No": o.VehicleNo || "",
-					"Mode of Dispatch": o.ModeOfDispatch || "",
-					"LR Number": o.LRNumber || "",
-					"Transporter": o.TransporterName || "",
-					"Challan No": o.ChallanNumber || "",
-					"Challan Date": o.ChallanDate || "",
-					"Remarks": o.Remarks || "",
-					"HOD Remarks": o.HODRemarks || "",
-					"Store Remarks": o.STORERemarks || "",
-					"Store Amend": o.StoreAmmend || ""
-				};
 				var aItems = (o.GateReqItmNav && o.GateReqItmNav.results) || (Array.isArray(o.GateReqItmNav) ? o.GateReqItmNav : []);
-				if (aItems.length > 0) {
-					aItems.forEach(function (itm) {
-						var oRow = Object.assign({}, oHeader);
-						oRow["Item No"] = itm.ItemNo || "";
-						oRow["Material"] = itm.Material || "";
-						oRow["Material Desc"] = itm.MaterialDesc || itm.Description || "";
-						oRow["HSN Code"] = itm.HSNCode || "";
-						oRow["Quantity"] = itm.Quantity || "";
-						oRow["Item UOM"] = itm.UOM || "";
-						aRows.push(oRow);
-					});
-				} else {
-					oHeader["Item No"] = "";
-					oHeader["Material"] = "";
-					oHeader["Material Desc"] = "";
-					oHeader["HSN Code"] = "";
-					oHeader["Quantity"] = "";
-					oHeader["Item UOM"] = "";
-					aRows.push(oHeader);
+				if (aItems.length === 0) {
+					aItems = [{}];
 				}
+				aItems.forEach(function (itm) {
+					aRows.push({
+						"Sno": iSno++,
+						"GP No": o.GatePassNo || "",
+						"Vendor Name": o.VendorName || "",
+						"Issue Date": formatD(o.GatePassDate),
+						"Material Description": o.CommonDesc || "",
+						"Item Name": itm.MaterialDesc || itm.Description || itm.HSNDesc || "",
+						"Qty Send": itm.SentQuantity || itm.Quantity || "",
+						"Uom": itm.UOM || itm.uom || itm.Uom || "",
+						"HSN Code": itm.HSNCode || "",
+						"Qty Received": itm.RecievedQuantity || itm.ReceivedQuantity || itm.ReceivedQty || "",
+						"Balance Qty": itm.BalanceQuantity || itm.BalanceQty || "",
+						"Due Date": formatD(o.ReturnableDate || o.DueDate),
+						"Extend Due Date": formatD(o.ExtReturnDate || o.Extreturndate || o.ExtendedReturnableDate || o.ReturnDate),
+						"Returned Date": formatD(o.ReturnedDate),
+						"UOP": itm.ItemNetPrice || itm.UnitPrice || "",
+						"Amount": itm.ItemNetPrice || itm.UnitPrice || itm.rate || "",
+						"Total Value": itm.Totalvalue || itm.amount || "",
+						"DC No": o.ChallanNumber || "",
+						"DC/DF Notes": o.CommonDesc || "",
+						"LR Number": o.LRNumber || o.LRNnumber || "",
+						"Vehicle No": o.VehicleNo || "",
+						"EWB No": o.EWBNo || o.EWBno || o.EwbNo || "",
+						"Transport Name": o.TransporterName || "",
+						"Transporter GST": o.TransporterGST || "",
+						"Insurance Yes/ No": o.InsuranceReq || o.Insurance || "NO",
+						"Insurance Value": o.InsuranceAmount || o.InsuranceValue || "",
+						"Inward Insurance LR/Vehicle No": o.InwardInsLRV || o.InwardLRVehicleNo || "",
+						"Inward Insurance Description": o.InwardInsDesc || o.InwardDescription || "",
+						"Inward Insurance Date": formatD(o.InwardInsDate || o.InwardDate),
+						"Inward Insurance Value": o.InwardInsValue || o.InwardValue || "",
+						"GP Req No": o.GatePassReqNo || o.GatePassreqNo || "",
+						"User": o.Requestor || o.RequestedUser || o.ReqEmpName || o.CreatedBy || "",
+						"Department": o.Department || "",
+						"User Remarks": o.Remarks || "",
+						"Dept Remarks": o.HODRemarks || "",
+						"Store Remarks": o.STORERemarks || o.StoreRemarks || "",
+						"Status": o.Status || ""
+					});
+				});
 			});
+
 			var sType = this.byId("idTypeFilterSelect").getSelectedKey();
 			var sStatus = this.byId("idStatusFilterSelect").getSelectedKey();
 			var aParts = ["Gate_Pass"];
@@ -650,7 +655,7 @@ sap.ui.define([
 			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
 			var sFileName = aParts.join("_") + ".xlsx";
 			var sSheetName = aParts.join(" ");
-			ExcelExport.download(aRows, sSheetName, sFileName, 22);
+			ExcelExport.download(aRows, sSheetName, sFileName, aRows.length ? Object.keys(aRows[0]).length : 37);
 		},
 
 		showApproveBtn: function (sStatus, sApproval1, sApproval2, sApprovalReq, sStoreRemarks, sStoreAmmend) {
@@ -659,6 +664,18 @@ sap.ui.define([
 			var bIsGatepassUserOnly = oUserModel ? oUserModel.getProperty("/IsGatepassUserOnly") : false;
 			var bIsHodUser = oUserModel ? oUserModel.getProperty("/IsHodUser") : false;
 			return (sDerived === "Store Approval Pending") && !bIsGatepassUserOnly && !bIsHodUser;
+		},
+
+		onSort: function () {
+			this._openSortDialog("idItemsGatePassTable", [
+				{ key: "GatePassReqNo", text: "Request No", selected: true },
+				{ key: "GatePassType", text: "Type" },
+				{ key: "GatePassDate", text: "Date" },
+				{ key: "Status", text: "Status" },
+				{ key: "Plant", text: "Plant" },
+				{ key: "VendorName", text: "Vendor Name" },
+				{ key: "Department", text: "Department" }
+			]);
 		}
 
 	});

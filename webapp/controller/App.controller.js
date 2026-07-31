@@ -30,6 +30,7 @@ sap.ui.define([
 					var aUserOnlyAllowed = [
 						"home", "GatePassList", "GatePassCreation", "GatePassAmendment", "IRGP", 
 						"ScrapRequestCreation", "ScrapRequestList", "AshGatePassCreation", "AshGatePassList",
+						"AshGatePassRequest", "AshGatePassRequestList",
 						"OutGatePass", "NRGPDetail", "RGPDetail", "ScrapGatepassDetail", "StoreRequestDetail",
 						"AddInwardInsurance"
 					];
@@ -41,6 +42,7 @@ sap.ui.define([
 					var aHodAllowed = [
 						"home", "GatePassList", "NRGPList", "GatePassAmendment", "ScrapRequestList", 
 						"ScrapRequestDetail", "ScrapGatepassList", "AshGatePassList", "AshGatePassDetail", "HODRequestDetail",
+						"AshGatePassRequest", "AshGatePassRequestList",
 						"OutGatePass", "NRGPDetail", "RGPDetail", "ScrapGatepassDetail", "StoreRequestDetail",
 						"AddInwardInsurance"
 					];

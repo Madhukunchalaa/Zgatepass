@@ -325,6 +325,16 @@ sap.ui.define([
 					gpNo: encodeURIComponent(sGpNo)
 				});
 			}
+		},
+
+		onSort: function () {
+			this._openSortDialog("scrapGpTable", [
+				{ key: "gatePassNo", text: "Gate Pass No", selected: true },
+				{ key: "requestId", text: "Req No" },
+				{ key: "requestDateStr", text: "Date" },
+				{ key: "customerName", text: "Customer" },
+				{ key: "vehicleNo", text: "Vehicle No" }
+			]);
 		}
 
 	});

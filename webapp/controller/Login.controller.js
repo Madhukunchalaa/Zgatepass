@@ -62,9 +62,13 @@ sap.ui.define([
                         oUserModel.setProperty("/Cocode", oResult.Cocode || "");
                         oUserModel.setProperty("/Department", oResult.Department || "");
                         oUserModel.setProperty("/Role", sRole);
-                        oUserModel.setProperty("/IsGatepassUserOnly", sRole === "ZC_MM_GATEPASS_USER_FRONT_VIEW" || sRole === "ZC_MM_GATEPASS_USER_FRONTVIEW" || sRole === "Z_MM_GATEPASS_USER_FRONT_VIEW" || sRole === "Z_MM_GATEPASS_USER_FRONTVIEW");
-                        oUserModel.setProperty("/IsHodUser", sRole === "ZC_MM_GATEPASS_HOD_FRONT_VIEW" || sRole === "ZC_MM_GATEPASS_HOD_FRONTVIEW" || sRole === "Z_MM_GATEPASS_HOD_FRONT_VIEW" || sRole === "Z_MM_GATEPASS_HOD_FRONTVIEW");
-                        oUserModel.setProperty("/IsStoreUser", sRole === "ZC_MM_GATEPASS_STORE_FRONTVIEW" || sRole === "ZC_MM_GATEPASS_STORE_FRONT_VIEW" || sRole === "Z_MM_GATEPASS_STORE_FRONTVIEW" || sRole === "Z_MM_GATEPASS_STORE_FRONT_VIEW");
+                        var bIsHod = sRole.indexOf("HOD") !== -1 || sRole === "ZC_MM_GATEPASS_HOD_FRONT_VIEW" || sRole === "ZC_MM_GATEPASS_HOD_FRONTVIEW" || sRole === "Z_MM_GATEPASS_HOD_FRONT_VIEW" || sRole === "Z_MM_GATEPASS_HOD_FRONTVIEW";
+                        var bIsStoreUser = sRole.indexOf("STORE") !== -1 || sRole === "ZC_MM_GATEPASS_STORE_FRONTVIEW" || sRole === "ZC_MM_GATEPASS_STORE_FRONT_VIEW" || sRole === "Z_MM_GATEPASS_STORE_FRONTVIEW" || sRole === "Z_MM_GATEPASS_STORE_FRONT_VIEW";
+                        var bIsUserOnly = (!bIsHod && !bIsStoreUser) && (sRole.indexOf("USER") !== -1 || sRole.indexOf("REQUESTER") !== -1 || sRole === "ZC_MM_GATEPASS_USER_FRONT_VIEW" || sRole === "ZC_MM_GATEPASS_USER_FRONTVIEW" || sRole === "Z_MM_GATEPASS_USER_FRONT_VIEW" || sRole === "Z_MM_GATEPASS_USER_FRONTVIEW");
+                        
+                        oUserModel.setProperty("/IsGatepassUserOnly", bIsUserOnly);
+                        oUserModel.setProperty("/IsHodUser", bIsHod);
+                        oUserModel.setProperty("/IsStoreUser", bIsStoreUser);
                         localStorage.setItem("gpms_user", JSON.stringify(oUserModel.getData()));
                     }
                     fnNavigate();

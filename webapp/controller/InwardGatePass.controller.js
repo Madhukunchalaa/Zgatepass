@@ -188,7 +188,7 @@ sap.ui.define([
 					recvdQty:     0,
 					balQty:       parseFloat(fBal.toFixed(3)),
 					_initialBal:  parseFloat(fBal.toFixed(3)),
-					uom:          item.UOM || item.Uom || "EA",
+					uom:          item.UOM || item.Uom || "",
 					rate:         fRateRaw,
 					amount:       parseFloat((fSent * fRateRaw).toFixed(2)),
 					_itemNo:        item.ItemNo || "",

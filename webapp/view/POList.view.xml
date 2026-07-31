@@ -29,6 +29,7 @@
 							<DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px"/>
 							<DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px"/>
 							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" type="Default" tooltip="Export to Excel"/>
+							<Button icon="sap-icon://sort" tooltip="Sort" press=".onSort" type="Transparent"/>
 						</Toolbar>
 					</headerToolbar>
 					<content>
@@ -41,12 +42,12 @@
 							growingThreshold="50"
 							class="sapUiSizeCompact gpmsItemTable">
 							<columns>
-								<Column><Text text="PO Number" class="gpmsHeaderText"/></Column>
-								<Column><Text text="Gate Pass No" class="gpmsHeaderText"/></Column>
-								<Column><Text text="Plant" class="gpmsHeaderText"/></Column>
-								<Column><Text text="Vendor" class="gpmsHeaderText"/></Column>
-								<Column><Text text="Vendor Name" class="gpmsHeaderText"/></Column>
-								<Column><Text text="GE Date" class="gpmsHeaderText"/></Column>
+								<Column><Button text="PO Number" icon="{= ${sortModel>/PurchaseOrder} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/PurchaseOrder} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="PurchaseOrder"/><core:CustomData key="tableName" value="idPOListTable"/></customData></Button></Column>
+								<Column><Button text="Gate Pass No" icon="{= ${sortModel>/GatePassNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GatePassNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GatePassNo"/><core:CustomData key="tableName" value="idPOListTable"/></customData></Button></Column>
+								<Column><Button text="Plant" icon="{= ${sortModel>/Plant} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/Plant} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="Plant"/><core:CustomData key="tableName" value="idPOListTable"/></customData></Button></Column>
+								<Column><Button text="Vendor" icon="{= ${sortModel>/Vendor} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/Vendor} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="Vendor"/><core:CustomData key="tableName" value="idPOListTable"/></customData></Button></Column>
+								<Column><Button text="Vendor Name" icon="{= ${sortModel>/VendorDesc} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/VendorDesc} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="VendorDesc"/><core:CustomData key="tableName" value="idPOListTable"/></customData></Button></Column>
+								<Column><Button text="GE Date" icon="{= ${sortModel>/GEDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GEDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GEDate"/><core:CustomData key="tableName" value="idPOListTable"/></customData></Button></Column>
 								<Column hAlign="Center"><Text text="Actions" class="gpmsHeaderText"/></Column>
 							</columns>
 							<items>

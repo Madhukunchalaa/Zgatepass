@@ -343,7 +343,8 @@ sap.ui.define([
 							"Total Value":                      itm.Totalvalue || "",
 							"DC No":                            o.ChallanNumber || "",
 							"DC/DF Notes":                      o.CommonDesc || "",
-							"LR/Vehicle No":                    o.LRNumber || o.VehicleNo || "",
+							"LR Number":                        o.LRNumber || o.LRNnumber || "",
+							"Vehicle No":                       o.VehicleNo || "",
 							"EWB No":                           o.EWBNo || o.EWBno || o.EwbNo || "",
 							"Transport Name":                   o.TransporterName || "",
 							"Transporter GST":                  o.TransporterGST || "",
@@ -553,6 +554,21 @@ sap.ui.define([
 			} else {
 				this.getRouter().navTo("NRGPDetail", { gpNo: oItem.GatePassNo, gpType: oItem.GatePassType });
 			}
+		},
+
+		onSort: function () {
+			this._openSortDialog("idNRGPTable", [
+				{ key: "GatePassDate", text: "Date", selected: true },
+				{ key: "GatePassNo", text: "Gate Pass No" },
+				{ key: "GatePassreqNo", text: "GP Req No" },
+				{ key: "GatePassType", text: "GP Type" },
+				{ key: "DueDate", text: "Due Date" },
+				{ key: "ReturnDate", text: "Ret Date" },
+				{ key: "VendorName", text: "Vendor" },
+				{ key: "Department", text: "Req Dept" },
+				{ key: "CommonDesc", text: "Desc" },
+				{ key: "GPStatusText", text: "Status" }
+			]);
 		}
 
 	});

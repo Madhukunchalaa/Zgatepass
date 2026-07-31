@@ -68,12 +68,8 @@
 					</VBox>
 					<VBox class="sapUiSmallMargin">
 						<Label text="Budget code" class="gpmsFieldLabel" />
-						<ComboBox id="pcpBudgetCode" selectedKey="{pcpModel>/BudgetCode}" class="gpmsFieldInput" enabled="{= !${pcpModel>/isView} }" width="100%">
-							<core:Item key="" text="Select Budget code" />
-							<core:Item key="MAINTENANCE" text="MAINTENANCE" />
-							<core:Item key="OPERATIONS" text="OPERATIONS" />
-							<core:Item key="IT" text="IT" />
-							<core:Item key="ADMIN" text="ADMIN" />
+						<ComboBox id="pcpBudgetCode" selectedKey="{pcpModel>/BudgetCode}" items="{pcpModel>/dropdowns/budgetCodes}" class="gpmsFieldInput" enabled="{= !${pcpModel>/isView} }" width="100%">
+							<core:Item key="{pcpModel>WBSElement}" text="{pcpModel>WBSElement} - {pcpModel>WBSDesc}" />
 						</ComboBox>
 					</VBox>
 					<VBox class="sapUiSmallMargin">

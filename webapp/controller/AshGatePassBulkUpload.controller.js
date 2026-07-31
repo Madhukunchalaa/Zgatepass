@@ -56,8 +56,7 @@ sap.ui.define([
 		onDownloadTemplate: function () {
 			this._loadSheetJS().then(function (XLSX) {
 				var aHeaders = [
-					["TAQA - GPMS - All Ash GP Report"],
-					["Sno", "Issue Date", "Ash Gate Pass Number", "Vendor Name", "Item Description", "Qty Send", "Uom", "HSN Code", "UOP", "Line Cost Value", "Total Value", "Gate Pass Remarks", "DC No", "DC Notes", "Vehicle No", "Transport Name", "Transporter GST", "Request User Name", "Approver Name", "Department", "Status"]
+					["Sales Document", "Vehicle No", "Sent Quantity", "Item Net Price", "Remarks", "Transporter Name", "Transporter GST"]
 				];
 				var ws = XLSX.utils.aoa_to_sheet(aHeaders);
 				var wb = XLSX.utils.book_new();
@@ -104,22 +103,38 @@ sap.ui.define([
 					}
 
 					var aFormattedRows = aRows.map(function (row, idx) {
+						var rawQty = row["SentQuantity"] !== undefined ? row["SentQuantity"] :
+						             row["Sent Quantity"] !== undefined ? row["Sent Quantity"] :
+						             row["RequestedQuantity"] !== undefined ? row["RequestedQuantity"] :
+						             row["Requested Quantity"] !== undefined ? row["Requested Quantity"] :
+						             row["Qty Send"] !== undefined ? row["Qty Send"] :
+						             row["Quantity"] !== undefined ? row["Quantity"] :
+						             row["Qty"] !== undefined ? row["Qty"] : "";
+						var rawPrice = row["ItemNetPrice"] !== undefined ? row["ItemNetPrice"] :
+						               row["Item Net Price"] !== undefined ? row["Item Net Price"] :
+						               row["UOP"] !== undefined ? row["UOP"] :
+						               row["Rate"] !== undefined ? row["Rate"] :
+						               row["Price"] !== undefined ? row["Price"] : "";
+
 						return {
 							Index: idx + 1,
-							IssueDate: row["Issue Date"] || "",
-							OriginalGPNo: row["Ash Gate Pass Number"] || "",
-							VendorName: row["Vendor Name"] || "",
-							ItemDescription: row["Item Description"] || "",
-							RequestedQuantity: row["Qty Send"] ? parseFloat(row["Qty Send"]) || 0 : 0,
-							Uom: row["Uom"] || "",
-							HSNCode: row["HSN Code"] || "",
-							ItemNetPrice: row["UOP"] ? parseFloat(row["UOP"]) || 0 : 0,
-							Remarks: row["Gate Pass Remarks"] || "",
-							DCNumber: row["DC No"] || "",
-							DCNotes: row["DC Notes"] || "",
-							VehicleNo: row["Vehicle No"] || "",
-							TransporterName: row["Transport Name"] || "",
-							TransporterGst: row["Transporter GST"] || "",
+							SalesDocument: row["SalesDocument"] || row["Sales Document"] || row["SalesDoc"] || row["Sales Doc"] || "",
+							IssueDate: row["Issue Date"] || row["IssueDate"] || "",
+							OriginalGPNo: row["Ash Gate Pass Number"] || row["AshGatePassNumber"] || "",
+							VendorName: row["Vendor Name"] || row["VendorName"] || "",
+							ItemDescription: row["Item Description"] || row["ItemDescription"] || "",
+							RequestedQuantity: rawQty !== "" ? parseFloat(rawQty) || 0 : 0,
+							Uom: row["Uom"] || row["UOM"] || "",
+							HSNCode: row["HSN Code"] || row["HSNCode"] || "",
+							ItemNetPrice: rawPrice !== "" ? parseFloat(rawPrice) || 0 : 0,
+							Remarks: row["Remarks"] || row["Gate Pass Remarks"] || row["GatePassRemarks"] || "",
+							DCNumber: row["DC No"] || row["DC Number"] || row["DCNo"] || "",
+							DCNotes: row["DC Notes"] || row["DCNotes"] || "",
+							VehicleNo: row["VehicleNo"] !== undefined ? row["VehicleNo"] :
+							           row["Vehicle No"] !== undefined ? row["Vehicle No"] :
+							           row["Vehicle Number"] !== undefined ? row["Vehicle Number"] : "",
+							TransporterName: row["TransporterName"] || row["Transporter Name"] || row["Transport Name"] || row["TransportName"] || "",
+							TransporterGst: row["TransporterGst"] || row["Transporter GST"] || row["TransporterGst"] || "",
 							StatusText: "Ready to Import",
 							StatusState: "None"
 						};
@@ -144,6 +159,22 @@ sap.ui.define([
 
 			if (aRows.length === 0) {
 				MessageBox.error("No rows to import.");
+				return;
+			}
+
+			// Quantity is required on every row; Item Net Price is optional.
+			var aBadRows = aRows.filter(function (r) {
+				return !(parseFloat(r.RequestedQuantity) > 0);
+			});
+			if (aBadRows.length > 0) {
+				aBadRows.forEach(function (r) {
+					oModel.setProperty("/rows/" + (r.Index - 1) + "/StatusText", "Missing Quantity");
+					oModel.setProperty("/rows/" + (r.Index - 1) + "/StatusState", "Error");
+				});
+				MessageBox.error(
+					aBadRows.length + " row(s) have Quantity missing/zero (rows " +
+					aBadRows.map(function (r) { return r.Index; }).join(", ") + "). Please correct the Excel and re-upload."
+				);
 				return;
 			}
 
@@ -174,12 +205,15 @@ sap.ui.define([
 			var oUploadModel = this.getView().getModel("upload");
 			var that = this;
 
-			// Group rows by VendorName and VehicleNo (to combine multi-item entries)
+			// One gate pass per Excel row — each row is a separate weighbridge trip,
+			// so the same vehicle appearing on several rows must NOT merge into one
+			// gate pass (the row index keeps every trip distinct).
 			var oGroups = {};
 			aRows.forEach(function (row) {
-				var key = row.VendorName + "_" + row.VehicleNo + "_" + row.IssueDate;
+				var key = row.Index + "_" + (row.SalesDocument || "") + "_" + row.VehicleNo;
 				if (!oGroups[key]) {
 					oGroups[key] = {
+						SalesDocument: row.SalesDocument,
 						VendorName: row.VendorName,
 						VehicleNo: row.VehicleNo,
 						TransporterName: row.TransporterName,
@@ -187,6 +221,8 @@ sap.ui.define([
 						Remarks: row.Remarks,
 						IssueDate: row.IssueDate,
 						OriginalGPNo: row.OriginalGPNo,
+						DCNumber: row.DCNumber,
+						DCNotes: row.DCNotes,
 						Items: [],
 						RowIndexes: []
 					};
@@ -214,20 +250,36 @@ sap.ui.define([
 				// Update loading text
 				sap.ui.core.BusyIndicator.show(0); // refresh spin
 
-				// Clean the search string for fuzzy matching
-				var sExcelKey = that._getVendorKeyword(oGroup.VendorName);
-				var oSO = aSalesOrders.find(function (so) {
-					var sCustName = so.CustomerName || so.Name1 || "";
-					var sCustKey = that._getVendorKeyword(sCustName);
-					return sCustKey === sExcelKey;
-				});
+				// Match Sales Order: Prioritize exact SalesDocument matching if provided
+				var oSO = null;
+				if (oGroup.SalesDocument) {
+					var sSalesDocExcel = String(oGroup.SalesDocument).trim();
+					oSO = aSalesOrders.find(function (so) {
+						var sSO = String(so.SalesDocument || so.Vbeln || "").trim();
+						// Remove leading zeros for matching if they are numeric
+						return sSO === sSalesDocExcel || parseInt(sSO, 10) === parseInt(sSalesDocExcel, 10);
+					});
+				}
+
+				// Fallback to fuzzy vendor matching if no SO found and VendorName is present
+				if (!oSO && oGroup.VendorName) {
+					var sExcelKey = that._getVendorKeyword(oGroup.VendorName);
+					oSO = aSalesOrders.find(function (so) {
+						var sCustName = so.CustomerName || so.Name1 || "";
+						var sCustKey = that._getVendorKeyword(sCustName);
+						return sCustKey === sExcelKey;
+					});
+				}
 
 				if (!oSO) {
 					oGroup.RowIndexes.forEach(function (idx) {
-						oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusText", "Error: Cust '" + oGroup.VendorName + "' SO not found");
+						var sErrText = oGroup.SalesDocument ? 
+							"Error: SO '" + oGroup.SalesDocument + "' not found" :
+							"Error: Cust '" + oGroup.VendorName + "' SO not found";
+						oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusText", sErrText);
 						oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusState", "Error");
 					});
-					aErrors.push("Group " + oGroup.VendorName + "/" + oGroup.VehicleNo + ": ZASH Sales Order not found in SAP for this Customer.");
+					aErrors.push("Group " + (oGroup.SalesDocument || oGroup.VendorName) + "/" + oGroup.VehicleNo + ": ZASH Sales Order not found in SAP.");
 					fnProcessNext();
 					return;
 				}
@@ -241,23 +293,33 @@ sap.ui.define([
 				// Build ASHItmNav payload using SO items matched with excel rates/quantities
 				var aASHItmNav = oGroup.Items.map(function (rowItem, index) {
 					var oSOItem = aSOItems[index] || aSOItems[0];
-					var fQty = parseFloat(rowItem.RequestedQuantity) || 0;
-					var fPrice = parseFloat(rowItem.ItemNetPrice) || 0;
+					var fQty = parseFloat(rowItem.RequestedQuantity) || 0; // Excel quantity
+					var fPrice = parseFloat(rowItem.ItemNetPrice) || 0;    // Excel price
 
-					return {
-						SalesDocument: oSO.SalesDocument || oSO.Vbeln || "",
+					var fSOQty = parseFloat(oSOItem ? (oSOItem.OrderQuantity || oSOItem.SOQuantity || oSOItem.RequestedQuantity || 0) : 0) || fQty;
+					var fOpenQty = (oSOItem && oSOItem.OpenQuantity !== undefined && oSOItem.OpenQuantity !== null && oSOItem.OpenQuantity !== "") ? parseFloat(oSOItem.OpenQuantity) : fSOQty;
+					var fBalQty = fOpenQty - fQty;
+
+					var oMappedItem = that._buildAshItemPayload({
+						// Use the SO item's (zero-padded) document number — the manual flow
+						// persists items under this key.
+						SalesDocument: (oSOItem && oSOItem.SalesDocument) || oSO.SalesDocument || oSO.Vbeln || "",
 						GatePasstype: "NRGP",
-						ItemNo: oSOItem ? (oSOItem.ItemNo || "000010") : "000010",
+						ItemNo: oSOItem ? (oSOItem.ItemNo || "10").padStart(6, "0") : "000010",
 						Material: oSOItem ? (oSOItem.Material || "") : "",
 						MaterialDescription: oSOItem ? (oSOItem.MaterialDesc || oSOItem.Arktx || "") : "",
 						HSNCode: oSOItem ? (oSOItem.HSNCode || "") : "",
-						RequestedQuantity: String(fQty.toFixed(3)),
-						UOM: oSOItem ? (oSOItem.UOM || "MT") : "MT",
-						ItemNetPrice: String(fPrice.toFixed(2)),
-						Totalvalue: String((fQty * fPrice).toFixed(2)),
+						SOQuantity: fSOQty,
+						OpenQuantity: fOpenQty,
+						SentQuantity: fQty, // Only SentQuantity comes from Excel!
+						BalanceQuantity: fBalQty,
+						UOM: oSOItem ? (oSOItem.UOM || "") : "",
+						ItemNetPrice: fPrice,
+						Totalvalue: fQty * fPrice,
 						GatePassNo: "",
 						GatePassReqNo: ""
-					};
+					});
+					return that._typePayloadForEntity(oODataModel, oMappedItem);
 				});
 
 				var sToday = new Date().toISOString().split("T")[0].replace(/-/g, "");
@@ -284,8 +346,8 @@ sap.ui.define([
 					ModeOfDispatch: "ROAD",
 					TransporterName: oGroup.TransporterName,
 					TransporterGst: oGroup.TransporterGst,
-					DCNotes: "",
-					DCNumber: "",
+					DCNotes: oGroup.DCNotes || "",
+					DCNumber: oGroup.DCNumber || "",
 					DCDate: sGPDate,
 					GatePassNo: "",
 					WBTicketNo: "",
@@ -293,17 +355,31 @@ sap.ui.define([
 					Approval1: "", // Step 1: Create Request
 					ASHItmNav: aASHItmNav
 				};
+				oPayload = that._typePayloadForEntity(oODataModel, oPayload);
 
 				// Call Step 1: Create the Gate Pass Request
 				oODataModel.create("/AshHdrSet", oPayload, {
 					success: function (oResponse) {
+						var sGPNo = oResponse.GatePassNo || "";
 						var sReqNo = oResponse.GatePassReqNo || "";
+
+						// If Gate Pass is generated directly, show success immediately
+						if (sGPNo) {
+							oGroup.RowIndexes.forEach(function (idx) {
+								oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusText", "Success: GP " + sGPNo);
+								oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusState", "Success");
+							});
+							aCreatedGP.push(sGPNo);
+							fnProcessNext();
+							return;
+						}
+
 						if (!sReqNo) {
 							oGroup.RowIndexes.forEach(function (idx) {
-								oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusText", "Error: No Request No returned");
+								oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusText", "Error: No GP No or Request No returned");
 								oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusState", "Error");
 							});
-							aErrors.push("Group " + oGroup.SalesDocument + "/" + oGroup.VehicleNo + ": Backend did not return a Request Number.");
+							aErrors.push("Group " + oGroup.SalesDocument + "/" + oGroup.VehicleNo + ": Backend did not return a GP No or Request No.");
 							fnProcessNext();
 							return;
 						}
@@ -313,32 +389,127 @@ sap.ui.define([
 							GatePassReqNo: sReqNo,
 							Approval1: "A1", // Approve!
 							ASHItmNav: oPayload.ASHItmNav.map(function(item) {
+								// Items are already canonical — only the req no changes
 								return Object.assign({}, item, { GatePassReqNo: sReqNo });
 							})
 						});
+						oApprovePayload = that._typePayloadForEntity(oODataModel, oApprovePayload);
 
 						oODataModel.create("/AshHdrSet", oApprovePayload, {
 							success: function (oApproveResponse) {
-								var sGPNo = oApproveResponse.GatePassNo || "";
-								var sBackendMsg = oApproveResponse.Message || "";
-								var bIsApproved = sGPNo || sBackendMsg.indexOf("Approved") !== -1;
-								
-								if (bIsApproved) {
-									var sGPDisplay = sGPNo || ("Approved (Req " + sReqNo + ")");
-									oGroup.RowIndexes.forEach(function (idx) {
-										oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusText", "Success: " + sGPDisplay);
-										oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusState", "Success");
+								// Step 3: Add a 1.5-second delay to let the SAP background asynchronous update tasks finish
+								// committing the request items to the database tables before we read/promote them!
+								setTimeout(function () {
+									oODataModel.read("/AshHdrSet", {
+										filters: [new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)],
+										urlParameters: { "$expand": "ASHItmNav" },
+										success: function (oReqData) {
+											var oReqRecord = oReqData.results && oReqData.results[0];
+											var aDBItems = (oReqRecord && oReqRecord.ASHItmNav && oReqRecord.ASHItmNav.results) || [];
+											if (aDBItems.length === 0) {
+												aDBItems = oPayload.ASHItmNav; // Fallback to local
+											}
+
+											var oSubmitPayload = Object.assign({}, oPayload, {
+												GatePassReqNo: sReqNo,
+												Approval1: "A1", // Submit Approved!
+												ASHItmNav: aDBItems.map(function(item) {
+													var oMappedItem = that._buildAshItemPayload(Object.assign({}, item, {
+														GatePassReqNo: "",
+														GatePassNo: ""
+													}));
+													return that._typePayloadForEntity(oODataModel, oMappedItem);
+												})
+											});
+											oSubmitPayload = that._typePayloadForEntity(oODataModel, oSubmitPayload);
+
+											oODataModel.create("/AshHdrSet", oSubmitPayload, {
+												success: function (oSubmitResponse) {
+													var sGPNo3 = oSubmitResponse.GatePassNo || "";
+													if (sGPNo3) {
+														var sGPDisplay = "GP " + sGPNo3 + " (Req " + sReqNo + ")";
+														oGroup.RowIndexes.forEach(function (idx) {
+															oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusText", "Success: " + sGPDisplay);
+															oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusState", "Success");
+														});
+														aCreatedGP.push(sGPDisplay);
+													} else {
+														oGroup.RowIndexes.forEach(function (idx) {
+															oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusText", "Approved (Req " + sReqNo + ") but GP is blank");
+															oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusState", "Warning");
+														});
+														aCreatedGP.push("Approved (Req " + sReqNo + ")");
+													}
+													fnProcessNext();
+												},
+												error: function (oSubmitError) {
+													var sSubmitMsg = "Error generating gate pass";
+													try {
+														var oErr = JSON.parse(oSubmitError.responseText);
+														sSubmitMsg = oErr.error.message.value;
+													} catch (e) { }
+
+													oGroup.RowIndexes.forEach(function (idx) {
+														oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusText", "Approved (Req " + sReqNo + ") but GP Gen Failed: " + sSubmitMsg);
+														oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusState", "Warning");
+													});
+													aErrors.push("Group " + oGroup.SalesDocument + "/" + oGroup.VehicleNo + ": Req approved but GP generation failed: " + sSubmitMsg);
+													fnProcessNext();
+												}
+											});
+										},
+										error: function () {
+											// Fallback if DB read fails: use local items mapping directly
+											var oSubmitPayload = Object.assign({}, oPayload, {
+												GatePassReqNo: sReqNo,
+												Approval1: "A1",
+												ASHItmNav: oPayload.ASHItmNav.map(function(item) {
+													var oMappedItem = that._buildAshItemPayload(Object.assign({}, item, {
+														GatePassReqNo: "",
+														GatePassNo: ""
+													}));
+													return that._typePayloadForEntity(oODataModel, oMappedItem);
+												})
+											});
+											oSubmitPayload = that._typePayloadForEntity(oODataModel, oSubmitPayload);
+
+											oODataModel.create("/AshHdrSet", oSubmitPayload, {
+												success: function (oSubmitResponse) {
+													var sGPNo3 = oSubmitResponse.GatePassNo || "";
+													if (sGPNo3) {
+														var sGPDisplay = "GP " + sGPNo3 + " (Req " + sReqNo + ")";
+														oGroup.RowIndexes.forEach(function (idx) {
+															oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusText", "Success: " + sGPDisplay);
+															oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusState", "Success");
+														});
+														aCreatedGP.push(sGPDisplay);
+													} else {
+														oGroup.RowIndexes.forEach(function (idx) {
+															oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusText", "Approved (Req " + sReqNo + ") but GP is blank");
+															oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusState", "Warning");
+														});
+														aCreatedGP.push("Approved (Req " + sReqNo + ")");
+													}
+													fnProcessNext();
+												},
+												error: function (oSubmitError) {
+													var sSubmitMsg = "Error generating gate pass";
+													try {
+														var oErr = JSON.parse(oSubmitError.responseText);
+														sSubmitMsg = oErr.error.message.value;
+													} catch (e) { }
+
+													oGroup.RowIndexes.forEach(function (idx) {
+														oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusText", "Approved (Req " + sReqNo + ") but GP Gen Failed: " + sSubmitMsg);
+														oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusState", "Warning");
+													});
+													aErrors.push("Group " + oGroup.SalesDocument + "/" + oGroup.VehicleNo + ": Req approved but GP generation failed: " + sSubmitMsg);
+													fnProcessNext();
+												}
+											});
+										}
 									});
-									aCreatedGP.push(sGPDisplay);
-								} else {
-									var sStatusText = sBackendMsg ? ("Req Created (" + sReqNo + ") but Approval returned message: " + sBackendMsg) : "Req Created (" + sReqNo + ") but GP No is blank";
-									oGroup.RowIndexes.forEach(function (idx) {
-										oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusText", sStatusText);
-										oUploadModel.setProperty("/rows/" + (idx - 1) + "/StatusState", "Warning");
-									});
-									aErrors.push("Group " + oGroup.SalesDocument + "/" + oGroup.VehicleNo + ": " + sStatusText);
-								}
-								fnProcessNext();
+								}, 1500);
 							},
 							error: function (oApproveError) {
 								var sApproveMsg = "Error approving request " + sReqNo;

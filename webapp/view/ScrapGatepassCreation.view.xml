@@ -150,8 +150,8 @@
 							<Input value="{scrapGp>/weighmentSlipNo}" placeholder="Enter Weighment slip Ticket No" class="gpmsFieldInput" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
-							<Label text="Challan Date &amp; Time" class="gpmsFieldLabel"/>
-							<Input value="{scrapGp>/challanDateTime}" placeholder="Enter Challan Date &amp; Time" class="gpmsFieldInput" width="100%"/>
+							<Label text="Challan Date" class="gpmsFieldLabel"/>
+							<DatePicker dateValue="{scrapGp>/challanDateTime}" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" placeholder="Select Challan Date" class="gpmsFieldInput" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="Delivery Number" class="gpmsFieldLabel"/>

@@ -139,14 +139,7 @@
 							<NumericContent value="{hodCounts>/ashGpListCount}" withMargin="false" valueColor="Good"/>
 						</TileContent>
 					</GenericTile>
-					
-					<!-- Ash Gate Pass Bulk Upload Card (Temporary)
-					<GenericTile class="gpmsDashCard ashCard" press=".onPressAshGatePassBulkUpload" header="ASH GP BULK UPLOAD" subheader="Bulk Create via Excel (Temp)" visible="{= !${user>/IsHodUser} }">
-						<TileContent>
-							<core:Icon src="sap-icon://excel-attachment" class="gpmsCardIcon"/>
-						</TileContent>
-					</GenericTile>
-					-->
+
 
 					<!-- Scrap Request Card -->
 					<GenericTile class="gpmsDashCard" press=".onPressScrapRequestCreation" header="SCRAP REQUEST" subheader="Scrap Collection Request" visible="{= !${user>/IsHodUser} }">

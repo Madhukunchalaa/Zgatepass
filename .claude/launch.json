@@ -6,6 +6,18 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "C:/Fiori/gpms-next/apps/web", "run", "dev"],
       "port": 5173
+    },
+    {
+      "name": "audzgpms",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd /d C:\\Aaudhatham\\audzgpms && npx fiori run --port 8089 --open index.html"],
+      "port": 8089
+    },
+    {
+      "name": "itsm-backend",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd /d C:\\Users\\IE-Admin\\Desktop\\sap-itsm-platform\\sap-itsm-platform\\backend && npm run dev"],
+      "port": 3005
     }
   ]
 }

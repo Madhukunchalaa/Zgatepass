@@ -22,6 +22,7 @@ sap.ui.define([
 			var sMode = oMeta.mode || "CREATE";
 
 			this._setModel(oRow, sMode);
+			this._loadBudgetCodes();
 
 			if (sMode === "PRINT" && oRow.GateEntryNo) {
 				this._generatePDF(this._buildPrintData(oRow));
@@ -69,18 +70,40 @@ sap.ui.define([
 			});
 		},
 
+		_loadBudgetCodes: function () {
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) { return; }
+
+			var that = this;
+			oODataModel.read("/ZWBSElementSet", {
+				success: function (oData) {
+					var aResults = oData.results || [];
+					var oModel = that.getView().getModel("pcpDetail");
+					if (oModel) {
+						var oDropdowns = oModel.getProperty("/dropdowns") || {};
+						oDropdowns.budgetCodes = aResults;
+						oModel.setProperty("/dropdowns", oDropdowns);
+					}
+				},
+				error: function (oError) {
+					console.error("Failed to load budget codes from /ZWBSElementSet", oError);
+				}
+			});
+		},
+
 		_mapItems: function (oPCPItmNav) {
 				var aRaw = (oPCPItmNav && oPCPItmNav.results) || [];
 				if (aRaw.length === 0) {
 					return [{ sno: 1, ItemNo: "00010", ItemDescription: "", RecievedQuantity: "0", UOM: "", TotalCost: "" }];
 				}
+				var that = this;
 				return aRaw.map(function (it, i) {
 					return {
 						sno: i + 1,
 						ItemNo: it.ItemNo || String((i + 1) * 10).padStart(5, "0"),
 						ItemDescription: it.ItemDescription || "",
 						RecievedQuantity: it.RecievedQuantity || "0",
-						UOM: it.UOM || "",
+						UOM: that._mapUOMToDropdownKey(it.UOM || it.uom || it.Uom || ""),
 						TotalCost: it.TotalCost || ""
 					};
 				});
@@ -137,10 +160,25 @@ sap.ui.define([
 			sap.ui.core.BusyIndicator.show(0);
 
 			var aFilters = [new Filter("GateEntryNo", FilterOperator.EQ, sGENo)];
-			var sGEDate = (this.getView().getModel("pcpDetail").getProperty("/GEDate") || "").replace(/-/g, "");
+			var sModelDate = (this.getView().getModel("pcpDetail").getProperty("/GEDate") || "").trim();
+			var sGEDate = "";
+			if (sModelDate) {
+				var aParts = sModelDate.split("-");
+				if (aParts.length === 3) {
+					if (aParts[0].length === 4) { // YYYY-MM-DD
+						sGEDate = aParts[0] + aParts[1] + aParts[2];
+					} else if (aParts[2].length === 4) { // DD-MM-YYYY
+						sGEDate = aParts[2] + aParts[1] + aParts[0];
+					}
+				} else {
+					sGEDate = sModelDate.replace(/-/g, "");
+				}
+			}
+			
 			if (sGEDate) {
 				aFilters.push(new Filter("GEDate", FilterOperator.EQ, sGEDate));
 			}
+
 
 			oODataModel.read("/PCPHdrSet", {
 				filters: aFilters,
@@ -150,7 +188,7 @@ sap.ui.define([
 					var aResults = oData.results || [];
 					if (aResults.length === 0) {
 						var sDisplayDate = that.getView().getModel("pcpDetail").getProperty("/GEDate") || "";
-						MessageBox.error("Gate Entry No " + sGENo + " not found on date " + sDisplayDate + ".");
+						MessageBox.error("Gate Entry No " + sGENo + " not found on date " + sDisplayDate + " (sent as " + sGEDate + ").");
 						return;
 					}
 					var oItem = aResults[0];
@@ -252,7 +290,7 @@ sap.ui.define([
 						ItemNo:           it.ItemNo || String((i + 1) * 10).padStart(5, "0"),
 						ItemDescription:  it.ItemDescription || "",
 						RecievedQuantity: String(parseFloat(it.RecievedQuantity || 0).toFixed(3)),
-						UOM:              it.UOM || "",
+						UOM:              it.UOM || it.uom || it.Uom || "",
 						TotalCost:        String(parseFloat(oData.TotalCost || 0).toFixed(2)),
 						GateEntryNo:      oData.GateEntryNo || "",
 						RRNo:             oData.RRNo        || "",
@@ -518,6 +556,42 @@ sap.ui.define([
 
 		onNavBack: function () {
 			this.getRouter().navTo("PCPManageList");
+		},
+
+		_mapUOMToDropdownKey: function (sUom) {
+			if (!sUom) return "";
+			var sClean = sUom.trim().toUpperCase();
+			if (sClean === "NO" || sClean === "NO." || sClean === "NOS" || sClean === "EA" || sClean === "PC" || sClean === "ST" || sClean === "NUMBER" || sClean === "NUM") {
+				return "Number";
+			}
+			if (sClean === "KG" || sClean === "KGS" || sClean === "KILOGRAM") {
+				return "Kilogram";
+			}
+			if (sClean === "M" || sClean === "MTR" || sClean === "METERS" || sClean === "METER") {
+				return "Meters";
+			}
+			if (sClean === "MT" || sClean === "TON" || sClean === "TONS" || sClean === "METRIC TONS") {
+				return "Metric Tons";
+			}
+			if (sClean === "FT" || sClean === "FEET") {
+				return "Feet";
+			}
+			if (sClean === "L" || sClean === "LTR" || sClean === "LITRE" || sClean === "LITRES") {
+				return "Litre";
+			}
+			if (sClean === "SET" || sClean === "SETS") {
+				return "Set";
+			}
+			if (sClean === "ROL" || sClean === "ROLL" || sClean === "ROLLS") {
+				return "Roll";
+			}
+			if (sClean === "BOX" || sClean === "BOXES") {
+				return "Box";
+			}
+			if (sClean === "BAG" || sClean === "BAGS") {
+				return "Bag";
+			}
+			return sUom.charAt(0).toUpperCase() + sUom.slice(1).toLowerCase();
 		}
 
 	});

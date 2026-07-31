@@ -1,0 +1,2 @@
+S.No,User Full Name,SAP User ID,Email Address,Department,Designation / Title,Primary Role (Creator / HOD / Store),Access: NRGP (Yes/No),Access: RGP (Yes/No),Access: IRGP (Yes/No),Access: Scrap Request (Yes/No),Access: Scrap Gatepass (Yes/No),Access: Ash Gatepass (Yes/No),Access: PCP / Gate Entry (Yes/No),Access: Reports / Analytics (Yes/No),Remarks / Custom Permissions
+1,John Doe,JDOE_MM,john.doe@meil.co.in,Mechanical,Manager,HOD,No,No,No,Yes,Yes,No,No,Yes,Needs approval rights for Scrap requests.

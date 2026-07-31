@@ -34,21 +34,22 @@
                             <Button text="Apply" type="Emphasized" press=".onApplyFilters"/>
                             <Button text="Clear" press=".onClearFilters"/>
                             <Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel" class="sapUiTinyMarginEnd"/>
+                            <Button icon="sap-icon://sort" tooltip="Sort" press=".onSort" type="Transparent" class="sapUiTinyMarginEnd"/>
                             <Button icon="sap-icon://copy" text="Copy" press=".onCopyList" tooltip="Copy list to clipboard" class="sapUiTinyMarginEnd"/>
                             <Button icon="sap-icon://print" text="Print List" press=".onPrintList" tooltip="Print list"/>
                         </OverflowToolbar>
                     </headerToolbar>
 
                     <columns>
-                        <Column width="9rem"><Text text="PCP No" class="gpmsTableHeaderText"/></Column>
-                        <Column width="8rem"><Text text="PCP Date" class="gpmsTableHeaderText"/></Column>
-                        <Column width="7rem"><Text text="Entry" class="gpmsTableHeaderText"/></Column>
-                        <Column width="6rem"><Text text="GE No" class="gpmsTableHeaderText"/></Column>
-                        <Column width="8rem"><Text text="GE Date" class="gpmsTableHeaderText"/></Column>
-                        <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Supplier" class="gpmsTableHeaderText"/></Column>
-                        <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Items" class="gpmsTableHeaderText"/></Column>
-                        <Column width="9rem" minScreenWidth="Desktop" demandPopin="true"><Text text="DC/INV No" class="gpmsTableHeaderText"/></Column>
-                        <Column width="7rem"><Text text="Status" class="gpmsTableHeaderText"/></Column>
+                        <Column width="9rem"><Button text="PCP No" icon="{= ${sortModel>/GatepassNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GatepassNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GatepassNo"/><core:CustomData key="tableName" value="idPCPManageListTable"/></customData></Button></Column>
+                        <Column width="8rem"><Button text="PCP Date" icon="{= ${sortModel>/PCPDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/PCPDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="PCPDate"/><core:CustomData key="tableName" value="idPCPManageListTable"/></customData></Button></Column>
+                        <Column width="7rem"><Button text="Entry" icon="{= ${sortModel>/Status} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/Status} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="Status"/><core:CustomData key="tableName" value="idPCPManageListTable"/></customData></Button></Column>
+                        <Column width="6rem"><Button text="GE No" icon="{= ${sortModel>/GateEntryNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GateEntryNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GateEntryNo"/><core:CustomData key="tableName" value="idPCPManageListTable"/></customData></Button></Column>
+                        <Column width="8rem"><Button text="GE Date" icon="{= ${sortModel>/GEDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GEDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GEDate"/><core:CustomData key="tableName" value="idPCPManageListTable"/></customData></Button></Column>
+                        <Column minScreenWidth="Tablet" demandPopin="true"><Button text="Supplier" icon="{= ${sortModel>/VendorDesc} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/VendorDesc} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="VendorDesc"/><core:CustomData key="tableName" value="idPCPManageListTable"/></customData></Button></Column>
+                        <Column minScreenWidth="Tablet" demandPopin="true"><Button text="Items" icon="{= ${sortModel>/OpenItems} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/OpenItems} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="OpenItems"/><core:CustomData key="tableName" value="idPCPManageListTable"/></customData></Button></Column>
+                        <Column width="9rem" minScreenWidth="Desktop" demandPopin="true"><Button text="DC/INV No" icon="{= ${sortModel>/DCNumber} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/DCNumber} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="DCNumber"/><core:CustomData key="tableName" value="idPCPManageListTable"/></customData></Button></Column>
+                        <Column width="7rem"><Button text="Status" icon="{= ${sortModel>/OverallStatus} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/OverallStatus} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="OverallStatus"/><core:CustomData key="tableName" value="idPCPManageListTable"/></customData></Button></Column>
                         <Column width="9rem" hAlign="Center"><Text text="Action" class="gpmsTableHeaderText"/></Column>
                     </columns>
 

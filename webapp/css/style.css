@@ -1930,3 +1930,31 @@
 body.sapUiBusy .sapUiBusyIndicator {
     opacity: 0 !important;
 }
+
+/* Make table column headers bolder and slightly larger */
+.sapMListTblHeader .sapMText,
+.sapMColumnHeader .sapMText,
+.sapMColumnHeader .sapMLabel,
+.gpmsTableHeaderText,
+.gpmsTableHeaderBtn .sapMBtnContent {
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    color: var(--navy-d) !important;
+}
+
+/* Style for transparent sorting header buttons */
+.gpmsTableHeaderBtn {
+    width: 100%;
+    text-align: left;
+    height: auto;
+    padding: 0;
+}
+.gpmsTableHeaderBtn .sapMBtnInner {
+    padding: 0;
+    justify-content: flex-start;
+}
+.gpmsTableHeaderBtn .sapMBtnIcon {
+    font-size: 0.8rem !important;
+    color: var(--navy-d) !important;
+    margin-left: 0.25rem;
+}

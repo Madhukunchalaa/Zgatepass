@@ -217,57 +217,68 @@ sap.ui.define([
 				sap.m.MessageToast.show("No data to export.");
 				return;
 			}
+
+			var fmtD = function (v) {
+				if (!v) { return ""; }
+				if (v instanceof Date) {
+					if (isNaN(v.getTime())) { return ""; }
+					return v.getDate().toString().padStart(2, "0") + "-" + (v.getMonth() + 1).toString().padStart(2, "0") + "-" + v.getFullYear();
+				}
+				if (typeof v === "string") {
+					var m = v.match(/\/Date\((\d+)/);
+					if (m) { return fmtD(new Date(parseInt(m[1], 10))); }
+					if (/^\d{8}$/.test(v) && !/^0+$/.test(v)) {
+						return v.slice(6, 8) + "-" + v.slice(4, 6) + "-" + v.slice(0, 4);
+					}
+				}
+				return v;
+			};
+
 			var aRows = [];
 			aData.forEach(function (o) {
-				var oHeader = {
-					"PCP No": o.GatepassNo || "",
-					"PCP Date": o.PCPDate || "",
-					"Entry": o.EntryPoint || "",
-					"GE No": o.GateEntryNo || "",
-					"GE Date": o.GEDate || "",
-					"Supplier": o.VendorDesc || "",
-					"Items": o.FirstItemDesc || "",
-					"DC/INV No": o.DCNumber || "",
-					"Status": o.GatepassNo ? "Closed" : "Pending",
-					"Plant": o.Plant || "",
-					"Vendor": o.Vendor || "",
-					"Department": o.Department || "",
-					"Source Type": o.SourceType || "",
-					"RGP No": o.RGPNumber || "",
-					"RR No": o.RRNo || "",
-					"Budget Code": o.BudgetCode || "",
-					"Total Cost": o.TotalCost || "",
-					"Remarks": o.Remarks || "",
-					"Inspection Status": o.InspectionStatus || "",
-					"Inspected Date": o.Inspectiondate || "",
-					"DC Date": o.DCdate || ""
-				};
 				var aItems = (o.PCPItmNav && (Array.isArray(o.PCPItmNav) ? o.PCPItmNav : o.PCPItmNav.results)) || [];
 				if (aItems.length === 0) {
-					oHeader["Item No"] = "";
-					oHeader["Item Description"] = "";
-					oHeader["Order Qty"] = "";
-					oHeader["Received Qty"] = "";
-					oHeader["Item UOM"] = "";
-					oHeader["Item Total Cost"] = "";
-					aRows.push(oHeader);
+					aRows.push({
+						"PCP No": o.GatepassNo || "",
+						"PCP Date": fmtD(o.PCPDate),
+						"Entry": o.EntryPoint || "",
+						"GE No": o.GateEntryNo || "",
+						"GE Date": fmtD(o.GEDate),
+						"Dept": o.Department || "",
+						"Supplier": o.VendorDesc || "",
+						"Items": o.FirstItemDesc || "",
+						"Qty": "",
+						"UOM": "",
+						"DC/INV No": o.DCNumber || "",
+						"DC/INV Date": fmtD(o.DCdate),
+						"Total cost": o.TotalCost || "",
+						"Budget": o.BudgetCode || ""
+					});
 				} else {
 					aItems.forEach(function (item) {
-						var oRow = Object.assign({}, oHeader);
-						oRow["Item No"] = item.ItemNo || "";
-						oRow["Item Description"] = item.ItemDescription || "";
-						oRow["Order Qty"] = item.OrderQuantity || "";
-						oRow["Received Qty"] = item.RecievedQuantity || "";
-						oRow["Item UOM"] = item.UOM || "";
-						oRow["Item Total Cost"] = item.TotalCost || "";
-						aRows.push(oRow);
+						aRows.push({
+							"PCP No": o.GatepassNo || "",
+							"PCP Date": fmtD(o.PCPDate),
+							"Entry": o.EntryPoint || "",
+							"GE No": o.GateEntryNo || "",
+							"GE Date": fmtD(o.GEDate),
+							"Dept": o.Department || "",
+							"Supplier": o.VendorDesc || "",
+							"Items": item.ItemDescription || item.Description || item.MaterialDesc || o.FirstItemDesc || "",
+							"Qty": item.OrderQuantity || item.Quantity || item.SentQuantity || "",
+							"UOM": item.UOM || item.uom || item.Uom || "",
+							"DC/INV No": o.DCNumber || "",
+							"DC/INV Date": fmtD(o.DCdate),
+							"Total cost": item.TotalCost || o.TotalCost || "",
+							"Budget": o.BudgetCode || ""
+						});
 					});
 				}
 			});
 			var aParts = ["PCP_List"];
 			if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
 			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
-			ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx", 21);
+			ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx", aRows.length ? Object.keys(aRows[0]).length : 14);
 		},
 
 		onCreateNew: function () {
@@ -372,6 +383,17 @@ sap.ui.define([
 				document.body.removeChild(textArea);
 				sap.m.MessageToast.show("List copied to clipboard.");
 			}
+		},
+
+		onSort: function () {
+			this._openSortDialog("idItemsPCPTable", [
+				{ key: "GateEntryNo", text: "Gate Entry No", selected: true },
+				{ key: "GEDate", text: "Date" },
+				{ key: "GatepassNo", text: "Gate Pass No" },
+				{ key: "VendorDesc", text: "Vendor" },
+				{ key: "SourceType", text: "Source Type" },
+				{ key: "Department", text: "Department" }
+			]);
 		}
 
 	});

@@ -215,26 +215,29 @@
 					<Table id="idItemsTable" items="{gpo>/GateInPoNav}" class="gpmsItemTable">
 						<columns>
 							<Column width="6rem"><Text text="Item No" class="gpmsHeaderText"/></Column>
+							<Column width="9rem"><Text text="Item Code" class="gpmsHeaderText"/></Column>
 							<Column><Text text="Item Description" class="gpmsHeaderText"/></Column>
 							<Column width="9rem" hAlign="Right"><Text text="PO Qty" class="gpmsHeaderText"/></Column>
 							<Column width="9rem" hAlign="Right"><Text text="Received Qty" class="gpmsHeaderText"/></Column>
+							<Column width="3rem" hAlign="Center" visible="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 							<Column width="9rem" hAlign="Right"><Text text="Balance Qty" class="gpmsHeaderText"/></Column>
 							<Column width="6rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
 							<Column width="8rem" hAlign="Right"><Text text="Unit Price" class="gpmsHeaderText"/></Column>
-							<Column width="9rem"><Text text="Gate Pass No" class="gpmsHeaderText"/></Column>
 							<Column width="3rem" visible="{= !${gpo>/isExisting} }"/>
 						</columns>
 						<items>
 							<ColumnListItem>
 								<cells>
 									<Input value="{gpo>ItemNo}" placeholder="Item No" class="gpmsTableInput" editable="{= !${gpo>/isExisting} }"/>
+									<Text text="{gpo>Material}"/>
 									<Input value="{gpo>ItemDescription}" placeholder="Item Description" class="gpmsTableInput" editable="{= !${gpo>/isExisting} }"/>
 									<Input value="{gpo>POQuantity}" placeholder="0.000" type="Text" textAlign="Right" class="gpmsTableInput" editable="{= !${gpo>/isExisting} }" liveChange=".onPOQuantityInputLiveChange"/>
 									<Input value="{gpo>RecievedQuantity}" placeholder="0.000" type="Text" textAlign="Right" class="gpmsTableInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
+									<CheckBox selected="{gpo>_fillRowQty}" select=".onFillRowQtyCheck" visible="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 									<Text text="{path: 'gpo>BalanceQuantity', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" textAlign="Right"/>
 									<Text text="{gpo>UOM}"/>
 									<Text text="{path: 'gpo>UnitPrice', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}" textAlign="Right"/>
-									<Text text="{gpo>GatePassNo}"/>
+									
 									<Button icon="sap-icon://delete" type="Transparent" press=".onDeleteItem" class="gpmsDeleteBtn" visible="{= !${gpo>/isExisting} }"/>
 								</cells>
 							</ColumnListItem>
@@ -265,34 +268,10 @@
 								<cells>
 									<Input value="{gpo>ItemDescription}" placeholder="Item Description" class="gpmsTableInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 									<Input value="{gpo>RecievedQuantity}" placeholder="0.00" type="Number" textAlign="Right" class="gpmsTableInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
-									<Select selectedKey="{gpo>UOM}" class="gpmsTableInput" width="100%"
-										enabled="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }">
-										<items>
-											<core:Item key="Number" text="Number"/>
-											<core:Item key="Feet" text="Feet"/>
-											<core:Item key="Kilogram" text="Kilogram"/>
-											<core:Item key="Length" text="Length"/>
-											<core:Item key="Litre" text="Litre"/>
-											<core:Item key="Load" text="Load"/>
-											<core:Item key="Lot" text="Lot"/>
-											<core:Item key="Meters" text="Meters"/>
-											<core:Item key="Metric Tons" text="Metric Tons"/>
-											<core:Item key="Pair" text="Pair"/>
-											<core:Item key="Roll" text="Roll"/>
-											<core:Item key="Set" text="Set"/>
-											<core:Item key="Sheet" text="Sheet"/>
-											<core:Item key="Square Feet" text="Square Feet"/>
-											<core:Item key="Square Meter" text="Square Meter"/>
-											<core:Item key="Item" text="Item"/>
-											<core:Item key="Pack" text="Pack"/>
-											<core:Item key="Days" text="Days"/>
-											<core:Item key="Pocket" text="Pocket"/>
-											<core:Item key="Ream" text="Ream"/>
-											<core:Item key="Tons" text="Tons"/>
-											<core:Item key="Unit" text="Unit"/>
-											<core:Item key="Month" text="Month"/>
-										</items>
-									</Select>
+									<ComboBox selectedKey="{gpo>UOM}" items="{gpo>/dropdowns/uoms}" class="gpmsTableInput" width="100%"
+										editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }" placeholder="UOM">
+										<core:Item key="{gpo>key}" text="{gpo>text}" />
+									</ComboBox>
 									<Button icon="sap-icon://delete" type="Transparent" press=".onDeleteItem" class="gpmsDeleteBtn" visible="{= !${gpo>/isExisting} }"/>
 								</cells>
 							</ColumnListItem>

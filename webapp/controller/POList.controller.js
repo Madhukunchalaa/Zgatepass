@@ -172,6 +172,17 @@ sap.ui.define([
 			if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
 			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
 			ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx", 14);
+		},
+
+		onSort: function () {
+			this._openSortDialog("poListTable", [
+				{ key: "PurchaseOrder", text: "PO Number", selected: true },
+				{ key: "GatePassNo", text: "Gate Pass No" },
+				{ key: "Plant", text: "Plant" },
+				{ key: "Vendor", text: "Vendor" },
+				{ key: "VendorDesc", text: "Vendor Name" },
+				{ key: "GEDateFormatted", text: "GE Date" }
+			]);
 		}
 
 	});

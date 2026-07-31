@@ -1,0 +1,39 @@
+<core:FragmentDefinition
+	xmlns="sap.m"
+	xmlns:core="sap.ui.core">
+	<TableSelectDialog
+		id="scrapDescriptionValueHelpDialog"
+		title="Select Material Description"
+		noDataText="No Materials Found"
+		search=".onDescriptionValueHelpSearch"
+		confirm=".onDescriptionValueHelpConfirm"
+		cancel=".onDescriptionValueHelpCancel"
+		items="{path: 'materials>/results'}">
+		<columns>
+			<Column width="30%">
+				<header>
+					<Text text="Material Code" />
+				</header>
+			</Column>
+			<Column width="50%">
+				<header>
+					<Text text="Material Description" />
+				</header>
+			</Column>
+			<Column width="20%">
+				<header>
+					<Text text="UOM" />
+				</header>
+			</Column>
+		</columns>
+		<items>
+			<ColumnListItem type="Active">
+				<cells>
+					<Text text="{materials>Material}" />
+					<Text text="{materials>MaterialName}" />
+					<Text text="{materials>UOM}" />
+				</cells>
+			</ColumnListItem>
+		</items>
+	</TableSelectDialog>
+</core:FragmentDefinition>

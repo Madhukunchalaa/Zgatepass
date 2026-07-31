@@ -130,11 +130,7 @@ sap.ui.define([
 		 * Defaults to KG when the value is unrecognised or empty.
 		 */
 		_normalizeUOM: function (sRawUom) {
-			var s = (sRawUom || "").toUpperCase();
-			if (s.indexOf("KG") !== -1 || s.indexOf("KILOGRAM") !== -1) { return "KG"; }
-			if (s.indexOf("LITRE") !== -1 || s.indexOf("LTR") !== -1 || s === "L" || s === "LIT") { return "L"; }
-			if (s.indexOf("TON") !== -1 || s.indexOf("TO") !== -1 || s.indexOf("MT") !== -1) { return "MT"; }
-			return "KG";
+			return sRawUom || "";
 		},
 
 		_mapMaterialType: function (sMaterial, sDescription) {
@@ -169,6 +165,256 @@ sap.ui.define([
 			if (sMaterial.indexOf("SCRAP") !== -1 || sMaterial.indexOf("METAL") !== -1 || sMaterial.indexOf("MS") !== -1) return "Metal";
 			
 			return "Metal"; // Default fallback
+		},
+
+		/**
+		 * Canonical ASHItm create payload — the exact field set and JSON types the
+		 * backend expects (confirmed sample): SentQuantity/BalanceQuantity/
+		 * SOQuantity/OpenQuantity/Totalvalue as raw NUMBERS, ItemNetPrice as a
+		 * STRING, and no RequestedQuantity (removed from the entity).
+		 */
+		_buildAshItemPayload: function (o) {
+			var n = function (v) { var f = parseFloat(v); return isNaN(f) ? 0 : f; };
+			return {
+				SalesDocument: o.SalesDocument || "",
+				GatePasstype: o.GatePasstype || "NRGP",
+				ItemNo: o.ItemNo || "",
+				Material: o.Material || "",
+				MaterialDescription: o.MaterialDescription || "",
+				HSNCode: o.HSNCode || "",
+				UOM: o.UOM || "",
+				// Edm.Decimal fields must be sent as STRING values — the Gateway JSON
+				// deserializer rejects unquoted numbers ("Failed to read property
+				// 'Totalvalue'"); read responses also return "45.000"-style strings.
+				ItemNetPrice: n(o.ItemNetPrice).toFixed(2),
+				Totalvalue: n(o.Totalvalue).toFixed(2),
+				GatePassNo: o.GatePassNo || "",
+				GatePassReqNo: o.GatePassReqNo || "",
+				SentQuantity: n(o.SentQuantity).toFixed(3),
+				BalanceQuantity: n(o.BalanceQuantity).toFixed(3),
+				SOQuantity: n(o.SOQuantity).toFixed(3),
+				OpenQuantity: n(o.OpenQuantity).toFixed(3),
+				RequestedQuantity: n(o.RequestedQuantity || o.SOQuantity || o.SentQuantity).toFixed(3)
+			};
+		},
+
+		/**
+		 * Rebuilds a create/update payload so it matches what the backend entity
+		 * actually declares in $metadata: properties the entity type no longer has
+		 * are dropped, and every value is serialised per its Edm type (Decimal →
+		 * string with the declared scale, Double/Single → number, Int64 → string,
+		 * Int16/32 → integer). Shields the UI from ABAP structure/type changes,
+		 * e.g. "Property 'RequestedQuantity' is invalid" after a DDIC retype.
+		 * The entity type is auto-detected as the one with the highest overlap
+		 * with the payload's property names.
+		 */
+		_typePayloadForEntity: function (oODataModel, oPayload) {
+			var oMeta = oODataModel && oODataModel.getServiceMetadata && oODataModel.getServiceMetadata();
+			if (!oMeta || !oMeta.dataServices) { return oPayload; }
+
+			var aKeys = Object.keys(oPayload).filter(function (k) {
+				return oPayload[k] !== undefined && !Array.isArray(oPayload[k]);
+			});
+
+			var oBestProps = null, iBestScore = 0;
+			(oMeta.dataServices.schema || []).forEach(function (oSchema) {
+				(oSchema.entityType || []).forEach(function (oType) {
+					var mProps = {};
+					(oType.property || []).forEach(function (p) { mProps[p.name] = p; });
+					var iScore = aKeys.reduce(function (n, k) { return n + (mProps[k] ? 1 : 0); }, 0);
+					if (iScore > iBestScore) { iBestScore = iScore; oBestProps = mProps; }
+				});
+			});
+			if (!oBestProps) { return oPayload; }
+
+			var oTyped = {};
+			Object.keys(oPayload).forEach(function (k) {
+				var v = oPayload[k];
+				if (Array.isArray(v)) { oTyped[k] = v; return; } // nav properties pass through
+				var oProp = oBestProps[k];
+				if (!oProp) {
+					// Backend entity no longer declares this property — sending it
+					// would raise "Property 'k' is invalid", so drop it.
+					return;
+				}
+				switch (oProp.type) {
+					case "Edm.Decimal": {
+						var fDec = parseFloat(v) || 0;
+						var iScale = parseInt(oProp.scale, 10);
+						oTyped[k] = isNaN(iScale) ? String(fDec) : fDec.toFixed(Math.min(iScale, 3));
+						break;
+					}
+					case "Edm.Double":
+					case "Edm.Single":
+						oTyped[k] = parseFloat(v) || 0;
+						break;
+					case "Edm.Int16":
+					case "Edm.Int32":
+					case "Edm.Byte":
+					case "Edm.SByte":
+						oTyped[k] = Math.round(parseFloat(v) || 0);
+						break;
+					case "Edm.Int64":
+						oTyped[k] = String(Math.round(parseFloat(v) || 0));
+						break;
+					default:
+						oTyped[k] = (v === null || v === undefined) ? "" : v;
+				}
+			});
+			return oTyped;
+		},
+
+		_openSortDialog: function (sTableId, aSortItems) {
+			var sDialogId = "_sortDialog_" + sTableId;
+			if (!this[sDialogId]) {
+				var sapM = sap.ui.require("sap/m/ViewSettingsDialog");
+				var sapItem = sap.ui.require("sap/m/ViewSettingsItem");
+				var that = this;
+				this[sDialogId] = new sapM({
+					confirm: function (oEvent) {
+						var oSortItem = oEvent.getParameter("sortItem");
+						var bDescending = oEvent.getParameter("sortDescending");
+						var aSorters = [];
+						if (oSortItem) {
+							var fnComparator = function(a, b) {
+								if (a === b) return 0;
+								if (a === null || a === undefined || a === "") return -1;
+								if (b === null || b === undefined || b === "") return 1;
+
+								var strA = String(a).trim();
+								var strB = String(b).trim();
+
+								// Numeric check
+								if (!isNaN(strA) && !isNaN(strB) && strA !== "" && strB !== "") {
+									return Number(strA) - Number(strB);
+								}
+
+								// Date check: formats DD-MM-YYYY, YYYY-MM-DD
+								var regexDDMMYYYY = /^(\d{2})-(\d{2})-(\d{4})$/;
+								var regexYYYYMMDD = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+								var d1 = null, d2 = null;
+								var m1 = strA.match(regexDDMMYYYY);
+								var m2 = strB.match(regexDDMMYYYY);
+								if (m1 && m2) {
+									d1 = new Date(m1[3], m1[2] - 1, m1[1]);
+									d2 = new Date(m2[3], m2[2] - 1, m2[1]);
+								} else {
+									m1 = strA.match(regexYYYYMMDD);
+									m2 = strB.match(regexYYYYMMDD);
+									if (m1 && m2) {
+										d1 = new Date(m1[1], m1[2] - 1, m1[3]);
+										d2 = new Date(m2[1], m2[2] - 1, m2[3]);
+									}
+								}
+								if (d1 && d2 && !isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+									return d1.getTime() - d2.getTime();
+								}
+
+								// Fallback string compare
+								return strA.localeCompare(strB);
+							};
+							aSorters.push(new sap.ui.model.Sorter(oSortItem.getKey(), bDescending, false, fnComparator));
+						}
+						var oTable = that.getView().byId(sTableId);
+						if (oTable) {
+							var oBinding = oTable.getBinding("items");
+							if (oBinding) {
+								oBinding.sort(aSorters);
+							}
+						}
+					}
+				});
+				aSortItems.forEach(function (itm) {
+					that[sDialogId].addSortItem(new sapItem({ key: itm.key, text: itm.text, selected: !!itm.selected }));
+				});
+				this.getView().addDependent(this[sDialogId]);
+			}
+			this[sDialogId].open();
+		},
+
+		onColumnHeaderSort: function (oEvent) {
+			var oButton = oEvent.getSource();
+			var sSortKey = oButton.data("sortKey");
+			var sTableId = oButton.data("tableName");
+			if (!sSortKey || !sTableId) return;
+
+			// Initialize sortModel if not exists
+			var oView = this.getView();
+			var oSortModel = oView.getModel("sortModel");
+			if (!oSortModel) {
+				oSortModel = new sap.ui.model.json.JSONModel({});
+				oView.setModel(oSortModel, "sortModel");
+			}
+
+			// Determine new sort direction
+			var sCurrentDir = oSortModel.getProperty("/" + sSortKey);
+			var sNewDir = "Asc";
+			if (sCurrentDir === "Asc") sNewDir = "Desc";
+			else if (sCurrentDir === "Desc") sNewDir = "None";
+
+			// Clear all previous sort states
+			oSortModel.setData({});
+			if (sNewDir !== "None") {
+				oSortModel.setProperty("/" + sSortKey, sNewDir);
+			}
+
+			var aSorters = [];
+			if (sNewDir !== "None") {
+				var bDescending = (sNewDir === "Desc");
+				var fnComparator = function (a, b) {
+					if (a === b) return 0;
+					
+					var emptyA = (a === null || a === undefined || a === "");
+					var emptyB = (b === null || b === undefined || b === "");
+					if (emptyA && emptyB) return 0;
+					// Always put empty values at the bottom
+					if (emptyA) return bDescending ? -1 : 1;
+					if (emptyB) return bDescending ? 1 : -1;
+
+					if (a instanceof Date && b instanceof Date) {
+						return a.getTime() - b.getTime();
+					}
+					if (a instanceof Date) return bDescending ? -1 : 1;
+					if (b instanceof Date) return bDescending ? 1 : -1;
+
+					var strA = String(a).trim();
+					var strB = String(b).trim();
+					
+					if (!isNaN(strA) && !isNaN(strB) && strA !== "" && strB !== "") {
+						return Number(strA) - Number(strB);
+					}
+
+					var regexDDMMYYYY = /^(\d{2})-(\d{2})-(\d{4})$/;
+					var regexYYYYMMDD = /^(\d{4})-(\d{2})-(\d{2})$/;
+					var d1 = null, d2 = null;
+					var m1 = strA.match(regexDDMMYYYY), m2 = strB.match(regexDDMMYYYY);
+					if (m1 && m2) { 
+						d1 = new Date(m1[3], m1[2] - 1, m1[1]); 
+						d2 = new Date(m2[3], m2[2] - 1, m2[1]); 
+					} else {
+						m1 = strA.match(regexYYYYMMDD); m2 = strB.match(regexYYYYMMDD);
+						if (m1 && m2) { 
+							d1 = new Date(m1[1], m1[2] - 1, m1[3]); 
+							d2 = new Date(m2[1], m2[2] - 1, m2[3]); 
+						}
+					}
+					if (d1 && d2 && !isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+						return d1.getTime() - d2.getTime();
+					}
+					
+					return strA.localeCompare(strB);
+				};
+				aSorters.push(new sap.ui.model.Sorter(sSortKey, bDescending, false, fnComparator));
+			}
+
+			var oTable = oView.byId(sTableId) || sap.ui.core.Fragment.byId(oView.getId(), sTableId);
+			if (oTable) {
+				var oBinding = oTable.getBinding("items");
+				if (oBinding) {
+					oBinding.sort(aSorters);
+				}
+			}
 		}
 	});
 

@@ -72,7 +72,7 @@ sap.ui.define([
 							UnitPrice: item.UnitPrice || item.NetPrice || item.Netprice || item.Netpr || item.ItemNetPrice || item.Price || "0.00",
 							PurchaseOrder: item.PurchaseOrder || sPoNumber,
 							Plant: item.Plant || sPlant,
-							GatePassNo: item.GatepassNo || item.GatePassNo || ""
+							Material: item.Material || ""
 						};
 					});
 					oModel.setProperty("/GateInPoNav", aItems);
@@ -148,7 +148,7 @@ sap.ui.define([
 									UnitPrice: item.UnitPrice || item.NetPrice || item.Netprice || item.Netpr || item.ItemNetPrice || item.Price || "0.00",
 									PurchaseOrder: item.PurchaseOrder || sPO,
 									Plant: item.Plant || sPlant,
-									GatePassNo: item.GatepassNo || item.GatePassNo || ""
+									Material: item.Material || ""
 								});
 							});
 						}
@@ -412,7 +412,10 @@ sap.ui.define([
 				GateEntryNo: "",
 				GatePassNo: "",
 				Message: "",
-				GateInPoNav: []
+				GateInPoNav: [],
+				dropdowns: {
+					uoms: this._getUOMs()
+				}
 			};
 			if (!oModel) {
 				this.getView().setModel(new JSONModel(oData), "gpo");
@@ -436,6 +439,48 @@ sap.ui.define([
 			var sMonth = String(oDate.getMonth() + 1).padStart(2, "0");
 			var sDay = String(oDate.getDate()).padStart(2, "0");
 			return sYear + sMonth + sDay;
+		},
+
+		_getUOMs: function () {
+			return [
+				{ key: "Amps", text: "Amps" },
+				{ key: "Bag", text: "Bag" },
+				{ key: "Barrel", text: "Barrel" },
+				{ key: "Bottle", text: "Bottle" },
+				{ key: "Box", text: "Box" },
+				{ key: "Bundle", text: "Bundle" },
+				{ key: "Can", text: "Can" },
+				{ key: "Carton", text: "Carton" },
+				{ key: "Cartridge", text: "Cartridge" },
+				{ key: "Coil", text: "Coil" },
+				{ key: "Cubic Feet", text: "Cubic Feet" },
+				{ key: "Cubic Meter", text: "Cubic Meter" },
+				{ key: "Cylinder", text: "Cylinder" },
+				{ key: "Drum", text: "Drum" },
+				{ key: "Feet", text: "Feet" },
+				{ key: "Kilogram", text: "Kilogram" },
+				{ key: "Length", text: "Length" },
+				{ key: "Litre", text: "Litre" },
+				{ key: "Load", text: "Load" },
+				{ key: "Lot", text: "Lot" },
+				{ key: "Meters", text: "Meters" },
+				{ key: "Metric Tons", text: "Metric Tons" },
+				{ key: "Month", text: "Month" },
+				{ key: "Number", text: "Number" },
+				{ key: "Pair", text: "Pair" },
+				{ key: "Roll", text: "Roll" },
+				{ key: "Set", text: "Set" },
+				{ key: "Sheet", text: "Sheet" },
+				{ key: "Square Feet", text: "Square Feet" },
+				{ key: "Square Meter", text: "Square Meter" },
+				{ key: "Item", text: "Item" },
+				{ key: "Pack", text: "Pack" },
+				{ key: "Days", text: "Days" },
+				{ key: "Pocket", text: "Pocket" },
+				{ key: "Ream", text: "Ream" },
+				{ key: "Tons", text: "Tons" },
+				{ key: "Unit", text: "Unit" }
+			];
 		},
 
 		_formatDateToHyphens: function (sDate) {
@@ -532,8 +577,28 @@ sap.ui.define([
 			if (!oODataModel || !oModel) { return; }
 
 			sap.ui.core.BusyIndicator.show(0);
+			
+			var aFilters = [new Filter("GateEntryNo", FilterOperator.EQ, sGE)];
+			var sModelDate = (oModel.getProperty("/GEDate") || "").trim();
+			if (sModelDate) {
+				var sGEDate = "";
+				var aParts = sModelDate.split("-");
+				if (aParts.length === 3) {
+					if (aParts[0].length === 4) { // YYYY-MM-DD
+						sGEDate = aParts[0] + aParts[1] + aParts[2];
+					} else if (aParts[2].length === 4) { // DD-MM-YYYY
+						sGEDate = aParts[2] + aParts[1] + aParts[0];
+					}
+				} else {
+					sGEDate = sModelDate.replace(/-/g, "");
+				}
+				if (sGEDate) {
+					aFilters.push(new Filter("GEDate", FilterOperator.EQ, sGEDate));
+				}
+			}
+
 			oODataModel.read("/PCPHdrSet", {
-				filters: [new Filter("GateEntryNo", FilterOperator.EQ, sGE)],
+				filters: aFilters,
 				urlParameters: { "$expand": "PCPItmNav" },
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
@@ -603,9 +668,9 @@ sap.ui.define([
 								RecievedQuantity: it.RecievedQuantity || "0.000",
 								BalanceQuantity: it.BalanceQuantity || "0.000",
 								UOM: it.UOM || "",
-								PurchaseOrder: it.PurchaseOrder || oResult.PurchaseOrder || "",
-								Plant: it.Plant || oResult.Plant || "",
-								GatePassNo: it.GatepassNo || it.GatePassNo || ""
+								PurchaseOrder: it.PurchaseOrder || oModel.getProperty("/PurchaseOrder") || "",
+								Plant: it.Plant || oModel.getProperty("/Plant") || "",
+								Material: it.Material || ""
 							};
 						});
 						oModel.setProperty("/GateInPoNav", aItems);
@@ -707,7 +772,7 @@ sap.ui.define([
 									UnitPrice: item.UnitPrice || item.NetPrice || item.Netprice || item.Netpr || item.ItemNetPrice || item.Price || "0.00",
 									PurchaseOrder: item.PurchaseOrder || sPO,
 									Plant: item.Plant || sPlant,
-									GatePassNo: item.GatepassNo || item.GatePassNo || ""
+									Material: item.Material || ""
 								});
 							});
 						}
@@ -841,9 +906,9 @@ sap.ui.define([
 							BalanceQuantity: item.BalanceQuantity || "0.000",
 							UOM: item.UOM || "",
 							UnitPrice: item.UnitPrice || item.NetPrice || item.Netprice || item.Netpr || item.ItemNetPrice || item.Price || "0.00",
-							PurchaseOrder: item.PurchaseOrder || oSelectedPO.PurchaseOrder,
-							Plant: item.Plant || oSelectedPO.Plant,
-							GatePassNo: item.GatepassNo || item.GatePassNo || ""
+							PurchaseOrder: item.PurchaseOrder || oModel.getProperty("/PurchaseOrder") || "",
+							Plant: item.Plant || oModel.getProperty("/Plant") || "",
+							Material: item.Material || ""
 						};
 					});
 				}
@@ -869,7 +934,7 @@ sap.ui.define([
 				UnitPrice: "",
 				PurchaseOrder: "",
 				Plant: "",
-				GatePassNo: ""
+				Material: ""
 			});
 			oModel.setProperty("/GateInPoNav", aItems.slice());
 		},
@@ -901,6 +966,25 @@ sap.ui.define([
 
 			oModel.setProperty("/_fullQtyAll", bSelected);
 			oModel.setProperty("/GateInPoNav", aItems.slice());
+		},
+
+		onFillRowQtyCheck: function (oEvent) {
+			var bSelected = oEvent.getParameter("selected");
+			var oContext = oEvent.getSource().getBindingContext("gpo");
+			if (!oContext) return;
+			var sPath = oContext.getPath();
+			var oModel = this.getView().getModel("gpo");
+			var oRow = oModel.getProperty(sPath);
+
+			if (bSelected) {
+				// Fill Received Qty = PO Qty
+				oRow.RecievedQuantity = String(oRow.POQuantity || "0");
+			} else {
+				// Uncheck - clear Received Qty
+				oRow.RecievedQuantity = "";
+			}
+			
+			oModel.setProperty(sPath, oRow);
 		},
 
 		onPOQuantityInputLiveChange: function (oEvent) {
@@ -993,7 +1077,8 @@ sap.ui.define([
 					TotalCost: oData.TotalCost ? String(parseFloat(oData.TotalCost).toFixed(2)) : "0.00",
 					GateEntryNo: oData.GateEntryNo || "",
 					PurchaseOrder: oItem.PurchaseOrder || sPO || "",
-					Plant: oItem.Plant || sPlant || ""
+					Plant: oItem.Plant || sPlant || "",
+					ItemCode: oItem.Material || ""
 				};
 			});
 

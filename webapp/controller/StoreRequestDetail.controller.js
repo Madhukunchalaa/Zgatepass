@@ -445,23 +445,6 @@ sap.ui.define([
 			var sFtype1  = (oData.FILETYPE  || oData.Filetype    || oData.FileType   || oData.Ftype || "").toUpperCase().trim();
 			var sFname2  = oData.FILENAME2  || oData.Filename2   || oData.FileName2  || oData.Fname2 || "";
 			var sFtype2  = (oData.FILETYPE2 || oData.Filetype2   || oData.FileType2  || oData.Ftype2 || "").toUpperCase().trim();
-
-			if (!sRawImg1 || !sRawImg2) {
-				var aLocal = this._getLocalStorageAttachment(sReqNo);
-				if (aLocal && aLocal.length > 0) {
-					if (!sRawImg1) {
-						sRawImg1 = aLocal[0].content;
-						if (!sFname1) sFname1 = aLocal[0].name;
-						if (!sFtype1) sFtype1 = aLocal[0].type;
-					}
-					if (!sRawImg2 && aLocal.length > 1) {
-						sRawImg2 = aLocal[1].content;
-						if (!sFname2) sFname2 = aLocal[1].name;
-						if (!sFtype2) sFtype2 = aLocal[1].type;
-					}
-				}
-			}
-
 			this._processLoadedAttachments({
 				Base64Img1: sRawImg1,
 				Fname: sFname1,
@@ -491,31 +474,7 @@ sap.ui.define([
 			oModel.setProperty("/totalAmount", fTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 		},
 
-		_getLocalStorageAttachment: function (sReqNo) {
-			if (!sReqNo) return null;
-			try {
-				var sLocalAttach = localStorage.getItem("attachments_" + sReqNo);
-				if (sLocalAttach) {
-					var aLocal = JSON.parse(sLocalAttach);
-					if (aLocal && aLocal.length > 0) {
-						return aLocal.map(function (att) {
-							var sFullName = att.name || "";
-							var iDot = sFullName.lastIndexOf(".");
-							var sFname = iDot !== -1 ? sFullName.substring(0, iDot) : sFullName;
-							var sFtype = iDot !== -1 ? sFullName.substring(iDot + 1).toUpperCase().trim() : "";
-							return {
-								content: att.content || "",
-								name: sFname,
-								type: sFtype
-							};
-						});
-					}
-				}
-			} catch (e) {
-				console.error("Error reading localStorage attachments for " + sReqNo, e);
-			}
-			return null;
-		},
+
 
 
 		_formatBase64ToBlobUrl: function (sRawImg) {
@@ -686,12 +645,6 @@ sap.ui.define([
 				ModeOfDispatch: oRaw.ModeOfDispatch || "",
 				Remarks:        oRaw.Remarks        || "",
 				ReturnableDate: oRaw.ReturnableDate || "",
-				Base64Img1:     this._getRawBase64FromModel(this.getView().getModel("store").getProperty("/Base64Img1")),
-				Base64Img2:     this._getRawBase64FromModel(this.getView().getModel("store").getProperty("/Base64Img2")),
-				Fname:          sFnameClean1,
-				Ftype:          this.getView().getModel("store").getProperty("/Ftype") || "",
-				Fname2:         sFnameClean2,
-				Ftype2:         this.getView().getModel("store").getProperty("/Ftype2") || "",
 				HODRemarks:     this.getView().getModel("store").getProperty("/HODRemarks") || "",
 				STORERemarks:   sRemarks            || "",
 				GatePassReqNo:  this._sReqNo,
@@ -711,6 +664,51 @@ sap.ui.define([
 					};
 				})
 			};
+
+			var oMetadata = oODataModel ? oODataModel.getServiceMetadata() : null;
+			var getValidProperty = function (sPropName) {
+				if (!oMetadata || !oMetadata.dataServices || !oMetadata.dataServices.schema) {
+					return null;
+				}
+				var aSchemas = oMetadata.dataServices.schema;
+				for (var i = 0; i < aSchemas.length; i++) {
+					var aEntityTypes = aSchemas[i].entityType || [];
+					for (var j = 0; j < aEntityTypes.length; j++) {
+						if (aEntityTypes[j].name && aEntityTypes[j].name.indexOf("GatePassReqHdr") !== -1) {
+							var aProperties = aEntityTypes[j].property || [];
+							var oMatch = aProperties.find(function (p) {
+								return p.name === sPropName;
+							});
+							if (oMatch) return oMatch.name;
+
+							var oCiMatch = aProperties.find(function (p) {
+								return p.name.toLowerCase() === sPropName.toLowerCase();
+							});
+							if (oCiMatch) return oCiMatch.name;
+						}
+					}
+				}
+				return null;
+			};
+
+			// Attachment 1 Mappings
+			var sKeyBase64Img1 = getValidProperty("Base64Img1") || getValidProperty("Base64img1") || "Base64Img1";
+			var sKeyFname = getValidProperty("FILENAME") || getValidProperty("Filename") || getValidProperty("FileName") || getValidProperty("Fname") || "Fname";
+			var sKeyFtype = getValidProperty("FILETYPE") || getValidProperty("Filetype") || getValidProperty("FileType") || getValidProperty("Ftype") || "Ftype";
+
+			oPayload[sKeyBase64Img1] = this._getRawBase64FromModel(this.getView().getModel("store").getProperty("/Base64Img1"));
+			oPayload[sKeyFname] = sFnameClean1;
+			oPayload[sKeyFtype] = this.getView().getModel("store").getProperty("/Ftype") || "";
+
+			// Attachment 2 Mappings
+			var sKeyBase64Img2 = getValidProperty("Base64Img2") || getValidProperty("Base64img2") || "Base64Img2";
+			var sKeyFname2 = getValidProperty("FILENAME2") || getValidProperty("Filename2") || getValidProperty("FileName2") || getValidProperty("Fname2") || "Fname2";
+			var sKeyFtype2 = getValidProperty("FILETYPE2") || getValidProperty("Filetype2") || getValidProperty("FileType2") || getValidProperty("Ftype2") || "Ftype2";
+
+			oPayload[sKeyBase64Img2] = this._getRawBase64FromModel(this.getView().getModel("store").getProperty("/Base64Img2"));
+			oPayload[sKeyFname2] = sFnameClean2;
+			oPayload[sKeyFtype2] = this.getView().getModel("store").getProperty("/Ftype2") || "";
+
 
 			oODataModel.create(
 				"/GatePassReqHdrSet",

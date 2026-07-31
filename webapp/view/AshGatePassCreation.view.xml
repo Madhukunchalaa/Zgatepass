@@ -83,6 +83,9 @@
 							<Column><Text text="Material Description" class="gpmsHeaderText"/></Column>
 							<Column width="8rem"><Text text="HSN Code" class="gpmsHeaderText"/></Column>
 							<Column width="8rem"><Text text="Qty *" class="gpmsHeaderText"/></Column>
+							<Column width="8rem"><Text text="Open Qty" class="gpmsHeaderText"/></Column>
+							<Column width="8rem"><Text text="Sent Qty" class="gpmsHeaderText"/></Column>
+							<Column width="8rem"><Text text="Balance Qty" class="gpmsHeaderText"/></Column>
 							<Column width="6rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
 							<Column width="8rem"><Text text="Rate *" class="gpmsHeaderText"/></Column>
 							<Column width="9rem"><Text text="Total Value" class="gpmsHeaderText"/></Column>
@@ -95,6 +98,9 @@
 									<Text text="{ash>MaterialDescription}" class="gpmsTableText"/>
 									<Input value="{ash>HSNCode}" class="gpmsTableInput"/>
 									<Input value="{ash>RequestedQuantity}" type="Text" liveChange=".calculateTotal" class="gpmsTableInput"/>
+									<Text text="{ash>OpenQuantity}" class="gpmsTableText"/>
+									<Input value="{ash>SentQuantity}" type="Text" liveChange=".calculateBalance" class="gpmsTableInput"/>
+									<Text text="{ash>BalanceQuantity}" class="gpmsTableText"/>
 									<Text text="{ash>UOM}" class="gpmsTableText"/>
 									<Input value="{ash>ItemNetPrice}" type="Text" liveChange=".calculateTotal" class="gpmsTableInput"/>
 									<Text text="{ash>Totalvalue}" class="gpmsTableText"/>

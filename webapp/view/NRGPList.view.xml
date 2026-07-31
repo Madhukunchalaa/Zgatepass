@@ -53,6 +53,7 @@
                         <ToolbarSpacer />
                         <Text id="idNRGPCountText" text="" />
                         <Button id="idNRGPDownloadExcelBtn" icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel" class="sapUiTinyMarginEnd"/>
+                        <Button icon="sap-icon://sort" text="Sort" tooltip="Sort" press=".onSort" type="Transparent" class="sapUiTinyMarginEnd"/>
                         <Button id="idNRGPCopyListBtn" icon="sap-icon://copy" text="Copy" press=".onCopyList" tooltip="Copy list to clipboard" class="sapUiTinyMarginEnd"/>
                         <Button id="idNRGPPrintListBtn" icon="sap-icon://print" text="Print List" press=".onPrintList" tooltip="Print gate pass list"/>
                     </Toolbar>
@@ -60,34 +61,34 @@
 
                 <columns>
                     <Column width="9rem">
-                        <Text text="GP Date" wrapping="false"/>
+                        <Button text="GP Date" icon="{= ${sortModel>/GatePassDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GatePassDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GatePassDate"/><core:CustomData key="tableName" value="idItemsNRGPTable"/></customData></Button>
                     </Column>
                     <Column width="11rem">
-                        <Text text="GP No" wrapping="false"/>
+                        <Button text="GP No" icon="{= ${sortModel>/GatePassNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GatePassNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GatePassNo"/><core:CustomData key="tableName" value="idItemsNRGPTable"/></customData></Button>
                     </Column>
                     <Column width="9rem">
-                        <Text text="GP Req No" wrapping="false"/>
+                        <Button text="GP Req No" icon="{= ${sortModel>/GatePassReqNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GatePassReqNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GatePassReqNo"/><core:CustomData key="tableName" value="idItemsNRGPTable"/></customData></Button>
                     </Column>
                     <Column width="5rem">
-                        <Text text="GP Type" wrapping="false"/>
+                        <Button text="GP Type" icon="{= ${sortModel>/GatePassType} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GatePassType} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GatePassType"/><core:CustomData key="tableName" value="idItemsNRGPTable"/></customData></Button>
                     </Column>
                     <Column width="8rem" minScreenWidth="Tablet" demandPopin="true">
-                        <Text text="Due Date" wrapping="false"/>
+                        <Button text="Due Date" icon="{= ${sortModel>/DueDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/DueDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="DueDate"/><core:CustomData key="tableName" value="idItemsNRGPTable"/></customData></Button>
                     </Column>
                     <Column width="8rem" minScreenWidth="Tablet" demandPopin="true">
-                        <Text text="Ret Date" wrapping="false"/>
+                        <Button text="Ret Date" icon="{= ${sortModel>/ReturnDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/ReturnDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="ReturnDate"/><core:CustomData key="tableName" value="idItemsNRGPTable"/></customData></Button>
                     </Column>
                     <Column width="10rem" minScreenWidth="Desktop" demandPopin="true">
-                        <Text text="Vendor" wrapping="false"/>
+                        <Button text="Vendor" icon="{= ${sortModel>/VendorName} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/VendorName} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="VendorName"/><core:CustomData key="tableName" value="idItemsNRGPTable"/></customData></Button>
                     </Column>
                     <Column width="8rem" minScreenWidth="Desktop" demandPopin="true">
-                        <Text text="Req Dept" wrapping="false"/>
+                        <Button text="Req Dept" icon="{= ${sortModel>/Department} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/Department} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="Department"/><core:CustomData key="tableName" value="idItemsNRGPTable"/></customData></Button>
                     </Column>
                     <Column minScreenWidth="Desktop" demandPopin="true">
-                        <Text text="Desc" />
+                        <Button text="Desc" icon="{= ${sortModel>/ReturnableRemarks} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/ReturnableRemarks} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="ReturnableRemarks"/><core:CustomData key="tableName" value="idItemsNRGPTable"/></customData></Button>
                     </Column>
                     <Column width="10rem">
-                        <Text text="Status" wrapping="false"/>
+                        <Button text="Status" icon="{= ${sortModel>/Status} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/Status} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="Status"/><core:CustomData key="tableName" value="idItemsNRGPTable"/></customData></Button>
                     </Column>
                     <Column width="7rem" hAlign="Center">
                         <Text text="Action" wrapping="false"/>

@@ -40,53 +40,135 @@ sap.ui.define([
 			this.byId("requestSearch").setValue(sReqNo);
 			sap.ui.core.BusyIndicator.show(0);
 
+			var that = this;
+			var fnProcessResult = function (oResult) {
+				sap.ui.core.BusyIndicator.hide();
+				var sStatus = that._getNormalizedStatus(oResult);
+				var oUserModel = sap.ui.getCore().getModel("user");
+				console.log("[GPMS Debug] _loadByReqNo fnProcessResult:", {
+					GatePassReqNo: oResult.GatePassReqNo || oResult.GatePassreqNo,
+					DerivedStatus: sStatus,
+					IsStoreUser: oUserModel ? oUserModel.getProperty("/IsStoreUser") : false,
+					GatePassNo: oResult.GatePassNo || "",
+					showLogistics: oResult.showLogistics || false
+				});
+				if (sStatus === "APPROVED" || sStatus === "CLOSED" || sStatus === "CANCELLED") {
+					that._validateAndMapData(oResult);
+					if (sStatus === "CLOSED") {
+						var oOutModel = that.getView().getModel("out");
+						oOutModel.setProperty("/ApprovalStatus", "CLOSED");
+						oOutModel.setProperty("/ApprovalState", "Success");
+						oOutModel.setProperty("/ApprovalIcon", "sap-icon://sys-enter-2");
+					} else if (sStatus === "CANCELLED") {
+						var oOutModel = that.getView().getModel("out");
+						oOutModel.setProperty("/ApprovalStatus", "CANCELLED");
+						oOutModel.setProperty("/ApprovalState", "Error");
+						oOutModel.setProperty("/ApprovalIcon", "sap-icon://sys-cancel-2");
+					}
+					// If a GP No was passed directly (navigated from Gate Pass List),
+					// force-set it and open logistics immediately
+					if (sGPNo) {
+						var oOutModel = that.getView().getModel("out");
+						oOutModel.setProperty("/GatePassNo", sGPNo);
+						oOutModel.setProperty("/showLogistics", true);
+					}
+				} else if (sStatus === "AMENDMENT") {
+					that._validateAndMapData(oResult);
+				} else if (sStatus === "REJECTED") {
+					sap.m.MessageBox.error("Request Number " + sReqNo + " has been Rejected.");
+					that._validateAndMapData(oResult);
+					var oOutModel = that.getView().getModel("out");
+					oOutModel.setProperty("/ApprovalStatus", "REJECTED");
+					oOutModel.setProperty("/ApprovalState", "Error");
+					oOutModel.setProperty("/ApprovalIcon", "sap-icon://decline");
+				} else {
+					that._showApprovalFlow(oResult);
+				}
+			};
+
+			var fnError = function () {
+				sap.ui.core.BusyIndicator.hide();
+				sap.m.MessageBox.error("No data found for Request No: " + sReqNo);
+			};
+
+			// Try 1: Query with Status = 'All' filter (most likely to work for approved requests)
 			oODataModel.read("/GateReqHdrSet", {
-				filters: [new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)],
+				filters: [
+					new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo),
+					new sap.ui.model.Filter("Status", sap.ui.model.FilterOperator.EQ, "All")
+				],
 				urlParameters: { "$expand": "GateReqItmNav" },
 				success: function (oData) {
-					sap.ui.core.BusyIndicator.hide();
 					var oResult = oData.results && oData.results[0];
-					if (!oResult) {
-						sap.m.MessageBox.error("No data found for Request No: " + sReqNo);
-						return;
-					}
-					var sStatus = this._getNormalizedStatus(oResult);
-					if (sStatus === "APPROVED" || sStatus === "CLOSED" || sStatus === "CANCELLED") {
-						this._validateAndMapData(oResult);
-						if (sStatus === "CLOSED") {
-							var oOutModel = this.getView().getModel("out");
-							oOutModel.setProperty("/ApprovalStatus", "CLOSED");
-							oOutModel.setProperty("/ApprovalState", "Success");
-							oOutModel.setProperty("/ApprovalIcon", "sap-icon://sys-enter-2");
-						} else if (sStatus === "CANCELLED") {
-							var oOutModel = this.getView().getModel("out");
-							oOutModel.setProperty("/ApprovalStatus", "CANCELLED");
-							oOutModel.setProperty("/ApprovalState", "Error");
-							oOutModel.setProperty("/ApprovalIcon", "sap-icon://sys-cancel-2");
-						}
-						// If a GP No was passed directly (navigated from Gate Pass List),
-						// force-set it and open logistics immediately
-						if (sGPNo) {
-							var oOutModel = this.getView().getModel("out");
-							oOutModel.setProperty("/GatePassNo", sGPNo);
-							oOutModel.setProperty("/showLogistics", true);
-						}
-					} else if (sStatus === "AMENDMENT") {
-						this._validateAndMapData(oResult);
-					} else if (sStatus === "REJECTED") {
-						sap.m.MessageBox.error("Request Number " + sReqNo + " has been Rejected.");
-						this._validateAndMapData(oResult);
-						var oOutModel = this.getView().getModel("out");
-						oOutModel.setProperty("/ApprovalStatus", "REJECTED");
-						oOutModel.setProperty("/ApprovalState", "Error");
-						oOutModel.setProperty("/ApprovalIcon", "sap-icon://decline");
+					if (oResult) {
+						fnProcessResult(oResult);
 					} else {
-						this._showApprovalFlow(oResult);
+						// Try 2: Query without Status filter (fallback)
+						oODataModel.read("/GateReqHdrSet", {
+							filters: [new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)],
+							urlParameters: { "$expand": "GateReqItmNav" },
+							success: function (oData2) {
+								var oResult2 = oData2.results && oData2.results[0];
+								if (oResult2) {
+									fnProcessResult(oResult2);
+								} else {
+									// Try 3: Loop through types NRGP/RGP with Status = 'All' (like other detail views)
+									that._loadByReqNoFallbackTypes(sReqNo, sGPNo, ["NRGP", "RGP"], fnProcessResult, fnError);
+								}
+							},
+							error: function () {
+								that._loadByReqNoFallbackTypes(sReqNo, sGPNo, ["NRGP", "RGP"], fnProcessResult, fnError);
+							}
+						});
 					}
-				}.bind(this),
+				},
 				error: function () {
-					sap.ui.core.BusyIndicator.hide();
-					sap.m.MessageBox.error("Error fetching request " + sReqNo);
+					// Try without Status filter
+					oODataModel.read("/GateReqHdrSet", {
+						filters: [new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)],
+						urlParameters: { "$expand": "GateReqItmNav" },
+						success: function (oData2) {
+							var oResult2 = oData2.results && oData2.results[0];
+							if (oResult2) {
+								fnProcessResult(oResult2);
+							} else {
+								that._loadByReqNoFallbackTypes(sReqNo, sGPNo, ["NRGP", "RGP"], fnProcessResult, fnError);
+							}
+						},
+						error: function () {
+							that._loadByReqNoFallbackTypes(sReqNo, sGPNo, ["NRGP", "RGP"], fnProcessResult, fnError);
+						}
+					});
+				}
+			});
+		},
+
+		_loadByReqNoFallbackTypes: function (sReqNo, sGPNo, aTypes, fnSuccess, fnError) {
+			if (aTypes.length === 0) {
+				fnError();
+				return;
+			}
+			var sType = aTypes[0];
+			var oODataModel = this.getOwnerComponent().getModel();
+			var that = this;
+
+			oODataModel.read("/GateReqHdrSet", {
+				filters: [
+					new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo),
+					new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, sType),
+					new sap.ui.model.Filter("Status", sap.ui.model.FilterOperator.EQ, "All")
+				],
+				urlParameters: { "$expand": "GateReqItmNav" },
+				success: function (oData) {
+					var oResult = oData.results && oData.results[0];
+					if (oResult) {
+						fnSuccess(oResult);
+					} else {
+						that._loadByReqNoFallbackTypes(sReqNo, sGPNo, aTypes.slice(1), fnSuccess, fnError);
+					}
+				},
+				error: function () {
+					that._loadByReqNoFallbackTypes(sReqNo, sGPNo, aTypes.slice(1), fnSuccess, fnError);
 				}
 			});
 		},
@@ -210,7 +292,6 @@ sap.ui.define([
 			if (!sReqNo) {
 				MessageBox.error("Request number not found");
 				return;
-				
 			}
 
 			var oODataModel = this.getOwnerComponent().getModel();
@@ -220,57 +301,7 @@ sap.ui.define([
 				return;
 			}
 
-			sap.ui.core.BusyIndicator.show(0);
-
-			// Use Filter because the entity has a composite key
-			var aFilters = [
-				new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)
-			];
-
-			// Try reading from OutGatePassSet first
-			oODataModel.read("/GateReqHdrSet", {
-				filters: aFilters,
-				urlParameters: {
-					"$expand": "GateReqItmNav"
-				},
-				success: function (oData) {
-					sap.ui.core.BusyIndicator.hide();
-					var oResult = oData.results && oData.results[0];
-
-					if (oResult) {
-						var sStatus = this._getNormalizedStatus(oResult);
-						// console.log("oResult:", oResult);
-						// console.log("Approval Status:", sStatus);
-						if (sStatus === "APPROVED" || sStatus === "CLOSED" || sStatus === "CANCELLED") {
-							this._validateAndMapData(oResult);
-							if (sStatus === "CLOSED") {
-								var oOutModel = this.getView().getModel("out");
-								oOutModel.setProperty("/ApprovalStatus", "CLOSED");
-								oOutModel.setProperty("/ApprovalState", "Success");
-								oOutModel.setProperty("/ApprovalIcon", "sap-icon://sys-enter-2");
-							} else if (sStatus === "CANCELLED") {
-								var oOutModel = this.getView().getModel("out");
-								oOutModel.setProperty("/ApprovalStatus", "CANCELLED");
-								oOutModel.setProperty("/ApprovalState", "Error");
-								oOutModel.setProperty("/ApprovalIcon", "sap-icon://sys-cancel-2");
-							}
-						} else if (sStatus === "REJECTED") {
-							sap.m.MessageBox.error("Request Number " + sReqNo + " has been Rejected.");
-							this._validateAndMapData(oResult);
-							var oOutModel = this.getView().getModel("out");
-							oOutModel.setProperty("/ApprovalStatus", "REJECTED");
-							oOutModel.setProperty("/ApprovalState", "Error");
-							oOutModel.setProperty("/ApprovalIcon", "sap-icon://decline");
-						} else {
-							this._showApprovalFlow(oResult);
-						}
-					}
-				}.bind(this),
-				error: function (oError) {
-					sap.ui.core.BusyIndicator.hide();
-					sap.m.MessageBox.error("Error fetching request " + sReqNo);
-				}.bind(this)
-			});
+			this._loadByReqNo(sReqNo, "");
 		},
 
 		onNextSection: function (oEvent) {
@@ -387,6 +418,14 @@ sap.ui.define([
 			
 			var sStatus = this._getNormalizedStatus(oData);
 			oOutModel.setProperty("/ApprovalStatus", sStatus);
+			
+			var oUserModel = sap.ui.getCore().getModel("user");
+			console.log("[GPMS Debug] _validateAndMapData status and role details:", {
+				ApprovalStatus: sStatus,
+				IsStoreUser: oUserModel ? oUserModel.getProperty("/IsStoreUser") : false,
+				GatePassNo: oData.GatePassNo || "",
+				showLogistics: oOutModel.getProperty("/showLogistics") || false
+			});
 
 			// Set state and icon based on status
 			var sState = "Warning";
@@ -481,7 +520,7 @@ sap.ui.define([
 					sentQty: fQty,
 					recvdQty: 0,
 					balQty: fQty,
-					uom: it.UOM || it.Uom || it.Meins || "EA",
+					uom: it.UOM || it.Uom || it.Meins || "",
 					rate: fRate,
 					amount: fTotal
 				};
@@ -625,7 +664,7 @@ sap.ui.define([
 								sentQty: fQty,
 								recvdQty: 0,
 								balQty: fQty,
-								uom: it.UOM || "EA",
+								uom: it.UOM || "",
 								rate: fRate,
 								amount: parseFloat((fQty * fRate).toFixed(2))
 							};
@@ -1614,7 +1653,7 @@ sap.ui.define([
 						MaterialDesc: it.materialName || "",
 						HSNCode: it.hsnCode || "",
 						HSNDesc: it.hsnDesc || "",
-						UOM: it.uom || "EA",
+						UOM: it.uom || "",
 						ItemNetPrice: fRate.toFixed(2),
 						RequestedQuantity: fQty.toFixed(3),
 						Totalvalue: fValue.toFixed(2),

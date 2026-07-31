@@ -117,90 +117,136 @@ sap.ui.define([
 			}
 
 			sap.ui.core.BusyIndicator.show(0);
+
+			var fnProcessItem = function (oItem) {
+				var sStatus = "Pending";
+				if (oItem.ApprovalReq === "A") {
+					sStatus = "Approved";
+				} else if (oItem.ApprovalReq === "P") {
+					sStatus = "Pending";
+				} else if (oItem.ApprovalReq === "R") {
+					sStatus = "Rejected";
+				} else if (oItem.Status || oItem.ReqStatus) {
+					sStatus = oItem.Status || oItem.ReqStatus;
+				}
+				if (oLocalReq && oLocalReq.status) {
+					sStatus = oLocalReq.status;
+				}
+
+				if (sStatus === "Gate Pass Generated") {
+					MessageBox.error("Already gate pass created for this request number", {
+						onClose: function () {
+							that.onNavBack();
+						}
+					});
+					return;
+				}
+
+				var sChallanRaw = oItem.ChallanDate || oItem.ChallanDateTime || oItem.DCDate || "";
+				var sChallanFormatted = sChallanRaw ? that._formatDate(sChallanRaw) : "";
+
+				oInitialData.remarks = (oLocalReq && oLocalReq.remarks) ? oLocalReq.remarks : (oItem.Remarks || "");
+				oInitialData.vehicleNo = (oLocalReq && oLocalReq.vehicleDetails) ? oLocalReq.vehicleDetails : (oItem.VehicleNo || oItem.VehicleDetails || "");
+				oInitialData.weighmentSlipNo = (oLocalReq && oLocalReq.weighmentSlipNo) ? oLocalReq.weighmentSlipNo : (oItem.WeighmentTicket || oItem.WeighmentSlipNo || oItem.WBTicketNo || "");
+				oInitialData.challanDateTime = (oLocalReq && oLocalReq.challanDateTime) ? oLocalReq.challanDateTime : sChallanFormatted;
+				oInitialData.deliveryNo = (oLocalReq && oLocalReq.deliveryNo) ? oLocalReq.deliveryNo : (oItem.DCNumber || "");
+				oInitialData.saleOrder = (oLocalReq && oLocalReq.saleOrder) ? oLocalReq.saleOrder : (oItem.SaleOrder || oItem.SaleOrderNo || oItem.SalesDocument || "");
+				
+				oInitialData.vendor = oItem.SoldToParty || "";
+				oInitialData.vendorName = oItem.CustomerName || "";
+				oInitialData.vendorAddress = oItem.CustomerAddress || ((oItem.City || "") + (oItem.City && oItem.PostalCode ? ", " : "") + (oItem.PostalCode || ""));
+				oInitialData.vendorGST = oItem.CustomerGst || "";
+				oInitialData.city = oItem.City || "";
+				oInitialData.postalCode = oItem.PostalCode || "";
+
+				if (oItem.ScrapReqItmNav && oItem.ScrapReqItmNav.results && oItem.ScrapReqItmNav.results.length > 0) {
+					oInitialData.items = oItem.ScrapReqItmNav.results.map(function (subItem, idx) {
+						var sQty = (subItem.OrderQuantity || subItem.Quantity || subItem.Qty || "0").toString();
+						var sUom = that._normalizeUOM(subItem.UOM || subItem.Uom || "");
+						return {
+							sno: String(idx + 1),
+							type: that._mapMaterialType(subItem.Material || subItem.MaterialType || subItem.Type || "", subItem.MaterialDesc || subItem.Description || ""),
+							description: subItem.MaterialDesc || subItem.Description || "",
+							availQty: sQty,
+							sendoutQty: sQty,
+							uom: sUom
+						};
+					});
+				} else if (oLocalReq && oLocalReq.items) {
+					oInitialData.items = oLocalReq.items.map(function (item, idx) {
+						var sQty = (item.quantity || "0").toString();
+						return {
+							sno: String(idx + 1),
+							type: item.type || "",
+							description: item.description || "",
+							availQty: sQty,
+							sendoutQty: sQty,
+							uom: item.uom || "KG"
+						};
+					});
+				}
+
+				var oModel = new JSONModel(oInitialData);
+				that.getView().setModel(oModel, "scrapGp");
+			};
+
+			var fnLoadFromList = function () {
+				oODataModel.read("/ScrapReqHdrSet", {
+					filters: [new Filter("GatePassType", FilterOperator.EQ, "NRGP")],
+					urlParameters: { "$expand": "ScrapReqItmNav" },
+					success: function (oDataAll) {
+						sap.ui.core.BusyIndicator.hide();
+						var aResults = oDataAll.results || [];
+						var oItem = aResults.find(function (r) {
+							return (r.GatePassReqNo === sReqNo) || (r.RequestId === sReqNo);
+						});
+						if (oItem) {
+							fnProcessItem(oItem);
+						} else {
+							fnFallback();
+						}
+					},
+					error: function () {
+						sap.ui.core.BusyIndicator.hide();
+						fnFallback();
+					}
+				});
+			};
+
+			// Try 1: Query by GatePassReqNo directly
 			oODataModel.read("/ScrapReqHdrSet", {
 				filters: [new Filter("GatePassReqNo", FilterOperator.EQ, sReqNo)],
 				urlParameters: { "$expand": "ScrapReqItmNav" },
 				success: function (oData) {
-					sap.ui.core.BusyIndicator.hide();
 					var oItem = oData.results && oData.results[0];
-					if (!oItem) {
-						fnFallback();
-						return;
-					}
-
-					var sStatus = "Pending";
-					if (oItem.ApprovalReq === "A") {
-						sStatus = "Approved";
-					} else if (oItem.ApprovalReq === "P") {
-						sStatus = "Pending";
-					} else if (oItem.ApprovalReq === "R") {
-						sStatus = "Rejected";
-					} else if (oItem.Status || oItem.ReqStatus) {
-						sStatus = oItem.Status || oItem.ReqStatus;
-					}
-					if (oLocalReq && oLocalReq.status) {
-						sStatus = oLocalReq.status;
-					}
-
-					if (sStatus === "Gate Pass Generated") {
-						MessageBox.error("Already gate pass created for this request number", {
-							onClose: function () {
-								that.onNavBack();
+					if (oItem) {
+						sap.ui.core.BusyIndicator.hide();
+						fnProcessItem(oItem);
+					} else {
+						// Try 2: Query by GatePassReqNo and GatePassType="NRGP"
+						oODataModel.read("/ScrapReqHdrSet", {
+							filters: [
+								new Filter("GatePassReqNo", FilterOperator.EQ, sReqNo),
+								new Filter("GatePassType", FilterOperator.EQ, "NRGP")
+							],
+							urlParameters: { "$expand": "ScrapReqItmNav" },
+							success: function (oData2) {
+								var oItem2 = oData2.results && oData2.results[0];
+								if (oItem2) {
+									sap.ui.core.BusyIndicator.hide();
+									fnProcessItem(oItem2);
+								} else {
+									fnLoadFromList();
+								}
+							},
+							error: function () {
+								fnLoadFromList();
 							}
 						});
-						return;
 					}
-
-					var sChallanRaw = oItem.ChallanDate || oItem.ChallanDateTime || oItem.DCDate || "";
-					var sChallanFormatted = sChallanRaw ? that._formatDate(sChallanRaw) : "";
-
-					oInitialData.remarks = (oLocalReq && oLocalReq.remarks) ? oLocalReq.remarks : (oItem.Remarks || "");
-					oInitialData.vehicleNo = (oLocalReq && oLocalReq.vehicleDetails) ? oLocalReq.vehicleDetails : (oItem.VehicleNo || oItem.VehicleDetails || "");
-					oInitialData.weighmentSlipNo = (oLocalReq && oLocalReq.weighmentSlipNo) ? oLocalReq.weighmentSlipNo : (oItem.WeighmentTicket || oItem.WeighmentSlipNo || oItem.WBTicketNo || "");
-					oInitialData.challanDateTime = (oLocalReq && oLocalReq.challanDateTime) ? oLocalReq.challanDateTime : sChallanFormatted;
-					oInitialData.deliveryNo = (oLocalReq && oLocalReq.deliveryNo) ? oLocalReq.deliveryNo : (oItem.DCNumber || "");
-					oInitialData.saleOrder = (oLocalReq && oLocalReq.saleOrder) ? oLocalReq.saleOrder : (oItem.SaleOrder || oItem.SaleOrderNo || oItem.SalesDocument || "");
-					
-					oInitialData.vendor = oItem.SoldToParty || "";
-					oInitialData.vendorName = oItem.CustomerName || "";
-					oInitialData.vendorAddress = oItem.CustomerAddress || ((oItem.City || "") + (oItem.City && oItem.PostalCode ? ", " : "") + (oItem.PostalCode || ""));
-					oInitialData.vendorGST = oItem.CustomerGst || "";
-					oInitialData.city = oItem.City || "";
-					oInitialData.postalCode = oItem.PostalCode || "";
-
-					if (oItem.ScrapReqItmNav && oItem.ScrapReqItmNav.results && oItem.ScrapReqItmNav.results.length > 0) {
-						oInitialData.items = oItem.ScrapReqItmNav.results.map(function (subItem, idx) {
-							var sQty = (subItem.OrderQuantity || subItem.Quantity || subItem.Qty || "0").toString();
-							var sUom = that._normalizeUOM(subItem.UOM || subItem.Uom || "");
-							return {
-								sno: String(idx + 1),
-								type: that._mapMaterialType(subItem.Material || subItem.MaterialType || subItem.Type || "", subItem.MaterialDesc || subItem.Description || ""),
-								description: subItem.MaterialDesc || subItem.Description || "",
-								availQty: sQty,
-								sendoutQty: sQty,
-								uom: sUom
-							};
-						});
-					} else if (oLocalReq && oLocalReq.items) {
-						oInitialData.items = oLocalReq.items.map(function (item, idx) {
-							var sQty = (item.quantity || "0").toString();
-							return {
-								sno: String(idx + 1),
-								type: item.type || "",
-								description: item.description || "",
-								availQty: sQty,
-								sendoutQty: sQty,
-								uom: item.uom || "KG"
-							};
-						});
-					}
-
-					var oModel = new JSONModel(oInitialData);
-					that.getView().setModel(oModel, "scrapGp");
 				},
-				error: function (oError) {
-					sap.ui.core.BusyIndicator.hide();
-					fnFallback();
+				error: function () {
+					fnLoadFromList();
 				}
 			});
 		},
@@ -1087,7 +1133,14 @@ onSaleOrderValueHelp: function () {
 				},
 				error: function (oError) {
 					sap.ui.core.BusyIndicator.hide();
-					MessageBox.error("Failed to load Sale Orders. Please try again.");
+					var sMsg = "Failed to load Sale Orders. Please try again.";
+					try {
+						var oErr = JSON.parse(oError.responseText);
+						if (oErr && oErr.error && oErr.error.message) {
+							sMsg = oErr.error.message.value;
+						}
+					} catch (e) { }
+					MessageBox.error(sMsg);
 				}
 			});
 		},

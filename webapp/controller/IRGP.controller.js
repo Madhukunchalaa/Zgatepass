@@ -41,6 +41,8 @@ sap.ui.define([
 				this._loadList();
 			} else {
 				this._loadMaterials();
+				this._loadVendors();
+				this._loadDepartments();
 				if (sStep === "CREATE") {
 					this._resetFormModel();
 					this._applyCreateMode();
@@ -267,6 +269,7 @@ sap.ui.define([
 						UOM:               it.UOM             || "",
 						MRNumber:          "",
 						Location:          it.Location        || "",
+						OldMaterialRef:    it.OldMaterialRef  || "",
 						Mp2ItmCode:        it.Mp2ItemCode      || "",
 						DefaultBin:        it.DefaultBin       || ""
 					};
@@ -360,6 +363,7 @@ sap.ui.define([
 						UOM:              it.UOM              || "",
 						MRNumber:         it.MRNumber         || "",
 						Location:         it.Location         || "",
+						OldMaterialRef:   it.OldMaterialRef   || "",
 						Mp2ItmCode:       it.Mp2ItemCode       || "",
 						DefaultBin:       it.DefaultBin        || ""
 					};
@@ -440,6 +444,7 @@ sap.ui.define([
 						UOM:              it.UOM             || "",
 						MRNumber:         it.MRNumber        || "",
 						Location:         it.Location        || "",
+						OldMaterialRef:   it.OldMaterialRef  || "",
 						Mp2ItmCode:       it.Mp2ItemCode      || "",
 						DefaultBin:       it.DefaultBin       || ""
 					};
@@ -551,6 +556,7 @@ sap.ui.define([
 								UOM:              it.UOM              || "",
 								MRNumber:         it.MRNumber         || "",
 								Location:         it.Location         || "",
+								OldMaterialRef:   it.OldMaterialRef   || "",
 								Mp2ItmCode:       it.Mp2ItemCode       || "",
 								DefaultBin:       it.DefaultBin        || ""
 							};
@@ -690,10 +696,11 @@ sap.ui.define([
 						SentQuantity:     it.SentQuantity     || "0",
 						RecievedQuantity: it.RecievedQuantity || "0",
 						BalanceQuantity:  it.BalanceQuantity  || "0",
-						UOM:              it.UOM              || "",
+						UOM:              this._mapUOMToDropdownKey(it.UOM || it.uom || it.Uom || ""),
 						HSNCode:          it.HSNCode          || "",
 						MRNumber:         this._sanitizeMRN(it.MRNumber),
 						Location:         it.Location         || "",
+						OldMaterialRef:   it.OldMaterialRef   || "",
 						Mp2ItemCode:      it.Mp2ItmCode        || "",
 						DefaultBin:       it.DefaultBin       || ""
 					};
@@ -1225,8 +1232,8 @@ sap.ui.define([
 			aItems.push({
 				SNo: aItems.length + 1,
 				ItemCode: "", ItemDescription: "",
-				SentQuantity: "0", RecievedQuantity: "0", BalanceQuantity: "0",
-				UOM: "", MRNumber: "", Location: "", Mp2ItemCode: "", DefaultBin: ""
+				SentQuantity: "", RecievedQuantity: "0", BalanceQuantity: "0",
+				UOM: "", MRNumber: "", Location: "", OldMaterialRef: "", Mp2ItemCode: "", DefaultBin: ""
 			});
 			oModel.setProperty("/items", aItems);
 			oModel.setProperty("/ui/hasPendingChanges", true);
@@ -1246,14 +1253,19 @@ sap.ui.define([
 
 			var aFilters = [new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sPlant)];
 
+			var that = this;
 			oODataModel.read("/ZMaterialSet", {
 				filters: aFilters,
 				success: function (oData) {
 					var aNormalized = (oData.results || []).map(function (m) {
 						return {
 							Material: m.Material || m.Matnr || "",
-							MaterialName: m.Maktx || m.MaterialDesc || m.Description || m.MatDesc || m.Materialtxt || m.Material || "",
-							UOM: m.Meins || m.Uom || m.BaseUOM || m.UOM || ""
+							MaterialName: m.MaterialDesc || m.MaterialDescription || m.Arktx || m.MaterialName || m.Maktx || "",
+							UOM: m.UOM || m.Meins || "",
+							Location: m.Location || m.Lgort || m.StorageLocation || "",
+							OldMaterialRef: m.OldMaterialRef || "",
+							Mp2ItemCode: m.MP2ItemCode || m.Mp2ItemCode || m.Mp2ItmCode || m.Mp2itemcode || "",
+							DefaultBin: m.DefaultBin || m.Bin || m.Lgpla || m.Defaultbin || ""
 						};
 					});
 					oMaterialsModel.setProperty("/results", aNormalized);
@@ -1308,6 +1320,53 @@ sap.ui.define([
 			oModel.setProperty(sPath + "/ItemCode", oSelectedMaterial.Material);
 			oModel.setProperty(sPath + "/ItemDescription", oSelectedMaterial.MaterialName);
 			oModel.setProperty(sPath + "/UOM", oSelectedMaterial.UOM);
+			oModel.setProperty(sPath + "/Location", oSelectedMaterial.Location || "");
+			oModel.setProperty(sPath + "/OldMaterialRef", oSelectedMaterial.OldMaterialRef || "");
+			oModel.setProperty(sPath + "/Mp2ItemCode", oSelectedMaterial.Mp2ItemCode || "");
+			oModel.setProperty(sPath + "/DefaultBin", oSelectedMaterial.DefaultBin || "");
+		},
+
+		onItemCodeChange: function (oEvent) {
+			var oInput = oEvent.getSource();
+			var sVal = (oInput.getValue() || "").trim();
+			var oRowCtx = oInput.getBindingContext("irgp");
+			if (!oRowCtx) return;
+
+			var oModel = this.getView().getModel("irgp");
+			var sPath = oRowCtx.getPath();
+
+			if (!sVal) {
+				oModel.setProperty(sPath + "/ItemDescription", "");
+				oModel.setProperty(sPath + "/UOM", "");
+				oModel.setProperty(sPath + "/Location", "");
+				oModel.setProperty(sPath + "/OldMaterialRef", "");
+				oModel.setProperty(sPath + "/Mp2ItemCode", "");
+				oModel.setProperty(sPath + "/DefaultBin", "");
+				return;
+			}
+
+			var oMaterialsModel = this.getView().getModel("materials");
+			var aResults = oMaterialsModel ? (oMaterialsModel.getProperty("/results") || []) : [];
+			var oFound = aResults.find(function (m) {
+				return (m.Material || "").trim().toLowerCase() === sVal.toLowerCase();
+			});
+
+			if (oFound) {
+				oModel.setProperty(sPath + "/ItemCode", oFound.Material);
+				oModel.setProperty(sPath + "/ItemDescription", oFound.MaterialName);
+				oModel.setProperty(sPath + "/UOM", oFound.UOM);
+				oModel.setProperty(sPath + "/Location", oFound.Location || "");
+				oModel.setProperty(sPath + "/OldMaterialRef", oFound.OldMaterialRef || "");
+				oModel.setProperty(sPath + "/Mp2ItemCode", oFound.Mp2ItemCode || "");
+				oModel.setProperty(sPath + "/DefaultBin", oFound.DefaultBin || "");
+			} else {
+				oModel.setProperty(sPath + "/ItemDescription", "");
+				oModel.setProperty(sPath + "/UOM", "");
+				oModel.setProperty(sPath + "/Location", "");
+				oModel.setProperty(sPath + "/OldMaterialRef", "");
+				oModel.setProperty(sPath + "/Mp2ItemCode", "");
+				oModel.setProperty(sPath + "/DefaultBin", "");
+			}
 		},
 
 		onMaterialValueHelpCancel: function () {},
@@ -1737,6 +1796,130 @@ sap.ui.define([
 					{ key: "Unit", text: "Unit" }
 				]
 			};
+		},
+
+		_loadVendors: function () {
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) { return; }
+
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var sPlant = oUserModel ? (oUserModel.getProperty("/plant") || oUserModel.getProperty("/Plant") || "") : "";
+			if (!sPlant) { return; }
+
+			var aFilters = [new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sPlant)];
+			var that = this;
+
+			oODataModel.read("/ZVendorSet", {
+				filters: aFilters,
+				success: function (oData) {
+					var aNormalized = (oData.results || []).map(function (v) {
+						var sName = v.Name || v.VendorName || v.Name1 || "";
+						var sCode = v.Vendor || v.Lifnr || "";
+						var sText = sCode ? (sCode + " - " + sName) : sName;
+						return {
+							key: sName,
+							text: sText
+						};
+					});
+					var oModel = that.getView().getModel("irgp");
+					if (oModel) {
+						oModel.setProperty("/dropdowns/contracts", aNormalized);
+					}
+				},
+				error: function () {
+					var oModel = that.getView().getModel("irgp");
+					if (oModel) {
+						oModel.setProperty("/dropdowns/contracts", []);
+					}
+				}
+			});
+		},
+
+		_loadDepartments: function () {
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) { return; }
+
+			var that = this;
+			oODataModel.read("/zdepartmentSet", {
+				success: function (oData) {
+					var aNormalized = (oData.results || []).map(function (d) {
+						var sKey = d.Kostl || d.Department || d.Dept || d.Id || d.Code || d.Zdept || "";
+						var sText = d.Ktext || d.Description || d.Name || d.Text || d.DepartmentText || d.ZdeptName || sKey;
+						if (sKey === "") {
+							var keys = Object.keys(d).filter(function(k) { return k !== "__metadata"; });
+							if (keys.length > 0) sKey = d[keys[0]];
+							if (keys.length > 1) sText = d[keys[1]] || sKey;
+						}
+						return {
+							key: sKey,
+							text: sText ? (sKey !== sText ? sKey + " - " + sText : sText) : sKey
+						};
+					});
+					
+					aNormalized.sort(function(a, b) {
+						return a.text.localeCompare(b.text);
+					});
+
+					var oModel = that.getView().getModel("irgp");
+					if (oModel) {
+						oModel.setProperty("/dropdowns/departments", aNormalized);
+					}
+				},
+				error: function (oError) {
+					console.error("Failed to load departments from /zdepartmentSet", oError);
+				}
+			});
+		},
+
+		_mapUOMToDropdownKey: function (sUom) {
+			if (!sUom) return "";
+			var sClean = sUom.trim().toUpperCase();
+			if (sClean === "NO" || sClean === "NO." || sClean === "NOS" || sClean === "EA" || sClean === "PC" || sClean === "ST" || sClean === "NUMBER" || sClean === "NUM") {
+				return "Number";
+			}
+			if (sClean === "KG" || sClean === "KGS" || sClean === "KILOGRAM") {
+				return "Kilogram";
+			}
+			if (sClean === "M" || sClean === "MTR" || sClean === "METERS" || sClean === "METER") {
+				return "Meters";
+			}
+			if (sClean === "MT" || sClean === "TON" || sClean === "TONS" || sClean === "METRIC TONS") {
+				return "Metric Tons";
+			}
+			if (sClean === "FT" || sClean === "FEET") {
+				return "Feet";
+			}
+			if (sClean === "L" || sClean === "LTR" || sClean === "LITRE" || sClean === "LITRES") {
+				return "Litre";
+			}
+			if (sClean === "SET" || sClean === "SETS") {
+				return "Set";
+			}
+			if (sClean === "ROL" || sClean === "ROLL" || sClean === "ROLLS") {
+				return "Roll";
+			}
+			if (sClean === "BOX" || sClean === "BOXES") {
+				return "Box";
+			}
+			if (sClean === "BAG" || sClean === "BAGS") {
+				return "Bag";
+			}
+			return sUom.charAt(0).toUpperCase() + sUom.slice(1).toLowerCase();
+		},
+
+		onSort: function () {
+			this._openSortDialog("idIRGPListTable", [
+				{ key: "GEDate", text: "IRGP Date", selected: true },
+				{ key: "IRGPNo", text: "IRGP No" },
+				{ key: "RequestType", text: "IRGP Type" },
+				{ key: "DueDate", text: "Due Date" },
+				{ key: "ReturnedDate", text: "Ret Date" },
+				{ key: "RequestUser", text: "Req User" },
+				{ key: "Department", text: "Req Dept" },
+				{ key: "ContractName", text: "Contract Name" },
+				{ key: "ContractEmployeeName", text: "Contract Employee Name" },
+				{ key: "StatusCode", text: "Status" }
+			]);
 		}
 
 	});

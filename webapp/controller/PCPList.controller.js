@@ -183,30 +183,18 @@ sap.ui.define([
 		},
 
 		onSort: function () {
-			if (!this._oSortDialog) {
-				var sapM = sap.ui.require("sap/m/ViewSettingsDialog");
-				var sapItem = sap.ui.require("sap/m/ViewSettingsItem");
-				this._oSortDialog = new sapM({
-					confirm: function (oEvent) {
-						var oSortItem = oEvent.getParameter("sortItem");
-						var bDescending = oEvent.getParameter("sortDescending");
-						var aSorters = [];
-						if (oSortItem) {
-							var sPath = oSortItem.getKey();
-							// Dates from string need custom sort or we just sort by string since it's DD-MM-YYYY (bad for string sort)
-							// Actually we should sort on a raw date, but UI has string. We'll sort by the displayed string for now.
-							aSorters.push(new sap.ui.model.Sorter(sPath, bDescending));
-						}
-						var oTable = this.getView().byId("pcpTable");
-						oTable.getBinding("items").sort(aSorters);
-					}.bind(this)
-				});
-				this._oSortDialog.addSortItem(new sapItem({ key: "GateEntryNo", text: "Gate Entry No", selected: true }));
-				this._oSortDialog.addSortItem(new sapItem({ key: "PCPDate", text: "PCP Date" }));
-				this._oSortDialog.addSortItem(new sapItem({ key: "GEDate", text: "GE Date" }));
-				this.getView().addDependent(this._oSortDialog);
-			}
-			this._oSortDialog.open();
+			this._openSortDialog("pcpTable", [
+				{ key: "GEDate", text: "GE Date", selected: true },
+				{ key: "GateEntryNo", text: "GE No" },
+				{ key: "VendorDesc", text: "Supplier" },
+				{ key: "SourceType", text: "Source Type" },
+				{ key: "Department", text: "Dept" },
+				{ key: "RGPNumber", text: "RGP No" },
+				{ key: "DCNumber", text: "Inv No" },
+				{ key: "RRNo", text: "RR No" },
+				{ key: "GatepassNo", text: "Gate Pass No" },
+				{ key: "InspectionStatus", text: "Inspection Status" }
+			]);
 		},
 
 		onFilter: function () {
@@ -270,61 +258,69 @@ sap.ui.define([
 				sap.m.MessageToast.show("No record found");
 				return;
 			}
+
+			var fmtD = function (v) {
+				if (!v) { return ""; }
+				if (v instanceof Date) {
+					if (isNaN(v.getTime())) { return ""; }
+					return v.getDate().toString().padStart(2, "0") + "-" + (v.getMonth() + 1).toString().padStart(2, "0") + "-" + v.getFullYear();
+				}
+				if (typeof v === "string") {
+					var m = v.match(/\/Date\((\d+)/);
+					if (m) { return fmtD(new Date(parseInt(m[1], 10))); }
+					if (/^\d{8}$/.test(v) && !/^0+$/.test(v)) {
+						return v.slice(6, 8) + "-" + v.slice(4, 6) + "-" + v.slice(0, 4);
+					}
+				}
+				return v;
+			};
+
 			var aRows = [];
 			aData.forEach(function (o) {
-				var oHeader = {
-					"GE Date": o.GEDate || "",
-					"GE No": o.GateEntryNo || "",
-					"Plant": o.Plant || "",
-					"Vendor": o.Vendor || "",
-					"Supplier": o.VendorDesc || "",
-					"PCP Date": o.PCPDate || "",
-					"Source Type": o.SourceType || "",
-					"Entry Point": o.EntryPoint || "",
-					"Dept": o.Department || "",
-					"Budget Code": o.BudgetCode || "",
-					"Total Cost": o.TotalCost || "",
-					"RGP No": o.RGPNumber || "",
-					"Inv No": o.DCNumber || "",
-					"DC Date": o.DCdate || "",
-					"RR No": o.RRNo || "",
-					"Gate Pass No": o.GatepassNo || "",
-					"Remarks": o.Remarks || "",
-					"Inspection Status": o.InspectionStatus || "",
-					"Inspected Date": o.Inspectiondate || "",
-					"PO Number": o.PurchaseOrder || ""
-				};
 				var aItems = (o.PCPItmNav && (o.PCPItmNav.results || o.PCPItmNav)) || [];
 				if (!Array.isArray(aItems)) { aItems = []; }
 				if (aItems.length === 0) {
-					oHeader["Item No"] = "";
-					oHeader["Item Description"] = "";
-					oHeader["Order Qty"] = "";
-					oHeader["Received Qty"] = "";
-					oHeader["Balance Qty"] = "";
-					oHeader["Item UOM"] = "";
-					oHeader["Item Total Cost"] = "";
-					oHeader["Item PO"] = "";
-					aRows.push(oHeader);
+					aRows.push({
+						"PCP No": o.GatepassNo || "",
+						"PCP Date": fmtD(o.PCPDate),
+						"Entry": o.EntryPoint || "",
+						"GE No": o.GateEntryNo || "",
+						"GE Date": fmtD(o.GEDate),
+						"Dept": o.Department || "",
+						"Supplier": o.VendorDesc || "",
+						"Items": o.FirstItemDesc || "",
+						"Qty": "",
+						"UOM": "",
+						"DC/INV No": o.DCNumber || "",
+						"DC/INV Date": fmtD(o.DCdate),
+						"Total cost": o.TotalCost || "",
+						"Budget": o.BudgetCode || ""
+					});
 				} else {
 					aItems.forEach(function (itm) {
-						var oRow = Object.assign({}, oHeader);
-						oRow["Item No"] = itm.ItemNo || "";
-						oRow["Item Description"] = itm.ItemDescription || "";
-						oRow["Order Qty"] = itm.OrderQuantity || "";
-						oRow["Received Qty"] = itm.RecievedQuantity || "";
-						oRow["Balance Qty"] = itm.BalanceQuantity || "";
-						oRow["Item UOM"] = itm.UOM || "";
-						oRow["Item Total Cost"] = itm.TotalCost || "";
-						oRow["Item PO"] = itm.PurchaseOrder || "";
-						aRows.push(oRow);
+						aRows.push({
+							"PCP No": o.GatepassNo || "",
+							"PCP Date": fmtD(o.PCPDate),
+							"Entry": o.EntryPoint || "",
+							"GE No": o.GateEntryNo || "",
+							"GE Date": fmtD(o.GEDate),
+							"Dept": o.Department || "",
+							"Supplier": o.VendorDesc || "",
+							"Items": itm.ItemDescription || itm.Description || itm.MaterialDesc || o.FirstItemDesc || "",
+							"Qty": itm.OrderQuantity || itm.Quantity || itm.SentQuantity || "",
+							"UOM": itm.UOM || itm.uom || itm.Uom || "",
+							"DC/INV No": o.DCNumber || "",
+							"DC/INV Date": fmtD(o.DCdate),
+							"Total cost": itm.TotalCost || o.TotalCost || "",
+							"Budget": o.BudgetCode || ""
+						});
 					});
 				}
 			});
 			var aParts = ["Gate_Entry"];
 			if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
 			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
-			ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx", 20);
+			ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx", aRows.length ? Object.keys(aRows[0]).length : 14);
 		},
 
 		// ==========================================================
@@ -488,7 +484,7 @@ sap.ui.define([
 
 				if (oSourceData.PCPItmNav && oSourceData.PCPItmNav.results && oSourceData.PCPItmNav.results.length > 0) {
 					oData.RecievedQuantity = oSourceData.PCPItmNav.results[0].RecievedQuantity || "0.00";
-					oData.UOM = oSourceData.PCPItmNav.results[0].UOM || "";
+					oData.UOM = this._mapUOMToDropdownKey(oSourceData.PCPItmNav.results[0].UOM || oSourceData.PCPItmNav.results[0].uom || oSourceData.PCPItmNav.results[0].Uom || "");
 					oData.ItemNo = oSourceData.PCPItmNav.results[0].ItemNo || "";
 				}
 			}
@@ -499,6 +495,29 @@ sap.ui.define([
 			} else {
 				oModel.setData(oData);
 			}
+
+			this._loadBudgetCodes();
+		},
+
+		_loadBudgetCodes: function () {
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) { return; }
+
+			var that = this;
+			oODataModel.read("/ZWBSElementSet", {
+				success: function (oData) {
+					var aResults = oData.results || [];
+					var oModel = that.getView().getModel("pcpModel");
+					if (oModel) {
+						var oDropdowns = oModel.getProperty("/dropdowns") || {};
+						oDropdowns.budgetCodes = aResults;
+						oModel.setProperty("/dropdowns", oDropdowns);
+					}
+				},
+				error: function (oError) {
+					console.error("Failed to load budget codes from /ZWBSElementSet", oError);
+				}
+			});
 		},
 
 		onClosePCPDialog: function () {
@@ -515,10 +534,30 @@ sap.ui.define([
 			var oPcpModel = this.getView().getModel("pcpModel");
 
 			sap.ui.core.BusyIndicator.show(0);
-			// Fetch the PCP Data based on GE No
+			var aFilters = [new Filter("GateEntryNo", FilterOperator.EQ, sGE)];
+			
+			var sModelDate = (oPcpModel.getProperty("/GEDate") || "").trim();
+			if (sModelDate) {
+				var sGEDate = "";
+				var aParts = sModelDate.split("-");
+				if (aParts.length === 3) {
+					if (aParts[0].length === 4) { // YYYY-MM-DD
+						sGEDate = aParts[0] + aParts[1] + aParts[2];
+					} else if (aParts[2].length === 4) { // DD-MM-YYYY
+						sGEDate = aParts[2] + aParts[1] + aParts[0];
+					}
+				} else {
+					sGEDate = sModelDate.replace(/-/g, "");
+				}
+				if (sGEDate) {
+					aFilters.push(new Filter("GEDate", FilterOperator.EQ, sGEDate));
+				}
+			}
+
+			// Fetch the PCP Data based on GE No and Date
 			var sPath = "/PCPHdrSet";
 			oODataModel.read(sPath, {
-				filters: [new Filter("GateEntryNo", FilterOperator.EQ, sGE)],
+				filters: aFilters,
 				urlParameters: { "$expand": "PCPItmNav" },
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
@@ -552,7 +591,7 @@ sap.ui.define([
 							var oItem = oResult.PCPItmNav.results[0];
 							oPcpModel.setProperty("/ItemDescription", oItem.ItemDescription || "");
 							oPcpModel.setProperty("/RecievedQuantity", oItem.RecievedQuantity || "0.00");
-							oPcpModel.setProperty("/UOM", oItem.UOM || "");
+							oPcpModel.setProperty("/UOM", this._mapUOMToDropdownKey(oItem.UOM || oItem.uom || oItem.Uom || ""));
 							oPcpModel.setProperty("/ItemNo", oItem.ItemNo || "");
 						}
 						MessageToast.show("Gate Entry details fetched.");
@@ -690,7 +729,7 @@ sap.ui.define([
 
 			if (oSourceData.PCPItmNav && oSourceData.PCPItmNav.results && oSourceData.PCPItmNav.results.length > 0) {
 				oData.RecievedQuantity = oSourceData.PCPItmNav.results[0].RecievedQuantity || "0.00";
-				oData.UOM = oSourceData.PCPItmNav.results[0].UOM || "";
+				oData.UOM = this._mapUOMToDropdownKey(oSourceData.PCPItmNav.results[0].UOM || oSourceData.PCPItmNav.results[0].uom || oSourceData.PCPItmNav.results[0].Uom || "");
 			}
 
 			this._generatePDF(oData);
@@ -930,6 +969,42 @@ sap.ui.define([
 				document.body.removeChild(textArea);
 				sap.m.MessageToast.show("List copied to clipboard.");
 			}
+		},
+
+		_mapUOMToDropdownKey: function (sUom) {
+			if (!sUom) return "";
+			var sClean = sUom.trim().toUpperCase();
+			if (sClean === "NO" || sClean === "NO." || sClean === "NOS" || sClean === "EA" || sClean === "PC" || sClean === "ST" || sClean === "NUMBER" || sClean === "NUM") {
+				return "Number";
+			}
+			if (sClean === "KG" || sClean === "KGS" || sClean === "KILOGRAM") {
+				return "Kilogram";
+			}
+			if (sClean === "M" || sClean === "MTR" || sClean === "METERS" || sClean === "METER") {
+				return "Meters";
+			}
+			if (sClean === "MT" || sClean === "TON" || sClean === "TONS" || sClean === "METRIC TONS") {
+				return "Metric Tons";
+			}
+			if (sClean === "FT" || sClean === "FEET") {
+				return "Feet";
+			}
+			if (sClean === "L" || sClean === "LTR" || sClean === "LITRE" || sClean === "LITRES") {
+				return "Litre";
+			}
+			if (sClean === "SET" || sClean === "SETS") {
+				return "Set";
+			}
+			if (sClean === "ROL" || sClean === "ROLL" || sClean === "ROLLS") {
+				return "Roll";
+			}
+			if (sClean === "BOX" || sClean === "BOXES") {
+				return "Box";
+			}
+			if (sClean === "BAG" || sClean === "BAGS") {
+				return "Bag";
+			}
+			return sUom.charAt(0).toUpperCase() + sUom.slice(1).toLowerCase();
 		}
 
 	});
