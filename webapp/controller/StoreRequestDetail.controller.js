@@ -5,17 +5,26 @@ sap.ui.define([
 	"sap/m/MessageToast",
 	"sap/ui/model/Filter",
 	"sap/ui/model/FilterOperator",
-	"sap/base/security/URLListValidator"
-], function (BaseController, JSONModel, MessageBox, MessageToast, Filter, FilterOperator, URLListValidator) {
+	"sap/base/security/URLListValidator",
+	"sap/ui/core/BusyIndicator"
+], function (BaseController, JSONModel, MessageBox, MessageToast, Filter, FilterOperator, URLListValidator, BusyIndicator) {
 	"use strict";
 
+	/**
+	 * StoreRequestDetail Controller
+	 * Manages Store Approval, Rejection, and Amendment workflows for Gate Pass Requests.
+	 */
 	return BaseController.extend("zgpms.meilpower.com.controller.StoreRequestDetail", {
+
+		/* =========================================================== */
+		/* LIFECYCLE & ROUTING HOOKS                                   */
+		/* =========================================================== */
 
 		onInit: function () {
 			try {
 				URLListValidator.add("data");
 			} catch (e) {
-				try { jQuery.sap.addUrlWhitelist("data"); } catch (e2) { /* ignore */ }
+				try { jQuery.sap.addUrlWhitelist("data"); } catch (e2) { /* ignore fallback */ }
 			}
 			this._resetModel();
 			this.getRouter().getRoute("StoreRequestDetail").attachPatternMatched(this._onRouteMatched, this);
@@ -23,10 +32,11 @@ sap.ui.define([
 
 		_onRouteMatched: function (oEvent) {
 			this._resetModel();
-			var oArgs    = oEvent.getParameter("arguments");
-			this._sReqNo = decodeURIComponent(oArgs.reqNo  || "");
+			var oArgs = oEvent.getParameter("arguments");
+			this._sReqNo = decodeURIComponent(oArgs.reqNo || "");
 			this._sType  = decodeURIComponent(oArgs.gpType || "NRGP");
 
+			// 1. Check temporary cache model for instant rendering
 			var oTemp = this.getOwnerComponent().getModel("storeTemp");
 			if (oTemp) {
 				var oRow = oTemp.getData();
@@ -35,11 +45,15 @@ sap.ui.define([
 				}
 			}
 
+			// 2. Fetch fresh data from backend
 			if (this._sReqNo) {
 				this._loadDetail(this._sReqNo, this._sType);
 			}
 		},
 
+		/**
+		 * Resets the local JSON model data structure to default empty state.
+		 */
 		_resetModel: function () {
 			var oData = {
 				GatePassReqNo: "", GatePassType: "", Status: "",
@@ -47,21 +61,33 @@ sap.ui.define([
 				VendorName: "", VendorGST: "", VendorAddress: "",
 				DueDate: "",
 				VehicleNo: "", ModeOfDispatch: "", Remarks: "",
-				HODRemarks: "", STORERemarks: "", totalAmount: "0.00",
-				items: [], Base64Img1: "", Fname: "", Ftype: "", hasAttachment1: false, isImage1: false, isPdf1: false,
+				HODRemarks: "", STORERemarks: "", StoreRemarks: "", totalAmount: "0.00",
+				items: [],
+				Base64Img1: "", Fname: "", Ftype: "", hasAttachment1: false, isImage1: false, isPdf1: false,
 				Base64Img2: "", Fname2: "", Ftype2: "", hasAttachment2: false, isImage2: false, isPdf2: false,
 				hasAttachment: false
 			};
 			var oModel = this.getView().getModel("store");
-			if (oModel) { oModel.setData(oData); } else { this.getView().setModel(new JSONModel(oData), "store"); }
+			if (oModel) {
+				oModel.setData(oData);
+			} else {
+				this.getView().setModel(new JSONModel(oData), "store");
+			}
 		},
 
+		/* =========================================================== */
+		/* DATA FETCHING & NORMALIZATION                               */
+		/* =========================================================== */
+
+		/**
+		 * Loads details for a single Gate Pass request from OData backend.
+		 */
 		_loadDetail: function (sReqNo, sType) {
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (!oODataModel) { return; }
 			var that = this;
 
-			sap.ui.core.BusyIndicator.show(0);
+			BusyIndicator.show(0);
 			oODataModel.read("/GateReqHdrSet", {
 				filters: [
 					new Filter("GatePassReqNo", FilterOperator.EQ, sReqNo),
@@ -69,16 +95,18 @@ sap.ui.define([
 				],
 				urlParameters: { "$expand": "GateReqItmNav" },
 				success: function (oData) {
-					sap.ui.core.BusyIndicator.hide();
+					BusyIndicator.hide();
 					var oItem = (oData.results || [])[0];
 					if (oItem) {
 						that._mapData(oItem);
-						// If HODRemarks is empty from GateReqHdrSet, fetch from creation entity
+
+						// Fetch HOD Remarks from creation entity if missing
 						var sHOD = oItem.HODRemarks || oItem.HodRemarks || "";
 						if (!sHOD) {
 							that._loadHODRemarks(sReqNo, sType);
 						}
-						// Fetch image from creation entity if missing
+
+						// Fetch attachments if missing
 						var sCheckImg1 = oItem.Base64Img1 || oItem.Base64img1 || "";
 						var sCheckImg2 = oItem.Base64Img2 || oItem.Base64img2 || "";
 						if (!sCheckImg1 || !sCheckImg2) {
@@ -89,13 +117,15 @@ sap.ui.define([
 					}
 				},
 				error: function () {
-					sap.ui.core.BusyIndicator.hide();
+					BusyIndicator.hide();
 					that._loadFromList(sReqNo, sType);
 				}
 			});
 		},
 
-		// Fetch HODRemarks from GatePassReqHdrSet when GateReqHdrSet doesn't return them
+		/**
+		 * Helper to fetch HODRemarks from GatePassReqHdrSet if primary entity didn't return them.
+		 */
 		_loadHODRemarks: function (sReqNo, sType) {
 			var oODataModel = this.getOwnerComponent().getModel();
 			var oStoreModel = this.getView() && this.getView().getModel("store");
@@ -116,8 +146,7 @@ sap.ui.define([
 					}
 					that._loadHODRemarksByFilter(sReqNo, sType);
 				},
-				error: function (oError) {
-					console.log("Direct key read for HODRemarks failed, trying filter", oError);
+				error: function () {
 					that._loadHODRemarksByFilter(sReqNo, sType);
 				}
 			});
@@ -140,9 +169,7 @@ sap.ui.define([
 						var sHOD = oItem.HODRemarks || oItem.HodRemarks || "";
 						if (sHOD) {
 							oStoreModel.setProperty("/HODRemarks", sHOD);
-							if (that._oRawData) {
-								that._oRawData.HODRemarks = sHOD;
-							}
+							if (that._oRawData) { that._oRawData.HODRemarks = sHOD; }
 						}
 					}
 				},
@@ -155,7 +182,7 @@ sap.ui.define([
 		_loadFromList: function (sReqNo, sType) {
 			var oODataModel = this.getOwnerComponent().getModel();
 			var that = this;
-			sap.ui.core.BusyIndicator.show(0);
+			BusyIndicator.show(0);
 
 			oODataModel.read("/GateReqHdrSet", {
 				filters: [
@@ -164,50 +191,39 @@ sap.ui.define([
 				],
 				urlParameters: { "$expand": "GateReqItmNav" },
 				success: function (oData) {
-					sap.ui.core.BusyIndicator.hide();
+					BusyIndicator.hide();
 					var oItem = (oData.results || []).find(function (r) {
 						return (r.GatePassReqNo === sReqNo) || (r.GatePassreqNo === sReqNo);
 					});
-					if (oItem) { 
-						that._mapData(oItem); 
-						// If HODRemarks is empty, fetch from creation entity
+					if (oItem) {
+						that._mapData(oItem);
 						var sHOD = oItem.HODRemarks || oItem.HodRemarks || "";
-						if (!sHOD) {
-							that._loadHODRemarks(sReqNo, sType);
-						}
-						// Fetch image from creation entity if missing
+						if (!sHOD) { that._loadHODRemarks(sReqNo, sType); }
 						var sCheckImg1 = oItem.Base64Img1 || oItem.Base64img1 || "";
 						var sCheckImg2 = oItem.Base64Img2 || oItem.Base64img2 || "";
-						if (!sCheckImg1 || !sCheckImg2) {
-							that._loadBase64(sReqNo, sType);
-						}
+						if (!sCheckImg1 || !sCheckImg2) { that._loadBase64(sReqNo, sType); }
 					}
 				},
-				error: function () { sap.ui.core.BusyIndicator.hide(); }
+				error: function () { BusyIndicator.hide(); }
 			});
 		},
 
-		// Fetch Base64 attachments from GatePassReqHdrSet (creation entity stores the image)
 		_loadBase64: function (sReqNo, sType) {
 			var oODataModel = this.getOwnerComponent().getModel();
-			var oStoreModel   = this.getView() && this.getView().getModel("store");
+			var oStoreModel = this.getView() && this.getView().getModel("store");
 			if (!oODataModel || !oStoreModel) { return; }
 			var that = this;
 
-			// Attempt direct key read (same 3-field key format)
 			var sKeyPath = "/GatePassReqHdrSet(GatePassReqNo='" + sReqNo + "',GatePassType='" + sType + "')";
 			oODataModel.read(sKeyPath, {
 				success: function (oData) {
 					if (oData && (oData.Base64Img1 || oData.Base64img1 || oData.Base64Img2 || oData.Base64img2)) {
 						that._processLoadedAttachments(oData, oStoreModel);
 					} else {
-						// Image empty in direct read, try filter
 						that._loadBase64ByFilter(sReqNo);
 					}
 				},
-				error: function (oError) {
-					console.error("Direct OData read on " + sKeyPath + " failed. Trying filter query.", oError);
-					// Key read unsupported or failed — try filter approach
+				error: function () {
 					that._loadBase64ByFilter(sReqNo);
 				}
 			});
@@ -215,7 +231,7 @@ sap.ui.define([
 
 		_loadBase64ByFilter: function (sReqNo) {
 			var oODataModel = this.getOwnerComponent().getModel();
-			var oStoreModel   = this.getView() && this.getView().getModel("store");
+			var oStoreModel = this.getView() && this.getView().getModel("store");
 			if (!oODataModel || !oStoreModel) { return; }
 			var that = this;
 
@@ -225,8 +241,6 @@ sap.ui.define([
 					var oItem = oData.results && oData.results[0];
 					if (oItem && (oItem.Base64Img1 || oItem.Base64img1 || oItem.Base64Img2 || oItem.Base64img2)) {
 						that._processLoadedAttachments(oItem, oStoreModel);
-					} else {
-						console.log("No attachment found in GatePassReqHdrSet via filter for request " + sReqNo);
 					}
 				},
 				error: function (oError) {
@@ -246,33 +260,23 @@ sap.ui.define([
 			if (sImg1) {
 				oModel.setProperty("/Base64Img1", this._formatBase64ToBlobUrl(sImg1));
 				oModel.setProperty("/hasAttachment1", true);
-				if (!sFtype1) {
-					sFtype1 = this._detectFileType(sImg1);
-				}
+				if (!sFtype1) { sFtype1 = this._detectFileType(sImg1); }
 				if (sFtype1) {
 					sFtype1 = sFtype1.toUpperCase().trim();
-					if (sFtype1.indexOf("PDF") !== -1 || sFtype1 === "APPLICATION/PDF") {
-						sFtype1 = "PDF";
-					} else if (sFtype1.indexOf("PNG") !== -1 || sFtype1 === "IMAGE/PNG") {
-						sFtype1 = "PNG";
-					} else if (sFtype1.indexOf("JPG") !== -1 || sFtype1.indexOf("JPEG") !== -1 || sFtype1 === "IMAGE/JPEG") {
-						sFtype1 = "JPG";
-					} else if (sFtype1.indexOf("DOC") !== -1 || sFtype1.indexOf("WORD") !== -1 || sFtype1.indexOf("OFFICEDOCUMENT") !== -1) {
-						sFtype1 = "DOCX";
-					}
+					if (sFtype1.indexOf("PDF") !== -1 || sFtype1 === "APPLICATION/PDF") sFtype1 = "PDF";
+					else if (sFtype1.indexOf("PNG") !== -1 || sFtype1 === "IMAGE/PNG") sFtype1 = "PNG";
+					else if (sFtype1.indexOf("JPG") !== -1 || sFtype1.indexOf("JPEG") !== -1 || sFtype1 === "IMAGE/JPEG") sFtype1 = "JPG";
+					else if (sFtype1.indexOf("DOC") !== -1 || sFtype1.indexOf("WORD") !== -1 || sFtype1.indexOf("OFFICEDOCUMENT") !== -1) sFtype1 = "DOCX";
 				}
 				var sDisplayFname1 = sFname1;
 				if (sDisplayFname1) {
-					if (sDisplayFname1.indexOf(".") === -1 && sFtype1) {
-						sDisplayFname1 += "." + sFtype1.toLowerCase();
-					}
+					if (sDisplayFname1.indexOf(".") === -1 && sFtype1) sDisplayFname1 += "." + sFtype1.toLowerCase();
 				} else if (sFtype1) {
 					sDisplayFname1 = "attachment1." + sFtype1.toLowerCase();
 				}
 				oModel.setProperty("/Fname", sDisplayFname1);
 				oModel.setProperty("/Ftype", sFtype1);
 
-				// UI5 safe helper properties
 				var bIsImage1 = !sFtype1 || ["JPG", "JPEG", "PNG", "GIF"].indexOf(sFtype1) !== -1;
 				var bIsPdf1 = sFtype1 === "PDF";
 				oModel.setProperty("/isImage1", bIsImage1);
@@ -294,33 +298,23 @@ sap.ui.define([
 			if (sImg2) {
 				oModel.setProperty("/Base64Img2", this._formatBase64ToBlobUrl(sImg2));
 				oModel.setProperty("/hasAttachment2", true);
-				if (!sFtype2) {
-					sFtype2 = this._detectFileType(sImg2);
-				}
+				if (!sFtype2) { sFtype2 = this._detectFileType(sImg2); }
 				if (sFtype2) {
 					sFtype2 = sFtype2.toUpperCase().trim();
-					if (sFtype2.indexOf("PDF") !== -1 || sFtype2 === "APPLICATION/PDF") {
-						sFtype2 = "PDF";
-					} else if (sFtype2.indexOf("PNG") !== -1 || sFtype2 === "IMAGE/PNG") {
-						sFtype2 = "PNG";
-					} else if (sFtype2.indexOf("JPG") !== -1 || sFtype2.indexOf("JPEG") !== -1 || sFtype2 === "IMAGE/JPEG") {
-						sFtype2 = "JPG";
-					} else if (sFtype2.indexOf("DOC") !== -1 || sFtype2.indexOf("WORD") !== -1 || sFtype2.indexOf("OFFICEDOCUMENT") !== -1) {
-						sFtype2 = "DOCX";
-					}
+					if (sFtype2.indexOf("PDF") !== -1 || sFtype2 === "APPLICATION/PDF") sFtype2 = "PDF";
+					else if (sFtype2.indexOf("PNG") !== -1 || sFtype2 === "IMAGE/PNG") sFtype2 = "PNG";
+					else if (sFtype2.indexOf("JPG") !== -1 || sFtype2.indexOf("JPEG") !== -1 || sFtype2 === "IMAGE/JPEG") sFtype2 = "JPG";
+					else if (sFtype2.indexOf("DOC") !== -1 || sFtype2.indexOf("WORD") !== -1 || sFtype2.indexOf("OFFICEDOCUMENT") !== -1) sFtype2 = "DOCX";
 				}
 				var sDisplayFname2 = sFname2;
 				if (sDisplayFname2) {
-					if (sDisplayFname2.indexOf(".") === -1 && sFtype2) {
-						sDisplayFname2 += "." + sFtype2.toLowerCase();
-					}
+					if (sDisplayFname2.indexOf(".") === -1 && sFtype2) sDisplayFname2 += "." + sFtype2.toLowerCase();
 				} else if (sFtype2) {
 					sDisplayFname2 = "attachment2." + sFtype2.toLowerCase();
 				}
 				oModel.setProperty("/Fname2", sDisplayFname2);
 				oModel.setProperty("/Ftype2", sFtype2);
 
-				// UI5 safe helper properties
 				var bIsImage2 = !sFtype2 || ["JPG", "JPEG", "PNG", "GIF"].indexOf(sFtype2) !== -1;
 				var bIsPdf2 = sFtype2 === "PDF";
 				oModel.setProperty("/isImage2", bIsImage2);
@@ -367,33 +361,23 @@ sap.ui.define([
 			var sAmmend = fnGetProp(oItem, "StoreAmmend");
 			sAmmend = String(sAmmend || "").trim().toUpperCase();
 
-			// 1. Rejected checks
 			if (s1 === "R" || s2 === "R" || sAppReq === "R" || sStatus === "REJECTED") {
 				return "Rejected";
 			}
-
-			// 2. Amendment checks
 			if (sAmmend === "AM" || s1 === "AM" || s2 === "AM"  || sStatus === "AM" || sStatus === "AMENDMENT") {
 				return "Amendment";
 			}
-
-			// 3. Approved checks (Store acted, or explicitly Approved)
 			if (s2 || sStatus === "APPROVED") {
 				return "Approved";
 			}
-			
-			// If backend GET_ENTITYSET forgot Approval2 but returned STORERemarks, we can assume Store acted
 			var sStoreRemarks = oItem.STORERemarks || oItem.StoreRemarks || "";
 			if (sStoreRemarks && String(sStoreRemarks).trim() !== "" && String(sStoreRemarks) !== "null") {
 				return "Approved";
 			}
-
-			// 4. Pending checks
 			if (s1 && s1 !== "X" && s1 !== "PENDING" && !s2) {
 				return "Store Approval Pending";
 			}
 
-			// Fallback checks
 			if (sStatus === "STORE APPROVAL PENDING") return "Store Approval Pending";
 			if (sStatus === "APPROVED") return "Approved";
 			if (sStatus === "REJECTED") return "Rejected";
@@ -439,20 +423,21 @@ sap.ui.define([
 			oModel.setProperty("/Remarks",        sRmk);
 			oModel.setProperty("/HODRemarks",     oData.HODRemarks    || oData.HodRemarks   || "");
 			oModel.setProperty("/STORERemarks",   oData.STORERemarks  || oData.StoreRemarks || "");
+			oModel.setProperty("/StoreRemarks",   oData.STORERemarks  || oData.StoreRemarks || "");
+
 			var sRawImg1 = oData.Base64Img1 || oData.Base64img1 || "";
 			var sRawImg2 = oData.Base64Img2 || oData.Base64img2 || "";
 			var sFname1  = oData.FILENAME   || oData.Filename    || oData.FileName   || oData.Fname || "";
 			var sFtype1  = (oData.FILETYPE  || oData.Filetype    || oData.FileType   || oData.Ftype || "").toUpperCase().trim();
 			var sFname2  = oData.FILENAME2  || oData.Filename2   || oData.FileName2  || oData.Fname2 || "";
 			var sFtype2  = (oData.FILETYPE2 || oData.Filetype2   || oData.FileType2  || oData.Ftype2 || "").toUpperCase().trim();
+			
 			this._processLoadedAttachments({
-				Base64Img1: sRawImg1,
-				Fname: sFname1,
-				Ftype: sFtype1,
-				Base64Img2: sRawImg2,
-				Fname2: sFname2,
-				Ftype2: sFtype2
-			}, oModel);			var aRaw = (oData.GateReqItmNav  && oData.GateReqItmNav.results) ||
+				Base64Img1: sRawImg1, Fname: sFname1, Ftype: sFtype1,
+				Base64Img2: sRawImg2, Fname2: sFname2, Ftype2: sFtype2
+			}, oModel);
+
+			var aRaw = (oData.GateReqItmNav  && oData.GateReqItmNav.results) ||
 			           (oData.GateReqItemNav  && oData.GateReqItemNav.results) || [];
 			var aItems = aRaw.map(function (it, i) {
 				var fQty    = parseFloat(it.RequestedQuantity || it.Quantity   || 0);
@@ -474,8 +459,374 @@ sap.ui.define([
 			oModel.setProperty("/totalAmount", fTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 		},
 
+		/* =========================================================== */
+		/* USER ACTIONS (APPROVE, REJECT, AMEND)                      */
+		/* =========================================================== */
 
+		/**
+		 * Fired when Store User clicks 'Approve' button.
+		 */
+		onApprove: function () {
+			var sRemarks = this.getView().getModel("store").getProperty("/STORERemarks") || "";
+			var that = this;
 
+			MessageBox.confirm("Approve this Gate Pass Request?", {
+				title: "Confirm Approval",
+				onClose: function (sAction) {
+					if (sAction === MessageBox.Action.OK) {
+						that._updateStatus("A2", "Approved", sRemarks);
+					}
+				}
+			});
+		},
+
+		/**
+		 * Fired when Store User clicks 'Reject' button.
+		 */
+		onReject: function () {
+			var sRemarks = this.getView().getModel("store").getProperty("/STORERemarks") || "";
+			var that = this;
+
+			MessageBox.confirm("Reject this Gate Pass Request?", {
+				title: "Confirm Rejection",
+				onClose: function (sAction) {
+					if (sAction === MessageBox.Action.OK) {
+						that._updateStatus("R", "Rejected", sRemarks);
+					}
+				}
+			});
+		},
+
+		/**
+		 * Fired when Store User clicks 'Amendment' button.
+		 * Opens a dialog prompting for a mandatory Amendment Reason.
+		 */
+		onAmend: function () {
+			var that = this;
+			var sExistingRemarks = this.getView().getModel("store").getProperty("/STORERemarks") ||
+			                       this.getView().getModel("store").getProperty("/StoreRemarks") || "";
+
+			var oReasonInput = new sap.m.TextArea({
+				value: sExistingRemarks,
+				placeholder: "Enter reason for sending back for amendment...",
+				rows: 4,
+				width: "100%",
+				liveChange: function (oEvent) {
+					var sText = oEvent.getParameter("value");
+					if (that._oAmendDialog) {
+						that._oAmendDialog.getBeginButton().setEnabled(sText.trim().length > 0);
+					}
+				}
+			});
+
+			this._oAmendDialog = new sap.m.Dialog({
+				title: "Amendment Reason",
+				type: sap.m.DialogType.Message,
+				content: [
+					new sap.m.Label({ text: "Please enter the reason for Amendment:", required: true }),
+					oReasonInput
+				],
+				beginButton: new sap.m.Button({
+					type: sap.m.ButtonType.Emphasized,
+					text: "Submit",
+					enabled: sExistingRemarks.trim().length > 0,
+					press: function () {
+						var sReason = oReasonInput.getValue().trim();
+						that._oAmendDialog.close();
+
+						// Sync reason to local model properties
+						var oStoreModel = that.getView().getModel("store");
+						if (oStoreModel) {
+							oStoreModel.setProperty("/STORERemarks", sReason);
+							oStoreModel.setProperty("/StoreRemarks", sReason);
+						}
+
+						// Execute backend OData status update
+						that._updateStatus("AM", "Amendment", sReason);
+					}
+				}),
+				endButton: new sap.m.Button({
+					text: "Cancel",
+					press: function () {
+						if (that._oAmendDialog) {
+							that._oAmendDialog.close();
+						}
+					}
+				}),
+				afterClose: function () {
+					if (that._oAmendDialog) {
+						that._oAmendDialog.destroy();
+						that._oAmendDialog = null;
+					}
+				}
+			});
+
+			this.getView().addDependent(this._oAmendDialog);
+			this._oAmendDialog.open();
+		},
+
+		/* =========================================================== */
+		/* BACKEND STATUS UPDATE & PAYLOAD BUILDING                    */
+		/* =========================================================== */
+
+		/**
+		 * Sends decision (Approve/Reject/Amendment) to backend SAP OData service.
+		 */
+		_updateStatus: function (sApprovalCode, sDisplayStatus, sRemarks) {
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) {
+				MessageBox.error("SAP system is not connected.");
+				return;
+			}
+
+			var that = this;
+			BusyIndicator.show(0);
+
+			// Build complete payload structure matching HOD controller design pattern
+			var oPayload = this._buildApprovalPayload(oODataModel, sApprovalCode, sRemarks);
+
+			oODataModel.create("/GatePassReqHdrSet", oPayload, {
+				success: function (oData) {
+					BusyIndicator.hide();
+					var oStoreModel = that.getView().getModel("store");
+					if (oStoreModel) {
+						oStoreModel.setProperty("/Status", sDisplayStatus);
+					}
+
+					var sMsg = (oData && oData.Message) || ("Request " + sDisplayStatus + " successfully.");
+					MessageBox.success(sMsg, {
+						onClose: function () {
+							if (oODataModel.refresh) {
+								oODataModel.refresh(true);
+							}
+							that.getRouter().navTo("GatePassList");
+						}
+					});
+				},
+				error: function (oError) {
+					BusyIndicator.hide();
+					MessageBox.error(that._extractODataErrorMessage(oError));
+				}
+			});
+		},
+
+		/**
+		 * Builds full CREATE payload structure from raw row data + Store decision.
+		 */
+		_buildApprovalPayload: function (oODataModel, sApprovalCode, sRemarks) {
+			var oRaw = this._oRawData || {};
+			var aRawItems = (oRaw.GateReqItmNav && oRaw.GateReqItmNav.results) ||
+			                (oRaw.GateReqItemNav && oRaw.GateReqItemNav.results) || [];
+
+			var oStoreModel = this.getView().getModel("store");
+			var sFname1 = this._stripExtension(oStoreModel ? (oStoreModel.getProperty("/Fname") || "") : "");
+			var sFname2 = this._stripExtension(oStoreModel ? (oStoreModel.getProperty("/Fname2") || "") : "");
+
+			var oPayload = {
+				GatePassType:   oRaw.GatePassType   || this._sType,
+				Cocode:         oRaw.CoCode         || oRaw.Cocode        || "",
+				Plant:          oRaw.Plant          || "",
+				FiscalYear:     oRaw.FiscalYear     || "",
+				GpDate:         oRaw.GpDate         || oRaw.CreatedOn     || "",
+				Vendor:         oRaw.Vendor         || "",
+				VendorName:     oRaw.VendorName     || "",
+				VendorGST:      oRaw.VendorGST      || oRaw.VendorGst     || "",
+				ZipCode:        oRaw.ZipCode        || "",
+				City:           oRaw.City           || "",
+				ApprovalReq:    sApprovalCode === "AM" ? "AM" : (oRaw.ApprovalReq || ""),
+				Approval1:      sApprovalCode === "AM" ? (oRaw.Approval1 || "") : "",
+				Approval2:      sApprovalCode === "AM" ? "AM" : sApprovalCode,
+				StoreAmmend:    sApprovalCode === "AM" ? "AM" : "",
+				Department:     oRaw.Department     || "",
+				VehicleNo:      oRaw.VehicleNo      || "",
+				ModeOfDispatch: oRaw.ModeOfDispatch || "",
+				Remarks:        oRaw.Remarks        || "",
+				ReturnableDate: oRaw.ReturnableDate || "",
+				HODRemarks:     oStoreModel ? (oStoreModel.getProperty("/HODRemarks") || "") : "",
+				STORERemarks:   sRemarks            || "",
+				GatePassReqNo:  this._sReqNo,
+				GateReqItemNav: aRawItems.map(function (it) {
+					return {
+						GatePassType:      it.GatePassType      || "",
+						ItemNo:            it.ItemNo            || "",
+						Material:          it.Material         || "",
+						MaterialDesc:      it.MaterialDesc      || "",
+						HSNCode:           it.HSNCode           || "",
+						HSNDesc:           it.HSNDesc           || "",
+						UOM:               it.UOM               || "",
+						ItemNetPrice:      it.ItemNetPrice      || "0.00",
+						RequestedQuantity: it.RequestedQuantity || "0.000",
+						Totalvalue:        it.Totalvalue        || "0.00",
+						Remarks:           it.Remarks           || ""
+					};
+				})
+			};
+
+			// Dynamic metadata lookup for attachments
+			var fnFindProp = this._buildMetadataPropertyFinder(oODataModel);
+
+			oPayload[fnFindProp("Base64Img1", "Base64img1") || "Base64Img1"] =
+				this._getRawBase64FromModel(oStoreModel ? oStoreModel.getProperty("/Base64Img1") : "");
+			oPayload[fnFindProp("FILENAME", "Filename", "FileName", "Fname") || "Fname"] = sFname1;
+			oPayload[fnFindProp("FILETYPE", "Filetype", "FileType", "Ftype") || "Ftype"] =
+				oStoreModel ? (oStoreModel.getProperty("/Ftype") || "") : "";
+
+			oPayload[fnFindProp("Base64Img2", "Base64img2") || "Base64Img2"] =
+				this._getRawBase64FromModel(oStoreModel ? oStoreModel.getProperty("/Base64Img2") : "");
+			oPayload[fnFindProp("FILENAME2", "Filename2", "FileName2", "Fname2") || "Fname2"] = sFname2;
+			oPayload[fnFindProp("FILETYPE2", "Filetype2", "FileType2", "Ftype2") || "Ftype2"] =
+				oStoreModel ? (oStoreModel.getProperty("/Ftype2") || "") : "";
+
+			return oPayload;
+		},
+
+		/**
+		 * Helper to find actual metadata property names for case-insensitive fallback.
+		 */
+		_buildMetadataPropertyFinder: function (oODataModel) {
+			var oMetadata = oODataModel ? oODataModel.getServiceMetadata() : null;
+			var aEntityProperties = [];
+
+			if (oMetadata && oMetadata.dataServices && oMetadata.dataServices.schema) {
+				oMetadata.dataServices.schema.forEach(function (oSchema) {
+					(oSchema.entityType || []).forEach(function (oEntityType) {
+						if (oEntityType.name && oEntityType.name.indexOf("GatePassReqHdr") !== -1) {
+							aEntityProperties = oEntityType.property || [];
+						}
+					});
+				});
+			}
+
+			return function () {
+				var aCandidates = Array.prototype.slice.call(arguments);
+				for (var i = 0; i < aCandidates.length; i++) {
+					var sCand = aCandidates[i];
+					var oExact = aEntityProperties.find(function (p) { return p.name === sCand; });
+					if (oExact) return oExact.name;
+
+					var oCi = aEntityProperties.find(function (p) {
+						return p.name.toLowerCase() === sCand.toLowerCase();
+					});
+					if (oCi) return oCi.name;
+				}
+				return null;
+			};
+		},
+
+		/**
+		 * Helper to extract human-readable error messages from OData error responses.
+		 */
+		_extractODataErrorMessage: function (oError) {
+			var sMsg = "Failed to update request status.";
+			if (!oError) return sMsg;
+
+			try {
+				var oBody = JSON.parse(oError.responseText);
+				var aInner = oBody.error && oBody.error.innererror && oBody.error.innererror.errordetails;
+				if (aInner && aInner[0] && aInner[0].message) {
+					return aInner[0].message;
+				}
+				if (oBody.error && oBody.error.message && oBody.error.message.value) {
+					return oBody.error.message.value;
+				}
+			} catch (e) {
+				if (typeof oError.responseText === "string" && oError.responseText.trim()) {
+					return oError.responseText;
+				}
+			}
+			return sMsg;
+		},
+
+		_stripExtension: function (sFilename) {
+			if (!sFilename) return "";
+			var iDot = sFilename.lastIndexOf(".");
+			return iDot !== -1 ? sFilename.substring(0, iDot) : sFilename;
+		},
+
+		/* =========================================================== */
+		/* ATTACHMENTS & UTILITIES                                    */
+		/* =========================================================== */
+
+		onImagePress: function (oEvent) {
+			var sSrc = oEvent.getSource().getSrc();
+			if (!sSrc) return;
+			if (!this._oImageDialog) {
+				this._oImageDialog = new sap.m.Dialog({
+					title: "Attachment Preview",
+					stretch: true,
+					content: new sap.m.Image({ src: sSrc, width: "100%", densityAware: false }),
+					endButton: new sap.m.Button({
+						text: "Close",
+						press: function () { this._oImageDialog.close(); }.bind(this)
+					})
+				});
+				this.getView().addDependent(this._oImageDialog);
+			} else {
+				this._oImageDialog.getContent()[0].setSrc(sSrc);
+			}
+			this._oImageDialog.open();
+		},
+
+		onDownloadAttachment1: function () {
+			this._downloadAttachmentFile(1);
+		},
+
+		onDownloadAttachment2: function () {
+			this._downloadAttachmentFile(2);
+		},
+
+		_downloadAttachmentFile: function (index) {
+			var oModel = this.getView().getModel("store");
+			var suffix = index === 2 ? "2" : "";
+			var sBase64 = oModel.getProperty("/Base64Img" + index);
+			var sFname = oModel.getProperty("/Fname" + suffix) || ("Attachment_" + index);
+			var sFtype = (oModel.getProperty("/Ftype" + suffix) || "JPG").toUpperCase();
+
+			if (!sBase64) return;
+
+			var sMime = "image/jpeg";
+			if (sFtype === "PDF") sMime = "application/pdf";
+			else if (sFtype === "DOCX") sMime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+			else if (sFtype === "DOC") sMime = "application/msword";
+			else if (sFtype === "PNG") sMime = "image/png";
+
+			var sPureBase64 = sBase64;
+			if (sBase64.indexOf("base64,") !== -1) {
+				sPureBase64 = sBase64.split("base64,")[1];
+			}
+
+			try {
+				var byteCharacters = atob(sPureBase64);
+				var byteNumbers = new Array(byteCharacters.length);
+				for (var i = 0; i < byteCharacters.length; i++) {
+					byteNumbers[i] = byteCharacters.charCodeAt(i);
+				}
+				var byteArray = new Uint8Array(byteNumbers);
+				var blob = new Blob([byteArray], { type: sMime });
+				
+				var sFileNameWithExt = sFname;
+				if (sFileNameWithExt.indexOf(".") === -1) {
+					sFileNameWithExt += "." + sFtype.toLowerCase();
+				}
+
+				if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+					window.navigator.msSaveOrOpenBlob(blob, sFileNameWithExt);
+				} else {
+					var link = document.createElement('a');
+					link.href = window.URL.createObjectURL(blob);
+					link.download = sFileNameWithExt;
+					if (sFtype === "PDF") {
+						window.open(link.href, "_blank");
+					} else {
+						document.body.appendChild(link);
+						link.click();
+						document.body.removeChild(link);
+					}
+				}
+			} catch (e) {
+				MessageBox.error("Failed to open or download attachment: " + e.message);
+			}
+		},
 
 		_formatBase64ToBlobUrl: function (sRawImg) {
 			var sImg = sRawImg || "";
@@ -565,264 +916,6 @@ sap.ui.define([
 				return "DOCX";
 			}
 			return "";
-		},
-
-		onApprove: function () {
-			var sRemarks = this.getView().getModel("store").getProperty("/STORERemarks") || "";
-			sap.m.MessageBox.confirm("Approve this Gate Pass Request?", {
-				title: "Confirm Approval",
-				onClose: function (sAction) {
-					if (sAction === sap.m.MessageBox.Action.OK) { this._updateStatus("A2", "Approved", sRemarks); }
-				}.bind(this)
-			});
-		},
-
-		onReject: function () {
-			var sRemarks = this.getView().getModel("store").getProperty("/STORERemarks") || "";
-			sap.m.MessageBox.confirm("Reject this Gate Pass Request?", {
-				title: "Confirm Rejection",
-				onClose: function (sAction) {
-					if (sAction === sap.m.MessageBox.Action.OK) { this._updateStatus("R", "Rejected", sRemarks); }
-				}.bind(this)
-			});
-		},
-
-		onAmend: function () {
-			var sRemarks = this.getView().getModel("store").getProperty("/STORERemarks") || "";
-			sap.m.MessageBox.confirm("Send this request back for Amendment?", {
-				title: "Confirm Amendment",
-				onClose: function (sAction) {
-					if (sAction === sap.m.MessageBox.Action.OK) { this._updateStatus("AM", "Amendment", sRemarks); }
-				}.bind(this)
-			});
-		},
-
-		_updateStatus: function (sApprovalCode, sDisplayStatus, sRemarks) {
-			var oODataModel = this.getOwnerComponent().getModel();
-			var that = this;
-
-			if (!oODataModel) {
-				sap.m.MessageBox.error("SAP system is not connected.");
-				return;
-			}
-
-			sap.ui.core.BusyIndicator.show(0);
-
-			var oRaw = this._oRawData || {};
-			var aRawItems = (oRaw.GateReqItmNav  && oRaw.GateReqItmNav.results) ||
-			                (oRaw.GateReqItemNav  && oRaw.GateReqItemNav.results) || [];
-
-			var sFnameClean1 = this.getView().getModel("store").getProperty("/Fname") || "";
-			var sFnameClean2 = this.getView().getModel("store").getProperty("/Fname2") || "";
-
-			// Strip extension if present before POSTing to the backend
-			var iDot1 = sFnameClean1.lastIndexOf(".");
-			if (iDot1 !== -1) {
-				sFnameClean1 = sFnameClean1.substring(0, iDot1);
-			}
-			var iDot2 = sFnameClean2.lastIndexOf(".");
-			if (iDot2 !== -1) {
-				sFnameClean2 = sFnameClean2.substring(0, iDot2);
-			}
-
-			var oPayload = {
-				GatePassType:   oRaw.GatePassType   || this._sType,
-				Cocode:         oRaw.CoCode         || oRaw.Cocode        || "",
-				Plant:          oRaw.Plant          || "",
-				FiscalYear:     oRaw.FiscalYear     || "",
-				GpDate:         oRaw.GpDate         || oRaw.CreatedOn     || "",
-				Vendor:         oRaw.Vendor         || "",
-				VendorName:     oRaw.VendorName     || "",
-				VendorGST:      oRaw.VendorGST      || oRaw.VendorGst     || "",
-				ZipCode:        oRaw.ZipCode        || "",
-				City:           oRaw.City           || "",
-				ApprovalReq:    sApprovalCode === "AM" ? "" : (oRaw.ApprovalReq || ""),
-				Approval1:      sApprovalCode === "AM" ? (oRaw.Approval1 || "") : "",
-				Approval2:      sApprovalCode,
-				StoreAmmend:    sApprovalCode === "AM" ? "AM" : "",
-				Department:     oRaw.Department     || "",
-				VehicleNo:      oRaw.VehicleNo      || "",
-				ModeOfDispatch: oRaw.ModeOfDispatch || "",
-				Remarks:        oRaw.Remarks        || "",
-				ReturnableDate: oRaw.ReturnableDate || "",
-				HODRemarks:     this.getView().getModel("store").getProperty("/HODRemarks") || "",
-				STORERemarks:   sRemarks            || "",
-				GatePassReqNo:  this._sReqNo,
-				GateReqItemNav: aRawItems.map(function (it) {
-					return {
-						GatePassType:      it.GatePassType      || "",
-						ItemNo:            it.ItemNo            || "",
-						Material:          it.Material         || "",
-						MaterialDesc:      it.MaterialDesc      || "",
-						HSNCode:           it.HSNCode           || "",
-						HSNDesc:           it.HSNDesc           || "",
-						UOM:               it.UOM               || "",
-						ItemNetPrice:      it.ItemNetPrice      || "0.00",
-						RequestedQuantity: it.RequestedQuantity || "0.000",
-						Totalvalue:        it.Totalvalue        || "0.00",
-						Remarks:           it.Remarks           || ""
-					};
-				})
-			};
-
-			var oMetadata = oODataModel ? oODataModel.getServiceMetadata() : null;
-			var getValidProperty = function (sPropName) {
-				if (!oMetadata || !oMetadata.dataServices || !oMetadata.dataServices.schema) {
-					return null;
-				}
-				var aSchemas = oMetadata.dataServices.schema;
-				for (var i = 0; i < aSchemas.length; i++) {
-					var aEntityTypes = aSchemas[i].entityType || [];
-					for (var j = 0; j < aEntityTypes.length; j++) {
-						if (aEntityTypes[j].name && aEntityTypes[j].name.indexOf("GatePassReqHdr") !== -1) {
-							var aProperties = aEntityTypes[j].property || [];
-							var oMatch = aProperties.find(function (p) {
-								return p.name === sPropName;
-							});
-							if (oMatch) return oMatch.name;
-
-							var oCiMatch = aProperties.find(function (p) {
-								return p.name.toLowerCase() === sPropName.toLowerCase();
-							});
-							if (oCiMatch) return oCiMatch.name;
-						}
-					}
-				}
-				return null;
-			};
-
-			// Attachment 1 Mappings
-			var sKeyBase64Img1 = getValidProperty("Base64Img1") || getValidProperty("Base64img1") || "Base64Img1";
-			var sKeyFname = getValidProperty("FILENAME") || getValidProperty("Filename") || getValidProperty("FileName") || getValidProperty("Fname") || "Fname";
-			var sKeyFtype = getValidProperty("FILETYPE") || getValidProperty("Filetype") || getValidProperty("FileType") || getValidProperty("Ftype") || "Ftype";
-
-			oPayload[sKeyBase64Img1] = this._getRawBase64FromModel(this.getView().getModel("store").getProperty("/Base64Img1"));
-			oPayload[sKeyFname] = sFnameClean1;
-			oPayload[sKeyFtype] = this.getView().getModel("store").getProperty("/Ftype") || "";
-
-			// Attachment 2 Mappings
-			var sKeyBase64Img2 = getValidProperty("Base64Img2") || getValidProperty("Base64img2") || "Base64Img2";
-			var sKeyFname2 = getValidProperty("FILENAME2") || getValidProperty("Filename2") || getValidProperty("FileName2") || getValidProperty("Fname2") || "Fname2";
-			var sKeyFtype2 = getValidProperty("FILETYPE2") || getValidProperty("Filetype2") || getValidProperty("FileType2") || getValidProperty("Ftype2") || "Ftype2";
-
-			oPayload[sKeyBase64Img2] = this._getRawBase64FromModel(this.getView().getModel("store").getProperty("/Base64Img2"));
-			oPayload[sKeyFname2] = sFnameClean2;
-			oPayload[sKeyFtype2] = this.getView().getModel("store").getProperty("/Ftype2") || "";
-
-
-			oODataModel.create(
-				"/GatePassReqHdrSet",
-				oPayload,
-				{
-					success: function (oData) {
-						that.getView().getModel("store").setProperty("/Status", sDisplayStatus);
-						sap.ui.core.BusyIndicator.hide();
-						var sMsg = (oData && oData.Message) || ("Request " + sDisplayStatus + " successfully.");
-						sap.m.MessageBox.success(sMsg, {
-							onClose: function () {
-								// Force fresh fetch from backend on next list load
-								var oOData = that.getOwnerComponent().getModel();
-								if (oOData) { oOData.refresh(true); }
-								that.getRouter().navTo("GatePassList");
-							}
-						});
-					},
-					error: function (oErr) {
-						sap.ui.core.BusyIndicator.hide();
-						var sMsg = "Failed to update request status.";
-						try {
-							var oBody = JSON.parse(oErr.responseText);
-							var aInner = oBody.error && oBody.error.innererror && oBody.error.innererror.errordetails;
-							if (aInner && aInner[0]) { sMsg = aInner[0].message; }
-							else if (oBody.error && oBody.error.message && oBody.error.message.value) {
-								sMsg = oBody.error.message.value;
-							}
-						} catch (e) { /* use default */ }
-						sap.m.MessageBox.error(sMsg);
-					}
-				}
-			);
-		},
-
-		onImagePress: function (oEvent) {
-			var sSrc = oEvent.getSource().getSrc();
-			if (!sSrc) return;
-			if (!this._oImageDialog) {
-				this._oImageDialog = new sap.m.Dialog({
-					title: "Attachment Preview",
-					stretch: true,
-					content: new sap.m.Image({ src: sSrc, width: "100%", densityAware: false }),
-					endButton: new sap.m.Button({
-						text: "Close",
-						press: function () { this._oImageDialog.close(); }.bind(this)
-					})
-				});
-				this.getView().addDependent(this._oImageDialog);
-			} else {
-				this._oImageDialog.getContent()[0].setSrc(sSrc);
-			}
-			this._oImageDialog.open();
-		},
-
-		onDownloadAttachment1: function () {
-			this._downloadAttachmentFile(1);
-		},
-
-		onDownloadAttachment2: function () {
-			this._downloadAttachmentFile(2);
-		},
-
-		_downloadAttachmentFile: function (index) {
-			var oModel = this.getView().getModel("store");
-			var suffix = index === 2 ? "2" : "";
-			var sBase64 = oModel.getProperty("/Base64Img" + index);
-			var sFname = oModel.getProperty("/Fname" + suffix) || ("Attachment_" + index);
-			var sFtype = (oModel.getProperty("/Ftype" + suffix) || "JPG").toUpperCase();
-
-			if (!sBase64) return;
-
-			var sMime = "image/jpeg";
-			if (sFtype === "PDF") sMime = "application/pdf";
-			else if (sFtype === "DOCX") sMime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-			else if (sFtype === "DOC") sMime = "application/msword";
-			else if (sFtype === "PNG") sMime = "image/png";
-
-			var sPureBase64 = sBase64;
-			if (sBase64.indexOf("base64,") !== -1) {
-				sPureBase64 = sBase64.split("base64,")[1];
-			}
-
-			try {
-				var byteCharacters = atob(sPureBase64);
-				var byteNumbers = new Array(byteCharacters.length);
-				for (var i = 0; i < byteCharacters.length; i++) {
-					byteNumbers[i] = byteCharacters.charCodeAt(i);
-				}
-				var byteArray = new Uint8Array(byteNumbers);
-				var blob = new Blob([byteArray], { type: sMime });
-				
-				var sFileNameWithExt = sFname;
-				if (sFileNameWithExt.indexOf(".") === -1) {
-					sFileNameWithExt += "." + sFtype.toLowerCase();
-				}
-
-				if (window.navigator && window.navigator.msSaveOrOpenBlob) {
-					window.navigator.msSaveOrOpenBlob(blob, sFileNameWithExt);
-				} else {
-					var link = document.createElement('a');
-					link.href = window.URL.createObjectURL(blob);
-					link.download = sFileNameWithExt;
-					if (sFtype === "PDF") {
-						window.open(link.href, "_blank");
-					} else {
-						document.body.appendChild(link);
-						link.click();
-						document.body.removeChild(link);
-					}
-				}
-			} catch (e) {
-				sap.m.MessageBox.error("Failed to open or download attachment: " + e.message);
-			}
 		},
 
 		_getRawBase64FromModel: function (sDataUrl) {

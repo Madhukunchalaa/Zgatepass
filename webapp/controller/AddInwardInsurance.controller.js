@@ -90,6 +90,7 @@ sap.ui.define([
 
 		_loadVendors: function () {
 			var oVendorModel = new JSONModel({ results: [] });
+			oVendorModel.setSizeLimit(100000);
 			this.getView().setModel(oVendorModel, "vendors");
 
 			var oODataModel = this.getOwnerComponent().getModel();

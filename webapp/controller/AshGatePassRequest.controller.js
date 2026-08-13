@@ -1,11 +1,11 @@
-sap.ui.define([
-	"./BaseController",
+sap.ui.define(["./BaseController",
 	"sap/ui/model/json/JSONModel",
 	"sap/ui/model/Filter",
 	"sap/ui/model/FilterOperator",
 	"sap/m/MessageBox",
-	"sap/m/MessageToast"
-], function (BaseController, JSONModel, Filter, FilterOperator, MessageBox, MessageToast) {
+	"sap/m/MessageToast",
+	"sap/ui/core/Fragment"
+], function (BaseController, JSONModel, Filter, FilterOperator, MessageBox, MessageToast, Fragment) {
 	"use strict";
 
 	return BaseController.extend("zgpms.meilpower.com.controller.AshGatePassRequest", {

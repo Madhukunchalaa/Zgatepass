@@ -1,10 +1,10 @@
-sap.ui.define([
-	"sap/ui/core/mvc/Controller",
+sap.ui.define(["sap/ui/core/mvc/Controller",
 	"sap/ui/model/json/JSONModel",
 	"sap/m/MessageBox",
 	"sap/m/MessageToast",
-	"zgpms/meilpower/com/utils/ExcelExport"
-], function (Controller, JSONModel, MessageBox, MessageToast, ExcelExport) {
+	"zgpms/meilpower/com/utils/ExcelExport",
+	"sap/ui/core/Fragment"
+], function (Controller, JSONModel, MessageBox, MessageToast, ExcelExport, Fragment) {
 	"use strict";
 
 	// OData Status  →  internal StatusCode used by the view's filters/bindings

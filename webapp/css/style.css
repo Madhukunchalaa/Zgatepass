@@ -1958,3 +1958,17 @@ body.sapUiBusy .sapUiBusyIndicator {
     color: var(--navy-d) !important;
     margin-left: 0.25rem;
 }
+/* adding color to the delte entry button in the gate entry with PO */
+/* Styles the normal state of the button */
+.gpmsCustomDeleteBtn.sapMBtn .sapMBtnInner {
+    background-color: var(--red-pale) !important;
+    border-color: var(--red) !important;
+    color: var(--red) !important;
+}
+
+/* Styles the hover state */
+.gpmsCustomDeleteBtn.sapMBtn:hover .sapMBtnInner {
+    background-color: var(--red) !important;
+    color: #ffffff !important;
+}
+/* *****************************************8 */

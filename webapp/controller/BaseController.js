@@ -1,7 +1,7 @@
-sap.ui.define([
-	"sap/ui/core/mvc/Controller",
-	"sap/ui/core/UIComponent"
-], function(Controller, UIComponent) {
+sap.ui.define(["sap/ui/core/mvc/Controller",
+	"sap/ui/core/UIComponent",
+	"sap/ui/core/Fragment"
+], function (Controller, UIComponent, Fragment) {
 	"use strict";
 
 	return Controller.extend("zgpms.meilpower.com.controller.BaseController", {

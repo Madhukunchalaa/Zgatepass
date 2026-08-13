@@ -175,7 +175,7 @@
 								<layout:GridData span="XL8 L8 M12 S12"/>
 							</layoutData>
 							<Label text="DC Notes" class="gpmsFieldLabel"/>
-							<TextArea value="{ash>/DCNotes}" placeholder="Enter DC Notes" rows="2" width="100%" class="gpmsFieldInput"/>
+							<TextArea value="{ash>/DCNotes}" placeholder="Enter DC Notes" rows="5" width="100%" class="gpmsFieldInput"/>
 						</VBox>
 					</layout:Grid>
 				</Panel>

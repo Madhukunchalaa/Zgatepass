@@ -285,7 +285,8 @@
 			<Toolbar class="gpmsFooterBar">
 				<ToolbarSpacer/>
 				<Button text="RESET" press=".onReset" icon="sap-icon://refresh" class="sapUiSmallMarginEnd" visible="{= !${gpo>/isExisting} }"/>
-				<Button text="{= ${gpo>/isExisting} ? 'UPDATE ENTRY' : 'ENTER GATE ENTRY' }" type="Accept" press=".onSubmit" icon="sap-icon://sys-add" class="gpmsSubmitBtn sapUiSmallMarginEnd" visible="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
+				<Button text="DELETE ENTRY" press=".onDelete" type="Reject" icon="sap-icon://delete" class="sapUiSmallMarginEnd" visible="{= ${gpo>/isExisting} &amp;&amp; !${gpo>/isDeleted} }"/>
+				<Button text="{= ${gpo>/isExisting} ? 'UPDATE ENTRY' : 'ENTER GATE ENTRY' }" type="Accept" press=".onSubmit" icon="sap-icon://sys-add" class="gpmsSubmitBtn sapUiSmallMarginEnd" visible="{= (!${gpo>/isExisting} || ${gpo>/isEditMode}) &amp;&amp; !${gpo>/isDeleted} }"/>
 			</Toolbar>
 		</footer>
 	</Page>

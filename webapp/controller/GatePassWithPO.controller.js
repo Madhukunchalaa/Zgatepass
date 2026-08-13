@@ -4,8 +4,9 @@ sap.ui.define([
 	"sap/m/MessageBox",
 	"sap/m/MessageToast",
 	"sap/ui/model/Filter",
+	"sap/ui/core/Fragment",
 	"sap/ui/model/FilterOperator"
-], function (BaseController, JSONModel, MessageBox, MessageToast, Filter, FilterOperator) {
+], function (BaseController, JSONModel, MessageBox, MessageToast, Filter, Fragment, FilterOperator) {
 	"use strict";
 
 	return BaseController.extend("zgpms.meilpower.com.controller.GatePassWithPO", {
@@ -15,6 +16,7 @@ sap.ui.define([
 			this.getRouter().getRoute("GatePassWithPO").attachPatternMatched(this._onRouteMatched, this);
 			this.getRouter().getRoute("GatePassWithPODetail").attachPatternMatched(this._onRouteMatchedDetail, this);
 			this.getRouter().getRoute("GatePassWithPOEdit").attachPatternMatched(this._onRouteMatchedEdit, this);
+			
 		},
 
 		_onRouteMatched: function () {
@@ -166,6 +168,7 @@ sap.ui.define([
 				var sPO = safeTrim(oRaw.PurchaseOrder || oRaw.Purchaseorder || oRaw.GatePassreqNo || "");
 				var sPlant = safeTrim(oRaw.Plant);
 
+				var sGatePassNum = safeTrim(oRaw.GatepassNo || oRaw.GatePassNo || oRaw.PCPNo || oRaw.PcpNo || oRaw.PassNo || "");
 				var aExistingItems = (oRaw.PCPItmNav && oRaw.PCPItmNav.results) || [];
 				var aMapped = aExistingItems.map(function (it, idx) {
 					return {
@@ -177,9 +180,28 @@ sap.ui.define([
 						UOM: it.UOM || "",
 						UnitPrice: it.UnitPrice || "0.00",
 						PurchaseOrder: it.PurchaseOrder || sPO,
-						GatePassNo: it.GatepassNo || it.GatePassNo || ""
+						GatePassNo: it.GatepassNo || it.GatePassNo || sGatePassNum,
+						Material: it.Material || it.ItemCode || it.MaterialNo || ""
 					};
 				});
+
+				// Extract exact OData entity key from __metadata or generate using metadata
+				var sKeyFromMeta = "";
+				if (oRaw && oRaw.__metadata && oRaw.__metadata.uri) {
+					var aMatch = oRaw.__metadata.uri.match(/(\/PCPHdrSet\([^)]+\))/);
+					if (aMatch) {
+						sKeyFromMeta = aMatch[1];
+					}
+				}
+				if (!sKeyFromMeta && oODataModel) {
+					try {
+						sKeyFromMeta = oODataModel.createKey("/PCPHdrSet", oRaw);
+					} catch (e) {
+						console.warn("createKey error:", e);
+					}
+				}
+
+				var bIsDeleted = safeTrim(oRaw.Status || oRaw.STATUS || oRaw.DelInd || oRaw.Delind) === "X";
 
 				oModel.setData({
 					GEDate: parseDate(oRaw.GEDate),
@@ -192,7 +214,7 @@ sap.ui.define([
 					RGPNumber: safeTrim(oRaw.RGPNumber),
 					DCNumber: safeTrim(oRaw.DCNumber),
 					DCdate: parseDate(oRaw.DCdate),
-					PCPNo: safeTrim(oRaw.GatepassNo || oRaw.PCPNo || oRaw.PcpNo || oRaw.GatePassNo),
+					PCPNo: sGatePassNum,
 					BudgetCode: safeTrim(oRaw.BudgetCode),
 					TotalCost: (aExistingItems.length > 0 && aExistingItems[0].TotalCost) ? safeTrim(aExistingItems[0].TotalCost) : safeTrim(oRaw.TotalCost || "0.00"),
 					RRNo: safeTrim(oRaw.RRNo),
@@ -200,11 +222,38 @@ sap.ui.define([
 					Inspectiondate: parseDate(oRaw.Inspectiondate),
 					Remarks: safeTrim(oRaw.Remarks),
 					GateEntryNo: safeTrim(oRaw.GateEntryNo),
-					GatePassNo: safeTrim(oRaw.GatepassNo || oRaw.GatePassNo || oRaw.PCPNo || oRaw.PcpNo),
+					GatePassNo: sGatePassNum,
+					GatepassNo: sGatePassNum,
 					GateInPoNav: aMapped,
 					isExisting: true,
-					isEditMode: sMode === "EDIT" && safeTrim(oRaw.InspectionStatus) !== "Completed"
+					isDeleted: bIsDeleted,
+					isEditMode: !bIsDeleted && sMode === "EDIT" && safeTrim(oRaw.InspectionStatus) !== "Completed",
+					_oDataKey: sKeyFromMeta || ""
 				});
+
+				// 🔍 PRINT VALUES IN CONSOLE WHEN EDIT SCREEN OPENS:
+				console.log("%c========================================", "color: #0070f3; font-weight: bold;");
+				console.log("%c✏️ EDIT SCREEN OPENED!", "color: #0070f3; font-weight: bold; font-size: 14px;");
+				console.log("📌 Gate Entry Number :", safeTrim(oRaw.GateEntryNo));
+				console.log("📌 Gate Pass Number  :", safeTrim(oRaw.GatepassNo || oRaw.GatePassNo || oRaw.PCPNo));
+				console.log("📌 Gate Entry Date   :", parseDate(oRaw.GEDate));
+				console.log("📌 Vendor Name       :", safeTrim(oRaw.VendorDesc || oRaw.VendorName));
+				console.log("📌 Purchase Order    :", sPO);
+				console.log("📌 Plant             :", sPlant);
+				console.log("📌 DelInd (from DB)  :", safeTrim(oRaw.Status || ""));
+				console.log("📌 Status (from DB)  :", safeTrim(oRaw.Status || ""));
+				console.log("📌 Is Deleted (flag) :", bIsDeleted);
+				console.log("📌 Inspection Status :", safeTrim(oRaw.InspectionStatus || ""));
+				console.log("🔑 Exact OData Key   :", sKeyFromMeta);
+				console.log("📦 Full Data Object  :", oRaw);
+				console.log("%c========================================", "color: #0070f3; font-weight: bold;");
+
+				if (bIsDeleted) {
+					sap.m.MessageToast.show("This Gate Entry is deleted.", {
+						duration: 4000,
+						width: "20em"
+					});
+				}
 
 				// If RRNo is missing from gate entry data, fetch it from the PO header without touching items
 				if (!safeTrim(oRaw.RRNo) && sPO && sPlant) {
@@ -301,7 +350,8 @@ sap.ui.define([
 										BalanceQuantity: it.BalanceQuantity || "0.000",
 										UOM: it.UOM || "",
 										PurchaseOrder: it.PurchaseOrder || sPO,
-										GatePassNo: it.GatepassNo || it.GatePassNo || ""
+										GatePassNo: it.GatepassNo || it.GatePassNo || "",
+										Material: it.Material || it.ItemCode || it.MaterialNo || ""
 									};
 								});
 								oModel.setProperty("/GateInPoNav", aMapped);
@@ -327,7 +377,7 @@ sap.ui.define([
 					sap.ui.core.BusyIndicator.hide();
 					var aResults = oData.results || [];
 					if (aResults.length > 0) {
-						var oResult = JSON.parse(JSON.stringify(aResults[0]));
+						var oResult = aResults[0];
 						applyData(oResult);
 						this._mergePOQuantities();
 					} else {
@@ -413,6 +463,8 @@ sap.ui.define([
 				GatePassNo: "",
 				Message: "",
 				GateInPoNav: [],
+				isExisting: false,
+				isEditMode: false,
 				dropdowns: {
 					uoms: this._getUOMs()
 				}
@@ -428,8 +480,19 @@ sap.ui.define([
 			if (!sDate) {
 				return "";
 			}
-			if (typeof sDate === "string" && sDate.length === 8 && !isNaN(sDate)) {
-				return sDate;
+			if (typeof sDate === "string") {
+				var sClean = sDate.trim();
+				if (/^\d{8}$/.test(sClean)) {
+					return sClean;
+				}
+				var aDmy = sClean.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+				if (aDmy) {
+					return aDmy[3] + aDmy[2] + aDmy[1];
+				}
+				var aYmd = sClean.match(/^(\d{4})[-/](\d{2})[-/](\d{2})$/);
+				if (aYmd) {
+					return aYmd[1] + aYmd[2] + aYmd[3];
+				}
 			}
 			var oDate = new Date(sDate);
 			if (isNaN(oDate.getTime())) {
@@ -535,6 +598,7 @@ sap.ui.define([
 
 		_loadVendors: function (sPlant) {
 			var oVendorModel = new JSONModel({ results: [] });
+			oVendorModel.setSizeLimit(100000);
 			this.getView().setModel(oVendorModel, "vendors");
 
 			if (!sPlant) { return; }
@@ -704,16 +768,11 @@ sap.ui.define([
 		_fetchPODetails: function (sPO, sPlant) {
 			var oODataModel = this.getOwnerComponent().getModel();
 			var sPath = "/GateInPoHdrSet";
-			// console.log(sPO);
-			// console.log(sPlant);
 			
 			var aFilters = [
 				new Filter("PurchaseOrder", FilterOperator.EQ, sPO),
 				new Filter("Plant", FilterOperator.EQ, sPlant)
-
 			];
-			// console.log(aFilters)
-			
 
 			sap.ui.core.BusyIndicator.show(0);
 			oODataModel.read(sPath, {
@@ -1052,11 +1111,94 @@ sap.ui.define([
 				}
 			}
 
-			// Unify payload mapping for all scenarios
-			var sPlant = oData.Plant;
-			var sPO = oData.PurchaseOrder;
+			var oPayloadDeep = this._buildSubmissionPayload(false);
+			console.log("📝 SUBMITTING GATE ENTRY (POST /PCPHdrSet):", oPayloadDeep);
+			this._executeODataCreate("/PCPHdrSet", oPayloadDeep);
+		},
 
-			var aNavItems = oData.GateInPoNav.map(function (oItem, idx) {
+		_getODataEntityKey: function (oCustomData) {
+			var oModel = this.getView().getModel("gpo");
+			var oODataModel = this.getOwnerComponent().getModel();
+			var oData = oCustomData || (oModel ? oModel.getData() : {});
+
+			// 1. Check if key was saved during route match or from __metadata
+			var sKey = oModel ? oModel.getProperty("/_oDataKey") : "";
+			if (sKey) {
+				return sKey;
+			}
+
+			// 2. Compute via UI5 ODataModel createKey using loaded metadata
+			if (oODataModel) {
+				try {
+					var sGenerated = oODataModel.createKey("/PCPHdrSet", {
+						GateEntryNo: oData.GateEntryNo || "",
+						GatepassNo: oData.GatepassNo || oData.GatePassNo || oData.PCPNo || "",
+						GEDate: this._formatDateToSAP(oData.GEDate || oData.GEDateRaw),
+						Plant: oData.Plant || "",
+						PurchaseOrder: oData.PurchaseOrder || "",
+						SourceType: oData.SourceType || "PO"
+					});
+					if (sGenerated) {
+						return sGenerated;
+					}
+				} catch (e) {
+					console.warn("createKey error:", e);
+				}
+			}
+
+			// 3. Fallback: GatepassNo or GateEntryNo
+			var sGP = (oData.GatepassNo || oData.GatePassNo || oData.PCPNo || "").trim();
+			var sGE = (oData.GateEntryNo || "").trim();
+			if (sGP) {
+				return "/PCPHdrSet(GatepassNo='" + sGP + "')";
+			}
+			return "/PCPHdrSet(GateEntryNo='" + sGE + "')";
+		},
+
+		_buildHeaderPayload: function (bIsDelete) {
+			var oModel = this.getView().getModel("gpo");
+			var oData = oModel.getData();
+			var sPlant = oData.Plant || "";
+			var sPO = oData.PurchaseOrder || "";
+			var sGEDate = this._formatDateToSAP(oData.GEDate || oData.GEDateRaw);
+			var sDCDateSAP = oData.DCdate ? this._formatDateToSAP(oData.DCdate) : sGEDate;
+
+			var oPayload = {
+				GateEntryNo: oData.GateEntryNo || "",
+				GEDate: sGEDate,
+				Plant: sPlant,
+				Vendor: oData.Vendor || "",
+				VendorDesc: oData.VendorDesc || "",
+				SourceType: oData.SourceType || "PO",
+				Department: oData.Department || "",
+				DCNumber: oData.DCNumber || "",
+				PurchaseOrder: sPO || "",
+				RRNo: oData.RRNo || "",
+				GatepassNo: oData.PCPNo || oData.GatePassNo || oData.GatepassNo || "",
+				PCPDate: sGEDate,
+				DCdate: sDCDateSAP,
+				BudgetCode: oData.BudgetCode || "",
+				EntryPoint: "",
+				InspectionStatus: oData.InspectionStatus || "Pending",
+				Inspectiondate: this._formatDateToSAP(oData.Inspectiondate || new Date().toISOString().split("T")[0]),
+				Remarks: oData.Remarks || "",
+				Message: ""
+			};
+
+			if (bIsDelete) {
+				oPayload.DelInd = "X";
+			}
+
+			return oPayload;
+		},
+
+		_buildSubmissionPayload: function (bIsDelete) {
+			var oModel = this.getView().getModel("gpo");
+			var oData = oModel.getData();
+			var sPlant = oData.Plant || "";
+			var sPO = oData.PurchaseOrder || "";
+
+			var aNavItems = (oData.GateInPoNav || []).map(function (oItem, idx) {
 				var sItemNo = oItem.ItemNo || String((idx + 1) * 10);
 				if (/^\d+$/.test(sItemNo)) {
 					sItemNo = String(sItemNo).padStart(5, "0");
@@ -1065,7 +1207,7 @@ sap.ui.define([
 				var fOrderQty = parseFloat(oItem.POQuantity || 0);
 				var fRecvdQty = parseFloat(oItem.RecievedQuantity || 0);
 
-				return {
+				var oNavItem = {
 					SourceType: oData.SourceType || "PO",
 					ItemNo: sItemNo,
 					ItemDescription: oItem.ItemDescription || "",
@@ -1076,13 +1218,16 @@ sap.ui.define([
 					UnitPrice: oItem.UnitPrice ? String(parseFloat(oItem.UnitPrice).toFixed(2)) : "0.00",
 					TotalCost: oData.TotalCost ? String(parseFloat(oData.TotalCost).toFixed(2)) : "0.00",
 					GateEntryNo: oData.GateEntryNo || "",
+					GatepassNo: oData.PCPNo || oData.GatePassNo || oData.GatepassNo || "",
 					PurchaseOrder: oItem.PurchaseOrder || sPO || "",
 					Plant: oItem.Plant || sPlant || "",
 					ItemCode: oItem.Material || ""
 				};
+
+				return oNavItem;
 			});
 
-			var sGEDate = this._formatDateToSAP(oData.GEDate);
+			var sGEDate = this._formatDateToSAP(oData.GEDate || oData.GEDateRaw);
 			var sDCDateSAP = oData.DCdate ? this._formatDateToSAP(oData.DCdate) : sGEDate;
 
 			var oPayload = {
@@ -1108,11 +1253,89 @@ sap.ui.define([
 				PCPItmNav: aNavItems
 			};
 
-			this._executeODataCreate("/PCPHdrSet", oPayload);
+			if (bIsDelete) {
+				oPayload.DelInd = "X";
+				// oPayload.Status = "X";
+			}
+
+			return oPayload;
 		},
 
 		// =========================================================================
-		// Reusable Core OData Submission Executor
+		// Core OData Update Executor (HTTP MERGE / PUT on /PCPHdrSet(GateEntryNo, GEDate))
+		// =========================================================================
+
+		_executeODataUpdate: function (sKey, oPayload, bIsDelete) {
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) {
+				MessageBox.error("OData model not available. Please refresh and try again.");
+				return;
+			}
+
+			sap.ui.core.BusyIndicator.show(0);
+			var that = this;
+
+			oODataModel.refreshSecurityToken(function () {
+				oODataModel.update(sKey, oPayload, {
+					merge: true,
+					success: function () {
+						sap.ui.core.BusyIndicator.hide();
+						var sMsg = bIsDelete ? "Gate Pass deleted successfully." : "Gate Entry updated successfully.";
+						var oModel = that.getView().getModel("gpo");
+						MessageBox.success(sMsg, {
+							onClose: function () {
+								if (oModel) { oModel.setProperty("/ui/hasPendingChanges", false); }
+								that.getRouter().navTo("PCPList");
+							}
+						});
+					},
+					error: function (oError) {
+						sap.ui.core.BusyIndicator.hide();
+						var sErrMsg = bIsDelete ? "Failed to delete Gate Pass." : "Failed to update Gate Entry.";
+						var sDetailedError = "";
+						try {
+							var oErrBody = JSON.parse(oError.responseText);
+							sErrMsg = (oErrBody.error && oErrBody.error.message && oErrBody.error.message.value) ? oErrBody.error.message.value : sErrMsg;
+
+							if (oErrBody.error && oErrBody.error.innererror) {
+								var oInner = oErrBody.error.innererror;
+								if (oInner.errordetails && oInner.errordetails.length > 0) {
+									var aDetails = oInner.errordetails.map(function (d) {
+										return d.message;
+									}).filter(Boolean);
+
+									aDetails = aDetails.filter(function (msg) {
+										return msg.indexOf("Error_Resolution") === -1 && msg.indexOf("SAP_Note") === -1 && msg.indexOf("/IWFND/ERROR_LOG") === -1;
+									});
+
+									if (aDetails.length > 0) {
+										sDetailedError = "\n\nBackend details:\n" + aDetails.join("\n");
+									}
+								}
+								if (!sDetailedError && oInner.transactionid) {
+									sDetailedError = "\n\nTransaction ID: " + oInner.transactionid;
+								}
+							}
+						} catch (e) {
+							var sRaw = oError.responseText || "";
+							if (sRaw.indexOf("ENOTFOUND") !== -1 || sRaw.indexOf("ECONNREFUSED") !== -1 || sRaw.indexOf("ETIMEDOUT") !== -1) {
+								sErrMsg = "SAP server is unreachable. Please check your network/VPN connection.";
+							} else if (oError.message) {
+								sDetailedError = "\n\nDetails: " + oError.message;
+							}
+						}
+
+						MessageBox.error(sErrMsg + sDetailedError);
+					}
+				});
+			}, function () {
+				sap.ui.core.BusyIndicator.hide();
+				MessageBox.error("Failed to refresh security token. Please reload the page.");
+			});
+		},
+
+		// =========================================================================
+		// Core OData Create Executor (HTTP POST on /PCPHdrSet)
 		// =========================================================================
 
 		_executeODataCreate: function (sEntitySet, oPayload) {
@@ -1180,7 +1403,7 @@ sap.ui.define([
 											  (sRawText.indexOf("Service provider did not return any business data") !== -1);
 
 						if (bIsSuccessError) {
-							MessageBox.success("Gate Entry updated successfully.", {
+							MessageBox.success("Gate Entry saved successfully.", {
 								onClose: function () {
 									this._resetModel();
 									this.getRouter().navTo("PCPList");
@@ -1204,6 +1427,33 @@ sap.ui.define([
 
 		onNavBack: function () {
 			this.getRouter().navTo("PCPList");
+		},
+
+		onDelete: function () {
+			var oModel = this.getView().getModel("gpo");
+			if (!oModel) { return; }
+
+			var oData = oModel.getData();
+			var sGateEntryNo = (oData.GateEntryNo || "").trim();
+			var sGatePassNo = (oData.GatepassNo || oData.GatePassNo || oData.PCPNo || "").trim();
+
+			if (!sGateEntryNo && !sGatePassNo) {
+				MessageBox.error("Gate Entry / Gate Pass Number is missing. Cannot delete.");
+				return;
+			}
+
+			MessageBox.confirm("Are you sure you want to delete Gate Pass " + (sGatePassNo || sGateEntryNo) + "?", {
+				title: "Delete Confirmation",
+				actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
+				emphasizedAction: MessageBox.Action.OK,
+				onClose: function (sAction) {
+					if (sAction === MessageBox.Action.OK) {
+						var oPayload = this._buildSubmissionPayload(true);
+						console.log("🗑️ SENDING DELETE POST TO /PCPHdrSet WITH DelInd='X':", oPayload);
+						this._executeODataCreate("/PCPHdrSet", oPayload);
+					}
+				}.bind(this)
+			});
 		}
 
 	});

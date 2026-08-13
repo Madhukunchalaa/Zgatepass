@@ -1,11 +1,11 @@
-sap.ui.define([
-	"./BaseController",
+sap.ui.define(["./BaseController",
 	"sap/ui/model/json/JSONModel",
 	"sap/m/MessageBox",
 	"sap/m/MessageToast",
 	"sap/ui/model/Filter",
-	"sap/ui/model/FilterOperator"
-], function (BaseController, JSONModel, MessageBox, MessageToast, Filter, FilterOperator) {
+	"sap/ui/model/FilterOperator",
+	"sap/ui/core/Fragment"
+], function (BaseController, JSONModel, MessageBox, MessageToast, Filter, FilterOperator, Fragment) {
 	"use strict";
 
 	return BaseController.extend("zgpms.meilpower.com.controller.ScrapGatepassCreation", {

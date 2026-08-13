@@ -282,7 +282,21 @@
 
 									<Input value="{gp>quantity}" textAlign="Right" liveChange=".onQtyRateChange" class="gpmsTableInput"/>
 
-									<Input value="{gp>uom}" class="gpmsTableInput" width="100%" placeholder="UOM"/>
+									<ComboBox value="{gp>uom}" class="gpmsTableInput" width="100%" placeholder="Select or type...">
+										<core:Item key="EA" text="EA (Each)" />
+										<core:Item key="NOS" text="NOS (Numbers)" />
+										<core:Item key="KG" text="KG (Kilogram)" />
+										<core:Item key="MTR" text="MTR (Meter)" />
+										<core:Item key="LTR" text="LTR (Liter)" />
+										<core:Item key="PAC" text="PAC (Pack)" />
+										<core:Item key="BTL" text="BTL (Bottle)" />
+										<core:Item key="BOX" text="BOX (Box)" />
+										<core:Item key="SET" text="SET (Set)" />
+										<core:Item key="DRM" text="DRM (Drum)" />
+										<core:Item key="BAG" text="BAG (Bag)" />
+										<core:Item key="ROL" text="ROL (Roll)" />
+										<core:Item key="CAN" text="CAN (Can)" />
+									</ComboBox>
 
 									<Input value="{gp>rate}" textAlign="Right" liveChange=".onQtyRateChange" class="gpmsTableInput"/>
 
@@ -303,19 +317,51 @@
 							<Label text="Remarks &amp; Summary" class="gpmsSectionBarLabel"/>
 						</Toolbar>
 					</headerToolbar>
-					<layout:Grid defaultSpan="XL8 L8 M12 S12" vSpacing="0" hSpacing="1">
+					<layout:Grid defaultSpan="XL5 L5 M6 S12" vSpacing="0" hSpacing="1">
+						<!-- User Remarks -->
 						<VBox class="sapUiSmallMargin">
 							<Label text="Remarks" class="gpmsFieldLabel"/>
 							<TextArea
 								value="{gp>/Remarks}"
 								placeholder="Enter detailed remarks here (up to 250 characters)..."
-								rows="6"
+								rows="5"
 								width="100%"
 								maxLength="250"
 								showExceededText="true"
 								class="gpmsFieldInput gpmsTextAreaBig"/>
 						</VBox>
+
+						<!-- HOD Remarks (Only Visible During Amendment / Editing Existing Request) -->
+						<VBox class="sapUiSmallMargin" visible="{= !!${gp>/GatePassReqNo} || !!${gp>/HODRemarks} }">
+							<Label text="HOD Remarks" class="gpmsFieldLabel"/>
+							<TextArea
+								value="{gp>/HODRemarks}"
+								placeholder="No HOD remarks available"
+								rows="5"
+								width="100%"
+								maxLength="250"
+								showExceededText="true"
+								editable="false"
+								class="gpmsFieldInput gpmsTextAreaBig"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin" visible="{= !!${gp>/GatePassReqNo} || !!${gp>/HODRemarks} }">
+							<Label text="Store Remarks" class="gpmsFieldLabel"/>
+							<TextArea
+								value="{gp>/STORERemarks}"
+								placeholder="No Store remarks available"
+								rows="5"
+								width="100%"
+								maxLength="250"
+								showExceededText="true"
+								editable="false"
+								class="gpmsFieldInput gpmsTextAreaBig"/>
+						</VBox>
+
+						<!-- Final Total (Far Right) -->
 						<VBox class="sapUiSmallMargin" justifyContent="End" alignItems="End">
+							<layoutData>
+								<layout:GridData span="XL2 L2 M12 S12"/>
+							</layoutData>
 							<Label text="Final Total (Rs.)" class="gpmsTotalLabel"/>
 							<Text text="{gp>/finalTotal}" class="gpmsTotalAmount"/>
 						</VBox>
@@ -329,6 +375,7 @@
 				<ToolbarSpacer/>
 				<Button text="Clear All" icon="sap-icon://clear-all" press=".onClear" class="gpmsClearBtn"/>
 				<Button text="{= ${gp>/GatePassReqNo} ? 'Resubmit Request' : 'Submit Gate Pass Request' }" icon="sap-icon://paper-plane" press=".onSubmit" class="gpmsSubmitBtn"/>
+				
 			</OverflowToolbar>
 		</footer>
 	</Page>

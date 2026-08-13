@@ -123,6 +123,14 @@
 					<layout:Grid defaultSpan="XL4 L4 M6 S12" vSpacing="0">
 
 						<VBox class="sapUiSmallMargin">
+							<Label text="Request Number" class="gpmsFieldLabel"/>
+							<Input value="{out>/GatePassreqNo}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin" visible="{= !!${out>/GatePassNo} }">
+							<Label text="Gate Pass Number" class="gpmsFieldLabel"/>
+							<Input value="{out>/GatePassNo}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
 							<Label text="Plant" class="gpmsFieldLabel"/>
 							<Input value="{out>/Plant}" editable="{= ${out>/ApprovalStatus} === 'AMENDMENT' }" class="gpmsFieldInput"/>
 						</VBox>
@@ -310,7 +318,7 @@
 							<!-- Row 6 - Full Width -->
 							<VBox class="sapUiSmallMarginTop" visible="{= ${out>/DocOptionIndex} === 1 }">
 								<Label text="DC/DF Notes" class="gpmsFieldLabel"/>
-								<TextArea value="{out>/DCNotes}" width="100%" rows="2" class="gpmsTextArea"/>
+								<TextArea value="{out>/DCNotes}" width="100%" rows="5" class="gpmsTextArea"/>
 							</VBox>
 
 							<!-- Insurance Required Checkbox -->
@@ -353,11 +361,12 @@
 						</VBox>
 
 						<HBox justifyContent="End" alignItems="Center" class="sapUiLargeMarginTop">
+							<Button text="GENERATE GATE PASS" type="Accept" press="onSubmitOutgate" icon="sap-icon://accept" class="gpmsSubmitBtn sapUiSmallMarginEnd" visible="{= ${out>/ApprovalStatus} === 'APPROVED' &amp;&amp; !${out>/GatePassNo} }"/>
 							<Button text="PRINT GATE PASS" type="Emphasized" press=".onPrintGatePass" icon="sap-icon://print" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd" visible="{= !!${out>/GatePassNo} }"/>
 							<Button text="CANCEL GATE PASS" type="Reject" press=".onCancelGatePass" icon="sap-icon://cancel" class="gpmsDocBtn rejectBtn sapUiSmallMarginEnd" visible="{= !!${out>/GatePassNo} &amp;&amp; ${out>/Status} !== 'CANCELLED' }"/>
 							<Button text="Generate DC" type="Emphasized" press=".onGenerateDC" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd" visible="{= ${out>/DocOptionIndex} === 1 &amp;&amp; !!${out>/GatePassNo} }"/>
 							<!-- <Button text="Generate E-Way Bill" type="Emphasized" press=".onGenerateEWay" class="gpmsDocBtn ewayBtn sapUiSmallMarginEnd" visible="{= ${out>/DocOptionIndex} === 1 }"/> -->
-							<Button text="SAVE" type="Accept" press=".onSaveLogistics" icon="sap-icon://save" class="gpmsSubmitBtn"/>
+							<Button text="SAVE" type="Accept" press=".onSaveLogistics" icon="sap-icon://save" class="gpmsSubmitBtn" visible="{= !!${out>/GatePassNo} }"/>
 						</HBox>
 					</VBox>
 				</Panel>
@@ -376,7 +385,7 @@
 				<ToolbarSpacer/>
 				<Button text="Reset Form" icon="sap-icon://refresh" press="onClear" class="gpmsClearBtn"/>
 				<Button text="RE-SUBMIT REQUEST" icon="sap-icon://reset" type="Emphasized" press="onSubmitOutgate" class="gpmsSubmitBtn sapUiSmallMarginEnd" visible="{= ${out>/ApprovalStatus} === 'AMENDMENT' }"/>
-				<Button text="GENERATE GATE PASS" icon="sap-icon://accept" type="Accept" press="onSubmitOutgate" class="gpmsSubmitBtn sapUiSmallMarginEnd" visible="{= ${out>/ApprovalStatus} === 'APPROVED' &amp;&amp; ${user>/IsStoreUser} &amp;&amp; !${out>/GatePassNo} &amp;&amp; !${out>/showLogistics} }"/>
+				<Button text="GENERATE GATE PASS" icon="sap-icon://accept" type="Accept" press="onSubmitOutgate" class="gpmsSubmitBtn sapUiSmallMarginEnd" visible="{= ${out>/ApprovalStatus} === 'APPROVED' &amp;&amp; !${out>/GatePassNo} }"/>
 				<Button text="APPROVE IN MY INBOX" icon="sap-icon://approvals" type="Accept" press="onApproveInMyInbox" class="gpmsSubmitBtn sapUiSmallMarginEnd" visible="{= ${user>/IsHodUser} }"/>
 			</Toolbar>
 		</footer>

@@ -4,6 +4,17 @@ specVersion: "4.0"
 metadata:
   name: gpms.meilpower.com.zgpms
 type: application
+framework:
+  name: SAPUI5
+  version: 1.84.61
+  libraries:
+    - name: sap.m
+    - name: sap.ui.core
+    - name: sap.tnt
+    - name: sap.ui.layout
+    - name: sap.ui.unified
+    - name: sap.f
+    - name: themelib_sap_fiori_3
 server:
   customMiddleware:
     - name: fiori-tools-proxy
@@ -19,6 +30,7 @@ server:
             - /resources
             - /test-resources
           url: https://ui5.sap.com
+          version: 1.84.61
 
     - name: fiori-tools-appreload
       afterMiddleware: compression
@@ -31,4 +43,4 @@ server:
       afterMiddleware: fiori-tools-appreload
       configuration:
         flp:
-          theme: sap_horizon
+          theme: sap_fiori_3

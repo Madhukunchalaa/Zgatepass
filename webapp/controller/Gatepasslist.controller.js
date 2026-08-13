@@ -472,6 +472,9 @@ sap.ui.define([
 			// Amendment: only the requester (non-HOD, non-Store) can edit and resubmit
 			if (bAmendment) {
 				if (!bIsHodUser && !bIsStoreUser) {
+					alert('you need to edit the request ')
+
+
 					this.getRouter().navTo("GatePassAmendment", {
 						type:   encodeURIComponent(oItem.GatePassType  || "NRGP"),
 						reqNo:  encodeURIComponent(oItem.GatePassReqNo || ""),
@@ -676,7 +679,10 @@ sap.ui.define([
 				{ key: "VendorName", text: "Vendor Name" },
 				{ key: "Department", text: "Department" }
 			]);
-		}
+		},
+
+
+	
 
 	});
 });

@@ -235,7 +235,7 @@
 							<!-- Row 5: DC Notes (only when Required) -->
 							<VBox class="sapUiSmallMarginTop" visible="{= ${nrgp>/DocOptionIndex} === 1}">
 								<Label text="DC / DF Notes" class="gpmsFieldLabel"/>
-								<TextArea value="{nrgp>/DCNotes}" width="100%" rows="2" class="gpmsTextArea" editable="{nrgp>/isEditable}"/>
+								<TextArea value="{nrgp>/DCNotes}" width="100%" rows="5" class="gpmsTextArea" editable="{nrgp>/isEditable}"/>
 							</VBox>
 
 							<!-- Insurance Required Checkbox -->

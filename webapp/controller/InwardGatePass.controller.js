@@ -1,9 +1,9 @@
-sap.ui.define([
-	"zgpms/meilpower/com/controller/BaseController",
+sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 	"sap/ui/model/json/JSONModel",
 	"sap/m/MessageBox",
-	"sap/m/MessageToast"
-], function (BaseController, JSONModel, MessageBox, MessageToast) {
+	"sap/m/MessageToast",
+	"sap/ui/core/Fragment"
+], function (BaseController, JSONModel, MessageBox, MessageToast, Fragment) {
 	"use strict";
 
 	return BaseController.extend("zgpms.meilpower.com.controller.InwardGatePass", {

@@ -1,11 +1,11 @@
-sap.ui.define([
-	"./BaseController",
+sap.ui.define(["./BaseController",
 	"sap/ui/model/json/JSONModel",
 	"sap/m/MessageBox",
 	"sap/m/MessageToast",
 	"sap/ui/model/Filter",
-	"sap/ui/model/FilterOperator"
-], function (BaseController, JSONModel, MessageBox, MessageToast, Filter, FilterOperator) {
+	"sap/ui/model/FilterOperator",
+	"sap/ui/core/Fragment"
+], function (BaseController, JSONModel, MessageBox, MessageToast, Filter, FilterOperator, Fragment) {
 	"use strict";
 	return BaseController.extend("zgpms.meilpower.com.controller.GatePassCreation", {
 		formatter: {
@@ -280,12 +280,13 @@ sap.ui.define([
 				filters: [
 					new Filter("GatePassReqNo", FilterOperator.EQ, sReqNo),
 					new Filter("GatePassType",  FilterOperator.EQ, sType),
-					new Filter("Status",        FilterOperator.EQ, sTargetStatus)
+					new Filter("Status",        FilterOperator.EQ, "Amendment")
 				],
 				urlParameters: { "$expand": "GateReqItmNav" },
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
-					var oRow = oData.results && oData.results[0];
+					var aResults = oData.results || [];
+					var oRow = aResults.find(function(r) { return r.GatePassReqNo === sReqNo; }) || aResults[0];
 					if (oRow) {
 						that._prefillAmendmentModel(oRow);
 					} else {
@@ -325,6 +326,9 @@ sap.ui.define([
 			oModel.setProperty("/VehicleNo",      oRow.VehicleNo      || "");
 			oModel.setProperty("/ModeOfDispatch", oRow.ModeOfDispatch || "");
 			oModel.setProperty("/Remarks",        oRow.Remarks        || "");
+			oModel.setProperty("/HODRemarks",     oRow.HODRemarks      || "");
+			oModel.setProperty("/STORERemarks",    oRow.STORERemarks  || "");
+			
 
 			// Date parsing helper
 			var fnParseDate = function (vDate) {
@@ -394,47 +398,26 @@ sap.ui.define([
 			if (!oODataModel || !oGpModel || !sReqNo) { return; }
 			var that = this;
 
-			// Query backend creation entity
-			var sKeyPath = "/GatePassReqHdrSet(GatePassReqNo='" + sReqNo + "',GatePassType='" + sType + "')";
-			oODataModel.read(sKeyPath, {
+			// The ABAP developer has not implemented GET_ENTITY (returns 501). 
+			// We must use GET_ENTITYSET with filters instead.
+			var aFilters = [new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)];
+			if (sType) {
+				aFilters.push(new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, sType));
+			}
+
+			oODataModel.read("/GateReqHdrSet", {
+				filters: aFilters,
 				success: function (oData) {
-					var aAttachments = that._processLoadedAttachmentsForCreation(oData);
-					if (aAttachments.length > 0) {
-						oGpModel.setProperty("/attachments", aAttachments);
-					} else {
-						// Try filter fallback
-						oODataModel.read("/GatePassReqHdrSet", {
-							filters: [new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)],
-							success: function (oData2) {
-								var oItem = oData2.results && oData2.results[0];
-								if (oItem) {
-									var aAttachmentsFallback = that._processLoadedAttachmentsForCreation(oItem);
-									oGpModel.setProperty("/attachments", aAttachmentsFallback);
-								}
-							},
-							error: function (oErr) {
-								console.error("Filter OData read on /GatePassReqHdrSet failed: ", oErr);
-							}
-						});
+					var oItem = oData.results && oData.results[0];
+					if (oItem) {
+						var aAttachments = that._processLoadedAttachmentsForCreation(oItem);
+						if (aAttachments.length > 0) {
+							oGpModel.setProperty("/attachments", aAttachments);
+						}
 					}
 				},
-				error: function (oError) {
-					console.error("Direct OData read on " + sKeyPath + " failed. Trying filter query.", oError);
-					
-					// Try filter fallback
-					oODataModel.read("/GatePassReqHdrSet", {
-						filters: [new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)],
-						success: function (oData2) {
-							var oItem = oData2.results && oData2.results[0];
-							if (oItem) {
-								var aAttachmentsFallback = that._processLoadedAttachmentsForCreation(oItem);
-								oGpModel.setProperty("/attachments", aAttachmentsFallback);
-							}
-						},
-						error: function (oErr) {
-							console.error("Filter OData read on /GatePassReqHdrSet failed: ", oErr);
-						}
-					});
+				error: function (oErr) {
+					console.error("Filter OData read on /GateReqHdrSet failed for Base64: ", oErr);
 				}
 			});
 		},
@@ -518,6 +501,7 @@ sap.ui.define([
 
 		_loadPlants: function () {
 			var oPlantModel = new JSONModel({ results: [] });
+			oPlantModel.setSizeLimit(100000);
 			this.getView().setModel(oPlantModel, "plants");
 
 			var oODataModel = this.getOwnerComponent().getModel();
@@ -604,6 +588,7 @@ sap.ui.define([
 				oMaterialsModel = new JSONModel({ results: [] });
 				this.getView().setModel(oMaterialsModel, "materials");
 			}
+			oMaterialsModel.setSizeLimit(100000);
 
 			if (!sPlant) {
 				oMaterialsModel.setProperty("/results", []);
@@ -669,6 +654,14 @@ sap.ui.define([
 			var oGpModel = this.getView().getModel("gp");
 			oGpModel.setProperty("/Plant", sKey);
 
+			// Reset vendor when plant changes
+			oGpModel.setProperty("/vendor", "");
+			oGpModel.setProperty("/vendorName", "");
+			oGpModel.setProperty("/vendorAddress", "");
+			oGpModel.setProperty("/vendorGST", "");
+			oGpModel.setProperty("/vendorCity", "");
+			oGpModel.setProperty("/vendorZipCode", "");
+
 			var oPlantModel = this.getView().getModel("plants");
 			var aPlants = (oPlantModel && oPlantModel.getProperty("/results")) || [];
 			var oPlant = aPlants.find(function (p) { return p.Plant === sKey; });
@@ -692,11 +685,12 @@ sap.ui.define([
 			this._loadVendors(sKey);
 			this._loadMaterials(sKey);
 
-			MessageToast.show("Materials refreshed for selected plant");
+			MessageToast.show("Materials & Vendors refreshed for selected plant");
 		},
 
 		_loadVendors: function (sPlant) {
 			var oVendorModel = new JSONModel({ results: [] });
+			oVendorModel.setSizeLimit(100000);
 			this.getView().setModel(oVendorModel, "vendors");
 
 			if (!sPlant) { return; }
@@ -710,6 +704,7 @@ sap.ui.define([
 				filters: aFilters,
 				success: function (oData) {
 					var aResults = oData.results || [];
+					console.log("Total Vendors fetched from Backend:", aResults.length);
 					if (aResults.length === 0) { return; }
 					var aNormalized = aResults.map(function (v) {
 						return {
@@ -735,15 +730,18 @@ sap.ui.define([
 			if (!oItem) { return; }
 
 			var sKey = oItem.getKey();
-			var aVendors = this.getView().getModel("vendors").getProperty("/results");
-			var oVendor = aVendors.find(function (v) { return v.Vendor === sKey; });
-			if (!oVendor) { return; }
+			var aVendors = this.getView().getModel("vendors").getProperty("/results") || [];
+			var oVendor = aVendors.find(function (v) { return v.Vendor === sKey; }) || {};
 
 			var sAddress = [oVendor.Street, oVendor.City, oVendor.PostalCode, oVendor.Country].filter(Boolean).join(", ");
 
 			var oGp = this.getView().getModel("gp");
+			oGp.setProperty("/vendor", oVendor.Vendor || sKey);
+			oGp.setProperty("/vendorName", oVendor.VendorName || oItem.getText() || "");
 			oGp.setProperty("/vendorAddress", sAddress);
-			oGp.setProperty("/vendorGST", oVendor.VendorGST);
+			oGp.setProperty("/vendorGST", oVendor.VendorGST || "");
+			oGp.setProperty("/vendorCity", oVendor.City || "");
+			oGp.setProperty("/vendorZipCode", oVendor.PostalCode || "");
 		},
 
 		onFileChange: function (oEvent) {
@@ -977,10 +975,10 @@ sap.ui.define([
 					FiscalYear: oGp.FiscalYear,
 					GpDate: fnFormatDate(oGp.gpDate),
 					Vendor: oGp.vendor,
-					VendorName: oSelectedVendor.VendorName || "",
+					VendorName: oGp.vendorName || oSelectedVendor.VendorName || "",
 					VendorGST: oGp.vendorGST || "",
-					ZipCode: oSelectedVendor.PostalCode || "",
-					City: oSelectedVendor.City || "",
+					ZipCode: oGp.vendorZipCode || oSelectedVendor.PostalCode || "",
+					City: oGp.vendorCity || oSelectedVendor.City || "",
 					ApprovalReq: "X",
 					Approval1: "",
 					Approval2: "",
@@ -990,6 +988,8 @@ sap.ui.define([
 					VehicleNo: oGp.VehicleNo || "",
 					ModeOfDispatch: oGp.ModeOfDispatch || "",
 					Remarks: oGp.Remarks || "",
+					HODRemarks:oGp.HODRemarks ||"",
+					STORERemarks:oGp.STORERemarks ||"",
 					ReturnableDate: fnFormatDate(oGp.returnableDate),
 					GateReqItemNav: (oGp.items || []).map(function (it, index) {
 						var fQty = parseFloat(String(it.quantity).replace(/,/g, '')) || 0;
@@ -997,6 +997,7 @@ sap.ui.define([
 						var fValue = fQty * fRate;
 
 						return {
+							GatePassReqNo: sAmendReqNo,
 							GatePassType: oGp.GatePassType || "",
 							ItemNo: String((index + 1) * 10).padStart(5, '0'),
 							Material: it.material || "",
@@ -1008,6 +1009,7 @@ sap.ui.define([
 							RequestedQuantity: fQty.toFixed(3),
 							Totalvalue: fValue.toFixed(2),
 							Remarks: it.remarks || ""
+
 						};
 					})
 				};
@@ -1079,11 +1081,13 @@ sap.ui.define([
 					return;
 				}
 
+				console.log("Submitting Gate Pass Payload to /GatePassReqHdrSet:", oPayload);
 				sap.ui.core.BusyIndicator.show(0);
 
 				oODataModel.create("/GatePassReqHdrSet", oPayload, {
 					success: function (oData) {
 						sap.ui.core.BusyIndicator.hide();
+						console.log("Create /GatePassReqHdrSet Success Response:", oData);
 
 						var sReqNo = oData.GatePassReqNo || oData.GatePassreqNo || "";
 						var sMsg = oData.Message || "Gate Pass Request created successfully!";

@@ -1,9 +1,9 @@
-sap.ui.define([
-	"zgpms/meilpower/com/controller/BaseController",
+sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 	"sap/ui/model/json/JSONModel",
 	"sap/m/MessageBox",
-	"sap/m/MessageToast"
-], function (BaseController, JSONModel, MessageBox, MessageToast) {
+	"sap/m/MessageToast",
+	"sap/ui/core/Fragment"
+], function (BaseController, JSONModel, MessageBox, MessageToast, Fragment) {
 	"use strict";
 
 	return BaseController.extend("zgpms.meilpower.com.controller.OutGatePass", {
@@ -52,7 +52,7 @@ sap.ui.define([
 					GatePassNo: oResult.GatePassNo || "",
 					showLogistics: oResult.showLogistics || false
 				});
-				if (sStatus === "APPROVED" || sStatus === "CLOSED" || sStatus === "CANCELLED") {
+				if (sStatus === "APPROVED" || sStatus === "CLOSED" || sStatus === "CANCELLED" || sStatus === "STORE APPROVAL PENDING") {
 					that._validateAndMapData(oResult);
 					if (sStatus === "CLOSED") {
 						var oOutModel = that.getView().getModel("out");
@@ -91,6 +91,15 @@ sap.ui.define([
 				sap.m.MessageBox.error("No data found for Request No: " + sReqNo);
 			};
 
+			var fnMatchResult = function (aResults) {
+				if (!aResults || aResults.length === 0) { return null; }
+				var sClean = (sReqNo || "").trim();
+				return aResults.find(function (r) {
+					var rNo = (r.GatePassReqNo || r.GatePassreqNo || "").trim();
+					return rNo === sClean || (parseInt(rNo, 10) === parseInt(sClean, 10) && !isNaN(parseInt(sClean, 10)));
+				}) || null;
+			};
+
 			// Try 1: Query with Status = 'All' filter (most likely to work for approved requests)
 			oODataModel.read("/GateReqHdrSet", {
 				filters: [
@@ -99,7 +108,7 @@ sap.ui.define([
 				],
 				urlParameters: { "$expand": "GateReqItmNav" },
 				success: function (oData) {
-					var oResult = oData.results && oData.results[0];
+					var oResult = fnMatchResult(oData.results);
 					if (oResult) {
 						fnProcessResult(oResult);
 					} else {
@@ -108,7 +117,7 @@ sap.ui.define([
 							filters: [new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)],
 							urlParameters: { "$expand": "GateReqItmNav" },
 							success: function (oData2) {
-								var oResult2 = oData2.results && oData2.results[0];
+								var oResult2 = fnMatchResult(oData2.results);
 								if (oResult2) {
 									fnProcessResult(oResult2);
 								} else {
@@ -128,7 +137,7 @@ sap.ui.define([
 						filters: [new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)],
 						urlParameters: { "$expand": "GateReqItmNav" },
 						success: function (oData2) {
-							var oResult2 = oData2.results && oData2.results[0];
+							var oResult2 = fnMatchResult(oData2.results);
 							if (oResult2) {
 								fnProcessResult(oResult2);
 							} else {
@@ -151,6 +160,14 @@ sap.ui.define([
 			var sType = aTypes[0];
 			var oODataModel = this.getOwnerComponent().getModel();
 			var that = this;
+			var fnMatchResult = function (aResults) {
+				if (!aResults || aResults.length === 0) { return null; }
+				var sClean = (sReqNo || "").trim();
+				return aResults.find(function (r) {
+					var rNo = (r.GatePassReqNo || r.GatePassreqNo || "").trim();
+					return rNo === sClean || (parseInt(rNo, 10) === parseInt(sClean, 10) && !isNaN(parseInt(sClean, 10)));
+				}) || null;
+			};
 
 			oODataModel.read("/GateReqHdrSet", {
 				filters: [
@@ -160,7 +177,7 @@ sap.ui.define([
 				],
 				urlParameters: { "$expand": "GateReqItmNav" },
 				success: function (oData) {
-					var oResult = oData.results && oData.results[0];
+					var oResult = fnMatchResult(oData.results);
 					if (oResult) {
 						fnSuccess(oResult);
 					} else {
@@ -330,6 +347,9 @@ sap.ui.define([
 				return "PENDING";
 			}
 			
+			var sDept = (oData.Department || "").trim().toUpperCase();
+			var sAppReq = (oData.ApprovalReq || "").trim().toUpperCase();
+
 			var s1 = oData.Approval1;
 			if (!s1 || s1 === "null" || s1 === "undefined") s1 = "";
 			s1 = String(s1).trim().toUpperCase();
@@ -342,13 +362,21 @@ sap.ui.define([
 			if (!sStatus || sStatus === "null" || sStatus === "undefined") sStatus = "";
 			sStatus = String(sStatus).trim().toUpperCase();
 
-			if (s1 === "R"  || s2 === "R")  return "REJECTED";
-			if (s1 === "AM" || s2 === "AM") return "AMENDMENT";
-			if (s2) return "APPROVED"; // If Store approved, it is fully approved
-			if (s1 && !s2) return "STORE APPROVAL PENDING"; // Though the OutGatePass UI will handle this as pending usually
-			
+			if (s1 === "R"  || s2 === "R" || sStatus === "REJECTED")  return "REJECTED";
+			if (s1 === "AM" || s2 === "AM" || sStatus === "AMENDMENT" || sStatus === "AM") return "AMENDMENT";
 			if (sStatus === "CANCELLED" || sStatus === "CANCEL" || sStatus === "CAN") return "CANCELLED";
 			if (sStatus === "CLOSED"    || sStatus === "C") return "CLOSED";
+
+			// If Store generated the request (Department is Store or ApprovalReq is not 'X'), no HOD approval needed!
+			var bIsStoreDept = (sDept === "STORE" || sDept === "STORES" || sDept === "STR" || sDept.indexOf("STORE") !== -1 || sAppReq === "" || sAppReq === "N");
+			if (bIsStoreDept) {
+				return "APPROVED";
+			}
+
+			// If Store approved or HOD approved or Status is Approved / Store Approval Pending
+			if (s2 || sStatus === "APPROVED") return "APPROVED";
+			if (s1 && s1 !== "PENDING") return "APPROVED"; // HOD approved, ready for Store Gate Pass Generation
+			if (sStatus === "STORE APPROVAL PENDING") return "APPROVED"; // Ready for Store Gate Pass Generation
 
 			return "PENDING";
 		},
@@ -376,6 +404,7 @@ sap.ui.define([
 
 		_validateAndMapData: function (oData) {
 			var oOutModel = this.getView().getModel("out");
+			oOutModel.setProperty("/showApprovalFlow", false);
 
 			var sReqNo = oData.GatePassReqNo || oData.GatePassreqNo || "";
 			var aAttachments = [];
@@ -584,13 +613,20 @@ sap.ui.define([
 				urlParameters: { "$expand": "OutgateNav" },
 				success: function (oData) {
 					var aResults = oData.results || [];
+					var sCleanReq = (sReqNo || "").trim();
 					var oGP = aResults.find(function (r) {
-						return (r.GatePassreqNo || "").trim() === sReqNo.trim();
+						var sResultReqNo = (r.GatePassreqNo || "").trim();
+						var sResultGPNo = (r.GatePassNo || "").trim();
+						var bReqMatch = (sResultReqNo === sCleanReq || (parseInt(sResultReqNo, 10) === parseInt(sCleanReq, 10) && !isNaN(parseInt(sCleanReq, 10))));
+						var bValidGP = sResultGPNo !== "" && sResultGPNo !== "0000000000" && sResultGPNo !== "-" && sResultGPNo !== sCleanReq;
+						return bReqMatch && bValidGP;
 					});
 					console.log("[GPMS Debug] _checkExistingGatePass response: matched =", JSON.stringify(oGP ? { GatePassNo: oGP.GatePassNo, GatePassreqNo: oGP.GatePassreqNo } : "none"), "total results =", aResults.length);
 					if (!oGP || !(oGP.GatePassNo || "").trim()) { return; }
+					var sGPNum = (oGP.GatePassNo || "").trim();
+					if (!sGPNum || sGPNum === "0000000000" || sGPNum === "-" || sGPNum === sCleanReq) { return; }
 
-					oOutModel.setProperty("/GatePassNo", oGP.GatePassNo);
+					oOutModel.setProperty("/GatePassNo", sGPNum);
 					oOutModel.setProperty("/GatePassType", oGP.GatePassType || oOutModel.getProperty("/GatePassType"));
 					var vGPDate = oGP.GpDate || oGP.GatePassDate;
 					var sGPDateDisplay = "";
@@ -1696,11 +1732,12 @@ sap.ui.define([
 				return;
 			}
 
-			// Gate pass generation is restricted to Store users only
+			// Gate pass generation is restricted to Store users
 			var oUserModel = sap.ui.getCore().getModel("user");
 			var bIsStoreUser = oUserModel ? oUserModel.getProperty("/IsStoreUser") : false;
-			if (!bIsStoreUser) {
-				sap.m.MessageBox.error("Only Store users (ZC_MM_GATEPASS_STORE_FRONTVIEW) are authorized to generate a Gate Pass.");
+			var bIsHodUser = oUserModel ? oUserModel.getProperty("/IsHodUser") : false;
+			if (!bIsStoreUser && bIsHodUser) {
+				sap.m.MessageBox.error("Only Store users are authorized to generate a Gate Pass.");
 				return;
 			}
 
@@ -1970,11 +2007,14 @@ sap.ui.define([
 					}
 					
 					var sMsg = oData.Message || "Logistics details saved successfully!";
-					MessageBox.success(sMsg);
-
-					if (bIsGenerateDC === true && sDC) {
-						that.onGenerateDC(false, true);
-					}
+					MessageBox.success(sMsg, {
+						onClose: function () {
+							if (bIsGenerateDC === true && sDC) {
+								that.onGenerateDC(false, true);
+							}
+							that.getRouter().navTo("GatePassList");
+						}
+					});
 				},
 				error: function (oError) {
 					sap.ui.core.BusyIndicator.hide();

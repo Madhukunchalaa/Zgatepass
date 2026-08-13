@@ -1,12 +1,12 @@
-sap.ui.define([
-	"./BaseController",
+sap.ui.define(["./BaseController",
 	"sap/ui/model/json/JSONModel",
 	"sap/m/MessageBox",
 	"sap/m/MessageToast",
 	"sap/ui/model/Filter",
 	"sap/ui/model/FilterOperator",
-	"zgpms/meilpower/com/utils/ExcelExport"
-], function (BaseController, JSONModel, MessageBox, MessageToast, Filter, FilterOperator, ExcelExport) {
+	"zgpms/meilpower/com/utils/ExcelExport",
+	"sap/ui/core/Fragment"
+], function (BaseController, JSONModel, MessageBox, MessageToast, Filter, FilterOperator, ExcelExport, Fragment) {
 	"use strict";
 
 	return BaseController.extend("zgpms.meilpower.com.controller.PCPList", {
