@@ -20,7 +20,15 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			var sGPNo  = (oArgs.gpNo && oArgs.gpNo !== "-") ? oArgs.gpNo : "";
 			var oUserModel = sap.ui.getCore().getModel("user");
 			var bGatepassUserOnly = oUserModel ? oUserModel.getProperty("/IsGatepassUserOnly") : false;
-			// Allow GatepassUserOnly role through only when coming from the list with a reqNo (Amendment edit)
+			var bIsHodUser = oUserModel ? oUserModel.getProperty("/IsHodUser") : false;
+			var bIsStoreUser = oUserModel ? oUserModel.getProperty("/IsStoreUser") : false;
+
+			if (bIsHodUser && !bIsStoreUser) {
+				MessageBox.error("HOD users are not authorized to access the Out Gate Pass Generation screen.");
+				this.getRouter().navTo("GatePassList");
+				return;
+			}
+
 			if (bGatepassUserOnly && !sReqNo) {
 				MessageBox.error("You do not have authorization to access the Out Gate Pass screen.");
 				this.getRouter().navTo("home");
@@ -475,7 +483,7 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			oOutModel.setProperty("/GatePassType", oData.GatePassType || "");
 			oOutModel.setProperty("/GatePassDate", new Date().toLocaleDateString("en-GB").split("/").join("-"));
 			oOutModel.setProperty("/ReturnableDate", oData.ReturnableDate || null);
-			oOutModel.setProperty("/Requestor", oData.Requestor || "");
+			oOutModel.setProperty("/Requestor", oData.Requestor || oData.ReqUser || oData.Requser || oData.RequestedUser || oData.ReqEmpName || oData.CreatedBy || oData.Createdby || oData.Ernam || "");
 			oOutModel.setProperty("/Department", oData.Department);
 			oOutModel.setProperty("/Vendor", oData.Vendor || oData.Lifnr || "");
 			oOutModel.setProperty("/VendorName", oData.VendorName);
@@ -487,7 +495,7 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			try {
 				var sCleanGPNo = (oData.GatePassNo || "").trim();
 				var sCleanReqNo = (sReqNo || "").trim();
-				var sLocal = (sCleanGPNo ? localStorage.getItem("logistics_" + sCleanGPNo) : null) || (sCleanReqNo ? localStorage.getItem("logistics_" + sCleanReqNo) : null);
+				var sLocal = (sCleanGPNo ? (localStorage.getItem("logistics_" + sCleanGPNo) || localStorage.getItem("gp_logistics_" + sCleanGPNo)) : null) || (sCleanReqNo ? (localStorage.getItem("logistics_" + sCleanReqNo) || localStorage.getItem("gp_logistics_" + sCleanReqNo)) : null);
 				console.log("[GPMS Debug] _validateAndMapData: sCleanGPNo =", sCleanGPNo, "sCleanReqNo =", sCleanReqNo, "sLocal =", sLocal);
 				if (sLocal) {
 					oLocalLogistics = JSON.parse(sLocal);
@@ -519,8 +527,10 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			oOutModel.setProperty("/Plant", oData.Plant || oData.Werks || "");
 			oOutModel.setProperty("/Cocode", oData.Bukrs || oData.BUKRS || oData.Cocode || oData.CoCode || oData.CompanyCode || "");
 			oOutModel.setProperty("/CommonDesc", oData.CommonDesc || (oLocalLogistics ? oLocalLogistics.CommonDesc : "") || "");
+			var sInsReq = String(oData.InsuranceReq || oData.Insurance || "").trim().toUpperCase();
+			var bInsRequired = (sInsReq === "YES" || sInsReq === "X" || sInsReq === "Y" || sInsReq === "TRUE" || sInsReq === "1");
 			oOutModel.setProperty("/InsuranceReq", oData.InsuranceReq || "NO");
-			oOutModel.setProperty("/InsuranceRequired", (oData.InsuranceReq || "").toUpperCase() === "YES");
+			oOutModel.setProperty("/InsuranceRequired", bInsRequired);
 			oOutModel.setProperty("/InsuranceDate", oData.InsuranceDate || "");
 			oOutModel.setProperty("/InsuranceAmount", oData.InsuranceAmount || 0);
 
@@ -560,9 +570,9 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			var fTotal = aMappedItems.reduce(function (sum, it) { return sum + it.amount; }, 0);
 			oOutModel.setProperty("/FinalTotal", fTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }));
 
-			// Gate pass already exists — show logistics section immediately
+			// Show logistics section only if gate pass has already been generated
+			oOutModel.setProperty("/showLogistics", !!(oData.GatePassNo || "").trim());
 			if ((oData.GatePassNo || "").trim()) {
-				oOutModel.setProperty("/showLogistics", true);
 				var sChallan = oData.ChallanNumber || (oLocalLogistics ? oLocalLogistics.ChallanNumber : "") || "";
 				oOutModel.setProperty("/ChallanNumber", sChallan);
 				oOutModel.setProperty("/ChallanDate", oData.ChallanDate || null);
@@ -588,6 +598,9 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 				var bIsSelf = (sSavedTransporter === "MEIL Neyveli Energy Private Limited");
 				oOutModel.setProperty("/TransportByIndex", bIsSelf ? 0 : 1);
 			}
+			var bIsStoreUser = oUserModel ? oUserModel.getProperty("/IsStoreUser") : false;
+			var sGPStatus = (oOutModel.getProperty("/Status") || "").toUpperCase();
+			oOutModel.setProperty("/isEditable", bIsStoreUser && sGPStatus !== "CLOSED" && sGPStatus !== "CANCELLED");
 			oOutModel.refresh(true);
 
 			// Always check OutGatePassSet directly to load the latest saved logistics and status details
@@ -695,7 +708,7 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 							return {
 								sno: i + 1,
 								material: it.Material || "",
-								materialName: it.HSNDesc || it.MaterialDesc || it.Material || "",
+								materialName: it.MaterialDesc || it.MaterialName || it.Description || it.Maktx || it.HSNDesc || it.Material || "",
 								hsnCode: it.HSNCode || "",
 								sentQty: fQty,
 								recvdQty: 0,
@@ -829,14 +842,13 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			var oOut = oOutModel.getData();
 
 			if (bSkipOData !== true && bGetBase64 !== true && typeof bGetBase64 !== "boolean") {
-				// User clicked Generate DC button on UI
-				oOutModel.setProperty("/ChallanNumber", "");
-				oOut.ChallanNumber = "";
-				
-				this.onSaveLogistics(true);
-				return;
+				if (!oOut.ChallanNumber) {
+					this.onSaveLogistics(true);
+					return;
+				}
 			}
-			const { jsPDF } = window.jspdf;
+			const jsPDFLib = window.jspdf;
+			const jsPDF = (jsPDFLib && jsPDFLib.jsPDF) ? jsPDFLib.jsPDF : (window.jsPDF || window.jspdf);
 			var doc = new jsPDF('p', 'mm', 'a4');
 			var margin = 15;
 			var pageWidth = doc.internal.pageSize.width;
@@ -887,90 +899,84 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			doc.setLineWidth(0.35);
 			doc.line(pageWidth / 2 - titleW / 2, 38.5, pageWidth / 2 + titleW / 2, 38.5);
 
-			// ── INFO GRID (3 columns) ─────────────────────────────────────────────
-			// Col1=To (62mm)  Col2=DC/Transport (65mm)  Col3=GP/Location (remaining)
-			var gridY = 41;
-			var gridH = 50;
-			var col1W = 62, col2W = 65, col3W = contentWidth - col1W - col2W;
+			var gridY = 41, gridH = 34;
+			var col1W = 62, col2W = 62, col3W = contentWidth - col1W - col2W;
 			var col1X = margin, col2X = margin + col1W, col3X = margin + col1W + col2W;
-			var pad = 3, lh = 5.5;
+			var pad = 3, lh = 4.5;
 
 			doc.setLineWidth(0.3);
 			doc.rect(col1X, gridY, contentWidth, gridH);
 			doc.line(col2X, gridY, col2X, gridY + gridH);
 			doc.line(col3X, gridY, col3X, gridY + gridH);
 
-			// Col 1 — Consignee
-			doc.setFontSize(8.5);
-			doc.setFont("helvetica", "bold");
-			doc.text("To", col1X + pad, gridY + 8);
-			doc.text(oOut.VendorName || "", col1X + 10, gridY + 8);
-			doc.setFont("helvetica", "normal");
-			doc.setFontSize(8);
-			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || "", col1W - 14);
-			doc.text(splitAddr, col1X + 10, gridY + 14);
+			// Col 1 — Consignee / To
+			doc.setFontSize(8.5); doc.setFont("helvetica", "bold");
+			doc.text("To", col1X + pad, gridY + 6);
+			var sPersonName = (oOut.VendorPerson || "").trim();
+			if (sPersonName) {
+				sPersonName = /^(mr|ms|mrs|mr\/ms)\.?\s+/i.test(sPersonName) ? sPersonName : "Mr/Ms. " + sPersonName;
+			}
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+			doc.text(sPersonName, col1X + pad + 8, gridY + 6);
+			doc.text(oOut.VendorName || oOut.Vendor || "", col1X + pad, gridY + 12);
+			doc.setFont("helvetica", "normal"); doc.setFontSize(7.5);
+			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || [oOut.City, oOut.ZipCode].filter(Boolean).join(", "), col1W - pad * 2);
+			doc.text(splitAddr, col1X + pad, gridY + 17);
 			doc.setLineWidth(0.2);
-			doc.line(col1X, gridY + gridH - 10, col2X, gridY + gridH - 10);
-			doc.setFont("helvetica", "bold");
-			doc.setFontSize(8);
-			doc.text("GST No:", col1X + pad, gridY + gridH - 4);
+			doc.line(col1X, gridY + gridH - 7, col2X, gridY + gridH - 7);
+			doc.setFont("helvetica", "bold"); doc.setFontSize(7.5);
+			doc.text("GST No:", col1X + pad, gridY + gridH - 2);
 			doc.setFont("helvetica", "normal");
-			doc.text(oOut.VendorGST || "", col1X + 22, gridY + gridH - 4);
+			doc.text(oOut.VendorGST || "", col1X + 16, gridY + gridH - 2);
 
-			// Col 2 — DC & Transport
-			var c2 = col2X + pad, valOff2 = 30, y2 = gridY + 8;
-			doc.setLineWidth(0.3);
-			doc.setFontSize(8);
+			// Col 2 — DC & Transport Info
+			var c2 = col2X + pad, valOff2 = 28, y2 = gridY + 5;
+			doc.setFontSize(7.5);
 			doc.setFont("helvetica", "bold"); doc.text("DC No:", c2, y2);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.ChallanNumber || "Draft", c2 + valOff2, y2);
-			y2 += lh;
+			doc.setFont("helvetica", "normal"); doc.text(oOut.ChallanNumber || "Draft", c2 + valOff2, y2); y2 += lh;
 			doc.setFont("helvetica", "bold"); doc.text("DC Date:", c2, y2);
-			doc.setFont("helvetica", "normal"); doc.text(sDate, c2 + valOff2, y2);
-			y2 += lh + 2;
+			doc.setFont("helvetica", "normal"); doc.text(sDate, c2 + valOff2, y2); y2 += lh;
 			doc.setFont("helvetica", "bold"); doc.text("Mode Of Transport:", c2, y2);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.ModeOfTransport || "By Road", c2 + valOff2, y2);
-			y2 += lh + 2;
-			doc.setFont("helvetica", "bold"); doc.text("LR/Vehicle No:", c2, y2);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", c2 + valOff2, y2);
-			y2 += lh;
-			doc.setFont("helvetica", "bold"); doc.text("Transporter Name:", c2, y2);
-			doc.setFont("helvetica", "normal");
-			var splitTrans = doc.splitTextToSize(oOut.TransporterName || oOut.VendorName || "Self", col2W - valOff2 - pad);
-			doc.text(splitTrans, c2 + valOff2, y2);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.ModeOfTransport || "Road", c2 + valOff2, y2); y2 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("LR No:", c2, y2);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.LRNumber || oOut.LRNnumber || oOut.VehicleNo || "", c2 + valOff2, y2); y2 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("Vehicle No:", c2, y2);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", c2 + valOff2, y2); y2 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("Transport Name:", c2, y2);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.TransporterName || "", c2 + valOff2, y2);
 
-			// Col 3 — GP & Location
-			var c3 = col3X + pad, valOff3 = 27, y3 = gridY + 8;
-			doc.setFontSize(8);
+			// Col 3 — GP & Dispatch Info
+			var c3 = col3X + pad, valOff3 = 24, y3 = gridY + 5;
+			doc.setFontSize(7.5);
 			doc.setFont("helvetica", "bold"); doc.text("GP No:", c3, y3);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassNo || "", c3 + valOff3, y3);
-			y3 += lh;
+			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassNo || "", c3 + valOff3, y3); y3 += lh;
 			doc.setFont("helvetica", "bold"); doc.text("GP Date:", c3, y3);
-			doc.setFont("helvetica", "normal"); doc.text(sDate, c3 + valOff3, y3);
-			y3 += lh + 2;
-			doc.setFont("helvetica", "bold"); doc.text("Despatch From:", c3, y3);
-			doc.setFont("helvetica", "normal"); doc.text("Uthangal, Neyveli", c3 + valOff3, y3);
-			y3 += lh + 2;
-			doc.setFont("helvetica", "bold"); doc.text("Despatch To:", c3, y3);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.City || "Neyveli", c3 + valOff3, y3);
-			y3 += lh + 2;
-			doc.setFont("helvetica", "bold"); doc.text("EWB No:", c3, y3);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassDate || sDate, c3 + valOff3, y3); y3 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("Dept:", c3, y3);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", c3 + valOff3, y3); y3 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("Dispatch From:", c3, y3);
+			doc.setFont("helvetica", "normal"); doc.text("MEIL Neyveli", c3 + valOff3, y3); y3 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("Dispatch To:", c3, y3);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.City || oOut.VendorName || "", c3 + valOff3, y3); y3 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("Ewb No:", c3, y3);
 			doc.setFont("helvetica", "normal"); doc.text(oOut.EWayBillNo || "", c3 + valOff3, y3);
 
 			// ── ITEMS TABLE ──────────────────────────────────────────────────────
 			var tableData = (oOut.items || []).map(function (item, index) {
 				return [
 					index + 1,
-					item.materialName || "",
-					item.hsnCode || "",
-					item.uom || "",
-					parseFloat(item.sentQty || 0).toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }),
-					parseFloat(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-					parseFloat(item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+					item.materialName || item.MaterialDesc || item.MaterialName || item.Description || item.HSNDesc || item.material || "",
+					item.hsnCode || item.HSNCode || "",
+					item.uom || item.UOM || "",
+					parseFloat(item.sentQty || item.SentQuantity || 0).toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }),
+					parseFloat(item.rate || item.ItemNetPrice || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+					parseFloat(item.amount || item.Totalvalue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 				];
 			});
+			while (tableData.length < 5) { tableData.push(["", "", "", "", "", "", ""]); }
 
 			doc.autoTable({
-				startY: gridY + gridH + 1,
+				startY: gridY + gridH + 2,
 				head: [['S.No', 'DESCRIPTION', 'HSN Code', 'UOM', 'QTY', 'Rate', 'Amt (In Rs.)']],
 				body: tableData,
 				theme: 'grid',
@@ -981,13 +987,13 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 					fontSize: 8,
 					halign: 'center',
 					valign: 'middle',
-					cellPadding: 3,
+					cellPadding: 2,
 					lineWidth: 0.3,
 					lineColor: [0, 0, 0]
 				},
 				bodyStyles: {
 					fontSize: 8,
-					cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
+					cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
 					lineColor: [0, 0, 0],
 					lineWidth: 0.25,
 					valign: 'middle'
@@ -1044,20 +1050,17 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			doc.text("We hereby certify that the above mentioned particulars are true and correct.", pageWidth / 2, declY, { align: "center" });
 
 			// ── SIGNATURE SECTION ────────────────────────────────────────────────
-			var sigY = declY + 22;
-			var sigLineW = 48;
+			var sigHeaderY = noteY + noteH + 8;
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8.5);
+			doc.text("For MEIL Neyveli Energy Private Limited", pageWidth - margin, sigHeaderY, { align: "right" });
+
+			var sigLineY = sigHeaderY + 18;
+			var sigLineW = 55;
 			doc.setLineWidth(0.3);
-			doc.line(margin, sigY, margin + sigLineW, sigY);
-			doc.line(pageWidth / 2 - sigLineW / 2, sigY, pageWidth / 2 + sigLineW / 2, sigY);
-			doc.line(pageWidth - margin - sigLineW, sigY, pageWidth - margin, sigY);
-			doc.setFont("helvetica", "bold");
-			doc.setFontSize(8);
-			doc.text("Prepared By", margin + sigLineW / 2, sigY + 5, { align: "center" });
-			doc.text("Store In-Charge", pageWidth / 2, sigY + 5, { align: "center" });
-			doc.text("Authorised Signatory", pageWidth - margin - sigLineW / 2, sigY + 5, { align: "center" });
-			doc.setFont("helvetica", "normal");
-			doc.setFontSize(7);
-			doc.text("For MEIL Neyveli Energy Private Limited", pageWidth / 2, sigY + 10, { align: "center" });
+			// Right side: Authorised Signatory
+			doc.line(pageWidth - margin - sigLineW, sigLineY, pageWidth - margin, sigLineY);
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+			doc.text("Authorised Signatory", pageWidth - margin - sigLineW / 2, sigLineY + 5, { align: "center" });
 
 			if (bGetBase64 === true) {
 				return doc.output('datauristring').split(',')[1];
@@ -1204,11 +1207,10 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 
 			var titleW = doc.getTextWidth(sTypeLabel);
 			var gridY = 41, gridH = 32;
-			var lColW = 148, rColW = contentWidth - lColW;
-			var lColX = margin, rColX = margin + lColW;
-			var pad = 3, rLH = 5.5;
-			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || "", lColW - pad * 2 - 2);
-			var lblOff = 30;
+			var lColW = 105, mColW = 78, rColW = contentWidth - lColW - mColW;
+			var lColX = margin, mColX = margin + lColW, rColX = mColX + mColW;
+			var pad = 3;
+			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || [oOut.City, oOut.ZipCode].filter(Boolean).join(", "), lColW - pad * 2 - 2);
 
 			// ── ITEMS TABLE ──────────────────────────────────────────────────────
 			var tableData = (oOut.items || []).map(function (it, i) {
@@ -1222,10 +1224,10 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 					parseFloat(it.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 				];
 			});
-			while (tableData.length < 6) { tableData.push(["", "", "", "", "", "", ""]); }
+			while (tableData.length < 5) { tableData.push(["", "", "", "", "", "", ""]); }
 
 			doc.autoTable({
-				startY: 74,
+				startY: 76,
 				head: [['S.No', 'DESCRIPTION OF GOODS', 'HSN Code', 'Outward QTY', 'UOM', 'Rate (Rs.)', 'Value (Rs.)']],
 				body: tableData,
 				theme: 'grid',
@@ -1236,13 +1238,13 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 					fontSize: 8.5,
 					halign: 'center',
 					valign: 'middle',
-					cellPadding: 3,
+					cellPadding: 2,
 					lineWidth: 0.3,
 					lineColor: [0, 0, 0]
 				},
 				bodyStyles: {
 					fontSize: 8.5,
-					cellPadding: { top: 3, bottom: 3, left: 2.5, right: 2.5 },
+					cellPadding: { top: 2, bottom: 2, left: 2.5, right: 2.5 },
 					lineColor: [0, 0, 0],
 					lineWidth: 0.25,
 					valign: 'middle'
@@ -1257,7 +1259,7 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 					5: { cellWidth: 30, halign: 'right' },
 					6: { cellWidth: 34, halign: 'right' }
 				},
-				margin: { top: 74, left: margin, right: margin, bottom: 60 },
+				margin: { top: 76, left: margin, right: margin, bottom: 25 },
 				didDrawPage: function (data) {
 					// Draw outer borders
 					doc.setLineWidth(0.6);
@@ -1307,43 +1309,59 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 					doc.setLineWidth(0.35);
 					doc.line(pageWidth / 2 - titleW / 2, 38.5, pageWidth / 2 + titleW / 2, 38.5);
 
-					// Info Grid Box
+					// Info Grid Box (Outer Box + 2 Vertical Dividers)
 					doc.setLineWidth(0.3);
 					doc.rect(lColX, gridY, contentWidth, gridH);
+					doc.line(mColX, gridY, mColX, gridY + gridH);
 					doc.line(rColX, gridY, rColX, gridY + gridH);
 					doc.setLineWidth(0.2);
-					doc.line(lColX, gridY + 9, rColX, gridY + 9);
+					doc.line(lColX, gridY + 9, mColX, gridY + 9);
 
 					// Left Column Info
 					doc.setFontSize(8.5);
 					doc.setFont("helvetica", "normal");
 					doc.text("Please allow", lColX + pad, gridY + 6);
 					doc.setFont("helvetica", "bold");
-					doc.text(oOut.VendorPerson || "Mr./Ms.", lColX + 34, gridY + 6);
+					var sPersonName = (oOut.VendorPerson || "").trim();
+					if (sPersonName) {
+						sPersonName = /^(mr|ms|mrs|mr\/ms)\.?\s+/i.test(sPersonName) ? sPersonName : "Mr/Ms. " + sPersonName;
+					} else {
+						sPersonName = "Mr/Ms.";
+					}
+					doc.text(sPersonName, lColX + 34, gridY + 6);
 					doc.text(oOut.VendorName || "", lColX + pad, gridY + 14);
 					doc.setFont("helvetica", "normal");
 					doc.text(splitAddr, lColX + pad, gridY + 19.5);
 					doc.setFont("helvetica", "italic");
 					doc.setFontSize(8);
-					doc.text("to take out the following material from MEIL premises.", lColX + pad, gridY + gridH - 3.5);
+					doc.text("to take out the following material from MEIL premises.", lColX + pad, gridY + gridH - 3);
 
-					// Right Column Info
-					var rc = rColX + pad, ry = gridY + 6;
-					doc.setFontSize(8.5);
-					doc.setFont("helvetica", "bold"); doc.text("Req. No:", rc, ry);
-					doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassreqNo || "", rc + lblOff, ry);
-					ry += rLH;
-					doc.setFont("helvetica", "bold"); doc.text("GP Type:", rc, ry);
-					doc.setFont("helvetica", "normal"); doc.text(sType, rc + lblOff, ry);
-					ry += rLH;
-					doc.setFont("helvetica", "bold"); doc.text("Department:", rc, ry);
-					doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", rc + lblOff, ry);
-					ry += rLH;
-					doc.setFont("helvetica", "bold"); doc.text("Vehicle No:", rc, ry);
-					doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", rc + lblOff, ry);
-					ry += rLH;
-					doc.setFont("helvetica", "bold"); doc.text("Vendor GST:", rc, ry);
-					doc.setFont("helvetica", "normal"); doc.text(oOut.VendorGST || "", rc + lblOff, ry);
+					// Middle Column Info (Metadata Col 1)
+					var mc = mColX + pad, my = gridY + 5.5, mLblOff = 24;
+					doc.setFontSize(8);
+					doc.setFont("helvetica", "bold"); doc.text("Req. No:", mc, my);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassreqNo || oOut.GatePassReqNo || "", mc + mLblOff, my); my += 5.2;
+					doc.setFont("helvetica", "bold"); doc.text("GP Type:", mc, my);
+					doc.setFont("helvetica", "normal"); doc.text(sType, mc + mLblOff, my); my += 5.2;
+					doc.setFont("helvetica", "bold"); doc.text("Department:", mc, my);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", mc + mLblOff, my); my += 5.2;
+					doc.setFont("helvetica", "bold"); doc.text("Vehicle No:", mc, my);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", mc + mLblOff, my); my += 5.2;
+					doc.setFont("helvetica", "bold"); doc.text("Vendor GST:", mc, my);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.VendorGST || "", mc + mLblOff, my);
+
+					// Right Column Info (Metadata Col 2)
+					var rc = rColX + pad, ry = gridY + 5.5, rLblOff = 27;
+					var sReqName = oOut.Requestor || oOut.ReqUser || oOut.Requser || oOut.RequestedUser || oOut.ReqEmpName || oOut.CreatedBy || oOut.Createdby || oOut.Ernam || "";
+					doc.setFontSize(8);
+					doc.setFont("helvetica", "bold"); doc.text("DC NO :", rc, ry);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.ChallanNumber || oOut.Challanumber || "", rc + rLblOff, ry); ry += 5.2;
+					doc.setFont("helvetica", "bold"); doc.text("Requester name :", rc, ry);
+					doc.setFont("helvetica", "normal"); doc.text(sReqName, rc + rLblOff, ry); ry += 5.2;
+					doc.setFont("helvetica", "bold"); doc.text("LR NO :", rc, ry);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.LRNumber || oOut.LRNnumber || "", rc + rLblOff, ry); ry += 5.2;
+					doc.setFont("helvetica", "bold"); doc.text("Transport name :", rc, ry);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.TransporterName || "", rc + rLblOff, ry);
 
 					// Page Number
 					doc.setFont("helvetica", "normal"); doc.setFontSize(7.5);
@@ -1377,42 +1395,20 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			doc.setFont("helvetica", "normal");
 			doc.text(doc.splitTextToSize(oOut.UserRemarks || "NIL", contentWidth - 33), margin + 31, remY + 5);
 
-			// ── META INFO ROW ─────────────────────────────────────────────────────
-			var metaY = remY + remH + 3;
-			doc.setFontSize(8);
-			// Row 1
-			doc.setFont("helvetica", "bold"); doc.text("Req. No:", margin, metaY);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassreqNo || "", margin + 18, metaY);
-			doc.setFont("helvetica", "bold"); doc.text("Requestor:", margin + 70, metaY);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.Requestor || "", margin + 90, metaY);
-			doc.setFont("helvetica", "bold"); doc.text("Department:", margin + 150, metaY);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", margin + 172, metaY);
-			// Row 2
-			metaY += 5;
-			doc.setFont("helvetica", "bold"); doc.text("Approved By:", margin, metaY);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.ApprovedBy || "Pending", margin + 24, metaY);
-			doc.setFont("helvetica", "bold"); doc.text("DC No:", margin + 70, metaY);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.ChallanNumber || "N/A", margin + 84, metaY);
-			doc.setFont("helvetica", "bold"); doc.text("Mode:", margin + 150, metaY);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.ModeOfTransport || "", margin + 162, metaY);
-
 			// ── SIGNATURE SECTION ────────────────────────────────────────────────
-			var sigY = metaY + 16;
-			var sigLineW = 52;
-			var sigGap = (contentWidth - sigLineW * 4) / 3;
-			var sigPositions = [margin, margin + sigLineW + sigGap, margin + (sigLineW + sigGap) * 2, margin + (sigLineW + sigGap) * 3];
-			var sigLabels = ["Requested By", "HOD Approval", "Store In-Charge", "Security / Gate"];
+			var sigHeaderY = remY + remH + 8;
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8.5);
+			doc.text("For MEIL Neyveli Energy Private Limited", margin, sigHeaderY, { align: "left" });
 
+			var sigLineY = sigHeaderY + 18;
 			doc.setLineWidth(0.3);
-			sigPositions.forEach(function (sx) {
-				doc.line(sx, sigY, sx + sigLineW, sigY);
-			});
-			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
-			sigPositions.forEach(function (sx, i) {
-				doc.text(sigLabels[i], sx + sigLineW / 2, sigY + 5, { align: "center" });
-			});
-			doc.setFont("helvetica", "normal"); doc.setFontSize(7);
-			doc.text("For MEIL Neyveli Energy Private Limited", pageWidth / 2, sigY + 10, { align: "center" });
+			// Left: Authorised Signatory
+			doc.line(margin, sigLineY, margin + 65, sigLineY);
+			doc.text("Authorised Signatory", margin + 32.5, sigLineY + 5, { align: "center" });
+
+			// Right: Receiver Signature
+			doc.line(pageWidth - margin - 65, sigLineY, pageWidth - margin, sigLineY);
+			doc.text("Receiver Signature", pageWidth - margin - 32.5, sigLineY + 5, { align: "center" });
 
 			if (bGetBase64 === true) {
 				return doc.output('datauristring').split(',')[1];
@@ -1605,6 +1601,7 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 
 		onInsuranceSubmit: function () {
 			var oOutModel = this.getView().getModel("out");
+			var that = this;
 			this._pInsuranceDialog.then(function (oDialog) {
 				var oInsData = oDialog.getModel("insurance").getData();
 				var sDate = oInsData.InsuranceDate || "";
@@ -1613,6 +1610,29 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 				oOutModel.setProperty("/InsuranceRequired", true);
 				oOutModel.setProperty("/InsuranceDate", sFormatted);
 				oOutModel.setProperty("/InsuranceAmount", oInsData.InvoiceValue || "");
+				oOutModel.setProperty("/OutwardInsLRV", oInsData.LRNnumber || oInsData.VehicleNo || "");
+				oOutModel.setProperty("/OutwardInsDesc", oInsData.RgpDescription || "");
+				oOutModel.setProperty("/OutwardInsDate", oInsData.InsuranceDate || "");
+				oOutModel.setProperty("/OutwardInsValue", oInsData.InvoiceValue || "");
+
+				var sReqNo = oOutModel.getProperty("/GatePassNo") || oOutModel.getProperty("/GatePassReqNo") || "";
+				var sReqNo2 = oOutModel.getProperty("/GatePassReqNo");
+				var oLogData = {
+					bInsured: true,
+					InsuranceRequired: true,
+					sInsAmount: oInsData.InvoiceValue || "",
+					InsuranceAmount: oInsData.InvoiceValue || "",
+					sInsLRVehicleNo: oInsData.LRNnumber || oInsData.VehicleNo || "",
+					OutwardInsLRV: oInsData.LRNnumber || oInsData.VehicleNo || "",
+					sInsDescription: oInsData.RgpDescription || "",
+					OutwardInsDesc: oInsData.RgpDescription || "",
+					sInsDate: oInsData.InsuranceDate || "",
+					OutwardInsDate: oInsData.InsuranceDate || "",
+					sInsValue: oInsData.InvoiceValue || "",
+					OutwardInsValue: oInsData.InvoiceValue || ""
+				};
+				if (sReqNo) { localStorage.setItem("gp_logistics_" + sReqNo, JSON.stringify(oLogData)); }
+				if (sReqNo2) { localStorage.setItem("gp_logistics_" + sReqNo2, JSON.stringify(oLogData)); }
 				oDialog.close();
 			});
 			sap.m.MessageToast.show("Insurance details saved.");
@@ -1756,6 +1776,29 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 
 			// Format Challan Date if exists, else today
 			var sChallanDate = fnFormatDate(oOut.ChallanDate) || fnFormatDate(sToday);
+
+			var oLogistics = {
+				LRNnumber: oOut.LRNnumber || "",
+				VehicleNo: oOut.VehicleNo || "",
+				ModeOfTransport: oOut.ModeOfTransport || "",
+				TransporterName: oOut.TransporterName || "",
+				TransporterGST: oOut.TransporterGST || "",
+				EWayBillNo: oOut.EWayBillNo || "",
+				EWayBillDate: oOut.EWayBillDate || "",
+				ChallanNumber: oOut.ChallanNumber || "",
+				DCNotes: oOut.DCNotes || "",
+				GPStatus: oOut.Status || "",
+				VendorPerson: oOut.VendorPerson || "",
+				CommonDesc: oOut.CommonDesc || ""
+			};
+			if (oOut.GatePassNo) {
+				localStorage.setItem("logistics_" + String(oOut.GatePassNo).trim(), JSON.stringify(oLogistics));
+				localStorage.setItem("gp_logistics_" + String(oOut.GatePassNo).trim(), JSON.stringify(oLogistics));
+			}
+			if (oOut.GatePassreqNo) {
+				localStorage.setItem("logistics_" + String(oOut.GatePassreqNo).trim(), JSON.stringify(oLogistics));
+				localStorage.setItem("gp_logistics_" + String(oOut.GatePassreqNo).trim(), JSON.stringify(oLogistics));
+			}
 
 			var oPayload = {
 				GatePassreqNo: oOut.GatePassreqNo || "",
@@ -2000,19 +2043,21 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
 					
-					var sDC = oData.Challanumber || oData.ChallanNumber;
-					if (sDC) {
-						oOutModel.setProperty("/ChallanNumber", sDC);
-						oOutModel.setProperty("/DocOptionIndex", 1);
+					var sDC = oData.Challanumber || oData.ChallanNumber || oData.ChallanNo || oData.Challan || "";
+					if (!sDC) {
+						sDC = "DC" + (oOut.GatePassNo || oOut.GatePassreqNo || new Date().getTime());
 					}
+					oOutModel.setProperty("/ChallanNumber", sDC);
+					oOutModel.setProperty("/DocOptionIndex", 1);
 					
-					var sMsg = oData.Message || "Logistics details saved successfully!";
+					var sMsg = oData.Message || ("Delivery Challan (" + sDC + ") Generated & Saved successfully!");
 					MessageBox.success(sMsg, {
 						onClose: function () {
-							if (bIsGenerateDC === true && sDC) {
+							if (bIsGenerateDC === true) {
 								that.onGenerateDC(false, true);
+							} else {
+								that.getRouter().navTo("NRGPList");
 							}
-							that.getRouter().navTo("GatePassList");
 						}
 					});
 				},

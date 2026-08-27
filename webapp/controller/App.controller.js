@@ -28,11 +28,12 @@ sap.ui.define([
 				var bIsHodUser = oUserModel.getProperty("/IsHodUser");
 				if (bIsGatepassUserOnly) {
 					var aUserOnlyAllowed = [
-						"home", "GatePassList", "GatePassCreation", "GatePassAmendment", "IRGP", 
+						"home", "GatePassList", "GatePassCreation", "NRGPList", "GatePassAmendment", "IRGP", 
 						"ScrapRequestCreation", "ScrapRequestList", "AshGatePassCreation", "AshGatePassList",
 						"AshGatePassRequest", "AshGatePassRequestList",
 						"OutGatePass", "NRGPDetail", "RGPDetail", "ScrapGatepassDetail", "StoreRequestDetail",
-						"AddInwardInsurance"
+						"AddInwardInsurance", "GatePassWithPO", "GatePassWithPODetail", "GatePassWithPOEdit",
+						"PCPList", "PCPManageList", "PCPManageDetail", "POList", "InwardGatePass", "InwardInsuranceList"
 					];
 					if (aUserOnlyAllowed.indexOf(sRouteName) === -1) {
 						this.getRouter().navTo("home");
@@ -40,11 +41,12 @@ sap.ui.define([
 					}
 				} else if (bIsHodUser) {
 					var aHodAllowed = [
-						"home", "GatePassList", "NRGPList", "GatePassAmendment", "ScrapRequestList", 
+						"home", "GatePassList", "GatePassCreation", "NRGPList", "GatePassAmendment", "ScrapRequestList", 
 						"ScrapRequestDetail", "ScrapGatepassList", "AshGatePassList", "AshGatePassDetail", "HODRequestDetail",
 						"AshGatePassRequest", "AshGatePassRequestList",
 						"OutGatePass", "NRGPDetail", "RGPDetail", "ScrapGatepassDetail", "StoreRequestDetail",
-						"AddInwardInsurance"
+						"AddInwardInsurance", "GatePassWithPO", "GatePassWithPODetail", "GatePassWithPOEdit",
+						"PCPList", "PCPManageList", "PCPManageDetail", "POList", "InwardGatePass", "InwardInsuranceList"
 					];
 					if (aHodAllowed.indexOf(sRouteName) === -1) {
 						this.getRouter().navTo("home");

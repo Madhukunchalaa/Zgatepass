@@ -281,38 +281,63 @@ sap.ui.define(["./BaseController",
 				if (!Array.isArray(aItems)) { aItems = []; }
 				if (aItems.length === 0) {
 					aRows.push({
-						"PCP No": o.GatepassNo || "",
-						"PCP Date": fmtD(o.PCPDate),
-						"Entry": o.EntryPoint || "",
-						"GE No": o.GateEntryNo || "",
 						"GE Date": fmtD(o.GEDate),
+						"GE No": o.GateEntryNo || "",
+						"Plant": o.Plant || "",
+						"Source Type": o.SourceType || "",
+						"Gate Pass No": o.GatepassNo || o.PCPNo || "",
+						"Inv No": o.DCNumber || "",
 						"Dept": o.Department || "",
+						"Vendor": o.Vendor || "",
 						"Supplier": o.VendorDesc || "",
-						"Items": o.FirstItemDesc || "",
-						"Qty": "",
-						"UOM": "",
-						"DC/INV No": o.DCNumber || "",
-						"DC/INV Date": fmtD(o.DCdate),
-						"Total cost": o.TotalCost || "",
-						"Budget": o.BudgetCode || ""
+						"PO Number": o.PurchaseOrder || "",
+						"Item No": "",
+						"Item Description": o.FirstItemDesc || "",
+						"Order Qty": "",
+						"Received Qty": "",
+						"Balance Qty": "",
+						"Item UOM": "",
+						"Item Total Cost": "",
+						"RR No": o.RRNo || "",
+						"Budget Code": o.BudgetCode || "",
+						"Total Cost": o.TotalCost || "",
+						"RGP No": o.RGPNumber || "",
+						"DC Date": fmtD(o.DCdate),
+						"Remarks": o.Remarks || "",
+						"Inspection Status": o.InspectionStatus || "",
+						"Inspected Date": fmtD(o.Inspectiondate)
 					});
 				} else {
 					aItems.forEach(function (itm) {
+						var fOrder = parseFloat(itm.OrderQuantity || itm.POQuantity || 0);
+						var fRecvd = parseFloat(itm.RecievedQuantity || itm.ReceivedQuantity || 0);
+						var fBal = fOrder > 0 ? Math.max(0, fOrder - fRecvd).toFixed(3) : (itm.BalanceQuantity || "");
 						aRows.push({
-							"PCP No": o.GatepassNo || "",
-							"PCP Date": fmtD(o.PCPDate),
-							"Entry": o.EntryPoint || "",
-							"GE No": o.GateEntryNo || "",
 							"GE Date": fmtD(o.GEDate),
+							"GE No": o.GateEntryNo || "",
+							"Plant": o.Plant || "",
+							"Source Type": o.SourceType || "",
+							"Gate Pass No": o.GatepassNo || o.PCPNo || "",
+							"Inv No": o.DCNumber || "",
 							"Dept": o.Department || "",
+							"Vendor": o.Vendor || "",
 							"Supplier": o.VendorDesc || "",
-							"Items": itm.ItemDescription || itm.Description || itm.MaterialDesc || o.FirstItemDesc || "",
-							"Qty": itm.OrderQuantity || itm.Quantity || itm.SentQuantity || "",
-							"UOM": itm.UOM || itm.uom || itm.Uom || "",
-							"DC/INV No": o.DCNumber || "",
-							"DC/INV Date": fmtD(o.DCdate),
-							"Total cost": itm.TotalCost || o.TotalCost || "",
-							"Budget": o.BudgetCode || ""
+							"PO Number": itm.PurchaseOrder || o.PurchaseOrder || "",
+							"Item No": itm.ItemNo || "",
+							"Item Description": itm.ItemDescription || itm.Description || itm.MaterialDesc || o.FirstItemDesc || "",
+							"Order Qty": itm.OrderQuantity || itm.POQuantity || "",
+							"Received Qty": itm.RecievedQuantity || itm.ReceivedQuantity || "",
+							"Balance Qty": fBal,
+							"Item UOM": itm.UOM || itm.uom || itm.Uom || "",
+							"Item Total Cost": itm.TotalCost || "",
+							"RR No": o.RRNo || "",
+							"Budget Code": o.BudgetCode || "",
+							"Total Cost": o.TotalCost || "",
+							"RGP No": o.RGPNumber || "",
+							"DC Date": fmtD(o.DCdate),
+							"Remarks": o.Remarks || "",
+							"Inspection Status": o.InspectionStatus || "",
+							"Inspected Date": fmtD(o.Inspectiondate)
 						});
 					});
 				}
@@ -320,7 +345,7 @@ sap.ui.define(["./BaseController",
 			var aParts = ["Gate_Entry"];
 			if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
 			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
-			ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx", aRows.length ? Object.keys(aRows[0]).length : 14);
+			ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx", aRows.length ? Object.keys(aRows[0]).length : 25);
 		},
 
 		// ==========================================================

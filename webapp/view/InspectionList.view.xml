@@ -16,7 +16,7 @@
 
                     <headerToolbar>
                         <OverflowToolbar>
-                            <Title text="Gate Entry List" level="H2"/>
+                            <Title text="Gate Entry List ({= ${inspList>/pendingCount} !== undefined ? ${inspList>/pendingCount} : '-' } Pending)" level="H2"/>
                             <ToolbarSpacer />
                             <SearchField width="300px" search=".onSearch" placeholder="Search..." class="gpmsFieldInput"/>
                             <Button icon="sap-icon://sort" tooltip="Sort" press=".onSort" type="Transparent"/>

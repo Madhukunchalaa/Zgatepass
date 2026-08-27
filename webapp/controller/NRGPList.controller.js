@@ -34,6 +34,74 @@ sap.ui.define([
 			var iDone = 0;
 			var iTarget = 3;
 
+			// Helper to refresh rendered table rows once vendor lookup finishes asynchronously
+			var fnUpdateVendorNamesInModel = function () {
+				var oModel = that.getView().getModel("nrgpList");
+				if (!oModel) return;
+				var aItems = oModel.getProperty("/items") || [];
+				var bUpdated = false;
+				aItems.forEach(function (itm) {
+					var sReqKey = String(itm.GatePassreqNo || itm.PurchaseOrder || "").trim();
+					var sCodeKey = String(itm.Vendor || "").trim();
+					var sResolved = (that._mReqVendorMap && that._mReqVendorMap[sReqKey]) ||
+					                (that._mVendorMap && that._mVendorMap[sCodeKey]);
+					if (sResolved && (!itm.VendorName || itm.VendorName === itm.Vendor)) {
+						itm.VendorName = sResolved;
+						bUpdated = true;
+					}
+				});
+				if (bUpdated) {
+					oModel.refresh(true);
+				}
+			};
+
+			// 1. Vendor Master lookup map (by Vendor Code filtered by Plant e.g. 2300)
+			if (!this._mVendorMap) {
+				this._mVendorMap = {};
+				var aPlantsToQuery = ["2300", "1000", "2000"]; // Common plants
+				aPlantsToQuery.forEach(function (sPlant) {
+					oODataModel.read("/ZVendorSet", {
+						filters: [new Filter("Plant", FilterOperator.EQ, sPlant)],
+						success: function (oVendorData) {
+							(oVendorData.results || []).forEach(function (v) {
+								var sCode = String(v.Vendor || v.Lifnr || "").trim();
+								var sName = String(v.Name || v.VendorName || v.Name1 || "").trim();
+								if (sCode && sName) {
+									that._mVendorMap[sCode] = sName;
+								}
+							});
+							fnUpdateVendorNamesInModel();
+						}
+					});
+				});
+			}
+
+			// 2. Request Header lookup map (by GatePassReqNo - filtered by GatePassType and Status='All')
+			if (!this._mReqVendorMap) {
+				this._mReqVendorMap = {};
+				["NRGP", "RGP", "PO"].forEach(function (sTypeKey) {
+					oODataModel.read("/GateReqHdrSet", {
+						filters: [
+							new Filter("GatePassType", FilterOperator.EQ, sTypeKey),
+							new Filter("Status", FilterOperator.EQ, "All")
+						],
+						success: function (oReqData) {
+							(oReqData.results || []).forEach(function (r) {
+								var sReqNo = String(r.GatePassReqNo || r.GatePassreqNo || "").trim();
+								var sVendorName = String(r.VendorName || r.VendorDesc || r.Name1 || "").trim();
+								if (sReqNo && sVendorName) {
+									that._mReqVendorMap[sReqNo] = sVendorName;
+								}
+							});
+							fnUpdateVendorNamesInModel();
+						}
+					});
+				});
+			}
+
+			var mVendorMap = this._mVendorMap || {};
+			var mReqVendorMap = this._mReqVendorMap || {};
+
 			function onBothDone() {
 				iDone++;
 				if (iDone === iTarget) {
@@ -50,9 +118,39 @@ sap.ui.define([
 					if (oItem.GatePassType === "RGP" && sRawStatus === "AWAITING FOR VENDOR ACKNOWLEDGEMENT") {
 						sDisplayStatus = "Awaiting for Return";
 					}
+
+					var fnGetDateProp = function (o, aKeys) {
+						if (!o) return "";
+						for (var k = 0; k < aKeys.length; k++) {
+							var val = o[aKeys[k]];
+							if (val && val !== "00000000" && val !== "0000-00-00" && val !== "null" && val !== "undefined" && String(val).trim() !== "") {
+								return val;
+							}
+						}
+						return "";
+					};
+					var sRawDue = fnGetDateProp(oItem, ["ReturnableDate", "Returnabledate", "DueDate", "RetDate", "TargetDate", "ReturnDate"]);
+					var sRawRet = fnGetDateProp(oItem, ["ExtReturnDate", "Extreturndate", "ExtendedReturnableDate", "ExtReturnableDate", "ActualReturnDate"]);
+
+					if ((!sRawDue || !sRawRet) && (oItem.GatePassNo || oItem.GatePassReqNo || oItem.GatePassreqNo)) {
+						try {
+							var sKeyNo = String(oItem.GatePassNo || oItem.GatePassReqNo || oItem.GatePassreqNo).trim();
+							var sLocalLog = localStorage.getItem("logistics_" + sKeyNo);
+							if (sLocalLog) {
+								var oParsed = JSON.parse(sLocalLog);
+								if (!sRawDue && oParsed.ReturnableDate) sRawDue = oParsed.ReturnableDate;
+								if (!sRawRet && oParsed.ExtendedReturnableDate) sRawRet = oParsed.ExtendedReturnableDate;
+							}
+						} catch (e) { }
+					}
+
+					var sReqNo = String(oItem.GatePassReqNo || oItem.GatePassreqNo || "").trim();
+					var sVendorCode = String(oItem.Vendor || "").trim();
+					var sVendorName = oItem.VendorName || oItem.VendorDesc || oItem.Name1 || mReqVendorMap[sReqNo] || mVendorMap[sVendorCode] || oItem.Vendor || "";
+
 					return {
-						GatePassNo: oItem.GatePassNo,
-						GatePassreqNo: oItem.GatePassReqNo || oItem.GatePassreqNo || "",
+						GatePassNo: oItem.GatePassNo || "",
+						GatePassreqNo: sReqNo,
 						GatePassDate: that._formatDate(oItem.GatePassDate),
 						GatePassType: oItem.GatePassType,
 						Plant: oItem.Plant,
@@ -65,7 +163,7 @@ sap.ui.define([
 						StatusState: that._getStatusState(sRawStatus),
 						NoOfItems: (oItem.OutgateNav && oItem.OutgateNav.results) ? oItem.OutgateNav.results.length : 0,
 						OutgateNav: oItem.OutgateNav || null,
-						VendorName: oItem.VendorName || oItem.VendorDesc || oItem.VendorPerson || oItem.Vendor || "",
+						VendorName: sVendorName,
 						Vendor: oItem.Vendor || "",
 						ZipCode: oItem.ZipCode || "",
 						LRNumber: oItem.LRNumber || "",
@@ -75,15 +173,26 @@ sap.ui.define([
 						ChallanNumber: oItem.ChallanNumber || "",
 						ChallanDate: oItem.ChallanDate || "",
 						CommonDesc: oItem.CommonDesc || "",
+						Requestor: (function() {
+							var sVal = oItem.ReqUser || oItem.Requser || oItem.requser || oItem.Requestor || oItem.RequestedUser || oItem.ReqEmpName || oItem.CreatedBy || oItem.Createdby || oItem.Ernam || "";
+							if (!sVal && sReqNo) {
+								try { sVal = localStorage.getItem("requser_" + sReqNo) || ""; } catch (e) {}
+							}
+							if (!sVal) {
+								var oU = sap.ui.getCore().getModel("user");
+								if (oU && oU.getProperty("/Username")) { sVal = oU.getProperty("/Username"); }
+							}
+							return sVal;
+						})(),
+						ReqUser: oItem.ReqUser || oItem.Requser || oItem.requser || oItem.Requestor || "",
 						NoOfPacakages: oItem.NoOfPacakages || "",
 						Remarks: oItem.Remarks || "",
 						InsuranceReq: oItem.InsuranceReq || "",
 						InsuranceDate: oItem.InsuranceDate || "",
 						InsuranceAmount: oItem.InsuranceAmount || "",
 						FiscalYear: oItem.FiscalYear || "",
-						DueDate: oItem.ReturnableDate ? that._formatDate(oItem.ReturnableDate) : "NA",
-						ReturnDate: oItem.ExtReturnDate ? that._formatDate(oItem.ExtReturnDate) : "NA",
-						Requestor: oItem.Requestor || ""
+						DueDate: sRawDue ? that._formatDate(sRawDue) : "-",
+						ReturnDate: sRawRet ? that._formatDate(sRawRet) : "-"
 					};
 				});
 			}
@@ -118,10 +227,13 @@ sap.ui.define([
 				urlParameters: { "$expand": "OutgateNav" },
 				success: function (oData) {
 					var aPoResults = (oData.results || []).map(function (oItem) {
+						var sReqNo = String(oItem.GatePassReqNo || oItem.GatePassreqNo || "").trim();
+						var sVendorCode = String(oItem.Vendor || "").trim();
+						var sVendorName = oItem.VendorName || oItem.VendorDesc || oItem.Name1 || mReqVendorMap[sReqNo] || mVendorMap[sVendorCode] || oItem.Vendor || "";
 						return {
 							GatePassNo: oItem.GatePassNo || "",
-							GatePassreqNo: "", // No request number for PO gate passes
-							PurchaseOrder: oItem.GatePassReqNo || oItem.GatePassreqNo || "", // Store the PO number for the detail dialog
+							GatePassreqNo: sReqNo,
+							PurchaseOrder: sReqNo, // Store the PO number for the detail dialog
 							GatePassDate: that._formatDate(oItem.GatePassDate),
 							GatePassType: "PO",
 							Plant: oItem.Plant || "",
@@ -133,7 +245,7 @@ sap.ui.define([
 							StatusState: that._getStatusState(oItem.GPStatus || "Pending"),
 							NoOfItems: (oItem.OutgateNav && oItem.OutgateNav.results) ? oItem.OutgateNav.results.length : 0,
 							OutgateNav: oItem.OutgateNav || null,
-							VendorName: oItem.VendorName || oItem.VendorDesc || oItem.VendorPerson || oItem.Vendor || "",
+							VendorName: sVendorName,
 							Vendor: oItem.Vendor || "",
 							ZipCode: oItem.ZipCode || "",
 							LRNumber: oItem.LRNumber || "",
@@ -290,6 +402,7 @@ sap.ui.define([
 		},
 
 		onDownloadExcel: function () {
+			var that = this;
 			var oTable = this.byId("idItemsNRGPTable");
 			var oBinding = oTable ? oTable.getBinding("items") : null;
 			var aObjects = [];
@@ -316,106 +429,66 @@ sap.ui.define([
 
 			var aRows = [];
 
-			// ── RGP-specific column format ──────────────────────────────────
-			if (sType === "RGP") {
-				var iSno = 1;
-				aObjects.forEach(function (o) {
-					var aItems = (o.OutgateNav && o.OutgateNav.results) || (Array.isArray(o.OutgateNav) ? o.OutgateNav : []);
-					if (aItems.length === 0) { aItems = [{}]; }
-					aItems.forEach(function (itm) {
-						aRows.push({
-							"Sno":                              iSno++,
-							"GP No":                            o.GatePassNo || "",
-							"Vendor Name":                      o.VendorName || "",
-							"Issue Date":                       o.GatePassDate || "",
-							"Material Description":             o.CommonDesc || "",
-							"Item Name":                        itm.MaterialDesc || itm.Description || itm.HSNDesc || "",
-							"Qty Send":                         itm.SentQuantity || itm.Quantity || "",
-							"Uom":                              itm.UOM || "",
-							"HSN Code":                         itm.HSNCode || "",
-							"Qty Received":                     itm.RecievedQuantity || "",
-							"Balance Qty":                      itm.BalanceQuantity || "",
-							"Due Date":                         o.DueDate || "",
-							"Extend Due Date":                  o.ReturnDate || "",
-							"Returned Date":                    o.ReturnedDate || "",
-							"UOP":                              itm.ItemNetPrice || "",
-							"Amount":                           itm.ItemNetPrice || "",
-							"Total Value":                      itm.Totalvalue || "",
-							"DC No":                            o.ChallanNumber || "",
-							"DC/DF Notes":                      o.CommonDesc || "",
-							"LR Number":                        o.LRNumber || o.LRNnumber || "",
-							"Vehicle No":                       o.VehicleNo || "",
-							"EWB No":                           o.EWBNo || o.EWBno || o.EwbNo || "",
-							"Transport Name":                   o.TransporterName || "",
-							"Transporter GST":                  o.TransporterGST || "",
-							"Insurance Yes/ No":                o.InsuranceReq || "NO",
-							"Insurance Value":                  o.InsuranceAmount || "",
-							"Inward Insurance LR/Vehicle No":   o.InwardInsLRV || "",
-							"Inward Insurance Description":     o.InwardInsDesc || "",
-							"Inward Insurance Date":            o.InwardInsDate || "",
-							"Inward Insurance Value":           o.InwardInsValue || "",
-							"GP Req No":                        o.GatePassreqNo || "",
-							"User":                             o.Requestor || "",
-							"Department":                       o.Department || "",
-							"User Remarks":                     o.Remarks || "",
-							"Dept Remarks":                     o.HODRemarks || "",
-							"Store Remarks":                    o.STORERemarks || o.StoreRemarks || "",
-							"Status":                           o.GPStatusText || o.GPStatus || ""
-						});
+			// ── Detailed format for all filter types (RGP, NRGP, PO, All) ──
+			var iSno = 1;
+			aObjects.forEach(function (o) {
+				var sReqNoKey = o.GatePassNo || o.GatePassreqNo || o.GatePassReqNo || "";
+				var oSavedLogistics = {};
+				try {
+					oSavedLogistics = JSON.parse(localStorage.getItem("gp_logistics_" + sReqNoKey) || "{}");
+				} catch (e) {}
+
+				var bInsured = oSavedLogistics.bInsured || oSavedLogistics.InsuranceRequired || (o.InsuranceReq === "X" || o.InsuranceReq === "YES" || o.Insurance === "YES" || o.InsuranceReq === "Y" || o.InsuranceReq === "1");
+				var sInsAmount = oSavedLogistics.sInsAmount || oSavedLogistics.InsuranceAmount || o.InsuranceAmount || o.InsuranceValue || "";
+				var sInsLRV = oSavedLogistics.sInsLRVehicleNo || oSavedLogistics.OutwardInsLRV || o.OutwardInsLRV || o.InwardInsLRV || o.InwardLRVehicleNo || "";
+				var sInsDesc = oSavedLogistics.sInsDescription || oSavedLogistics.OutwardInsDesc || o.OutwardInsDesc || o.InwardInsDesc || o.InwardDescription || "";
+				var sInsDate = oSavedLogistics.sInsDate || oSavedLogistics.OutwardInsDate || o.OutwardInsDate || o.InwardInsDate || o.InwardDate || "";
+				var sInsVal = oSavedLogistics.sInsValue || oSavedLogistics.OutwardInsValue || o.OutwardInsValue || o.InwardInsValue || o.InwardValue || "";
+
+				var aItems = (o.OutgateNav && o.OutgateNav.results) || (Array.isArray(o.OutgateNav) ? o.OutgateNav : []);
+				if (aItems.length === 0) { aItems = [{}]; }
+				aItems.forEach(function (itm) {
+					aRows.push({
+						"Sno":                              iSno++,
+						"GP No":                            o.GatePassNo || "",
+						"Vendor Name":                      o.VendorName || "",
+						"Issue Date":                       that._formatDate(o.GatePassDate || o.CreatedOn),
+						"Common Description":               o.CommonDesc || "",
+						"Material Description":             itm.MaterialDesc || itm.Description || itm.HSNDesc || "",
+						"Qty Send":                         itm.SentQuantity || itm.Quantity || "",
+						"Uom":                              itm.UOM || "",
+						"HSN Code":                         itm.HSNCode || "",
+						"Qty Received":                     itm.RecievedQuantity || "",
+						"Balance Qty":                      itm.BalanceQuantity || "",
+						"Due Date":                         that._formatDate(o.DueDate || o.ReturnableDate),
+						"Extend Due Date":                  that._formatDate(o.ReturnDate || o.ExtReturnDate),
+						"Returned Date":                    that._formatDate(o.ReturnedDate),
+						"UOP":                              itm.ItemNetPrice || "",
+						"Amount":                           itm.ItemNetPrice || "",
+						"Total Value":                      itm.Totalvalue || "",
+						"DC No":                            o.ChallanNumber || "",
+						"DC/DF Notes":                      o.CommonDesc || "",
+						"LR Number":                        o.LRNumber || o.LRNnumber || "",
+						"Vehicle No":                       o.VehicleNo || "",
+						"EWB No":                           o.EWBNo || o.EWBno || o.EwbNo || "",
+						"Transport Name":                   o.TransporterName || "",
+						"Transporter GST":                  o.TransporterGST || "",
+						"Insurance Yes/ No":                bInsured ? "YES" : "NO",
+						"Insurance Value":                  sInsAmount,
+						"Outward Insurance LR/Vehicle No":   sInsLRV,
+						"Outward Insurance Description":     sInsDesc,
+						"Outward Insurance Date":            that._formatDate(sInsDate),
+						"Outward Insurance Value":           sInsVal,
+						"GP Req No":                        o.GatePassReqNo || o.GatePassreqNo || "",
+						"Requested User":                   o.Requestor || o.ReqUser || o.RequestedUser || o.ReqEmpName || o.CreatedBy || "",
+						"Department":                       o.Department || "",
+						"User Remarks":                     o.Remarks || "",
+						"Dept Remarks":                     o.HODRemarks || "",
+						"Store Remarks":                    o.STORERemarks || o.StoreRemarks || "",
+						"Status":                           o.GPStatusText || o.GPStatus || ""
 					});
 				});
-
-			// ── Generic format for NRGP / PO / All ──────────────────────────
-			} else {
-				aObjects.forEach(function (o) {
-					var oHeader = {
-						"GP No":            o.GatePassNo || "",
-						"Req No":           o.GatePassreqNo || "",
-						"Type":             o.GatePassType || "",
-						"Date":             o.GatePassDate || "",
-						"Plant":            o.Plant || "",
-						"Department":       o.Department || "",
-						"Vendor Name":      o.VendorName || "",
-						"Vendor GST":       o.VendorGST || "",
-						"LR Number":        o.LRNumber || "",
-						"Vehicle No":       o.VehicleNo || "",
-						"Mode of Dispatch": o.ModeOfDispatch || "",
-						"Transporter":      o.TransporterName || "",
-						"Transporter GST":  o.TransporterGST || "",
-						"Challan No":       o.ChallanNumber || "",
-						"Description":      o.CommonDesc || "",
-						"Remarks":          o.Remarks || "",
-						"Insurance Req":    o.InsuranceReq || "",
-						"Insurance Date":   o.InsuranceDate || "",
-						"Insurance Amount": o.InsuranceAmount || "",
-						"Status":           o.GPStatusText || o.GPStatus || "",
-						"Fiscal Year":      o.FiscalYear || ""
-					};
-					var aItems = (o.OutgateNav && o.OutgateNav.results) || (Array.isArray(o.OutgateNav) ? o.OutgateNav : []);
-					if (aItems.length > 0) {
-						aItems.forEach(function (itm) {
-							var oRow = Object.assign({}, oHeader);
-							oRow["Item No"]       = itm.ItemNo || "";
-							oRow["Material"]      = itm.Material || "";
-							oRow["Material Desc"] = itm.MaterialDesc || itm.Description || "";
-							oRow["HSN Code"]      = itm.HSNCode || "";
-							oRow["Sent Qty"]      = itm.SentQuantity || itm.Quantity || "";
-							oRow["Received Qty"]  = itm.RecievedQuantity || "";
-							oRow["Balance Qty"]   = itm.BalanceQuantity || "";
-							oRow["Item UOM"]      = itm.UOM || "";
-							oRow["Unit Price"]    = itm.ItemNetPrice || "";
-							oRow["Total Value"]   = itm.Totalvalue || "";
-							aRows.push(oRow);
-						});
-					} else {
-						oHeader["Item No"] = ""; oHeader["Material"] = ""; oHeader["Material Desc"] = "";
-						oHeader["HSN Code"] = ""; oHeader["Sent Qty"] = ""; oHeader["Received Qty"] = "";
-						oHeader["Balance Qty"] = ""; oHeader["Item UOM"] = ""; oHeader["Unit Price"] = "";
-						oHeader["Total Value"] = "";
-						aRows.push(oHeader);
-					}
-				});
-			}
+			});
 
 			var aParts = ["Out_Gate_Pass"];
 			if (sType)   { aParts.push(sType.replace(/\s+/g, "_")); }
@@ -451,7 +524,7 @@ sap.ui.define([
 			sHtml += "th { background-color: #F2F4F4; color: #1F4E79; font-weight: bold; }";
 			sHtml += "tr:nth-child(even) { background-color: #F8F9F9; }</style></head><body>";
 			sHtml += "<h2>Out Gate Passes List</h2><table><thead><tr>";
-			sHtml += "<th>GP Date</th><th>GP No.</th><th>GP Req No.</th><th>GP Type</th><th>Due Date</th><th>Ret Date</th><th>Vendor</th><th>Req Dept</th><th>Desc</th><th>Status</th>";
+			sHtml += "<th>GP Date</th><th>GP No.</th><th>GP Req No.</th><th>GP Type</th><th>Due Date</th><th>Ret Date</th><th>Vendor</th><th>Req Dept</th><th>Common Description</th><th>Status</th>";
 			sHtml += "</tr></thead><tbody>";
 			aObjects.forEach(function (o) {
 				sHtml += "<tr>";
@@ -491,7 +564,7 @@ sap.ui.define([
 				sap.m.MessageToast.show("No items to copy.");
 				return;
 			}
-			var sHeaders = ["GP Date", "GP No.", "GP Req No.", "GP Type", "Due Date", "Ret Date", "Vendor", "Req Dept", "Desc", "Status"];
+			var sHeaders = ["GP Date", "GP No.", "GP Req No.", "GP Type", "Due Date", "Ret Date", "Vendor", "Req Dept", "Common Description", "Status"];
 			var aLines = [sHeaders.join("\t")];
 			aObjects.forEach(function (o) {
 				aLines.push([
@@ -566,7 +639,7 @@ sap.ui.define([
 				{ key: "ReturnDate", text: "Ret Date" },
 				{ key: "VendorName", text: "Vendor" },
 				{ key: "Department", text: "Req Dept" },
-				{ key: "CommonDesc", text: "Desc" },
+				{ key: "CommonDesc", text: "Common Description" },
 				{ key: "GPStatusText", text: "Status" }
 			]);
 		}

@@ -1,54 +1,100 @@
-sap.ui.define(["sap/ui/core/mvc/Controller",
+sap.ui.define([
+	"sap/ui/core/mvc/Controller",
 	"sap/ui/core/UIComponent",
-	"sap/ui/core/Fragment"
-], function (Controller, UIComponent, Fragment) {
+	"sap/m/MessageBox",
+	"sap/m/MessageToast"
+], function (Controller, UIComponent, MessageBox, MessageToast) {
 	"use strict";
 
 	return Controller.extend("zgpms.meilpower.com.controller.BaseController", {
 
 		/**
-		 * Convenience method for accessing the router.
+		 * Convenience method for accessing the router in every controller.
 		 * @public
 		 * @returns {sap.ui.core.routing.Router} the router for this component
 		 */
-		getRouter : function () {
+		getRouter: function () {
 			return UIComponent.getRouterFor(this);
 		},
 
 		/**
-		 * Convenience method for getting the view model by name.
+		 * Convenience method for getting the view model by name in every controller.
 		 * @public
-		 * @param {string} [sName] the model name
+		 * @param {string} sName the model name
 		 * @returns {sap.ui.model.Model} the model instance
 		 */
-		getModel : function (sName) {
+		getModel: function (sName) {
 			return this.getView().getModel(sName);
 		},
 
 		/**
-		 * Convenience method for setting the view model.
+		 * Convenience method for setting the view model in every controller.
 		 * @public
 		 * @param {sap.ui.model.Model} oModel the model instance
 		 * @param {string} sName the model name
 		 * @returns {sap.ui.core.mvc.View} the view instance
 		 */
-		setModel : function (oModel, sName) {
+		setModel: function (oModel, sName) {
 			return this.getView().setModel(oModel, sName);
 		},
 
 		/**
-		 * Returns a promises which resolves with the resource bundle value of the given key <code>sI18nKey</code>
-		 *
+		 * Helper method to format date string or object to YYYYMMDD string format.
 		 * @public
-		 * @param {string} sI18nKey The key
-		 * @param {sap.ui.core.model.ResourceModel} oResourceModel The resource model
-		 * @param {string[]} [aPlaceholderValues] The values which will repalce the placeholders in the i18n value
-		 * @returns {Promise<string>} The promise
+		 * @param {string|Date} sDisplayDate
+		 * @returns {string} YYYYMMDD formatted string
 		 */
-		getBundleTextByModel: function(sI18nKey, oResourceModel, aPlaceholderValues){
-			return oResourceModel.getResourceBundle().then(function(oBundle){
-				return oBundle.getText(sI18nKey, aPlaceholderValues);
-			});
+		_dateToYYYYMMDD: function (sDisplayDate) {
+			if (!sDisplayDate) { return ""; }
+			if (sDisplayDate instanceof Date) {
+				var d = sDisplayDate;
+				return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+			}
+			var aParts = String(sDisplayDate).split("-");
+			if (aParts.length === 3 && aParts[2].length === 4) {
+				return aParts[2] + aParts[1] + aParts[0];
+			}
+			if (/^\d{8}$/.test(sDisplayDate)) { return sDisplayDate; }
+			var d2 = new Date(sDisplayDate);
+			if (!isNaN(d2.getTime())) {
+				return d2.getFullYear() + String(d2.getMonth() + 1).padStart(2, '0') + String(d2.getDate()).padStart(2, '0');
+			}
+			return "";
+		},
+
+		/**
+		 * Convenience method for getting the resource bundle.
+		 * @public
+		 * @returns {sap.ui.model.resource.ResourceModel} the resourceModel of the component
+		 */
+		getResourceBundle: function () {
+			return this.getOwnerComponent().getModel("i18n").getResourceBundle();
+		},
+
+		/**
+		 * Event handler when the share by E-Mail button has been clicked
+		 * @public
+		 */
+		onShareEmailPress: function () {
+			var oViewModel = (this.getModel("objectView") || this.getModel("worklistView"));
+			sap.m.URLHelper.triggerEmail(
+				null,
+				oViewModel.getProperty("/shareSendEmailSubject"),
+				oViewModel.getProperty("/shareSendEmailMessage")
+			);
+		},
+
+		/**
+		 * Convenience method for getting an i18n text string from the resource bundle.
+		 * @public
+		 * @param {string} sI18nKey key in i18n file
+		 * @param {array} [aPlaceholderValues] optional array of placeholder replacement values
+		 * @returns {string} translated text
+		 */
+		getText: function (sI18nKey, aPlaceholderValues) {
+			var oBundle = this.getResourceBundle();
+			if (!oBundle) { return sI18nKey; }
+			return oBundle.getText(sI18nKey, aPlaceholderValues);
 		},
 
 		/**
@@ -76,14 +122,11 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 
 			if (s1 === "R" || s2 === "R" || sAppReq === "R" || sStatus === "REJECTED") { return "Rejected"; }
 			if (sAmmend === "AM" || s1 === "AM" || s2 === "AM" || sAppReq === "AM" || sAppReq === "AMENDMENT" || sStatus === "AM" || sStatus === "AMENDMENT") { return "Amendment"; }
-			if (s2 || sStatus === "APPROVED") { return "Approved"; }
-			var sStoreRmk = fnGet("STORERemarks") || fnGet("StoreRemarks");
-			if (sStoreRmk && sStoreRmk !== "NULL") { return "Approved"; }
-			if (s1 && s1 !== "X" && s1 !== "PENDING" && !s2) { return "Store Approval Pending"; }
-			if (sStatus === "STORE APPROVAL PENDING") { return "Store Approval Pending"; }
+			if (s2 === "A2" || sStatus === "APPROVED") { return "Approved"; }
+			if (s1 === "A1" || sStatus === "STORE APPROVAL PENDING") { return "Store Approval Pending"; }
 			if (sStatus === "CAN" || sStatus === "CANCELLED") { return "Cancelled"; }
 			if (sStatus === "C"   || sStatus === "CLOSED")    { return "Closed"; }
-			return "Pending";
+			return "HOD approval pending";
 		},
 
 		/**
@@ -91,31 +134,52 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 		 * into DD-MM-YYYY string for display. Returns "" for null/empty/invalid input.
 		 */
 		_formatDate: function (vDate) {
-			if (!vDate || vDate === "00000000" || vDate === "") { return ""; }
-			if (typeof vDate === "string" && vDate.indexOf("/Date(") === 0) {
-				var ms = parseInt(vDate.replace(/\/Date\((\d+)[^)]*\)\//, "$1"), 10);
-				vDate = new Date(ms);
-			}
-			if (typeof vDate === "string" && /^\d{8}$/.test(vDate)) {
-				return vDate.slice(6, 8) + "-" + vDate.slice(4, 6) + "-" + vDate.slice(0, 4);
-			}
-			if (typeof vDate === "string" && vDate.indexOf("Date") !== -1) {
-				var ts = parseInt(vDate.replace(/\/Date\((\d+)\)\//, "$1"), 10);
-				if (!isNaN(ts)) { vDate = new Date(ts); }
-			}
-			if (typeof vDate === "string") {
-				var aParts = vDate.split("T")[0].split("-");
-				if (aParts.length === 3 && aParts[0].length === 4) {
-					return aParts[2] + "-" + aParts[1] + "-" + aParts[0];
-				}
-			}
-			if (vDate instanceof Date && !isNaN(vDate)) {
+			if (!vDate || vDate === "00000000" || vDate === "" || vDate === "null" || vDate === "undefined") { return ""; }
+			if (vDate instanceof Date) {
+				if (isNaN(vDate.getTime())) return "";
 				var dd = String(vDate.getDate()).padStart(2, "0");
 				var mm = String(vDate.getMonth() + 1).padStart(2, "0");
 				var yyyy = vDate.getFullYear();
 				return dd + "-" + mm + "-" + yyyy;
 			}
-			return String(vDate || "");
+			if (typeof vDate === "string") {
+				var sClean = vDate.trim();
+				if (!sClean || sClean === "00000000") return "";
+				if (/^\d{8}$/.test(sClean)) {
+					return sClean.slice(6, 8) + "-" + sClean.slice(4, 6) + "-" + sClean.slice(0, 4);
+				}
+				if (sClean.indexOf("/Date(") !== -1) {
+					var ms = parseInt(sClean.replace(/\/Date\((\d+)[^)]*\)\//, "$1"), 10);
+					if (!isNaN(ms)) {
+						var dMs = new Date(ms);
+						if (!isNaN(dMs.getTime())) {
+							var ddMs = String(dMs.getDate()).padStart(2, "0");
+							var mmMs = String(dMs.getMonth() + 1).padStart(2, "0");
+							var yyyyMs = dMs.getFullYear();
+							return ddMs + "-" + mmMs + "-" + yyyyMs;
+						}
+					}
+				}
+				var aParts = sClean.split("T")[0].split("-");
+				if (aParts.length === 3 && aParts[0].length === 4) {
+					return aParts[2] + "-" + aParts[1] + "-" + aParts[0];
+				}
+				if (aParts.length === 3 && aParts[2].length === 4) {
+					return aParts[0] + "-" + aParts[1] + "-" + aParts[2];
+				}
+				var dParsed = new Date(sClean); 
+				
+				if (!isNaN(dParsed.getTime())) {
+					var ddP = String(dParsed.getDate()).padStart(2, "0");
+					var mmP = String(dParsed.getMonth() + 1).padStart(2, "0");
+					var yyyyP = dParsed.getFullYear();
+					return ddP + "-" + mmP + "-" + yyyyP;
+				}
+			}
+			return String(vDate || ""); 
+			retur;
+			
+			
 		},
 
 		/**
@@ -176,92 +240,53 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 		_buildAshItemPayload: function (o) {
 			var n = function (v) { var f = parseFloat(v); return isNaN(f) ? 0 : f; };
 			return {
-				SalesDocument: o.SalesDocument || "",
-				GatePasstype: o.GatePasstype || "NRGP",
-				ItemNo: o.ItemNo || "",
-				Material: o.Material || "",
-				MaterialDescription: o.MaterialDescription || "",
-				HSNCode: o.HSNCode || "",
-				UOM: o.UOM || "",
-				// Edm.Decimal fields must be sent as STRING values — the Gateway JSON
-				// deserializer rejects unquoted numbers ("Failed to read property
-				// 'Totalvalue'"); read responses also return "45.000"-style strings.
-				ItemNetPrice: n(o.ItemNetPrice).toFixed(2),
-				Totalvalue: n(o.Totalvalue).toFixed(2),
-				GatePassNo: o.GatePassNo || "",
-				GatePassReqNo: o.GatePassReqNo || "",
-				SentQuantity: n(o.SentQuantity).toFixed(3),
-				BalanceQuantity: n(o.BalanceQuantity).toFixed(3),
-				SOQuantity: n(o.SOQuantity).toFixed(3),
-				OpenQuantity: n(o.OpenQuantity).toFixed(3),
-				RequestedQuantity: n(o.RequestedQuantity || o.SOQuantity || o.SentQuantity).toFixed(3)
+				AshGatePassNo:  o.AshGatePassNo || "",
+				ItemNo:         o.ItemNo        || "",
+				Material:       o.Material      || "",
+				MaterialDesc:   o.MaterialDesc  || "",
+				HSNCode:        o.HSNCode       || "",
+				HSNDesc:        o.HSNDesc       || "",
+				UOM:            o.UOM           || "",
+				ItemNetPrice:   String(n(o.ItemNetPrice).toFixed(2)),
+				SentQuantity:   n(o.SentQuantity),
+				BalanceQuantity: n(o.BalanceQuantity),
+				SOQuantity:     n(o.SOQuantity),
+				OpenQuantity:   n(o.OpenQuantity),
+				Totalvalue:     n(o.Totalvalue),
+				OriginalGPNo:   o.OriginalGPNo  || "",
+				Remarks:        o.Remarks       || ""
 			};
 		},
 
 		/**
-		 * Rebuilds a create/update payload so it matches what the backend entity
-		 * actually declares in $metadata: properties the entity type no longer has
-		 * are dropped, and every value is serialised per its Edm type (Decimal →
-		 * string with the declared scale, Double/Single → number, Int64 → string,
-		 * Int16/32 → integer). Shields the UI from ABAP structure/type changes,
-		 * e.g. "Property 'RequestedQuantity' is invalid" after a DDIC retype.
-		 * The entity type is auto-detected as the one with the highest overlap
-		 * with the payload's property names.
+		 * Formats status code to human-readable string.
 		 */
-		_typePayloadForEntity: function (oODataModel, oPayload) {
-			var oMeta = oODataModel && oODataModel.getServiceMetadata && oODataModel.getServiceMetadata();
-			if (!oMeta || !oMeta.dataServices) { return oPayload; }
-
-			var aKeys = Object.keys(oPayload).filter(function (k) {
-				return oPayload[k] !== undefined && !Array.isArray(oPayload[k]);
+		formatStatus: function (sStatus, sApproval1, sApproval2, sApprovalReq, sStoreRemarks, sStoreAmmend) {
+			return this._deriveStatus({
+				Status: sStatus,
+				Approval1: sApproval1,
+				Approval2: sApproval2,
+				ApprovalReq: sApprovalReq,
+				STORERemarks: sStoreRemarks,
+				StoreAmmend: sStoreAmmend
 			});
+		},
 
-			var oBestProps = null, iBestScore = 0;
-			(oMeta.dataServices.schema || []).forEach(function (oSchema) {
-				(oSchema.entityType || []).forEach(function (oType) {
-					var mProps = {};
-					(oType.property || []).forEach(function (p) { mProps[p.name] = p; });
-					var iScore = aKeys.reduce(function (n, k) { return n + (mProps[k] ? 1 : 0); }, 0);
-					if (iScore > iBestScore) { iBestScore = iScore; oBestProps = mProps; }
-				});
-			});
-			if (!oBestProps) { return oPayload; }
-
-			var oTyped = {};
-			Object.keys(oPayload).forEach(function (k) {
-				var v = oPayload[k];
-				if (Array.isArray(v)) { oTyped[k] = v; return; } // nav properties pass through
-				var oProp = oBestProps[k];
-				if (!oProp) {
-					// Backend entity no longer declares this property — sending it
-					// would raise "Property 'k' is invalid", so drop it.
-					return;
-				}
-				switch (oProp.type) {
-					case "Edm.Decimal": {
-						var fDec = parseFloat(v) || 0;
-						var iScale = parseInt(oProp.scale, 10);
-						oTyped[k] = isNaN(iScale) ? String(fDec) : fDec.toFixed(Math.min(iScale, 3));
-						break;
-					}
-					case "Edm.Double":
-					case "Edm.Single":
-						oTyped[k] = parseFloat(v) || 0;
-						break;
-					case "Edm.Int16":
-					case "Edm.Int32":
-					case "Edm.Byte":
-					case "Edm.SByte":
-						oTyped[k] = Math.round(parseFloat(v) || 0);
-						break;
-					case "Edm.Int64":
-						oTyped[k] = String(Math.round(parseFloat(v) || 0));
-						break;
-					default:
-						oTyped[k] = (v === null || v === undefined) ? "" : v;
-				}
-			});
-			return oTyped;
+		/**
+		 * Returns value state for status text formatting.
+		 */
+		formatStatusState: function (sStatus, sApproval1, sApproval2, sApprovalReq, sStoreRemarks, sStoreAmmend) {
+			var sDerived = this.formatStatus(sStatus, sApproval1, sApproval2, sApprovalReq, sStoreRemarks, sStoreAmmend);
+			switch (sDerived) {
+				case "Approved": return "Success";
+				case "Rejected": return "Error";
+				case "Amendment": return "Warning";
+				case "HOD approval pending": return "Warning";
+				case "Store Approval Pending": return "Information";
+				case "Cancelled": return "Error";
+				case "Closed": return "None";
+				default: return "None";
+			}
 		},
 
 		_openSortDialog: function (sTableId, aSortItems) {
@@ -328,7 +353,9 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 				aSortItems.forEach(function (itm) {
 					that[sDialogId].addSortItem(new sapItem({ key: itm.key, text: itm.text, selected: !!itm.selected }));
 				});
-				this.getView().addDependent(this[sDialogId]);
+				/** @type {sap.ui.core.Element} */
+				var oDependent = this[sDialogId];
+				this.getView().addDependent(oDependent);
 			}
 			this[sDialogId].open();
 		},
@@ -376,7 +403,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 						return a.getTime() - b.getTime();
 					}
 					if (a instanceof Date) return bDescending ? -1 : 1;
-					if (b instanceof Date) return bDescending ? 1 : -1;
+					if (b instanceof Date) return bDescending ? -1 : 1;
 
 					var strA = String(a).trim();
 					var strB = String(b).trim();
@@ -409,6 +436,16 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			}
 
 			var oTable = oView.byId(sTableId) || sap.ui.core.Fragment.byId(oView.getId(), sTableId);
+			if (!oTable && oButton) {
+				var oParent = oButton.getParent();
+				while (oParent && !oTable) {
+					if (oParent.getMetadata && oParent.getMetadata().getName() === "sap.m.Table") {
+						oTable = oParent;
+					} else {
+						oParent = oParent.getParent ? oParent.getParent() : null;
+					}
+				}
+			}
 			if (oTable) {
 				var oBinding = oTable.getBinding("items");
 				if (oBinding) {

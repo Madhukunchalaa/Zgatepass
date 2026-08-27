@@ -15,14 +15,14 @@
 
 				<HBox wrap="Wrap" justifyContent="Center" class="gpmsDashboardCardsContainer">
 					<!-- NRGP Card -->
-					<GenericTile class="gpmsDashCard nrgpCard" press=".onPressNRGP" header="NRGP REQUEST" subheader="Non-Returnable Gate Pass" visible="{= !${user>/IsHodUser} }">
+					<GenericTile class="gpmsDashCard nrgpCard" press=".onPressNRGP" header="NRGP REQUEST" subheader="Non-Returnable Gate Pass">
 						<TileContent>
 							<core:Icon src="sap-icon://add-document" class="gpmsCardIcon"/>
 						</TileContent>
 					</GenericTile>
 
 					<!-- RGP Card -->
-					<GenericTile class="gpmsDashCard rgpCard" press=".onPressRGP" header="RGP REQUEST" subheader="Returnable Gate Pass" visible="{= !${user>/IsHodUser} }">
+					<GenericTile class="gpmsDashCard rgpCard" press=".onPressRGP" header="RGP REQUEST" subheader="Returnable Gate Pass">
 						<TileContent>
 							<core:Icon src="sap-icon://shipping-status" class="gpmsCardIcon"/>
 						</TileContent>
@@ -72,13 +72,13 @@
 
 					<!-- Gate Pass Requests List Card -->
 					<GenericTile class="gpmsDashCard listCard" press=".onGenericTileGatePassListPress" header="GATE PASS REQUESTS LIST" subheader="View All Requests">
-						<TileContent footer="Pending Requests">
+						<TileContent footer="HOD Pending Requests">
 							<NumericContent value="{hodCounts>/gatePassListCount}" withMargin="false" />
 						</TileContent>
 					</GenericTile>
 
 					<!-- Gate Pass List Card -->
-					<GenericTile class="gpmsDashCard nrgpListCard" press=".onPressNRGPList" header="GATE PASS LIST" subheader="Out Gate Pass Records" visible="{= !${user>/IsGatepassUserOnly} }">
+					<GenericTile class="gpmsDashCard nrgpListCard" press=".onPressNRGPList" header="GATE PASS LIST" subheader="Out Gate Pass Records">
 						<TileContent footer="Total Records">
 							<NumericContent value="{hodCounts>/nrgpListCount}" withMargin="false" />
 						</TileContent>
@@ -170,7 +170,7 @@
 					</GenericTile>
 
 					<!-- Scrap Gatepass List Card -->
-					<GenericTile class="gpmsDashCard scrapGpListCard" press=".onPressScrapGatepassList" header="SCRAP GATE PASS LIST" subheader="View Scrap Gate Passes" visible="{= !${user>/IsGatepassUserOnly} }">
+					<GenericTile class="gpmsDashCard scrapGpListCard" press=".onPressScrapGatepassList" header="SCRAP GATE PASS LIST" subheader="View Scrap Gate Passes" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }">
 						<TileContent footer="Total Records">
 							<NumericContent value="{hodCounts>/scrapGpListCount}" withMargin="false" valueColor="Good"/>
 						</TileContent>
@@ -185,8 +185,8 @@
 
 					<!-- Inspection List Card -->
 					<GenericTile class="gpmsDashCard inspectionCard" press=".onPressInspectionList" header="INSPECTION LIST" subheader="Gate Entry Inspections">
-						<TileContent>
-							<core:Icon src="sap-icon://inspection" class="gpmsCardIcon"/>
+						<TileContent footer="Pending Inspection">
+							<NumericContent value="{hodCounts>/inspectionPendingCount}" withMargin="false" />
 						</TileContent>
 					</GenericTile>
 					

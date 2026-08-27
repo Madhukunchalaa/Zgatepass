@@ -367,18 +367,12 @@ sap.ui.define([
 			if (sAmmend === "AM" || s1 === "AM" || s2 === "AM"  || sStatus === "AM" || sStatus === "AMENDMENT") {
 				return "Amendment";
 			}
-			if (s2 || sStatus === "APPROVED") {
+			if (s2 === "A2" || sStatus === "APPROVED") {
 				return "Approved";
 			}
-			var sStoreRemarks = oItem.STORERemarks || oItem.StoreRemarks || "";
-			if (sStoreRemarks && String(sStoreRemarks).trim() !== "" && String(sStoreRemarks) !== "null") {
-				return "Approved";
-			}
-			if (s1 && s1 !== "X" && s1 !== "PENDING" && !s2) {
+			if (s1 === "A1" || sStatus === "STORE APPROVAL PENDING") {
 				return "Store Approval Pending";
 			}
-
-			if (sStatus === "STORE APPROVAL PENDING") return "Store Approval Pending";
 			if (sStatus === "APPROVED") return "Approved";
 			if (sStatus === "REJECTED") return "Rejected";
 			if (sStatus === "AMENDMENT") return "Amendment";
@@ -414,6 +408,8 @@ sap.ui.define([
 			oModel.setProperty("/Plant",          oData.Plant         || "");
 			oModel.setProperty("/FiscalYear",     sFY);
 			oModel.setProperty("/Department",     oData.Department    || "");
+			oModel.setProperty("/Requestor",      oData.ReqUser       || oData.Requser || oData.requser || oData.Requestor || oData.RequestedUser || "");
+			oModel.setProperty("/CommonDesc",     oData.CommonDesc    || oData.RGPCoomonDesc || "");
 			oModel.setProperty("/VendorName",     oData.VendorName    || oData.Vendor1 || oData.Name1 || "");
 			oModel.setProperty("/VendorGST",      sVGST);
 			oModel.setProperty("/VendorAddress",  [sCity, sZip].filter(Boolean).join(", "));

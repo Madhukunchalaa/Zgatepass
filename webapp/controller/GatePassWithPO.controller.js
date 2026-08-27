@@ -12,11 +12,13 @@ sap.ui.define([
 	return BaseController.extend("zgpms.meilpower.com.controller.GatePassWithPO", {
 
 		onInit: function () {
+			var oVendorModel = new JSONModel({ results: [] });
+			oVendorModel.setSizeLimit(100000);
+			this.getView().setModel(oVendorModel, "vendors");
 			this._resetModel();
 			this.getRouter().getRoute("GatePassWithPO").attachPatternMatched(this._onRouteMatched, this);
 			this.getRouter().getRoute("GatePassWithPODetail").attachPatternMatched(this._onRouteMatchedDetail, this);
 			this.getRouter().getRoute("GatePassWithPOEdit").attachPatternMatched(this._onRouteMatchedEdit, this);
-			
 		},
 
 		_onRouteMatched: function () {
@@ -25,16 +27,17 @@ sap.ui.define([
 			var oModel = this.getView().getModel("gpo");
 			if (oModel) {
 				var oUserModel = sap.ui.getCore().getModel("user");
+				var sPlant = "";
 				if (oUserModel) {
-					var sPlant = oUserModel.getProperty("/Plant");
-					var sDept = oUserModel.getProperty("/Department");
+					sPlant = oUserModel.getProperty("/Plant") || "";
+					var sDept = oUserModel.getProperty("/Department") || "";
 
 					if (sPlant) {
 						oModel.setProperty("/Plant", sPlant);
-						this._loadVendors(sPlant);
 					}
 					if (sDept) { oModel.setProperty("/Department", sDept); }
 				}
+				this._loadVendors(sPlant || oModel.getProperty("/Plant") || "");
 			}
 		},
 
@@ -59,7 +62,7 @@ sap.ui.define([
 				if (oCoreData) {
 					if (oCoreData.Vendor) { oModel.setProperty("/Vendor", oCoreData.Vendor); }
 					if (oCoreData.VendorDesc) { oModel.setProperty("/VendorDesc", oCoreData.VendorDesc); }
-					oModel.setProperty("/Department", oCoreData.Department || "");
+					if (oCoreData.Department) { oModel.setProperty("/Department", oCoreData.Department); }
 					var aNavItems = (oCoreData.GateInPoNav && oCoreData.GateInPoNav.results) || [];
 					var aItems = aNavItems.map(function (item, idx) {
 						var sItemNo = item.ItemNo || String((idx + 1) * 10);
@@ -74,7 +77,7 @@ sap.ui.define([
 							UnitPrice: item.UnitPrice || item.NetPrice || item.Netprice || item.Netpr || item.ItemNetPrice || item.Price || "0.00",
 							PurchaseOrder: item.PurchaseOrder || sPoNumber,
 							Plant: item.Plant || sPlant,
-							Material: item.Material || ""
+							Material: item.Material || item.ItemCode || item.MaterialNo || item.Matnr || item.zmatnr || ""
 						};
 					});
 					oModel.setProperty("/GateInPoNav", aItems);
@@ -150,7 +153,7 @@ sap.ui.define([
 									UnitPrice: item.UnitPrice || item.NetPrice || item.Netprice || item.Netpr || item.ItemNetPrice || item.Price || "0.00",
 									PurchaseOrder: item.PurchaseOrder || sPO,
 									Plant: item.Plant || sPlant,
-									Material: item.Material || ""
+									Material: item.Material || item.ItemCode || item.MaterialNo || item.Matnr || item.zmatnr || ""
 								});
 							});
 						}
@@ -181,7 +184,7 @@ sap.ui.define([
 						UnitPrice: it.UnitPrice || "0.00",
 						PurchaseOrder: it.PurchaseOrder || sPO,
 						GatePassNo: it.GatepassNo || it.GatePassNo || sGatePassNum,
-						Material: it.Material || it.ItemCode || it.MaterialNo || ""
+						Material: it.Material || it.ItemCode || it.MaterialNo || it.Matnr || it.zmatnr || ""
 					};
 				});
 
@@ -296,7 +299,8 @@ sap.ui.define([
 											UOM: it.UOM || "",
 											UnitPrice: it.UnitPrice || "0.00",
 											PurchaseOrder: it.PurchaseOrder || sPO,
-											GatePassNo: it.GatepassNo || it.GatePassNo || ""
+											GatePassNo: it.GatepassNo || it.GatePassNo || "",
+											Material: it.Material || it.ItemCode || it.MaterialNo || it.Matnr || it.zmatnr || ""
 										};
 									});
 								}
@@ -349,9 +353,10 @@ sap.ui.define([
 										RecievedQuantity: it.RecievedQuantity || "0.000",
 										BalanceQuantity: it.BalanceQuantity || "0.000",
 										UOM: it.UOM || "",
+										UnitPrice: it.UnitPrice || "0.00",
 										PurchaseOrder: it.PurchaseOrder || sPO,
 										GatePassNo: it.GatepassNo || it.GatePassNo || "",
-										Material: it.Material || it.ItemCode || it.MaterialNo || ""
+										Material: it.Material || it.ItemCode || it.MaterialNo || it.Matnr || it.zmatnr || ""
 									};
 								});
 								oModel.setProperty("/GateInPoNav", aMapped);
@@ -411,9 +416,15 @@ sap.ui.define([
 					if (!oFirst || !oFirst.GateInPoNav || !oFirst.GateInPoNav.results) { return; }
 
 					var mPOQty = {};
+					var mPOMaterial = {};
 					oFirst.GateInPoNav.results.forEach(function (poItem) {
-						var sKey = String(parseInt(poItem.ItemNo || "0", 10));
+						var sItemNoRaw = poItem.ItemNo || poItem.Itemno || poItem.PurchaseOrderItem || poItem.POItem || "0";
+						var sKey = String(parseInt(sItemNoRaw, 10));
 						mPOQty[sKey] = poItem.OrderQuantity || poItem.POQuantity || "0.000";
+						var sMat = poItem.Material || poItem.ItemCode || poItem.MaterialNo || poItem.Matnr || poItem.zmatnr || "";
+						if (sMat) {
+							mPOMaterial[sKey] = sMat;
+						}
 					});
 
 					var aItems = oModel.getProperty("/GateInPoNav") || [];
@@ -422,6 +433,10 @@ sap.ui.define([
 						var sKey = String(parseInt(item.ItemNo || "0", 10));
 						if (mPOQty[sKey] && (!item.POQuantity || parseFloat(item.POQuantity) === 0)) {
 							item.POQuantity = mPOQty[sKey];
+							bChanged = true;
+						}
+						if (mPOMaterial[sKey] && !item.Material) {
+							item.Material = mPOMaterial[sKey];
 							bChanged = true;
 						}
 					});
@@ -578,21 +593,45 @@ sap.ui.define([
 		},
 
 		onVendorSelect: function (oEvent) {
+			this.onVendorCodeSelect(oEvent);
+		},
+		onVendorCodeSelect: function (oEvent) {
 			var oItem = oEvent.getParameter("selectedItem");
 			var oModel = this.getView().getModel("gpo");
-			if (!oModel) { return; }
-
-			if (!oItem) {
-				oModel.setProperty("/VendorDesc", "");
-				return;
+			if (!oModel) return;
+			if (oItem) {
+				var oContext = oItem.getBindingContext("vendors");
+				if (oContext) {
+					var oData = oContext.getObject();
+					oModel.setProperty("/Vendor", oData.Vendor || "");
+					oModel.setProperty("/VendorDesc", oData.VendorName || "");
+				} else {
+					var sKey = oItem.getKey() || oEvent.getParameter("newValue") || "";
+					oModel.setProperty("/Vendor", sKey);
+				}
+			} else {
+				var sVal = oEvent.getParameter("newValue") || "";
+				oModel.setProperty("/Vendor", sVal);
 			}
+		},
 
-			var sVendorKey = oItem.getKey();
-			var oVendorModel = this.getView().getModel("vendors");
-			var aVendors = (oVendorModel) ? oVendorModel.getProperty("/results") : [];
-			var oVendor = aVendors.find(function (v) { return v.Vendor === sVendorKey; });
-			if (oVendor) {
-				oModel.setProperty("/VendorDesc", oVendor.VendorName || "");
+		onVendorNameSelect: function (oEvent) {
+			var oItem = oEvent.getParameter("selectedItem");
+			var oModel = this.getView().getModel("gpo");
+			if (!oModel) return;
+			if (oItem) {
+				var oContext = oItem.getBindingContext("vendors");
+				if (oContext) {
+					var oData = oContext.getObject();
+					oModel.setProperty("/Vendor", oData.Vendor || "");
+					oModel.setProperty("/VendorDesc", oData.VendorName || "");
+				} else {
+					var sKey = oItem.getKey() || oEvent.getParameter("newValue") || "";
+					oModel.setProperty("/VendorDesc", sKey);
+				}
+			} else {
+				var sVal = oEvent.getParameter("newValue") || "";
+				oModel.setProperty("/VendorDesc", sVal);
 			}
 		},
 
@@ -601,12 +640,10 @@ sap.ui.define([
 			oVendorModel.setSizeLimit(100000);
 			this.getView().setModel(oVendorModel, "vendors");
 
-			if (!sPlant) { return; }
-
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (!oODataModel) { return; }
 
-			var aFilters = [new Filter("Plant", FilterOperator.EQ, sPlant)];
+			var aFilters = sPlant ? [new Filter("Plant", FilterOperator.EQ, sPlant)] : [];
 
 			oODataModel.read("/ZVendorSet", {
 				filters: aFilters,
@@ -626,8 +663,19 @@ sap.ui.define([
 					});
 					oVendorModel.setProperty("/results", aNormalized);
 				},
-				error: function (oError) {
-					MessageBox.error("Failed to load vendors. Please try again.");
+				error: function () {
+					oODataModel.read("/ZVendorSet", {
+						success: function (oData2) {
+							var aResults2 = oData2.results || [];
+							var aNormalized2 = aResults2.map(function (v) {
+								return {
+									Vendor: v.Vendor || v.Lifnr || "",
+									VendorName: v.Name || v.VendorName || v.Name1 || "Unknown Vendor"
+								};
+							});
+							oVendorModel.setProperty("/results", aNormalized2);
+						}
+					});
 				}
 			});
 		},
@@ -788,7 +836,7 @@ sap.ui.define([
 						var oModel = this.getView().getModel("gpo");
 						if (oFirstResult.Vendor) { oModel.setProperty("/Vendor", oFirstResult.Vendor); }
 						if (oFirstResult.VendorDesc) { oModel.setProperty("/VendorDesc", oFirstResult.VendorDesc); }
-						oModel.setProperty("/Department", oFirstResult.Department || "");
+						if (oFirstResult.Department) { oModel.setProperty("/Department", oFirstResult.Department); }
 						var sCurrentType = oModel.getProperty("/SourceType");
 						if (sCurrentType !== "PO" && sCurrentType !== "PO_RGP" && sCurrentType !== "FREE" && sCurrentType !== "SERVICE" && sCurrentType !== "STAFF_WELFARE") {
 							oModel.setProperty("/SourceType", "PO");
@@ -831,7 +879,7 @@ sap.ui.define([
 									UnitPrice: item.UnitPrice || item.NetPrice || item.Netprice || item.Netpr || item.ItemNetPrice || item.Price || "0.00",
 									PurchaseOrder: item.PurchaseOrder || sPO,
 									Plant: item.Plant || sPlant,
-									Material: item.Material || ""
+									Material: item.Material || item.ItemCode || item.MaterialNo || item.Matnr || item.zmatnr || ""
 								});
 							});
 						}
@@ -885,7 +933,17 @@ sap.ui.define([
 				urlParameters: { "$expand": "GateInPoNav" },
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
-					this.getView().getModel("pos").setProperty("/results", oData.results || []);
+					var aResults = (oData && oData.results) || [];
+					var aUniquePOs = [];
+					var mSeenPOs = {};
+					aResults.forEach(function (po) {
+						var sKey = (po.PurchaseOrder || "").trim();
+						if (sKey && !mSeenPOs[sKey]) {
+							mSeenPOs[sKey] = true;
+							aUniquePOs.push(po);
+						}
+					});
+					this.getView().getModel("pos").setProperty("/results", aUniquePOs);
 					this._pPOValueHelp.then(function (oDialog) {
 						oDialog.getBinding("items").filter([]);
 						oDialog.open();
@@ -924,7 +982,7 @@ sap.ui.define([
 				oModel.setProperty("/PurchaseOrder", oSelectedPO.PurchaseOrder || "");
 				oModel.setProperty("/Vendor", oSelectedPO.Vendor || "");
 				oModel.setProperty("/VendorDesc", oSelectedPO.VendorDesc || "");
-				oModel.setProperty("/Department", oSelectedPO.Department || "");
+				if (oSelectedPO.Department) { oModel.setProperty("/Department", oSelectedPO.Department); }
 				var sCurrentType = oModel.getProperty("/SourceType");
 				if (sCurrentType !== "PO" && sCurrentType !== "PO_RGP" && sCurrentType !== "FREE" && sCurrentType !== "SERVICE" && sCurrentType !== "STAFF_WELFARE") {
 					oModel.setProperty("/SourceType", "PO");
@@ -967,7 +1025,7 @@ sap.ui.define([
 							UnitPrice: item.UnitPrice || item.NetPrice || item.Netprice || item.Netpr || item.ItemNetPrice || item.Price || "0.00",
 							PurchaseOrder: item.PurchaseOrder || oModel.getProperty("/PurchaseOrder") || "",
 							Plant: item.Plant || oModel.getProperty("/Plant") || "",
-							Material: item.Material || ""
+							Material: item.Material || item.ItemCode || item.MaterialNo || item.Matnr || item.zmatnr || ""
 						};
 					});
 				}
@@ -1014,12 +1072,15 @@ sap.ui.define([
 
 			// Update all rows at once
 			aItems.forEach(function (oRow) {
+				var fOrder = parseFloat(oRow.POQuantity || 0);
 				if (bSelected) {
 					// Fill Received Qty = PO Qty for every item
 					oRow.RecievedQuantity = String(oRow.POQuantity || "0");
+					oRow.BalanceQuantity = "0.000";
 				} else {
 					// Uncheck — clear all Received Qty so user can type manually
 					oRow.RecievedQuantity = "";
+					oRow.BalanceQuantity = fOrder.toFixed(3);
 				}
 			});
 
@@ -1034,16 +1095,40 @@ sap.ui.define([
 			var sPath = oContext.getPath();
 			var oModel = this.getView().getModel("gpo");
 			var oRow = oModel.getProperty(sPath);
+			var fOrder = parseFloat(oRow.POQuantity || 0);
 
 			if (bSelected) {
 				// Fill Received Qty = PO Qty
 				oRow.RecievedQuantity = String(oRow.POQuantity || "0");
+				oRow.BalanceQuantity = "0.000";
 			} else {
 				// Uncheck - clear Received Qty
 				oRow.RecievedQuantity = "";
+				oRow.BalanceQuantity = fOrder.toFixed(3);
 			}
 			
 			oModel.setProperty(sPath, oRow);
+		},
+
+		onReceivedQuantityLiveChange: function (oEvent) {
+			var oInput = oEvent.getSource();
+			var sVal = oEvent.getParameter("value");
+			var sClean = sVal.replace(/[^0-9.]/g, "");
+			var aParts = sClean.split(".");
+			if (aParts.length > 2) { sClean = aParts[0] + "." + aParts.slice(1).join(""); }
+			if (sClean !== sVal) { oInput.setValue(sClean); }
+
+			var oContext = oInput.getBindingContext("gpo");
+			if (!oContext) return;
+			var sPath = oContext.getPath();
+			var oModel = this.getView().getModel("gpo");
+			var oRow = oModel.getProperty(sPath);
+
+			var fOrder = parseFloat(oRow.POQuantity || 0);
+			var fRecvd = parseFloat(sClean || 0);
+			var fBal = fOrder - fRecvd;
+			if (fBal < 0) { fBal = 0; }
+			oModel.setProperty(sPath + "/BalanceQuantity", fBal.toFixed(3));
 		},
 
 		onPOQuantityInputLiveChange: function (oEvent) {
@@ -1220,8 +1305,7 @@ sap.ui.define([
 					GateEntryNo: oData.GateEntryNo || "",
 					GatepassNo: oData.PCPNo || oData.GatePassNo || oData.GatepassNo || "",
 					PurchaseOrder: oItem.PurchaseOrder || sPO || "",
-					Plant: oItem.Plant || sPlant || "",
-					ItemCode: oItem.Material || ""
+					Plant: oItem.Plant || sPlant || ""
 				};
 
 				return oNavItem;

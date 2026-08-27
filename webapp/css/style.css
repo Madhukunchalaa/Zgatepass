@@ -629,6 +629,13 @@
     font-size: 0.8rem !important;
     color: var(--text) !important;
     height: auto !important;
+    resize: vertical !important;
+}
+
+/* Global text area draggable resize handle */
+.sapMTextAreaInner,
+textarea.sapMTextAreaInner {
+    resize: vertical !important;
 }
 
 /* Focus State */

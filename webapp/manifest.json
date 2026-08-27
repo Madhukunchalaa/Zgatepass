@@ -308,6 +308,8 @@
 					"viewLevel": 1
 				},
 				"TargetGatePassCreation": {
+					"viewType": "XML",
+					"viewId": "GatePassCreation",
 					"viewName": "GatePassCreation",
 					"viewLevel": 2
 				},

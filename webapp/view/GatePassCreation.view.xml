@@ -2,13 +2,12 @@
 	controllerName="zgpms.meilpower.com.controller.GatePassCreation"
 	xmlns="sap.m"
 	xmlns:mvc="sap.ui.core.mvc"
-	xmlns:form="sap.ui.layout.form"
 	xmlns:core="sap.ui.core"
 	xmlns:unified="sap.ui.unified"
 	xmlns:layout="sap.ui.layout"
 	height="100%">
 	<Page
-		id="gatePassCreationPage"
+		id="idGatePassCreationPage"
 		showHeader="false"
 		class="gpmsPage">
 		<content>
@@ -56,6 +55,15 @@
 								width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
+							<Label text="Request Person Name" required="true" class="gpmsFieldLabel"/>
+							<Input
+								id="requestor"
+								value="{gp>/ReqUser}"
+								editable="false"
+								class="gpmsFieldInput"
+								width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
 							<Label text="GP Type" required="true" class="gpmsFieldLabel"/>
 							<Select
                              id="gpType"
@@ -81,7 +89,7 @@
 							<Select
 								id="department"
 								selectedKey="{gp>/Department}"
-								enabled="{gp>/isFieldEditable}"
+								enabled="false"
 								class="gpmsFieldInput"
 								width="100%">
 								<core:Item key="" text="-- Select Department --"/>
@@ -344,7 +352,7 @@
 								editable="false"
 								class="gpmsFieldInput gpmsTextAreaBig"/>
 						</VBox>
-						<VBox class="sapUiSmallMargin" visible="{= !!${gp>/GatePassReqNo} || !!${gp>/HODRemarks} }">
+						<VBox class="sapUiSmallMargin" visible="{= !!${gp>/GatePassReqNo} || !!${gp>/STORERemarks} }">
 							<Label text="Store Remarks" class="gpmsFieldLabel"/>
 							<TextArea
 								value="{gp>/STORERemarks}"

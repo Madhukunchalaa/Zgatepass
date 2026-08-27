@@ -50,6 +50,10 @@
 							<Input value="{store>/Department}" editable="false" class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
+							<Label text="Request Person Name" class="gpmsFieldLabel"/>
+							<Input value="{store>/Requestor}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
 							<Label text="Vendor Name" class="gpmsFieldLabel"/>
 							<Input value="{store>/VendorName}" editable="false" class="gpmsFieldInput"/>
 						</VBox>

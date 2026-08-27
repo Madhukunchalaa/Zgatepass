@@ -231,12 +231,13 @@ sap.ui.define(["./BaseController",
 			var sCleanGPNo = (oData.GatePassNo || "").trim();
 			var sCleanReqNo = (oData.GatePassReqNo || oData.GatePassreqNo || "").trim();
 			try {
-				var sLocal = (sCleanGPNo ? localStorage.getItem("logistics_" + sCleanGPNo) : null) || (sCleanReqNo ? localStorage.getItem("logistics_" + sCleanReqNo) : null);
+				var sLocal = (sCleanGPNo ? (localStorage.getItem("logistics_" + sCleanGPNo) || localStorage.getItem("gp_logistics_" + sCleanGPNo)) : null) || (sCleanReqNo ? (localStorage.getItem("logistics_" + sCleanReqNo) || localStorage.getItem("gp_logistics_" + sCleanReqNo)) : null);
 				if (sLocal) {
 					oLocalLogistics = JSON.parse(sLocal);
 				}
 			} catch (e) {}
 
+			oModel.setProperty("/Requestor", oData.Requestor || oData.ReqUser || oData.Requser || oData.RequestedUser || oData.ReqEmpName || oData.CreatedBy || oData.Createdby || oData.Ernam || "");
 			oModel.setProperty("/VendorPerson", oData.VendorPerson || (oLocalLogistics ? oLocalLogistics.VendorPerson : "") || "");
 			oModel.setProperty("/CommonDesc", oData.CommonDesc || (oLocalLogistics ? oLocalLogistics.CommonDesc : "") || "");
 			oModel.setProperty("/LRNnumber", oData.LRNumber || oData.LRNnumber || (oLocalLogistics ? oLocalLogistics.LRNnumber : "") || "");
@@ -257,8 +258,9 @@ sap.ui.define(["./BaseController",
 				sGPStatus = oLocalLogistics.GPStatus.trim().toUpperCase();
 			}
 			oModel.setProperty("/GPStatus", sGPStatus);
-			oModel.setProperty("/StatusState", this._getStatusState(sGPStatus));
-			oModel.setProperty("/isEditable", sGPStatus !== "CLOSED" && sGPStatus !== "CANCELLED");
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var bIsStoreUser = oUserModel ? oUserModel.getProperty("/IsStoreUser") : false;
+			oModel.setProperty("/isEditable", bIsStoreUser && sGPStatus !== "CLOSED" && sGPStatus !== "CANCELLED");
 			
 			var sDCVal = oData.ChallanNumber || oData.Challanumber || (oLocalLogistics ? oLocalLogistics.ChallanNumber : "") || "";
 			oModel.setProperty("/ChallanNumber", sDCVal);
@@ -796,16 +798,15 @@ sap.ui.define(["./BaseController",
 
 			var titleW = doc.getTextWidth("NON-RETURNABLE GATE PASS");
 			var gridY = 41, gridH = 32;
-			var lColW = 148, rColW = contentWidth - lColW;
-			var lColX = margin, rColX = margin + lColW;
-			var pad = 3, rLH = 5.5;
-			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || oOut.City || "", lColW - pad * 2 - 2);
-			var lblOff = 30;
+			var lColW = 105, mColW = 78, rColW = contentWidth - lColW - mColW;
+			var lColX = margin, mColX = margin + lColW, rColX = mColX + mColW;
+			var pad = 3;
+			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || [oOut.City, oOut.ZipCode].filter(Boolean).join(", "), lColW - pad * 2 - 2);
 
 			var tableData = (oOut.items || []).map(function (it, i) {
 				return [
 					i + 1,
-					it.Material || "",
+					it.MaterialDesc || it.MaterialName || it.Description || it.HSNDesc || it.Material || "",
 					it.HSNCode || "",
 					parseFloat(it.SentQuantity || 0).toLocaleString("en-IN", { minimumFractionDigits: 3 }),
 					it.UOM || "",
@@ -813,17 +814,17 @@ sap.ui.define(["./BaseController",
 					parseFloat(it.Totalvalue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })
 				];
 			});
-			while (tableData.length < 6) { tableData.push(["", "", "", "", "", "", ""]); }
+			while (tableData.length < 5) { tableData.push(["", "", "", "", "", "", ""]); }
 
 			doc.autoTable({
-				startY: 74,
+				startY: 76,
 				head: [["S.No", "DESCRIPTION OF GOODS", "HSN Code", "Outward QTY", "UOM", "Rate (Rs.)", "Value (Rs.)"]],
 				body: tableData,
 				theme: "grid",
-				headStyles: { fillColor: [235, 235, 235], textColor: [0, 0, 0], fontStyle: "bold", fontSize: 8.5, halign: "center", valign: "middle", cellPadding: 3, lineWidth: 0.3, lineColor: [0, 0, 0] },
-				bodyStyles: { fontSize: 8.5, cellPadding: { top: 3, bottom: 3, left: 2.5, right: 2.5 }, lineColor: [0, 0, 0], lineWidth: 0.25, valign: "middle" },
+				headStyles: { fillColor: [235, 235, 235], textColor: [0, 0, 0], fontStyle: "bold", fontSize: 8.5, halign: "center", valign: "middle", cellPadding: 2, lineWidth: 0.3, lineColor: [0, 0, 0] },
+				bodyStyles: { fontSize: 8.5, cellPadding: { top: 2, bottom: 2, left: 2.5, right: 2.5 }, lineColor: [0, 0, 0], lineWidth: 0.25, valign: "middle" },
 				columnStyles: { 0: { cellWidth: 14, halign: "center" }, 1: { cellWidth: "auto" }, 2: { cellWidth: 26, halign: "center" }, 3: { cellWidth: 30, halign: "right" }, 4: { cellWidth: 18, halign: "center" }, 5: { cellWidth: 30, halign: "right" }, 6: { cellWidth: 34, halign: "right" } },
-				margin: { top: 74, left: margin, right: margin, bottom: 60 },
+				margin: { top: 76, left: margin, right: margin, bottom: 25 },
 				didDrawPage: function (data) {
 					// Draw outer borders
 					doc.setLineWidth(0.6);
@@ -873,43 +874,59 @@ sap.ui.define(["./BaseController",
 					doc.setLineWidth(0.35);
 					doc.line(pageWidth / 2 - titleW / 2, 38.5, pageWidth / 2 + titleW / 2, 38.5);
 
-					// Info Grid Box
+					// Info Grid Box (Outer Box + 2 Vertical Dividers)
 					doc.setLineWidth(0.3);
 					doc.rect(lColX, gridY, contentWidth, gridH);
+					doc.line(mColX, gridY, mColX, gridY + gridH);
 					doc.line(rColX, gridY, rColX, gridY + gridH);
 					doc.setLineWidth(0.2);
-					doc.line(lColX, gridY + 9, rColX, gridY + 9);
+					doc.line(lColX, gridY + 9, mColX, gridY + 9);
 
 					// Left Column Info
 					doc.setFontSize(8.5);
 					doc.setFont("helvetica", "normal");
 					doc.text("Please allow", lColX + pad, gridY + 6);
+					var sPersonName = (oOut.VendorPerson || "").trim();
+					if (sPersonName) {
+						sPersonName = /^(mr|ms|mrs|mr\/ms)\.?\s+/i.test(sPersonName) ? sPersonName : "Mr/Ms. " + sPersonName;
+					} else {
+						sPersonName = "Mr/Ms.";
+					}
 					doc.setFont("helvetica", "bold");
-					doc.text(oOut.VendorPerson || "Mr./Ms.", lColX + 34, gridY + 6);
+					doc.text(sPersonName, lColX + 34, gridY + 6);
 					doc.text(oOut.VendorName || "", lColX + pad, gridY + 14);
 					doc.setFont("helvetica", "normal");
 					doc.text(splitAddr, lColX + pad, gridY + 19.5);
 					doc.setFont("helvetica", "italic");
 					doc.setFontSize(8);
-					doc.text("to take out the following material from MEIL premises.", lColX + pad, gridY + gridH - 3.5);
+					doc.text("to take out the following material from MEIL premises.", lColX + pad, gridY + gridH - 3);
 
-					// Right Column Info
-					var rc = rColX + pad, ry = gridY + 6;
-					doc.setFontSize(8.5);
-					doc.setFont("helvetica", "bold"); doc.text("Req. No:", rc, ry);
-					doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassreqNo || "", rc + lblOff, ry);
-					ry += rLH;
-					doc.setFont("helvetica", "bold"); doc.text("GP Type:", rc, ry);
-					doc.setFont("helvetica", "normal"); doc.text("NRGP", rc + lblOff, ry);
-					ry += rLH;
-					doc.setFont("helvetica", "bold"); doc.text("Department:", rc, ry);
-					doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", rc + lblOff, ry);
-					ry += rLH;
-					doc.setFont("helvetica", "bold"); doc.text("Vehicle No:", rc, ry);
-					doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", rc + lblOff, ry);
-					ry += rLH;
-					doc.setFont("helvetica", "bold"); doc.text("Vendor GST:", rc, ry);
-					doc.setFont("helvetica", "normal"); doc.text(oOut.VendorGST || "", rc + lblOff, ry);
+					// Middle Column Info (Metadata Col 1)
+					var mc = mColX + pad, my = gridY + 5.5, mLblOff = 24;
+					doc.setFontSize(8);
+					doc.setFont("helvetica", "bold"); doc.text("Req. No:", mc, my);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassreqNo || oOut.GatePassReqNo || "", mc + mLblOff, my); my += 5.2;
+					doc.setFont("helvetica", "bold"); doc.text("GP Type:", mc, my);
+					doc.setFont("helvetica", "normal"); doc.text("NRGP", mc + mLblOff, my); my += 5.2;
+					doc.setFont("helvetica", "bold"); doc.text("Department:", mc, my);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", mc + mLblOff, my); my += 5.2;
+					doc.setFont("helvetica", "bold"); doc.text("Vehicle No:", mc, my);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", mc + mLblOff, my); my += 5.2;
+					doc.setFont("helvetica", "bold"); doc.text("Vendor GST:", mc, my);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.VendorGST || "", mc + mLblOff, my);
+
+					// Right Column Info (Metadata Col 2)
+					var rc = rColX + pad, ry = gridY + 5.5, rLblOff = 27;
+					var sReqName = oOut.Requestor || oOut.ReqUser || oOut.Requser || oOut.RequestedUser || oOut.ReqEmpName || oOut.CreatedBy || oOut.Createdby || oOut.Ernam || "";
+					doc.setFontSize(8);
+					doc.setFont("helvetica", "bold"); doc.text("DC NO :", rc, ry);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.ChallanNumber || oOut.Challanumber || "", rc + rLblOff, ry); ry += 5.2;
+					doc.setFont("helvetica", "bold"); doc.text("Requester name :", rc, ry);
+					doc.setFont("helvetica", "normal"); doc.text(sReqName, rc + rLblOff, ry); ry += 5.2;
+					doc.setFont("helvetica", "bold"); doc.text("LR NO :", rc, ry);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.LRNumber || oOut.LRNnumber || "", rc + rLblOff, ry); ry += 5.2;
+					doc.setFont("helvetica", "bold"); doc.text("Transport name :", rc, ry);
+					doc.setFont("helvetica", "normal"); doc.text(oOut.TransporterName || "", rc + rLblOff, ry);
 
 					// Page Number
 					doc.setFont("helvetica", "normal"); doc.setFontSize(7.5);
@@ -1003,52 +1020,72 @@ sap.ui.define(["./BaseController",
 			doc.setLineWidth(0.35);
 			doc.line(pageWidth / 2 - titleW / 2, 38.5, pageWidth / 2 + titleW / 2, 38.5);
 
-			var gridY = 41, gridH = 50;
-			var col1W = 62, col2W = 65;
+			var gridY = 41, gridH = 34;
+			var col1W = 62, col2W = 62, col3W = contentWidth - col1W - col2W;
 			var col1X = margin, col2X = margin + col1W, col3X = margin + col1W + col2W;
-			var pad = 3, lh = 5.5;
+			var pad = 3, lh = 4.5;
 
 			doc.setLineWidth(0.3);
 			doc.rect(col1X, gridY, contentWidth, gridH);
 			doc.line(col2X, gridY, col2X, gridY + gridH);
 			doc.line(col3X, gridY, col3X, gridY + gridH);
 
+			// Col 1 — Consignee / To
 			doc.setFontSize(8.5); doc.setFont("helvetica", "bold");
-			doc.text("To", col1X + pad, gridY + 8);
-			doc.setFont("helvetica", "normal"); doc.setFontSize(8);
-			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || oOut.City || "", col1W - 14);
-			doc.text(splitAddr, col1X + 10, gridY + 14);
-			doc.setLineWidth(0.2);
-			doc.line(col1X, gridY + gridH - 10, col2X, gridY + gridH - 10);
+			doc.text("To", col1X + pad, gridY + 6);
+			var sPersonName = (oOut.VendorPerson || "").trim();
+			if (sPersonName) {
+				sPersonName = /^(mr|ms|mrs|mr\/ms)\.?\s+/i.test(sPersonName) ? sPersonName : "Mr/Ms. " + sPersonName;
+			}
 			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
-			doc.text("GST No:", col1X + pad, gridY + gridH - 4);
+			doc.text(sPersonName, col1X + pad + 8, gridY + 6);
+			doc.text(oOut.VendorName || "", col1X + pad, gridY + 12);
+			doc.setFont("helvetica", "normal"); doc.setFontSize(7.5);
+			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || [oOut.City, oOut.ZipCode].filter(Boolean).join(", "), col1W - pad * 2);
+			doc.text(splitAddr, col1X + pad, gridY + 17);
+			doc.setLineWidth(0.2);
+			doc.line(col1X, gridY + gridH - 7, col2X, gridY + gridH - 7);
+			doc.setFont("helvetica", "bold"); doc.setFontSize(7.5);
+			doc.text("GST No:", col1X + pad, gridY + gridH - 2);
 			doc.setFont("helvetica", "normal");
-			doc.text(oOut.VendorGST || "", col1X + 22, gridY + gridH - 4);
+			doc.text(oOut.VendorGST || "", col1X + 16, gridY + gridH - 2);
 
-			var c2 = col2X + pad, valOff2 = 30, y2 = gridY + 8;
-			doc.setFontSize(8);
+			// Col 2 — DC & Transport Info
+			var c2 = col2X + pad, valOff2 = 28, y2 = gridY + 5;
+			doc.setFontSize(7.5);
 			doc.setFont("helvetica", "bold"); doc.text("DC No:", c2, y2);
 			doc.setFont("helvetica", "normal"); doc.text(oOut.ChallanNumber || "Draft", c2 + valOff2, y2); y2 += lh;
 			doc.setFont("helvetica", "bold"); doc.text("DC Date:", c2, y2);
-			doc.setFont("helvetica", "normal"); doc.text(sDate, c2 + valOff2, y2); y2 += lh + 2;
+			doc.setFont("helvetica", "normal"); doc.text(sDate, c2 + valOff2, y2); y2 += lh;
 			doc.setFont("helvetica", "bold"); doc.text("Mode Of Transport:", c2, y2);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.ModeOfTransport || "By Road", c2 + valOff2, y2); y2 += lh + 2;
+			doc.setFont("helvetica", "normal"); doc.text(oOut.ModeOfTransport || "Road", c2 + valOff2, y2); y2 += lh;
 			doc.setFont("helvetica", "bold"); doc.text("LR/Vehicle No:", c2, y2);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", c2 + valOff2, y2);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.LRNumber || oOut.LRNnumber || oOut.VehicleNo || "", c2 + valOff2, y2); y2 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("Vehicle No:", c2, y2);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.VehicleNo || "", c2 + valOff2, y2); y2 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("Transport Name:", c2, y2);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.TransporterName || "", c2 + valOff2, y2);
 
-			var c3 = col3X + pad, valOff3 = 27, y3 = gridY + 8;
-			doc.setFontSize(8);
+			// Col 3 — GP & Dispatch Info
+			var c3 = col3X + pad, valOff3 = 24, y3 = gridY + 5;
+			doc.setFontSize(7.5);
 			doc.setFont("helvetica", "bold"); doc.text("GP No:", c3, y3);
 			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassNo || "", c3 + valOff3, y3); y3 += lh;
 			doc.setFont("helvetica", "bold"); doc.text("GP Date:", c3, y3);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassDate || sDate, c3 + valOff3, y3); y3 += lh + 2;
+			doc.setFont("helvetica", "normal"); doc.text(oOut.GatePassDate || sDate, c3 + valOff3, y3); y3 += lh;
 			doc.setFont("helvetica", "bold"); doc.text("Dept:", c3, y3);
-			doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", c3 + valOff3, y3);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.Department || "", c3 + valOff3, y3); y3 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("Dispatch From:", c3, y3);
+			doc.setFont("helvetica", "normal"); doc.text("MEIL Neyveli", c3 + valOff3, y3); y3 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("Dispatch To:", c3, y3);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.City || oOut.VendorName || "", c3 + valOff3, y3); y3 += lh;
+			doc.setFont("helvetica", "bold"); doc.text("Ewb No:", c3, y3);
+			doc.setFont("helvetica", "normal"); doc.text(oOut.EWayBillNo || "", c3 + valOff3, y3);
 
 			var tableData = (oOut.items || []).map(function (item, index) {
 				return [
 					index + 1,
-					item.Material || "",
+					item.MaterialDesc || item.MaterialName || item.Description || item.HSNDesc || item.Material || "",
 					item.HSNCode || "",
 					item.UOM || "",
 					parseFloat(item.SentQuantity || 0).toLocaleString("en-IN", { minimumFractionDigits: 3 }),
@@ -1056,21 +1093,22 @@ sap.ui.define(["./BaseController",
 					parseFloat(item.Totalvalue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })
 				];
 			});
+			while (tableData.length < 5) { tableData.push(["", "", "", "", "", "", ""]); }
 
 			doc.autoTable({
-				startY: gridY + gridH + 1,
+				startY: gridY + gridH + 2,
 				head: [["S.No", "DESCRIPTION", "HSN Code", "UOM", "QTY", "Rate", "Amt (In Rs.)"]],
 				body: tableData,
 				theme: "grid",
-				headStyles: { fillColor: [235, 235, 235], textColor: [0, 0, 0], fontStyle: "bold", fontSize: 8, halign: "center", valign: "middle", cellPadding: 3, lineWidth: 0.3, lineColor: [0, 0, 0] },
-				bodyStyles: { fontSize: 8, cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 }, lineColor: [0, 0, 0], lineWidth: 0.25, valign: "middle" },
-				columnStyles: { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: "auto" }, 2: { cellWidth: 25, halign: "center" }, 3: { cellWidth: 16, halign: "center" }, 4: { cellWidth: 20, halign: "right" }, 5: { cellWidth: 22, halign: "right" }, 6: { cellWidth: 27, halign: "right" } },
-				margin: { left: margin, right: margin }
+				headStyles: { fillColor: [235, 235, 235], textColor: [0, 0, 0], fontStyle: "bold", fontSize: 8, halign: "center", valign: "middle", cellPadding: 2, lineWidth: 0.3, lineColor: [0, 0, 0] },
+				bodyStyles: { fontSize: 8, cellPadding: { top: 2, bottom: 2, left: 2, right: 2 }, lineColor: [0, 0, 0], lineWidth: 0.25, valign: "middle" },
+				columnStyles: { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: "auto" }, 2: { cellWidth: 24, halign: "center" }, 3: { cellWidth: 16, halign: "center" }, 4: { cellWidth: 20, halign: "right" }, 5: { cellWidth: 22, halign: "right" }, 6: { cellWidth: 28, halign: "right" } },
+				margin: { left: margin, right: margin, bottom: 25 }
 			});
 
 			var finalY = doc.lastAutoTable.finalY;
 			var fTotalNum = parseFloat(oOut.FinalTotal ? oOut.FinalTotal.toString().replace(/,/g, "") : "0") || 0;
-			var footH = 9, totalColW = 49;
+			var footH = 9, totalColW = 50;
 			doc.setLineWidth(0.25);
 			doc.rect(margin, finalY, contentWidth, footH);
 			doc.line(pageWidth - margin - totalColW, finalY, pageWidth - margin - totalColW, finalY + footH);
@@ -1091,16 +1129,17 @@ sap.ui.define(["./BaseController",
 			doc.setFont("helvetica", "normal");
 			doc.text(splitNote, margin + 18, noteY + 6);
 
-			var sigY = noteY + noteH + 22;
-			var sigLineW = 48;
+			var sigHeaderY = noteY + noteH + 8;
+			doc.setFont("helvetica", "bold"); doc.setFontSize(8.5);
+			doc.text("For MEIL Neyveli Energy Private Limited", pageWidth - margin, sigHeaderY, { align: "right" });
+
+			var sigLineY = sigHeaderY + 18;
+			var sigLineW = 55;
 			doc.setLineWidth(0.3);
-			doc.line(margin, sigY, margin + sigLineW, sigY);
-			doc.line(pageWidth / 2 - sigLineW / 2, sigY, pageWidth / 2 + sigLineW / 2, sigY);
-			doc.line(pageWidth - margin - sigLineW, sigY, pageWidth - margin, sigY);
+			// Right side: Authorised Signatory
+			doc.line(pageWidth - margin - sigLineW, sigLineY, pageWidth - margin, sigLineY);
 			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
-			doc.text("Prepared By", margin + sigLineW / 2, sigY + 5, { align: "center" });
-			doc.text("Store In-Charge", pageWidth / 2, sigY + 5, { align: "center" });
-			doc.text("Authorised Signatory", pageWidth - margin - sigLineW / 2, sigY + 5, { align: "center" });
+			doc.text("Authorised Signatory", pageWidth - margin - sigLineW / 2, sigLineY + 5, { align: "center" });
 
 			if (bGetBase64 === true) {
 				return doc.output('datauristring').split(',')[1];

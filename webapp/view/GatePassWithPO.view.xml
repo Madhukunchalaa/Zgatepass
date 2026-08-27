@@ -52,19 +52,33 @@
 
 						<VBox class="sapUiSmallMargin" visible="true">
 							<Label text="PO Number" class="gpmsFieldLabel"/>
-							<Input id="idPurchaseOrder" value="{gpo>/PurchaseOrder}" placeholder="Enter PO Number" class="gpmsFieldInput" showValueHelp="true" valueHelpRequest=".onPOValueHelp" change=".onPOChange" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
+							<Input id="idPurchaseOrder" value="{gpo>/PurchaseOrder}" placeholder="Enter PO Number" class="gpmsFieldInput" showValueHelp="true" valueHelpRequest=".onPOValueHelp" change=".onPOChange"/>
 						</VBox>
 
-						<!-- Standard Vendor Code Input for PO Mode -->
-						<VBox class="sapUiSmallMargin" visible="true">
+						<!-- Vendor Code -->
+						<VBox class="sapUiSmallMargin">
 							<Label text="Vendor Code" class="gpmsFieldLabel"/>
-							<Input id="idVendor" value="{gpo>/Vendor}" placeholder="Enter Vendor Code" class="gpmsFieldInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
+							<ComboBox id="idVendorSelect" value="{gpo>/Vendor}" selectedKey="{gpo>/Vendor}"
+								placeholder="Search / Select Vendor Code..."
+								class="gpmsFieldInput" width="100%"
+								selectionChange=".onVendorCodeSelect"
+								enabled="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"
+								items="{path: 'vendors>/results', templateShareable: false}">
+								<core:ListItem key="{vendors>Vendor}" text="{vendors>Vendor}" additionalText="{vendors>VendorName}"/>
+							</ComboBox>
 						</VBox>
-   
-  
+
+						<!-- Vendor Name -->
 						<VBox class="sapUiSmallMargin">
 							<Label text="Vendor Name" required="{= ${gpo>/SourceType} === 'PettyCash' }" class="gpmsFieldLabel"/>
-							<Input id="idVendorDesc" value="{gpo>/VendorDesc}" placeholder="Vendor Name" class="gpmsFieldInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
+							<ComboBox id="idVendorDescSelect" value="{gpo>/VendorDesc}" selectedKey="{gpo>/VendorDesc}"
+								placeholder="Search / Select Vendor Name..."
+								class="gpmsFieldInput" width="100%"
+								selectionChange=".onVendorNameSelect"
+								enabled="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"
+								items="{path: 'vendors>/results', templateShareable: false}">
+								<core:ListItem key="{vendors>VendorName}" text="{vendors>VendorName}" additionalText="{vendors>Vendor}"/>
+							</ComboBox>
 						</VBox>
  
 						<VBox class="sapUiSmallMargin">
@@ -74,13 +88,14 @@
  
 						<VBox class="sapUiSmallMargin">
 							<Label text="Department" required="true" class="gpmsFieldLabel"/>
-							<Input value="{gpo>/Department}" class="gpmsFieldInput" editable="false"
+							<!-- Input field for Only Purchase Order (PO) -->
+							<Input id="idDepartmentInput" value="{gpo>/Department}" placeholder="Enter Department" class="gpmsFieldInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"
 								visible="{= ${gpo>/SourceType} === 'PO' || ${gpo>/SourceType} === 'PO_RGP' }"/>
-							<Select selectedKey="{gpo>/Department}" class="gpmsFieldInput" width="100%"
+							<!-- Dropdown ComboBox for remaining Source Types (PettyCash, FREE, SERVICE, etc.) -->
+							<ComboBox id="idDepartmentSelect" value="{gpo>/Department}" selectedKey="{gpo>/Department}" class="gpmsFieldInput" width="100%"
 								visible="{= ${gpo>/SourceType} !== 'PO' &amp;&amp; ${gpo>/SourceType} !== 'PO_RGP' }"
 								enabled="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }">
 								<items>
-									<core:Item key="" text="Select Department"/>
 									<core:Item key="ADMIN" text="ADMIN"/>
 									<core:Item key="C And I" text="C And I"/>
 									<core:Item key="CHEMICAL" text="CHEMICAL"/>
@@ -98,7 +113,7 @@
 									<core:Item key="PURCHASE" text="PURCHASE"/>
 									<core:Item key="OTHERS" text="OTHERS"/>
 								</items>
-							</Select>
+							</ComboBox>
 						</VBox>
  
 						<VBox class="sapUiSmallMargin">
@@ -112,7 +127,7 @@
 						</VBox>
 
 						<VBox class="sapUiSmallMargin" visible="true">
-							<Label text="DC Date" class="gpmsFieldLabel"/>
+							<Label text="DC / Invoice Date" class="gpmsFieldLabel"/>
 							<DatePicker
 								id="idDCdateDatePicker"
 								value="{gpo>/DCdate}"
@@ -176,20 +191,7 @@
 							<Input value="{= ${gpo>/GatePassNo} || ${gpo>/PCPNo} }" editable="false" class="gpmsFieldInput"/>
 						</VBox>
 
-						<!-- Dynamic Vendor ComboBox for Petty Cash Mode (Moved here so it doesn't affect column grids) -->
-						<VBox class="sapUiSmallMargin" visible="false">
-							<Label text="Vendor Code / Name" required="true" class="gpmsFieldLabel"/>
-							<ComboBox
-								id="idVendorSelect"
-								selectedKey="{gpo>/Vendor}"
-								placeholder="Search and select vendor..."
-								selectionChange=".onVendorSelect"
-								class="gpmsFieldInput"
-								width="100%"
-								items="{path: 'vendors>/results', templateShareable: false}">
-								<core:ListItem key="{vendors>Vendor}" text="{vendors>VendorName}" additionalText="{vendors>Vendor}"/>
-							</ComboBox>
-						</VBox>
+
 
 					</layout:Grid>
 
@@ -214,15 +216,14 @@
 					</headerToolbar>
 					<Table id="idItemsTable" items="{gpo>/GateInPoNav}" class="gpmsItemTable">
 						<columns>
-							<Column width="6rem"><Text text="Item No" class="gpmsHeaderText"/></Column>
-							<Column width="9rem"><Text text="Item Code" class="gpmsHeaderText"/></Column>
+							<Column width="5rem"><Text text="Item No" class="gpmsHeaderText"/></Column>
+							<Column width="8rem"><Text text="Item Code" class="gpmsHeaderText"/></Column>
 							<Column><Text text="Item Description" class="gpmsHeaderText"/></Column>
-							<Column width="9rem" hAlign="Right"><Text text="PO Qty" class="gpmsHeaderText"/></Column>
-							<Column width="9rem" hAlign="Right"><Text text="Received Qty" class="gpmsHeaderText"/></Column>
-							<Column width="3rem" hAlign="Center" visible="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
-							<Column width="9rem" hAlign="Right"><Text text="Balance Qty" class="gpmsHeaderText"/></Column>
-							<Column width="6rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
-							<Column width="8rem" hAlign="Right"><Text text="Unit Price" class="gpmsHeaderText"/></Column>
+							<Column width="7rem" hAlign="Right"><Text text="PO Qty" class="gpmsHeaderText"/></Column>
+							<Column width="11rem" hAlign="Right"><Text text="Received Qty" class="gpmsHeaderText"/></Column>
+							<Column width="8rem" hAlign="Right"><Text text="Balance Qty" class="gpmsHeaderText"/></Column>
+							<Column width="5rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
+							<Column width="7rem" hAlign="Right"><Text text="Unit Price" class="gpmsHeaderText"/></Column>
 							<Column width="3rem" visible="{= !${gpo>/isExisting} }"/>
 						</columns>
 						<items>
@@ -232,8 +233,10 @@
 									<Text text="{gpo>Material}"/>
 									<Input value="{gpo>ItemDescription}" placeholder="Item Description" class="gpmsTableInput" editable="{= !${gpo>/isExisting} }"/>
 									<Input value="{gpo>POQuantity}" placeholder="0.000" type="Text" textAlign="Right" class="gpmsTableInput" editable="{= !${gpo>/isExisting} }" liveChange=".onPOQuantityInputLiveChange"/>
-									<Input value="{gpo>RecievedQuantity}" placeholder="0.000" type="Text" textAlign="Right" class="gpmsTableInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
-									<CheckBox selected="{gpo>_fillRowQty}" select=".onFillRowQtyCheck" visible="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
+									<HBox alignItems="Center" justifyContent="End">
+										<Input value="{gpo>RecievedQuantity}" placeholder="0.000" type="Text" textAlign="Right" class="gpmsTableInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }" liveChange=".onReceivedQuantityLiveChange"/>
+										<CheckBox selected="{gpo>_fillRowQty}" select=".onFillRowQtyCheck" visible="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }" tooltip="Check to fill PO Qty"/>
+									</HBox>
 									<Text text="{path: 'gpo>BalanceQuantity', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" textAlign="Right"/>
 									<Text text="{gpo>UOM}"/>
 									<Text text="{path: 'gpo>UnitPrice', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}" textAlign="Right"/>
@@ -285,7 +288,7 @@
 			<Toolbar class="gpmsFooterBar">
 				<ToolbarSpacer/>
 				<Button text="RESET" press=".onReset" icon="sap-icon://refresh" class="sapUiSmallMarginEnd" visible="{= !${gpo>/isExisting} }"/>
-				<Button text="DELETE ENTRY" press=".onDelete" type="Reject" icon="sap-icon://delete" class="sapUiSmallMarginEnd" visible="{= ${gpo>/isExisting} &amp;&amp; !${gpo>/isDeleted} }"/>
+				<!-- <Button text="DELETE ENTRY" press=".onDelete" type="Reject" icon="sap-icon://delete" class="sapUiSmallMarginEnd" visible="{= ${gpo>/isExisting} &amp;&amp; !${gpo>/isDeleted} }"/> -->
 				<Button text="{= ${gpo>/isExisting} ? 'UPDATE ENTRY' : 'ENTER GATE ENTRY' }" type="Accept" press=".onSubmit" icon="sap-icon://sys-add" class="gpmsSubmitBtn sapUiSmallMarginEnd" visible="{= (!${gpo>/isExisting} || ${gpo>/isEditMode}) &amp;&amp; !${gpo>/isDeleted} }"/>
 			</Toolbar>
 		</footer>

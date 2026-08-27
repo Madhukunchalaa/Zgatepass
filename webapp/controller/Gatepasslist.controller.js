@@ -34,6 +34,7 @@ sap.ui.define([
 		},
 
 		_getData: function () {
+
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (!oODataModel) {
 				return;
@@ -41,9 +42,6 @@ sap.ui.define([
 
 			var sSelectedStatus = this.byId("idStatusFilterSelect").getSelectedKey();
 			var sBackendStatus = "All";
-			if (sSelectedStatus && sSelectedStatus !== "Store Approval Pending") {
-				sBackendStatus = sSelectedStatus;
-			}
 			var sType = this.byId("idTypeFilterSelect").getSelectedKey();
 
 			var that = this;
@@ -100,12 +98,35 @@ sap.ui.define([
 							} else if (oItem.GatePassreqNo !== undefined && oItem.GatePassreqNo !== null) {
 								sReqNo = String(oItem.GatePassreqNo).trim();
 							}
+							var sRawDate = oItem.CreatedOn || oItem.Createdon || oItem.GpDate || oItem.Gpdate || oItem.GPDate || oItem.Erdat || oItem.GatePassDate || oItem.RequestDate || oItem.Requestdate || oItem.CreateDate || "";
+							var sFormattedDate = that._formatDate(sRawDate);
+							console.log("date:" + sRawDate + " -> formatted: " + sFormattedDate);
+							var sFormattedStatus = that.formatStatus(oItem.Status, oItem.Approval1, oItem.Approval2, oItem.ApprovalReq, oItem.STORERemarks || oItem.StoreRemarks, oItem.StoreAmmend);
+
+							var sReqUserVal = oItem.ReqUser || oItem.Requser || oItem.requser || oItem.Requestor || oItem.RequestedUser || oItem.CreatedBy || oItem.Createdby || oItem.Ernam || "";
+							if (!sReqUserVal && sReqNo) {
+								try {
+									sReqUserVal = localStorage.getItem("requser_" + sReqNo) || "";
+								} catch (e) {}
+							}
+							if (!sReqUserVal) {
+								var oUserModel = sap.ui.getCore().getModel("user");
+								if (oUserModel && oUserModel.getProperty("/Username")) {
+									sReqUserVal = oUserModel.getProperty("/Username");
+								}
+							}
+							console.log("Request No:", sReqNo);
+							console.log("ReqUser from Backend:", sReqUserVal);
+							// console.log(reqUserVal)
+
 							return Object.assign({}, oItem, {
 								GatePassReqNo: sReqNo,
 								GatePassNo: oItem.GatePassNo ? String(oItem.GatePassNo).trim() : "",
 								PurchaseOrder: sReqNo,
+								GatePassDate: sFormattedDate,
 								GatePassType: typeKey === "PO" ? "GP with PO" : (oItem.GatePassType || typeKey),
-								Status: that.formatStatus(oItem.Status, oItem.Approval1, oItem.Approval2, oItem.ApprovalReq, oItem.STORERemarks || oItem.StoreRemarks, oItem.StoreAmmend),
+								Status: sFormattedStatus,
+								StatusText: sFormattedStatus,
 								Plant: oItem.Plant ? String(oItem.Plant).trim() : "",
 								VendorName: oItem.VendorName ? String(oItem.VendorName).trim() : "",
 								Vendor: oItem.Vendor || "",
@@ -113,7 +134,8 @@ sap.ui.define([
 								City: oItem.City || "",
 								ZipCode: oItem.ZipCode || "",
 								Department: oItem.Department ? String(oItem.Department).trim() : "",
-								Requestor: oItem.Requestor || oItem.RequestedUser || "",
+								Requestor: sReqUserVal,
+								ReqUser: sReqUserVal,
 								CommonDesc: oItem.CommonDesc || "",
 								VehicleNo: oItem.VehicleNo ? String(oItem.VehicleNo).trim() : "",
 								ModeOfDispatch: oItem.ModeOfDispatch || "",
@@ -123,7 +145,6 @@ sap.ui.define([
 								ChallanDate: oItem.ChallanDate || "",
 								Remarks: oItem.Remarks || "",
 								HODRemarks: oItem.HODRemarks || "",
-								GatePassDate: oItem.GatePassDate || null,
 								Approval1: oItem.Approval1 || "",
 								Approval2: oItem.Approval2 || "",
 								ApprovalReq: oItem.ApprovalReq || "",
@@ -225,14 +246,8 @@ sap.ui.define([
 				return true;
 			});
 
-			// Set filtered results into a temporary model property and rebind
+			// Set filtered results into model property bound to XML table
 			this.getView().getModel("gatePassList").setProperty("/filtered", aFiltered);
-			oTable.bindItems({
-				path: "gatePassList>/filtered",
-				template: oTable.getBindingInfo("items").template,
-				templateShareable: true
-			});
-
 			this._updateCount();
 		},
 
@@ -423,6 +438,7 @@ sap.ui.define([
 			
 			var oUserModel = sap.ui.getCore().getModel("user");
 			var bIsStoreUser = oUserModel ? oUserModel.getProperty("/IsStoreUser") : false;
+			var bIsHodUser   = oUserModel ? oUserModel.getProperty("/IsHodUser")   : false;
 			var sRole = oUserModel ? oUserModel.getProperty("/Role") : "";
 			var sStatus = this.formatStatus(oItem.Status, oItem.Approval1, oItem.Approval2, oItem.ApprovalReq, oItem.STORERemarks || oItem.StoreRemarks, oItem.StoreAmmend);
 
@@ -431,6 +447,19 @@ sap.ui.define([
 
 			if (bAmendment) {
 				sap.m.MessageBox.information("This request is pending amendment by the requester.");
+			} else if (bIsHodUser) {
+				var oRowData = JSON.parse(JSON.stringify(oItem));
+				oRowData.Status = sStatus;
+				var oTemp = this.getOwnerComponent().getModel("hodTemp");
+				if (!oTemp) {
+					oTemp = new sap.ui.model.json.JSONModel();
+					this.getOwnerComponent().setModel(oTemp, "hodTemp");
+				}
+				oTemp.setData(oRowData);
+				this.getRouter().navTo("HODRequestDetail", {
+					reqNo:  encodeURIComponent(oItem.GatePassReqNo || ""),
+					gpType: encodeURIComponent(oItem.GatePassType  || "NRGP")
+				});
 			} else if (bIsStoreUser) {
 				if (bApproved) {
 					this.getRouter().navTo("OutGatePass", { reqNo: oItem.GatePassReqNo, gpNo: oItem.GatePassNo || "-" });
@@ -486,12 +515,7 @@ sap.ui.define([
 				return;
 			}
 
-			// For fully approved requests, any user clicking the row goes directly to generate gate pass
-			if (bApproved) {
-				this.getRouter().navTo("OutGatePass", { reqNo: oItem.GatePassReqNo, gpNo: oItem.GatePassNo || "-" });
-				return;
-			}
-
+			// HOD user: navigate to HODRequestDetail (read-only view for approved/pending requests)
 			if (bIsHodUser) {
 				var oRowData = JSON.parse(JSON.stringify(oItem));
 				oRowData.Status = sStatus;
@@ -503,11 +527,16 @@ sap.ui.define([
 				}
 				oTemp.setData(oRowData);
 
-				// HOD: navigate to read-only detail with Approve/Reject/Amendment actions
 				this.getRouter().navTo("HODRequestDetail", {
 					reqNo:  encodeURIComponent(oItem.GatePassReqNo || ""),
 					gpType: encodeURIComponent(oItem.GatePassType  || "NRGP")
 				});
+				return;
+			}
+
+			// For Non-HOD users, fully approved requests go directly to OutGatePass (generate DC / print)
+			if (bApproved) {
+				this.getRouter().navTo("OutGatePass", { reqNo: oItem.GatePassReqNo, gpNo: oItem.GatePassNo || "-" });
 				return;
 			}
 
@@ -569,6 +598,7 @@ sap.ui.define([
 		},
 
 		onDownloadExcelButtonPress: function () {
+			var that = this;
 			var oTable = this.byId("idItemsGatePassTable");
 			var oBinding = oTable ? oTable.getBinding("items") : null;
 			var aObjects = [];
@@ -590,15 +620,6 @@ sap.ui.define([
 				return;
 			}
 
-			var formatD = function (v) {
-				if (!v) { return ""; }
-				var d = new Date(v);
-				if (isNaN(d.getTime())) { return ""; }
-				return d.getDate().toString().padStart(2, "0") + "-" +
-					(d.getMonth() + 1).toString().padStart(2, "0") + "-" +
-					d.getFullYear();
-			};
-
 			var aRows = [];
 			var iSno = 1;
 			aObjects.forEach(function (o) {
@@ -607,21 +628,34 @@ sap.ui.define([
 					aItems = [{}];
 				}
 				aItems.forEach(function (itm) {
+					var sReqNoKey = o.GatePassNo || o.GatePassReqNo || o.GatePassreqNo || "";
+					var oSavedLogistics = {};
+					try {
+						oSavedLogistics = JSON.parse(localStorage.getItem("gp_logistics_" + sReqNoKey) || "{}");
+					} catch (e) {}
+
+					var bInsured = oSavedLogistics.bInsured || oSavedLogistics.InsuranceRequired || (o.InsuranceReq === "X" || o.InsuranceReq === "YES" || o.Insurance === "YES" || o.InsuranceReq === "Y" || o.InsuranceReq === "1");
+					var sInsAmount = oSavedLogistics.sInsAmount || oSavedLogistics.InsuranceAmount || o.InsuranceAmount || o.InsuranceValue || "";
+					var sInsLRV = oSavedLogistics.sInsLRVehicleNo || oSavedLogistics.OutwardInsLRV || o.OutwardInsLRV || o.InwardInsLRV || o.InwardLRVehicleNo || "";
+					var sInsDesc = oSavedLogistics.sInsDescription || oSavedLogistics.OutwardInsDesc || o.OutwardInsDesc || o.InwardInsDesc || o.InwardDescription || "";
+					var sInsDate = oSavedLogistics.sInsDate || oSavedLogistics.OutwardInsDate || o.OutwardInsDate || o.InwardInsDate || o.InwardDate || "";
+					var sInsVal = oSavedLogistics.sInsValue || oSavedLogistics.OutwardInsValue || o.OutwardInsValue || o.InwardInsValue || o.InwardValue || "";
+
 					aRows.push({
 						"Sno": iSno++,
-						"GP No": o.GatePassNo || "",
+						"GP No": o.GatePassNo || o.GatePassReqNo || "",
 						"Vendor Name": o.VendorName || "",
-						"Issue Date": formatD(o.GatePassDate),
-						"Material Description": o.CommonDesc || "",
-						"Item Name": itm.MaterialDesc || itm.Description || itm.HSNDesc || "",
+						"Issue Date": that._formatDate(o.GatePassDate || o.CreatedOn),
+						"Common Description": o.CommonDesc || "",
+						"Material Description": itm.MaterialDesc || itm.Description || itm.HSNDesc || "",
 						"Qty Send": itm.SentQuantity || itm.Quantity || "",
 						"Uom": itm.UOM || itm.uom || itm.Uom || "",
 						"HSN Code": itm.HSNCode || "",
 						"Qty Received": itm.RecievedQuantity || itm.ReceivedQuantity || itm.ReceivedQty || "",
 						"Balance Qty": itm.BalanceQuantity || itm.BalanceQty || "",
-						"Due Date": formatD(o.ReturnableDate || o.DueDate),
-						"Extend Due Date": formatD(o.ExtReturnDate || o.Extreturndate || o.ExtendedReturnableDate || o.ReturnDate),
-						"Returned Date": formatD(o.ReturnedDate),
+						"Due Date": that._formatDate(o.ReturnableDate || o.DueDate),
+						"Extend Due Date": that._formatDate(o.ExtReturnDate || o.Extreturndate || o.ExtendedReturnableDate || o.ReturnDate),
+						"Returned Date": that._formatDate(o.ReturnedDate),
 						"UOP": itm.ItemNetPrice || itm.UnitPrice || "",
 						"Amount": itm.ItemNetPrice || itm.UnitPrice || itm.rate || "",
 						"Total Value": itm.Totalvalue || itm.amount || "",
@@ -632,14 +666,14 @@ sap.ui.define([
 						"EWB No": o.EWBNo || o.EWBno || o.EwbNo || "",
 						"Transport Name": o.TransporterName || "",
 						"Transporter GST": o.TransporterGST || "",
-						"Insurance Yes/ No": o.InsuranceReq || o.Insurance || "NO",
-						"Insurance Value": o.InsuranceAmount || o.InsuranceValue || "",
-						"Inward Insurance LR/Vehicle No": o.InwardInsLRV || o.InwardLRVehicleNo || "",
-						"Inward Insurance Description": o.InwardInsDesc || o.InwardDescription || "",
-						"Inward Insurance Date": formatD(o.InwardInsDate || o.InwardDate),
-						"Inward Insurance Value": o.InwardInsValue || o.InwardValue || "",
+						"Insurance Yes/ No": bInsured ? "YES" : "NO",
+						"Insurance Value": sInsAmount,
+						"Outward Insurance LR/Vehicle No": sInsLRV,
+						"Outward Insurance Description": sInsDesc,
+						"Outward Insurance Date": that._formatDate(sInsDate),
+						"Outward Insurance Value": sInsVal,
 						"GP Req No": o.GatePassReqNo || o.GatePassreqNo || "",
-						"User": o.Requestor || o.RequestedUser || o.ReqEmpName || o.CreatedBy || "",
+						"Requested User": o.Requestor || o.ReqUser || o.RequestedUser || o.ReqEmpName || o.CreatedBy || "",
 						"Department": o.Department || "",
 						"User Remarks": o.Remarks || "",
 						"Dept Remarks": o.HODRemarks || "",

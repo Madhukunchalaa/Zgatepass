@@ -237,40 +237,57 @@ sap.ui.define([
 			var aRows = [];
 			aData.forEach(function (o) {
 				var aItems = (o.PCPItmNav && (Array.isArray(o.PCPItmNav) ? o.PCPItmNav : o.PCPItmNav.results)) || [];
+				var sPcpStatus = o.Status || ((o.GatepassNo || "").trim() ? "Closed" : "Pending");
 				if (aItems.length === 0) {
 					aRows.push({
-						"PCP No": o.GatepassNo || "",
-						"PCP Date": fmtD(o.PCPDate),
-						"Entry": o.EntryPoint || "",
 						"GE No": o.GateEntryNo || "",
 						"GE Date": fmtD(o.GEDate),
-						"Dept": o.Department || "",
-						"Supplier": o.VendorDesc || "",
-						"Items": o.FirstItemDesc || "",
-						"Qty": "",
-						"UOM": "",
+						"Source Type": o.SourceType || "",
+						"Plant": o.Plant || "",
+						"Entry": o.EntryPoint || "",
+						"Department": o.Department || "",
+						"PCP Date": fmtD(o.PCPDate),
+						"PCP No": o.GatepassNo || "",
+						"Vendor": o.Vendor || "",
+						"DC Date": fmtD(o.DCdate),
 						"DC/INV No": o.DCNumber || "",
-						"DC/INV Date": fmtD(o.DCdate),
-						"Total cost": o.TotalCost || "",
-						"Budget": o.BudgetCode || ""
+						"Supplier": o.VendorDesc || "",
+						"Item No": o.ItemNo || "",
+						"Item Description": o.FirstItemDesc || "",
+						"Received Qty": o.RecievedQuantity || "",
+						"Item UOM": o.UOM || "",
+						"Item Total Cost": "",
+						"Budget Code": o.BudgetCode || "",
+						"Status": sPcpStatus,
+						"Inspection Status": o.InspectionStatus || "",
+						"Inspected Date": fmtD(o.Inspectiondate),
+						"Remarks": o.Remarks || ""
 					});
 				} else {
 					aItems.forEach(function (item) {
 						aRows.push({
-							"PCP No": o.GatepassNo || "",
-							"PCP Date": fmtD(o.PCPDate),
-							"Entry": o.EntryPoint || "",
 							"GE No": o.GateEntryNo || "",
 							"GE Date": fmtD(o.GEDate),
-							"Dept": o.Department || "",
-							"Supplier": o.VendorDesc || "",
-							"Items": item.ItemDescription || item.Description || item.MaterialDesc || o.FirstItemDesc || "",
-							"Qty": item.OrderQuantity || item.Quantity || item.SentQuantity || "",
-							"UOM": item.UOM || item.uom || item.Uom || "",
+							"Source Type": o.SourceType || "",
+							"Plant": o.Plant || "",
+							"Entry": o.EntryPoint || "",
+							"Department": o.Department || "",
+							"PCP Date": fmtD(o.PCPDate),
+							"PCP No": o.GatepassNo || "",
+							"Vendor": o.Vendor || "",
+							"DC Date": fmtD(o.DCdate),
 							"DC/INV No": o.DCNumber || "",
-							"DC/INV Date": fmtD(o.DCdate),
-							"Total cost": item.TotalCost || o.TotalCost || "",
-							"Budget": o.BudgetCode || ""
+							"Supplier": o.VendorDesc || "",
+							"Item No": item.ItemNo || "",
+							"Item Description": item.ItemDescription || item.Description || item.MaterialDesc || o.FirstItemDesc || "",
+							"Received Qty": item.RecievedQuantity || item.ReceivedQuantity || item.OrderQuantity || item.Quantity || "",
+							"Item UOM": item.UOM || item.uom || item.Uom || "",
+							"Item Total Cost": item.TotalCost || "",
+							"Budget Code": o.BudgetCode || "",
+							"Status": sPcpStatus,
+							"Inspection Status": o.InspectionStatus || "",
+							"Inspected Date": fmtD(o.Inspectiondate),
+							"Remarks": o.Remarks || ""
 						});
 					});
 				}
@@ -278,7 +295,7 @@ sap.ui.define([
 			var aParts = ["PCP_List"];
 			if (dFrom) { aParts.push(ExcelExport.fmtDate(dFrom)); }
 			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
-			ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx", aRows.length ? Object.keys(aRows[0]).length : 14);
+			ExcelExport.download(aRows, aParts.join(" "), aParts.join("_") + ".xlsx", aRows.length ? Object.keys(aRows[0]).length : 22);
 		},
 
 		onCreateNew: function () {

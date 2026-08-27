@@ -50,6 +50,10 @@
 							<Input value="{hod>/Department}" editable="false" class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
+							<Label text="Request Person Name" class="gpmsFieldLabel"/>
+							<Input value="{gp>/ReqUser}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
 							<Label text="Vendor Name" class="gpmsFieldLabel"/>
 							<Input value="{hod>/VendorName}" editable="false" class="gpmsFieldInput"/>
 						</VBox>
@@ -179,7 +183,7 @@
 								rows="5"
 								width="100%"
 								maxLength="250"
-								showExceededText="true"
+								editable="{= ${hod>/Status} === 'HOD approval pending' || ${hod>/Status} === 'HOD Approval Pending' || ${hod>/Status} === 'Pending' || ${hod>/Status} === 'OPEN' }"
 								class="gpmsFieldInput gpmsTextAreaBig"/>
 						</VBox>
 					</layout:Grid>
@@ -191,11 +195,11 @@
 		<footer>
 			<OverflowToolbar class="gpmsFooterBar">
 				<Button text="Approve" type="Accept" icon="sap-icon://accept" press=".onApprove"
-					visible="{= ${hod>/Status} === 'Pending'}" class="sapUiSmallMarginBegin"/>
+					visible="{= ${hod>/Status} === 'HOD approval pending' || ${hod>/Status} === 'HOD Approval Pending' || ${hod>/Status} === 'Pending' || ${hod>/Status} === 'OPEN' }" class="sapUiSmallMarginBegin"/>
 				<Button text="Reject" type="Reject" icon="sap-icon://decline" press=".onReject"
-					visible="{= ${hod>/Status} === 'Pending'}"/>
+					visible="{= ${hod>/Status} === 'HOD approval pending' || ${hod>/Status} === 'HOD Approval Pending' || ${hod>/Status} === 'Pending' || ${hod>/Status} === 'OPEN' }"/>
 				<Button text="Amendment" type="Emphasized" icon="sap-icon://edit" press=".onAmend"
-					visible="{= ${hod>/Status} === 'Pending'}"/>
+					visible="{= ${hod>/Status} === 'HOD approval pending' || ${hod>/Status} === 'HOD Approval Pending' || ${hod>/Status} === 'Pending' || ${hod>/Status} === 'OPEN' }"/>
 				<ToolbarSpacer/>
 				<Button text="Back" icon="sap-icon://nav-back" press=".onNavBack"/>
 			</OverflowToolbar>

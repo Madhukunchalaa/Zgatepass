@@ -245,8 +245,8 @@ sap.ui.define(["./BaseController",
 			};
 
 			var oPayload = {
-				SalesDocument: oData.saleOrder || "",
 				GatePassType: "NRGP",
+				SalesDocument: oData.saleOrder || "",
 				RequestDate: fnFormatDate(oData.requestDate),
 				SoldToParty: oData.vendor || "",
 				CustomerName: oData.vendorName || "",

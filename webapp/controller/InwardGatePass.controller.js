@@ -55,7 +55,6 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 				VehicleNo: "",
 				ModeOfTransport: "",
 				TransportByIndex: 1,
-				// GateEntryNo: "",
 				EWayBillNo: "",
 				EWayBillDate: null,
 				InsuranceRequired: false,
@@ -80,7 +79,6 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			}
 		},
 
-
 		onSearchRGP: function (oEvent) {
 			var sQuery = oEvent.getParameter("query");
 			if (!sQuery) { return; }
@@ -90,6 +88,7 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 
 		_loadByGPNo: function (sGPNo) {
 			var oODataModel = this.getOwnerComponent().getModel();
+			var that = this;
 			if (!oODataModel) {
 				MessageBox.error("Backend OData service not connected.");
 				return;
@@ -110,9 +109,18 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 						MessageBox.error("RGP Gate Pass " + sGPNo + " not found.");
 						return;
 					}
+
+					var sTrimmed = sGPNo.trim();
 					var oResult = aResults.find(function (r) {
-						return (r.GatePassNo || "").trim() === sGPNo.trim();
-					}) || aResults[0];
+						return (r.GatePassNo || "").trim() === sTrimmed ||
+						       (r.GatePassreqNo || "").trim() === sTrimmed ||
+						       (r.GatePassReqNo || "").trim() === sTrimmed;
+					});
+
+					if (!oResult) {
+						MessageBox.error("RGP Gate Pass " + sGPNo + " not found.");
+						return;
+					}
 
 					if (oResult.GatePassType !== "RGP") {
 						MessageBox.warning("This is an NRGP Gate Pass. Inward is only for RGP.");
@@ -146,8 +154,8 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 					}
 
 					oResult.OutgateNav = { results: aCombinedItems };
-					this._mapData(oResult);
-				}.bind(this),
+					that._mapData(oResult);
+				},
 				error: function () {
 					sap.ui.core.BusyIndicator.hide();
 					MessageBox.error("Error fetching Gate Pass data.");
@@ -160,7 +168,6 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			var oModel = this.getView().getModel("inward");
 			var aItems = (oData.OutgateNav && oData.OutgateNav.results) || [];
 
-			var sFullyReceivedMsg = "";
 			var aMapped = aItems.map(function (item, i) {
 				var fSent = parseFloat(item.SentQuantity || item.Quantity || 0);
 				var fRec  = parseFloat(item.RecievedQuantity || 0);
@@ -168,10 +175,6 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 
 				if ((isNaN(fBal) || (fBal === 0 && fRec === 0)) && fSent > 0) {
 					fBal = fSent;
-				}
-
-				if (fBal === 0 && fSent > 0) {
-					sFullyReceivedMsg = item.Message || "All items for Gate Pass " + (oData.GatePassNo || "") + " have already been received.";
 				}
 
 				var fRateRaw = parseFloat(item.ItemNetPrice || 0);
@@ -199,8 +202,12 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 				};
 			});
 
-			if (sFullyReceivedMsg) {
-				MessageBox.warning(sFullyReceivedMsg);
+			var bAllFullyReceived = aMapped.length > 0 && aMapped.every(function (it) {
+				return it.balQty === 0;
+			});
+
+			if (bAllFullyReceived) {
+				MessageBox.warning("All items for Gate Pass " + (oData.GatePassNo || "") + " have already been received.");
 			}
 
 			oModel.setProperty("/GatePassNo",     oData.GatePassNo || "");
@@ -220,7 +227,17 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			oModel.setProperty("/LRNumber",          oData.LRNumber || oData.LRNnumber || "");
 			oModel.setProperty("/VehicleNo",         oData.VehicleNo || "");
 			oModel.setProperty("/ModeOfTransport",   oData.ModeOfDispatch || "Road");
-			oModel.setProperty("/InsuranceRequired", (oData.InsuranceReq || "").toLowerCase() === "yes");
+			var sReqNoKey = oData.GatePassNo || oData.GatePassreqNo || "";
+			var oSavedLogistics = {};
+			try {
+				oSavedLogistics = JSON.parse(localStorage.getItem("gp_logistics_" + sReqNoKey) || "{}");
+			} catch (e) {}
+
+			var sInsStr = String(oData.InsuranceReq || oData.Insurance || "").toUpperCase();
+			var bInsured = oSavedLogistics.bInsured || oSavedLogistics.InsuranceRequired ||
+			               sInsStr === "X" || sInsStr === "YES" || sInsStr === "Y" || sInsStr === "TRUE" || sInsStr === "1" || oData.InsuranceReq === true;
+
+			oModel.setProperty("/InsuranceRequired", bInsured);
 			oModel.setProperty("/InsuranceDate", oData.InsuranceDate || "");
 			oModel.setProperty("/InsuranceAmount", oData.InsuranceAmount || "");
 			oModel.setProperty("/items",          aMapped);
@@ -264,7 +281,6 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 
 			var fNow     = parseFloat(oSource.getValue() || 0);
 
-			// Manually sync the typed value to the model for real-time total calculation
 			oModel.setProperty(oContext.getPath() + "/recvdQty", fNow);
 
 			var fInitial = parseFloat(oItem._initialBal || oItem.sentQty || 0);
@@ -291,8 +307,6 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			var bAnyReceived = aItems.some(function (item) { return parseFloat(item.recvdQty || 0) > 0; });
 			var fTotal = aItems.reduce(function (sum, item) {
 				var fRate = parseFloat(item._itemNetPrice || 0);
-				// Before user enters any received qty, show full gate pass value (sentQty * rate)
-				// Once user starts entering, show received value (recvdQty * rate)
 				var fQty = bAnyReceived ? parseFloat(item.recvdQty || 0) : parseFloat(item.sentQty || 0);
 				return sum + (fQty * fRate);
 			}, 0);
@@ -578,7 +592,6 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			var fTotal = oInward.FinalTotal ? oInward.FinalTotal.toString().replace(/,/g, '') : "0";
 			var totalAmt = parseFloat(fTotal);
 
-			// Table Footer Row (In Words & Total)
 			doc.rect(margin, finalY, pageWidth - margin * 2, 8);
 			doc.setFontSize(8); doc.setFont("helvetica", "normal");
 			doc.text("In Words - Rupees " + this._numberToWords(Math.round(totalAmt)) + " Only.", margin + 2, finalY + 5);
@@ -597,7 +610,6 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			var pageWidth = doc.internal.pageSize.width;
 			var sDate = new Date().toLocaleDateString('en-GB').split('/').join('-');
 
-			// --- 1. Header Section ---
 			var sLogoUrl = sap.ui.require.toUrl("zgpms/meilpower/com/images/meil_logo.png");
 			try {
 				var sLogoBase64 = await this._getImageBase64(sLogoUrl);
@@ -618,14 +630,12 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			doc.text("DELIVERY CHALLAN (RETURN RECEIPT)", pageWidth / 2, 30, { align: "center" });
 			doc.line(pageWidth / 2 - 30, 31, pageWidth / 2 + 30, 31);
 
-			// --- 2. Unified Grid Section ---
 			var hY = 35;
 			doc.setLineWidth(0.1);
-			doc.rect(margin, hY, pageWidth - margin * 2, 45); // Outer Box
-			doc.line(75, hY, 75, hY + 45); // Vertical 1
-			doc.line(135, hY, 135, hY + 45); // Vertical 2
+			doc.rect(margin, hY, pageWidth - margin * 2, 45);
+			doc.line(75, hY, 75, hY + 45);
+			doc.line(135, hY, 135, hY + 45);
 
-			// Column 1: From Address (Vendor)
 			doc.setFontSize(8); doc.setFont("helvetica", "bold");
 			doc.text("Received From", margin + 2, hY + 5);
 			doc.text(oInward.VendorName || "", margin + 10, hY + 5);
@@ -637,7 +647,6 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			doc.setFont("helvetica", "normal");
 			doc.text(oInward.VendorGST || "", margin + 12, hY + 40);
 
-			// Column 2: Inward Info
 			var c2X = 77;
 			doc.setFont("helvetica", "bold"); doc.text("Ref RGP No:", c2X, hY + 5);
 			doc.setFont("helvetica", "normal"); doc.text(oInward.GatePassNo || "", c2X + 28, hY + 5);
@@ -655,7 +664,6 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			var splitTrans = doc.splitTextToSize(oInward.TransporterName || "Self", 40);
 			doc.text(splitTrans, c2X + 28, hY + 30);
 
-			// Column 3: Location Info
 			var c3X = 137;
 			doc.setFont("helvetica", "bold"); doc.text("Plant:", c3X, hY + 5);
 			doc.setFont("helvetica", "normal"); doc.text(oInward.Plant || "", c3X + 28, hY + 5);
@@ -667,7 +675,6 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			doc.setFont("helvetica", "bold"); doc.text("EWBNo:", c3X, hY + 34);
 			doc.setFont("helvetica", "normal"); doc.text(oInward.EWayBillNo || "", c3X + 28, hY + 34);
 
-			// --- 3. Items Table ---
 			var tableData = (oInward.items || []).filter(it => parseFloat(it.recvdQty) > 0).map(function (item, index) {
 				return [index + 1, item.materialName, "", item.uom, item.recvdQty, parseFloat(item._itemNetPrice || 0).toFixed(2), (parseFloat(item.recvdQty) * parseFloat(item._itemNetPrice || 0)).toFixed(2)];
 			});
@@ -686,7 +693,6 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			var fTotal = oInward.FinalTotal ? oInward.FinalTotal.toString().replace(/,/g, '') : "0";
 			var totalAmt = parseFloat(fTotal);
 
-			// Table Footer Row (In Words & Total)
 			doc.rect(margin, finalY, pageWidth - margin * 2, 8);
 			doc.setFontSize(8); doc.setFont("helvetica", "normal");
 			doc.text("In Words - Rupees " + this._numberToWords(Math.round(totalAmt)) + " Only.", margin + 2, finalY + 5);
@@ -694,7 +700,6 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			doc.setFont("helvetica", "bold"); doc.text("Total", pageWidth - 55, finalY + 5);
 			doc.text(totalAmt.toLocaleString(), pageWidth - margin - 2, finalY + 5, { align: "right" });
 
-			// Note Section
 			var y = finalY + 12;
 			doc.rect(margin, y, pageWidth - margin * 2, 10);
 			doc.setFont("helvetica", "bold"); doc.text("Note :", margin + 2, y + 6);

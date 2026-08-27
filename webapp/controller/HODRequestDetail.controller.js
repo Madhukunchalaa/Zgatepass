@@ -261,6 +261,8 @@ sap.ui.define([
 				Plant: f(oRaw.Plant),
 				FiscalYear: f(oRaw.FiscalYear, oRaw.Gjahr, oRaw.FisYear, String(new Date().getFullYear())),
 				Department: f(oRaw.Department),
+				Requestor: f(oRaw.ReqUser, oRaw.Requser, oRaw.requser, oRaw.Requestor, oRaw.RequestedUser),
+				CommonDesc: f(oRaw.CommonDesc, oRaw.RGPCoomonDesc),
 
 				GpDate: f(oRaw.GpDate, oRaw.Gpdate, oRaw.GPDate, oRaw.GatePassDate,
 					oRaw.GatepassDate, oRaw.RequestDate, oRaw.Requestdate,
@@ -313,9 +315,11 @@ sap.ui.define([
 
 			var oModel = this.getView().getModel("hod");
 
+			var sStatus = this._deriveStatus(oRawData);
+
 			oModel.setProperty("/GatePassReqNo", oRow.GatePassReqNo);
 			oModel.setProperty("/GatePassType", oRow.GatePassType);
-			oModel.setProperty("/Status", this._deriveStatus(oRawData));
+			oModel.setProperty("/Status", sStatus);
 
 			oModel.setProperty("/GpDate", this._formatDate(oRow.GpDate) || this._formatDate(new Date()));
 			oModel.setProperty("/ReturnableDate", this._formatDate(oRow.ReturnableDate));

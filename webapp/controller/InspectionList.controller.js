@@ -53,7 +53,14 @@ sap.ui.define([
 						}
 						return oItem;
 					});
+					var iPendingCount = aResults.filter(function (item) {
+						var sStatus = (item.InspectionStatus || "").trim().toLowerCase();
+						return sStatus === "pending" || (sStatus !== "completed" && sStatus !== "done");
+					}).length;
+
 					that.getView().getModel("inspList").setProperty("/results", aResults);
+					that.getView().getModel("inspList").setProperty("/pendingCount", iPendingCount);
+
 					// Default filter is set to Pending in the view, so apply it now
 					setTimeout(function() {
 						that._applyFilters();

@@ -13,7 +13,8 @@ sap.ui.define([
 				gatePassListCount: "-",
 				nrgpListCount: "-",
 				scrapGpListCount: "-",
-				ashGpListCount: "-"
+				ashGpListCount: "-",
+				inspectionPendingCount: "-"
 			}), "hodCounts");
 
 			this.getRouter().getRoute("home").attachPatternMatched(this._onRouteMatched, this);
@@ -29,8 +30,8 @@ sap.ui.define([
 
 			var oCountsModel = this.getView().getModel("hodCounts");
 
-			// Track all 8 parallel calls — BusyIndicator hides only when every call settles
-			var iTotalCalls = 8;
+			// Track all 9 parallel calls — BusyIndicator hides only when every call settles
+			var iTotalCalls = 9;
 			var iSettled = 0;
 			sap.ui.core.BusyIndicator.show(0);
 			var fnSettle = function () {
@@ -40,9 +41,10 @@ sap.ui.define([
 				}
 			};
 
-			// Gate Pass Request List — backend requires GatePassType filter; count pending client-side
-			var iReqPending = 0;
+			// Gate Pass Request List — count only HOD Pending requests
+			var iReqTotal = 0;
 			var iReqDone = 0;
+			var that = this;
 			["NRGP", "RGP", "PO"].forEach(function (sType) {
 				oODataModel.read("/GateReqHdrSet", {
 					filters: [
@@ -51,26 +53,13 @@ sap.ui.define([
 					],
 					success: function (oData) {
 						var aResults = oData.results || [];
-						iReqPending += aResults.filter(function (item) {
-							var fnGetProp = function (obj, sProp) {
-								if (!obj) return "";
-								var sTarget = sProp.toLowerCase();
-								for (var key in obj) {
-									if (key.toLowerCase() === sTarget) {
-										return obj[key];
-									}
-								}
-								return "";
-							};
-							var s = fnGetProp(item, "ApprovalReq") || fnGetProp(item, "Status") || "";
-							s = String(s).trim().toUpperCase();
-							return s !== "A" && s !== "APPROVED" &&
-								   s !== "R" && s !== "REJECTED" &&
-								   s !== "AM" && s !== "AMENDMENT";
-						}).length;
+						var aHodPending = aResults.filter(function (oItem) {
+							return that._deriveStatus(oItem) === "HOD approval pending";
+						});
+						iReqTotal += aHodPending.length;
 						iReqDone++;
 						if (iReqDone === 3) {
-							oCountsModel.setProperty("/gatePassListCount", iReqPending);
+							oCountsModel.setProperty("/gatePassListCount", iReqTotal);
 						}
 						fnSettle();
 					},
@@ -111,6 +100,20 @@ sap.ui.define([
 				filters: [new Filter("GatePassType", FilterOperator.EQ, "NRGP")],
 				success: function (oData) {
 					oCountsModel.setProperty("/ashGpListCount", (oData.results || []).length);
+					fnSettle();
+				},
+				error: function () { fnSettle(); }
+			});
+
+			// Inspection List — count pending gate entry inspections
+			oODataModel.read("/PCPHdrSet", {
+				success: function (oData) {
+					var aResults = oData.results || [];
+					var iPendingCount = aResults.filter(function (item) {
+						var sStatus = (item.InspectionStatus || "").trim().toLowerCase();
+						return sStatus === "pending" || (sStatus !== "completed" && sStatus !== "done");
+					}).length;
+					oCountsModel.setProperty("/inspectionPendingCount", iPendingCount);
 					fnSettle();
 				},
 				error: function () { fnSettle(); }

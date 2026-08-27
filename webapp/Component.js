@@ -32,6 +32,9 @@ sap.ui.define([
 				try {
 					var oUserData = JSON.parse(sSavedUser);
 					oUserModel.setData(oUserData);
+
+					// console.log(oUserData)
+					console.log('user data',sSavedUser)
 					
 					// Asynchronously refresh user details from backend to update roles
 					if (oUserData.id) {
@@ -117,7 +120,7 @@ sap.ui.define([
 			if (oPrevHash !== undefined) {
 				window.history.go(-1);
 			} else {
-				this.getRouter().navTo("masterSettings", {}, true);
+				this.getRouter().navTo("masterSettings", {}, undefined, true);
 			}
 		},
 

@@ -88,7 +88,7 @@
 							<Title text="TABLE OF ITEMS" level="H3"/>
 							<ToolbarSpacer/>
 							<Button id="idRGPCopyItemsBtn" icon="sap-icon://copy" text="Copy" press=".onCopyItemsToClipboard" tooltip="Copy items to clipboard" class="sapUiTinyMarginEnd"/>
-							<Button id="idRGPPrintItemsBtn" icon="sap-icon://print" text="Print" press=".onPrintItems" tooltip="Print item table"/>
+							<Button id="idRGPPrintItemsBtn" icon="sap-icon://print" text="Print" press=".onPrintItems" tooltip="Print item table" visible="{user>/IsStoreUser}"/>
 						</Toolbar>
 					</headerToolbar>
 					<Table items="{rgp>/items}" class="gpmsItemTable" alternateRowColors="true">
@@ -282,7 +282,7 @@
 							<!-- Row 7: Gate Pass Status -->
 							<VBox class="sapUiSmallMarginTop">
 								<Label text="Gate Pass Status" class="gpmsFieldLabel" required="true"/>
-								<Select selectedKey="{rgp>/GPStatus}" width="100%" class="gpmsFieldInput" change=".onSelectStatusChange">
+								<Select selectedKey="{rgp>/GPStatus}" width="100%" class="gpmsFieldInput" change=".onSelectStatusChange" enabled="{= ${user>/IsStoreUser} &amp;&amp; ${rgp>/isEditable} }">
 									<core:Item key="" text="Select Status"/>
 									<core:Item key="OPEN" text="OPEN"/>
 									<core:Item key="AWAITING FOR VENDOR ACKNOWLEDGEMENT" text="Awaiting for Return"/>
@@ -291,11 +291,6 @@
 								</Select>
 							</VBox>
 
-							<!-- Row 8: Remarks -->
-							<VBox class="sapUiSmallMarginTop">
-								<Label text="Common Description" class="gpmsFieldLabel"/>
-								<TextArea value="{rgp>/CommonDesc}" width="100%" rows="2" class="gpmsTextArea" editable="{rgp>/isEditable}"/>
-							</VBox>
 						</VBox>
 
 						<!-- Comments Table -->
@@ -319,18 +314,19 @@
 							</Table>
 						</VBox>
 
-						<!-- Action Buttons -->
+						<!-- Action Buttons (Visible for Store Users only) -->
 						<HBox justifyContent="End" class="sapUiLargeMarginTop">
 							<Button text="PRINT GATE PASS" type="Emphasized" press=".onPRINTGATEPASSButtonPress"
 								icon="sap-icon://print" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd"
-								visible="{= !!${rgp>/GatePassNo} }"/>
+								visible="{= !!${rgp>/GatePassNo} &amp;&amp; ${user>/IsStoreUser} }"/>
 							<Button text="CANCEL GATE PASS" type="Reject" press=".onCANCELGATEPASSButtonPress"
 								icon="sap-icon://cancel" class="gpmsDocBtn rejectBtn sapUiSmallMarginEnd"
-								visible="{= !!${rgp>/GatePassNo} &amp;&amp; ${rgp>/GPStatus} !== 'CANCELLED' }"/>
+								visible="{= !!${rgp>/GatePassNo} &amp;&amp; ${rgp>/GPStatus} !== 'CANCELLED' &amp;&amp; ${user>/IsStoreUser} }"/>
 							<Button text="Generate DC" type="Emphasized" press=".onGenerateDCButtonPress"
 								class="gpmsDocBtn dcBtn sapUiSmallMarginEnd"
-								visible="{= ${rgp>/DocOptionIndex} === 1 &amp;&amp; !!${rgp>/GatePassNo} }"/>
-							<Button text="SAVE" type="Accept" press=".onSAVEButtonPress" icon="sap-icon://save" class="gpmsSubmitBtn"/>
+								visible="{= ${rgp>/DocOptionIndex} === 1 &amp;&amp; !!${rgp>/GatePassNo} &amp;&amp; ${user>/IsStoreUser} }"/>
+							<Button text="SAVE" type="Accept" press=".onSAVEButtonPress" icon="sap-icon://save" class="gpmsSubmitBtn"
+								visible="{user>/IsStoreUser}"/>
 						</HBox>
 					</VBox>
 				</Panel>

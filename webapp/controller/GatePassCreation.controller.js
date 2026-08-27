@@ -196,6 +196,7 @@ sap.ui.define(["./BaseController",
 			this._resetModel(null);
 			this._sAmendReqNo = null; // track amendment request number
 
+
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (oODataModel) {
 				oODataModel.metadataLoaded().then(function () {
@@ -241,13 +242,21 @@ sap.ui.define(["./BaseController",
 					var sCocode = oUserModel.getProperty("/Cocode");
 					var sDept = oUserModel.getProperty("/Department");
 
+					var sUsername = this._getLoggedInUsername();
+					if (sUsername) { oModel.setProperty("/ReqUser", sUsername); }
 					if (sCocode) { oModel.setProperty("/Cocode", sCocode); }
 					if (sDept) {
 						var oDeptSelect = this.byId("department");
 						var sMatchedDept = sDept;
 						if (oDeptSelect) {
+							var sDeptUpper = sDept.trim().toUpperCase();
 							var oMatch = oDeptSelect.getItems().find(function (oItem) {
-								return oItem.getKey().toUpperCase() === sDept.toUpperCase();
+								var sKeyUpper = oItem.getKey().toUpperCase();
+								return sKeyUpper === sDeptUpper || 
+								       (sDeptUpper.indexOf("STORE") !== -1 && sKeyUpper === "STORES") ||
+								       (sDeptUpper.indexOf("PROD") !== -1 && sKeyUpper === "PRODUCTION") ||
+								       (sDeptUpper.indexOf("CIVIL") !== -1 && sKeyUpper === "CIVIL") ||
+								       (sDeptUpper.indexOf("ELEC") !== -1 && sKeyUpper === "ELECTRICAL");
 							});
 							if (oMatch) { sMatchedDept = oMatch.getKey(); }
 						}
@@ -272,15 +281,10 @@ sap.ui.define(["./BaseController",
 			var that = this;
 			if (!oODataModel) { return; }
 
-			// Default status parameter to "AM" or "AMENDMENT" if missing
-			var sTargetStatus = sStatus || "AM";
-
 			sap.ui.core.BusyIndicator.show(0);
 			oODataModel.read("/GateReqHdrSet", {
 				filters: [
-					new Filter("GatePassReqNo", FilterOperator.EQ, sReqNo),
-					new Filter("GatePassType",  FilterOperator.EQ, sType),
-					new Filter("Status",        FilterOperator.EQ, "Amendment")
+					new Filter("GatePassReqNo", FilterOperator.EQ, sReqNo)
 				],
 				urlParameters: { "$expand": "GateReqItmNav" },
 				success: function (oData) {
@@ -290,12 +294,7 @@ sap.ui.define(["./BaseController",
 					if (oRow) {
 						that._prefillAmendmentModel(oRow);
 					} else {
-						// Fallback query if AM status failed
-						if (sTargetStatus !== "AMENDMENT") {
-							that._loadAmendmentData(sReqNo, sType, "AMENDMENT");
-						} else {
-							MessageToast.show("Amendment data not found. Please fill in manually.");
-						}
+						MessageToast.show("Amendment data not found. Please fill in manually.");
 					}
 				},
 				error: function () {
@@ -326,8 +325,8 @@ sap.ui.define(["./BaseController",
 			oModel.setProperty("/VehicleNo",      oRow.VehicleNo      || "");
 			oModel.setProperty("/ModeOfDispatch", oRow.ModeOfDispatch || "");
 			oModel.setProperty("/Remarks",        oRow.Remarks        || "");
-			oModel.setProperty("/HODRemarks",     oRow.HODRemarks      || "");
-			oModel.setProperty("/STORERemarks",    oRow.STORERemarks  || "");
+			oModel.setProperty("/HODRemarks",     oRow.HODRemarks     || oRow.HodRemarks    || oRow.Hodremarks || "");
+			oModel.setProperty("/STORERemarks",   oRow.STORERemarks   || oRow.StoreRemarks  || oRow.Storeremarks || "");
 			
 
 			// Date parsing helper
@@ -539,7 +538,34 @@ sap.ui.define(["./BaseController",
 			});
 		},
 
+		_getLoggedInUsername: function () {
+			try {
+				var oUserModel = sap.ui.getCore().getModel("user");
+				if (oUserModel) {
+					var sUser = oUserModel.getProperty("/Username") || oUserModel.getProperty("/id") || oUserModel.getProperty("/fullName");
+					if (sUser) { return String(sUser); }
+				}
+			} catch (e1) {}
+
+			try {
+				var sSaved = localStorage.getItem("gpms_user");
+				if (sSaved && sSaved.charAt(0) === "{") {
+					var oParsed = JSON.parse(sSaved);
+					var sRes = oParsed.Username || oParsed.id || oParsed.fullName;
+					if (sRes) { return String(sRes); }
+				}
+			} catch (e2) {}
+
+			try {
+				return localStorage.getItem("gpms_username") || "";
+			} catch (e3) {
+				return "";
+			}
+		},
+
 		_resetModel: function (sType) {
+			var sUsername = this._getLoggedInUsername();
+
 			var oViewModel = new JSONModel({
 				GatePassReqNo: "",
 				GatePassType: sType || "",
@@ -547,6 +573,7 @@ sap.ui.define(["./BaseController",
 				isFieldEditable: false,
 				Cocode: "",
 				Plant: "",
+				ReqUser: sUsername,
 				FiscalYear: String(new Date().getFullYear()),
 				gpDate: new Date(),
 				returnableDate: null,
@@ -554,6 +581,7 @@ sap.ui.define(["./BaseController",
 				vendorName: "",
 				vendorAddress: "",
 				vendorGST: "",
+				vendorPerson: "",
 				fileName: "",
 				attachments: [],
 				Department: "",
@@ -888,6 +916,11 @@ sap.ui.define(["./BaseController",
 					return;
 				}
 
+				// if ((!oGp.ReqUser || !String(oGp.ReqUser).trim()) && (!oGp.Requestor || !String(oGp.Requestor).trim())) {
+				// 	MessageBox.error("Please enter Request Person Name.");
+				// 	return;
+				// }
+
 				if (oGp.Remarks && oGp.Remarks.length > 250) {
 					MessageBox.error("Remarks cannot exceed 250 characters.");
 					return;
@@ -965,8 +998,11 @@ sap.ui.define(["./BaseController",
 					sRawImage2 = sRawImage2.substring(iComma2 + 7);
 				}
 
-				// Determine if this is an amendment resubmit (carry same request number)
+				// Determine if this is an amendment resubmit
 				var sAmendReqNo = this._sAmendReqNo || "";
+
+				// Get current logged-in user
+				var sLoggedInUser = this._getLoggedInUsername();
 
 				var oPayload = {
 					GatePassType: oGp.GatePassType,
@@ -983,13 +1019,14 @@ sap.ui.define(["./BaseController",
 					Approval1: "",
 					Approval2: "",
 					StoreAmmend: "",
-					GatePassReqNo: sAmendReqNo, // same request number for amendment resubmit
+					GatePassReqNo: sAmendReqNo,
 					Department: oGp.Department,
+					ReqUser: sLoggedInUser,
 					VehicleNo: oGp.VehicleNo || "",
 					ModeOfDispatch: oGp.ModeOfDispatch || "",
 					Remarks: oGp.Remarks || "",
-					HODRemarks:oGp.HODRemarks ||"",
-					STORERemarks:oGp.STORERemarks ||"",
+					HODRemarks: oGp.HODRemarks || "",
+					STORERemarks: oGp.STORERemarks || "",
 					ReturnableDate: fnFormatDate(oGp.returnableDate),
 					GateReqItemNav: (oGp.items || []).map(function (it, index) {
 						var fQty = parseFloat(String(it.quantity).replace(/,/g, '')) || 0;
@@ -1090,6 +1127,16 @@ sap.ui.define(["./BaseController",
 						console.log("Create /GatePassReqHdrSet Success Response:", oData);
 
 						var sReqNo = oData.GatePassReqNo || oData.GatePassreqNo || "";
+						if (sReqNo) {
+							try {
+								localStorage.setItem("requser_" + sReqNo, oPayload.ReqUser || "");
+								if (oGp.vendorPerson) {
+									var oLog = { VendorPerson: oGp.vendorPerson };
+									localStorage.setItem("logistics_" + sReqNo, JSON.stringify(oLog));
+									localStorage.setItem("gp_logistics_" + sReqNo, JSON.stringify(oLog));
+								}
+							} catch (e) {}
+						}
 						var sMsg = oData.Message || "Gate Pass Request created successfully!";
 						var sDisplayMsg = sMsg;
 						if (sReqNo && sMsg.indexOf(sReqNo) === -1) {
