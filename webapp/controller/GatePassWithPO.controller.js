@@ -101,19 +101,33 @@ sap.ui.define([
 			var oModel = this.getView().getModel("gpo");
 			if (!oODataModel || !oModel) { return; }
 
-			var parseDate = function (vDate) {
-				if (!vDate) return "";
+			var parseDate = function (vDate, sFallbackDate) {
+				if (!vDate || vDate === "00000000" || vDate === "null" || vDate === "undefined") {
+					return sFallbackDate ? parseDate(sFallbackDate) : "";
+				}
 				if (vDate instanceof Date) {
-					return isNaN(vDate.getTime()) ? "" : vDate.toISOString().split("T")[0];
+					if (isNaN(vDate.getTime())) return sFallbackDate ? parseDate(sFallbackDate) : "";
+					var yyyy = vDate.getFullYear();
+					var mm = String(vDate.getMonth() + 1).padStart(2, "0");
+					var dd = String(vDate.getDate()).padStart(2, "0");
+					return yyyy + "-" + mm + "-" + dd;
 				}
 				if (typeof vDate === "string") {
-					var oTsMatch = vDate.match(/\/Date\((\d+)[^)]*\)\//);
+					var sClean = vDate.trim();
+					if (sClean === "" || sClean === "00000000" || sClean === "null" || sClean === "undefined") {
+						return sFallbackDate ? parseDate(sFallbackDate) : "";
+					}
+					var oTsMatch = sClean.match(/\/Date\((\d+)[^)]*\)\//);
 					if (oTsMatch) {
 						var oD = new Date(parseInt(oTsMatch[1], 10));
-						return isNaN(oD.getTime()) ? "" : oD.toISOString().split("T")[0];
+						if (isNaN(oD.getTime())) return sFallbackDate ? parseDate(sFallbackDate) : "";
+						var y1 = oD.getFullYear();
+						var m1 = String(oD.getMonth() + 1).padStart(2, "0");
+						var d1 = String(oD.getDate()).padStart(2, "0");
+						return y1 + "-" + m1 + "-" + d1;
 					}
-					if (/^\d{8}$/.test(vDate)) {
-						return vDate === "00000000" ? "" : vDate.substring(0, 4) + "-" + vDate.substring(4, 6) + "-" + vDate.substring(6, 8);
+					if (/^\d{8}$/.test(sClean)) {
+						return sClean.substring(0, 4) + "-" + sClean.substring(4, 6) + "-" + sClean.substring(6, 8);
 					}
 				}
 				return vDate;
@@ -215,9 +229,9 @@ sap.ui.define([
 					Department: safeTrim(oRaw.Department),
 					PurchaseOrder: sPO,
 					RGPNumber: safeTrim(oRaw.RGPNumber),
-					DCNumber: safeTrim(oRaw.DCNumber),
-					DCdate: parseDate(oRaw.DCdate),
-					PCPNo: sGatePassNum,
+					DCNumber: safeTrim(oRaw.DCNumber || oRaw.Dcnumber || oRaw.DCno || oRaw.DcNo || oRaw.ChallanNumber || ""),
+					DCdate: parseDate(oRaw.DCdate || oRaw.Dcdate || oRaw.DCDate || oRaw.DcDate || oRaw.ChallanDate || "", oRaw.GEDate),
+					PCPNo: safeTrim(oRaw.PCPNO || oRaw.Pcpno || oRaw.PCPNo || ""),
 					BudgetCode: safeTrim(oRaw.BudgetCode),
 					TotalCost: (aExistingItems.length > 0 && aExistingItems[0].TotalCost) ? safeTrim(aExistingItems[0].TotalCost) : safeTrim(oRaw.TotalCost || "0.00"),
 					RRNo: safeTrim(oRaw.RRNo),
@@ -375,25 +389,36 @@ sap.ui.define([
 
 			// FALLBACK: no cache (direct URL navigation) — fetch everything from backend
 			sap.ui.core.BusyIndicator.show(0);
-			oODataModel.read("/PCPHdrSet", {
-				filters: aFilters,
-				urlParameters: { "$expand": "PCPItmNav" },
-				success: function (oData) {
-					sap.ui.core.BusyIndicator.hide();
-					var aResults = oData.results || [];
-					if (aResults.length > 0) {
-						var oResult = aResults[0];
-						applyData(oResult);
-						this._mergePOQuantities();
-					} else {
-						sap.m.MessageBox.error("Gate Entry record not found: " + sGateEntryNo);
-					}
-				}.bind(this),
-				error: function () {
-					sap.ui.core.BusyIndicator.hide();
-					sap.m.MessageBox.error("Failed to load Gate Entry details.");
-				}
-			});
+			var fnFetchBackendData = function (aCurrentFilters) {
+				oODataModel.read("/PCPHdrSet", {
+					filters: aCurrentFilters,
+					urlParameters: { "$expand": "PCPItmNav" },
+					success: function (oData) {
+						var aResults = oData.results || [];
+						if (aResults.length > 0) {
+							sap.ui.core.BusyIndicator.hide();
+							var oResult = aResults[0];
+							applyData(oResult);
+							this._mergePOQuantities();
+						} else if (aCurrentFilters.length > 1) {
+							fnFetchBackendData([new sap.ui.model.Filter("GateEntryNo", sap.ui.model.FilterOperator.EQ, sGateEntryNo)]);
+						} else {
+							sap.ui.core.BusyIndicator.hide();
+							sap.m.MessageBox.error("Gate Entry record not found: " + sGateEntryNo);
+						}
+					}.bind(this),
+					error: function () {
+						if (aCurrentFilters.length > 1) {
+							fnFetchBackendData([new sap.ui.model.Filter("GateEntryNo", sap.ui.model.FilterOperator.EQ, sGateEntryNo)]);
+						} else {
+							sap.ui.core.BusyIndicator.hide();
+							sap.m.MessageBox.error("Failed to load Gate Entry details.");
+						}
+					}.bind(this)
+				});
+			}.bind(this);
+
+			fnFetchBackendData(aFilters);
 		},
 
 		_mergePOQuantities: function () {
@@ -605,6 +630,13 @@ sap.ui.define([
 					var oData = oContext.getObject();
 					oModel.setProperty("/Vendor", oData.Vendor || "");
 					oModel.setProperty("/VendorDesc", oData.VendorName || "");
+					oModel.setProperty("/VendorName", oData.VendorName || "");
+					oModel.setProperty("/VendorGST", oData.VendorGST || "");
+					oModel.setProperty("/Address", oData.Address || "");
+					oModel.setProperty("/City", oData.City || "");
+					oModel.setProperty("/ZipCode", oData.ZipCode || "");
+					var sFullAddr = [oData.Address, oData.City, oData.ZipCode].filter(Boolean).join(", ");
+					oModel.setProperty("/VendorAddress", sFullAddr);
 				} else {
 					var sKey = oItem.getKey() || oEvent.getParameter("newValue") || "";
 					oModel.setProperty("/Vendor", sKey);
@@ -625,6 +657,13 @@ sap.ui.define([
 					var oData = oContext.getObject();
 					oModel.setProperty("/Vendor", oData.Vendor || "");
 					oModel.setProperty("/VendorDesc", oData.VendorName || "");
+					oModel.setProperty("/VendorName", oData.VendorName || "");
+					oModel.setProperty("/VendorGST", oData.VendorGST || "");
+					oModel.setProperty("/Address", oData.Address || "");
+					oModel.setProperty("/City", oData.City || "");
+					oModel.setProperty("/ZipCode", oData.ZipCode || "");
+					var sFullAddr = [oData.Address, oData.City, oData.ZipCode].filter(Boolean).join(", ");
+					oModel.setProperty("/VendorAddress", sFullAddr);
 				} else {
 					var sKey = oItem.getKey() || oEvent.getParameter("newValue") || "";
 					oModel.setProperty("/VendorDesc", sKey);
@@ -649,16 +688,18 @@ sap.ui.define([
 				filters: aFilters,
 				success: function (oData) {
 					var aResults = oData.results || [];
-					if (aResults.length === 0) { return; }
-					var aNormalized = aResults.map(function (v) {
+					var aNormalized = aResults.filter(function(v) {
+						var sVendorNo = String(v.Vendor || v.Lifnr || "").trim();
+						return !sVendorNo.startsWith("200");
+					}).map(function (v) {
 						return {
 							Vendor: v.Vendor || v.Lifnr || "",
 							VendorName: v.Name || v.VendorName || v.Name1 || "Unknown Vendor",
-							Street: v.Address || v.Street || "",
-							City: v.City || "",
-							PostalCode: v.ZipCode || v.PostalCode || "",
-							Country: v.Country || "",
-							VendorGST: v.VendorGST || v.TaxNumber1 || ""
+							Address: v.Address || v.Street || v.Stras || "",
+							City: v.City || v.Ort01 || "",
+							ZipCode: v.ZipCode || v.PostalCode || v.Pstlz || "",
+							Country: v.Country || v.Land1 || "",
+							VendorGST: v.VendorGST || v.TaxNumber1 || v.Stcd1 || ""
 						};
 					});
 					oVendorModel.setProperty("/results", aNormalized);
@@ -670,7 +711,11 @@ sap.ui.define([
 							var aNormalized2 = aResults2.map(function (v) {
 								return {
 									Vendor: v.Vendor || v.Lifnr || "",
-									VendorName: v.Name || v.VendorName || v.Name1 || "Unknown Vendor"
+									VendorName: v.Name || v.VendorName || v.Name1 || "Unknown Vendor",
+									Address: v.Address || v.Street || v.Stras || "",
+									City: v.City || v.Ort01 || "",
+									ZipCode: v.ZipCode || v.PostalCode || v.Pstlz || "",
+									VendorGST: v.VendorGST || v.TaxNumber1 || v.Stcd1 || ""
 								};
 							});
 							oVendorModel.setProperty("/results", aNormalized2);
@@ -737,7 +782,7 @@ sap.ui.define([
 					oModel.setProperty("/RRNo", oResult.RRNo || "");
 					oModel.setProperty("/Remarks", oResult.Remarks || "");
 					oModel.setProperty("/GatePassNo", oResult.GatepassNo || oResult.GatePassNo || "");
-					oModel.setProperty("/PCPNo", oResult.GatepassNo || oResult.PCPNo || "");
+					oModel.setProperty("/PCPNo", oResult.PCPNO || oResult.Pcpno || oResult.PCPNo || "");
 
 					if (oResult.GEDate) {
 						var gd;
@@ -1217,7 +1262,7 @@ sap.ui.define([
 				try {
 					var sGenerated = oODataModel.createKey("/PCPHdrSet", {
 						GateEntryNo: oData.GateEntryNo || "",
-						GatepassNo: oData.GatepassNo || oData.GatePassNo || oData.PCPNo || "",
+						GatepassNo: oData.GatepassNo || oData.GatePassNo || "",
 						GEDate: this._formatDateToSAP(oData.GEDate || oData.GEDateRaw),
 						Plant: oData.Plant || "",
 						PurchaseOrder: oData.PurchaseOrder || "",
@@ -1231,9 +1276,13 @@ sap.ui.define([
 				}
 			}
 
-			// 3. Fallback: GatepassNo or GateEntryNo
-			var sGP = (oData.GatepassNo || oData.GatePassNo || oData.PCPNo || "").trim();
+			// 3. Fallback: GateEntryNo + GEDate or GatepassNo
+			var sGP = (oData.GatepassNo || oData.GatePassNo || "").trim();
 			var sGE = (oData.GateEntryNo || "").trim();
+			var sDate = this._formatDateToSAP(oData.GEDate || oData.GEDateRaw);
+			if (sGE && sDate) {
+				return "/PCPHdrSet(GateEntryNo='" + sGE + "',GEDate='" + sDate + "')";
+			}
 			if (sGP) {
 				return "/PCPHdrSet(GatepassNo='" + sGP + "')";
 			}
@@ -1259,10 +1308,12 @@ sap.ui.define([
 				DCNumber: oData.DCNumber || "",
 				PurchaseOrder: sPO || "",
 				RRNo: oData.RRNo || "",
-				GatepassNo: oData.PCPNo || oData.GatePassNo || oData.GatepassNo || "",
+				GatepassNo: oData.GatePassNo || oData.GatepassNo || "",
+				PCPNO: oData.PCPNo || "",
 				PCPDate: sGEDate,
 				DCdate: sDCDateSAP,
 				BudgetCode: oData.BudgetCode || "",
+				TotalCost: oData.TotalCost ? String(parseFloat(oData.TotalCost).toFixed(2)) : "0.00",
 				EntryPoint: "",
 				InspectionStatus: oData.InspectionStatus || "Pending",
 				Inspectiondate: this._formatDateToSAP(oData.Inspectiondate || new Date().toISOString().split("T")[0]),
@@ -1303,7 +1354,7 @@ sap.ui.define([
 					UnitPrice: oItem.UnitPrice ? String(parseFloat(oItem.UnitPrice).toFixed(2)) : "0.00",
 					TotalCost: oData.TotalCost ? String(parseFloat(oData.TotalCost).toFixed(2)) : "0.00",
 					GateEntryNo: oData.GateEntryNo || "",
-					GatepassNo: oData.PCPNo || oData.GatePassNo || oData.GatepassNo || "",
+					GatepassNo: oData.GatePassNo || oData.GatepassNo || "",
 					PurchaseOrder: oItem.PurchaseOrder || sPO || "",
 					Plant: oItem.Plant || sPlant || ""
 				};
@@ -1325,7 +1376,8 @@ sap.ui.define([
 				PurchaseOrder: sPO || "",
 				RRNo: oData.RRNo || "",
 				GateEntryNo: oData.GateEntryNo || "",
-				GatepassNo: oData.PCPNo || oData.GatePassNo || oData.GatepassNo || "",
+				GatepassNo: oData.GatePassNo || oData.GatepassNo || "",
+				PCPNO: oData.PCPNo || "",
 				PCPDate: sGEDate,
 				DCdate: sDCDateSAP,
 				BudgetCode: oData.BudgetCode || "",
@@ -1519,7 +1571,7 @@ sap.ui.define([
 
 			var oData = oModel.getData();
 			var sGateEntryNo = (oData.GateEntryNo || "").trim();
-			var sGatePassNo = (oData.GatepassNo || oData.GatePassNo || oData.PCPNo || "").trim();
+			var sGatePassNo = (oData.GatepassNo || oData.GatePassNo || "").trim();
 
 			if (!sGateEntryNo && !sGatePassNo) {
 				MessageBox.error("Gate Entry / Gate Pass Number is missing. Cannot delete.");

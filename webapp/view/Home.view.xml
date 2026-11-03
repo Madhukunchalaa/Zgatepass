@@ -7,10 +7,13 @@
 	height="100%">
 	<Page title="Dashboard" class="gpmsDashboardPage" showHeader="false">
 		<content>
-			<VBox class="gpmsDashboardHero" alignItems="Center" justifyContent="Center">
+			<VBox id="idDashboardHero" class="gpmsDashboardHero" alignItems="Center" justifyContent="Center">
 				<VBox alignItems="Center" class="gpmsHeroTextContainer">
 					<Title text="GATE PASS MANAGEMENT SYSTEM" level="H1" class="gpmsHeroTitle"/>
 					<Text text="Industrial Logistics &amp; Security Control Dashboard" class="gpmsHeroSubTitle"/>
+					<HBox alignItems="Center" class="sapUiTinyMarginTop">
+						<ObjectStatus text="{homeInfo>/plantDisplayName}" state="Information" icon="sap-icon://factory" class="gpmsPlantBadge"/>
+					</HBox>
 				</VBox>
 
 				<HBox wrap="Wrap" justifyContent="Center" class="gpmsDashboardCardsContainer">
@@ -57,7 +60,7 @@
 					</GenericTile>
 
 					<!-- Inward Insurance List Card -->
-					<GenericTile class="gpmsDashCard poListCard" press=".onPressInwardInsuranceList" header="INWARD INSURANCE LIST" subheader="View Insurance Records" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }">
+					<GenericTile class="gpmsDashCard poListCard" press=".onPressInwardInsuranceList" header=" INSURANCE LIST" subheader="View Insurance Records" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }">
 						<TileContent>
 							<core:Icon src="sap-icon://list" class="gpmsCardIcon"/>
 						</TileContent>
@@ -66,7 +69,31 @@
 					<!-- Out Gate Pass Card -->
 					<GenericTile class="gpmsDashCard outCard" press=".onPressOutGatePass" header="OUT GATE PASS" subheader="Generate &amp; Print Pass" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }">
 						<TileContent>
-							<core:Icon src="sap-icon://shipping-status" class="gpmsCardIcon"/>
+							<core:Icon src="sap-icon://log" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- Security Gate Control Card -->
+					<GenericTile 
+						class="gpmsDashCard securityCard" 
+						press=".onPressSecurityGateControl" 
+						header="SECURITY GATE CONTROL" 
+						subheader="Gate In / Gate Out Verification"
+						visible="{= ${user>/Plant} === '3121' }">
+						<TileContent>
+							<core:Icon src="sap-icon://shield" class="gpmsCardIcon"/>
+						</TileContent>
+					</GenericTile>
+
+					<!-- Coal Gate Pass Card (Plant 3121) -->
+					<GenericTile 
+						class="gpmsDashCard coalCard" 
+						press=".onPressCoalGatePassCreation" 
+						header="COAL GATE PASS" 
+						subheader="Coal Disposal Creation" 
+						visible="{= ${user>/Plant} === '3121' }">
+						<TileContent>
+							<core:Icon src="sap-icon://cargo-train" class="gpmsCardIcon"/>
 						</TileContent>
 					</GenericTile>
 
@@ -100,8 +127,8 @@
 
 					<!-- IRGP Card -->
 					<GenericTile class="gpmsDashCard irgpCard" press=".onPressIRGP" header="IRGP WORKFLOW" subheader="Internal Returnable GP" visible="{= !${user>/IsHodUser} }">
-						<TileContent>
-							<core:Icon src="sap-icon://process" class="gpmsCardIcon"/>
+						<TileContent footer="Pending Actions">
+							<NumericContent value="{hodCounts>/irgpPendingCount}" withMargin="false" />
 						</TileContent>
 					</GenericTile>
 

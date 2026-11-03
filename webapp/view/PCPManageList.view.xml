@@ -29,8 +29,8 @@
                                     <core:Item key="Pending" text="Pending"/>
                                 </items>
                             </Select>
-                            <DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px" class="gpmsFieldInput"/>
-                            <DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px" class="gpmsFieldInput"/>
+                            <DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MMM-yyyy" width="150px" class="gpmsFieldInput"/>
+                            <DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MMM-yyyy" width="150px" class="gpmsFieldInput"/>
                             <Button text="Apply" type="Emphasized" press=".onApplyFilters"/>
                             <Button text="Clear" press=".onClearFilters"/>
                             <Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel" class="sapUiTinyMarginEnd"/>
@@ -41,7 +41,8 @@
                     </headerToolbar>
 
                     <columns>
-                        <Column width="9rem"><Button text="PCP No" icon="{= ${sortModel>/GatepassNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GatepassNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GatepassNo"/><core:CustomData key="tableName" value="idPCPManageListTable"/></customData></Button></Column>
+                        <Column width="9rem"><Button text="Gate Pass No" icon="{= ${sortModel>/GatepassNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GatepassNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GatepassNo"/><core:CustomData key="tableName" value="idPCPManageListTable"/></customData></Button></Column>
+                        <Column width="9rem"><Button text="PCP No" icon="{= ${sortModel>/PCPNO} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/PCPNO} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="PCPNO"/><core:CustomData key="tableName" value="idPCPManageListTable"/></customData></Button></Column>
                         <Column width="8rem"><Button text="PCP Date" icon="{= ${sortModel>/PCPDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/PCPDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="PCPDate"/><core:CustomData key="tableName" value="idPCPManageListTable"/></customData></Button></Column>
                         <Column width="7rem"><Button text="Entry" icon="{= ${sortModel>/Status} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/Status} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="Status"/><core:CustomData key="tableName" value="idPCPManageListTable"/></customData></Button></Column>
                         <Column width="6rem"><Button text="GE No" icon="{= ${sortModel>/GateEntryNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GateEntryNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GateEntryNo"/><core:CustomData key="tableName" value="idPCPManageListTable"/></customData></Button></Column>
@@ -57,6 +58,7 @@
                         <ColumnListItem class="gpmsTableRow">
                             <cells>
                                 <Text text="{pcpManageList>GatepassNo}" class="gpmsTableText sapMObjectIdentifierTitle"/>
+                                <Text text="{pcpManageList>PCPNO}" class="gpmsTableText"/>
                                 <Text text="{pcpManageList>PCPDate}" class="gpmsTableText"/>
                                 <Text text="{pcpManageList>EntryPoint}" class="gpmsTableText"/>
                                 <Text text="{pcpManageList>GateEntryNo}" class="gpmsTableText"/>

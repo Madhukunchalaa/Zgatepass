@@ -12,11 +12,11 @@
 			<HBox alignItems="End" class="sapUiSmallMarginBottom" wrap="Wrap">
 				<VBox class="sapUiSmallMarginEnd">
 					<Label text="From Date" class="gpmsFieldLabel"/>
-					<DatePicker id="idFilterFromDate" displayFormat="dd-MM-yyyy" placeholder="From Date" width="180px" class="gpmsFieldInput"/>
+					<DatePicker id="idFilterFromDate" displayFormat="dd-MMM-yyyy" placeholder="From Date" width="180px" class="gpmsFieldInput"/>
 				</VBox>
 				<VBox class="sapUiSmallMarginEnd">
 					<Label text="To Date" class="gpmsFieldLabel"/>
-					<DatePicker id="idFilterToDate" displayFormat="dd-MM-yyyy" placeholder="To Date" width="180px" class="gpmsFieldInput"/>
+					<DatePicker id="idFilterToDate" displayFormat="dd-MMM-yyyy" placeholder="To Date" width="180px" class="gpmsFieldInput"/>
 				</VBox>
 				<Button text="Apply" type="Emphasized" press=".onDateFilter" class="sapUiSmallMarginEnd"/>
 				<Button text="Clear" type="Transparent" press=".onClearDateFilter"/>
@@ -54,6 +54,7 @@
 						<Column><Button text="Inv No" icon="{= ${sortModel>/DCNumber} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/DCNumber} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="DCNumber"/><core:CustomData key="tableName" value="pcpTable"/></customData></Button></Column>
 						<Column><Button text="RR No" icon="{= ${sortModel>/RRNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/RRNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="RRNo"/><core:CustomData key="tableName" value="pcpTable"/></customData></Button></Column>
 						<Column><Button text="Gate Pass No" icon="{= ${sortModel>/GatepassNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GatepassNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GatepassNo"/><core:CustomData key="tableName" value="pcpTable"/></customData></Button></Column>
+						<Column><Button text="PCP No" icon="{= ${sortModel>/PCPNO} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/PCPNO} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="PCPNO"/><core:CustomData key="tableName" value="pcpTable"/></customData></Button></Column>
 						<Column><Button text="Inspection Status" icon="{= ${sortModel>/InspectionStatus} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/InspectionStatus} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="InspectionStatus"/><core:CustomData key="tableName" value="pcpTable"/></customData></Button></Column>
 						<Column hAlign="Center"><Text text="Action" class="gpmsTableHeaderText"/></Column>
 					</columns>
@@ -69,6 +70,7 @@
 								<Text text="{pcpList>DCNumber}" class="gpmsTableText"/>
 								<Text text="{pcpList>RRNo}" class="gpmsTableText"/>
 								<Text text="{pcpList>GatepassNo}" class="gpmsTableText"/>
+								<Text text="{pcpList>PCPNO}" class="gpmsTableText"/>
 								<Text text="{pcpList>InspectionStatus}" class="gpmsTableText"/>
 								<HBox justifyContent="Center" class="gpmsActionBox">
 									<Button icon="sap-icon://show" type="Default" tooltip="View" press=".onViewPCP" class="sapUiTinyMarginEnd gpmsActionButton"/>

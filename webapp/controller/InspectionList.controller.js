@@ -38,7 +38,8 @@ sap.ui.define([
 				urlParameters: { "$expand": "PCPItmNav" },
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
-					var aResults = (oData.results || []).map(function (oItem) {
+					var aRaw = that.filterResultsByPlant(oData.results || [], sPlant);
+					var aResults = aRaw.map(function (oItem) {
 						oItem.GEDateRaw = oItem.GEDate || "";
 						oItem.GEDate    = that._formatDate(oItem.GEDate);
 						oItem.PCPDate   = that._formatDate(oItem.PCPDate);
@@ -76,13 +77,7 @@ sap.ui.define([
 
 		_toSAPDate: function (sDate) {
 			if (!sDate) return "";
-			if (/^\d{8}$/.test(sDate)) return sDate;
-			var aParts = sDate.split("-");
-			if (aParts.length === 3) {
-				if (aParts[0].length === 4) return aParts[0] + aParts[1] + aParts[2];
-				if (aParts[2].length === 4) return aParts[2] + aParts[1] + aParts[0];
-			}
-			return sDate;
+			return this._dateToYYYYMMDD(sDate) || sDate;
 		},
 
 		onSearch: function () {
@@ -163,7 +158,12 @@ sap.ui.define([
 						if (!sValue) return false;
 						var aParts = sValue.split("-");
 						if (aParts.length !== 3) return false;
-						var dVal = new Date(parseInt(aParts[2]), parseInt(aParts[1], 10) - 1, parseInt(aParts[0]));
+						var MONTHS_MAP = { JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11 };
+						var mIdx = isNaN(aParts[1]) ? MONTHS_MAP[aParts[1].toUpperCase()] : (parseInt(aParts[1], 10) - 1);
+						var dVal = aParts[0].length === 4
+							? new Date(parseInt(aParts[0], 10), mIdx, parseInt(aParts[2], 10))
+							: new Date(parseInt(aParts[2], 10), mIdx, parseInt(aParts[0], 10));
+						if (isNaN(dVal.getTime())) return false;
 						if (oFrom && dVal < oFrom) return false;
 						if (oTo && dVal > oTo) return false;
 						return true;

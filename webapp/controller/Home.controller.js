@@ -14,14 +14,47 @@ sap.ui.define([
 				nrgpListCount: "-",
 				scrapGpListCount: "-",
 				ashGpListCount: "-",
-				inspectionPendingCount: "-"
+				inspectionPendingCount: "-",
+				irgpPendingCount: "-"
 			}), "hodCounts");
 
+			this.getView().setModel(new JSONModel({
+				plantDisplayName: ""
+			}), "homeInfo");
 			this.getRouter().getRoute("home").attachPatternMatched(this._onRouteMatched, this);
 		},
 
+		onAfterRendering: function () {
+			this._applyPlantBackground();
+			this._setPlantDisplayName();
+		},
+
 		_onRouteMatched: function () {
+			this._applyPlantBackground();
 			this._loadPendingCounts();
+		},
+
+		_applyPlantBackground: function () {
+			var oHero = this.byId("idDashboardHero");
+			if (!oHero) { return; }
+			var sPlant = (typeof this.getUserPlant === "function" ? this.getUserPlant() : "") || "2301";
+			["2301", "3120", "3121"].forEach(function (p) {
+				oHero.removeStyleClass("gpmsPlant_" + p);
+			});
+			oHero.addStyleClass("gpmsPlant_" + sPlant);
+			console.log("[Home] Applied background theme for Plant:", sPlant);
+		},
+
+		_setPlantDisplayName: function () {
+			var sPlant = (typeof this.getUserPlant === "function" ? this.getUserPlant() : "") || "2301";
+			var mPlants = {
+				"2301": "2301 - NEYVELI HEAD SITE",
+				"3121": "3121 - SEPC POWER PLANT",
+				"3120": "3120 - SEPC HEAD OFFICE",
+				"2121": "2121 - ANPARA POWER SITE"
+			};
+			var sName = mPlants[sPlant] || ("Plant " + sPlant);
+			this.getView().getModel("homeInfo").setProperty("/plantDisplayName", sName);
 		},
 
 		_loadPendingCounts: function () {
@@ -30,8 +63,8 @@ sap.ui.define([
 
 			var oCountsModel = this.getView().getModel("hodCounts");
 
-			// Track all 9 parallel calls — BusyIndicator hides only when every call settles
-			var iTotalCalls = 9;
+			// Track all 10 parallel calls — BusyIndicator hides only when every call settles
+			var iTotalCalls = 10;
 			var iSettled = 0;
 			sap.ui.core.BusyIndicator.show(0);
 			var fnSettle = function () {
@@ -118,6 +151,20 @@ sap.ui.define([
 				},
 				error: function () { fnSettle(); }
 			});
+
+			// IRGP List — count pending IRGPs
+			oODataModel.read("/IRGPHdrSet", {
+				success: function (oData) {
+					var aResults = oData.results || [];
+					var iPendingCount = aResults.filter(function (item) {
+						var sStatus = (item.StatusCode || "").trim().toUpperCase();
+						return sStatus !== "CLOSED";
+					}).length;
+					oCountsModel.setProperty("/irgpPendingCount", iPendingCount);
+					fnSettle();
+				},
+				error: function () { fnSettle(); }
+			});
 		},
 
 		onPressNRGP: function () {
@@ -138,6 +185,10 @@ sap.ui.define([
 
 		onPressInwardInsuranceList: function () {
 			this.getRouter().navTo("InwardInsuranceList");
+		},
+		onPressSecurityGateControl: function () {
+			this.getRouter().navTo("SecurityGateControl");
+			// console.log('security pass screen triggerd')
 		},
 
 		onPressOutGatePass: function () {
@@ -174,6 +225,10 @@ sap.ui.define([
 
 		onPressAddPCP: function () {
 			this.getRouter().navTo("PCPList");
+		},
+
+				onPressCoalGatePassCreation: function () {
+			this.getRouter().navTo("CoalGatePassCreation");
 		},
 
 		onPressAshGatePassCreation: function () {

@@ -243,6 +243,21 @@ sap.ui.define(["./BaseController",
 					};
 				});
 
+				// Filter sales orders client-side for user plant if items specify a plant
+				var sUserPlant = that.getUserPlant ? that.getUserPlant() : "";
+				if (sUserPlant) {
+					var aPlantFiltered = aMapped.filter(function (so) {
+						if (!so.items || so.items.length === 0) return true;
+						return so.items.some(function (it) {
+							var p = String(it.Plant || "").trim();
+							return !p || p === sUserPlant;
+						});
+					});
+					if (aPlantFiltered.length > 0) {
+						aMapped = aPlantFiltered;
+					}
+				}
+
 				that.getView().setModel(new JSONModel({ results: aMapped }), "sos");
 				fnOpenDialog();
 			};

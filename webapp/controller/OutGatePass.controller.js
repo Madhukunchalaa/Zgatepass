@@ -406,8 +406,16 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			oOutModel.setProperty("/StoreActive", bHODApproved || bStoreApproved);
 			oOutModel.setProperty("/GatePassreqNo", oResult.GatePassReqNo || "");
 			oOutModel.setProperty("/Department", oResult.Department || "");
-			oOutModel.setProperty("/HODRemarks", oResult.HODRemarks || "");
-			oOutModel.setProperty("/StoreRemarks", oResult.STORERemarks || "");
+			var sHODRem = oResult.HODRemarks || oResult.HodRemarks || "";
+			var sStoreRem = oResult.STORERemarks || oResult.StoreRemarks || "";
+			oOutModel.setProperty("/HODRemarks", sHODRem);
+			oOutModel.setProperty("/StoreRemarks", sStoreRem);
+			var sReqNoKey = String(oResult.GatePassReqNo || "").trim();
+			if (sReqNoKey && (sHODRem || sStoreRem)) {
+				try {
+					localStorage.setItem("req_remarks_" + sReqNoKey, JSON.stringify({ HODRemarks: sHODRem, StoreRemarks: sStoreRem }));
+				} catch (e) {}
+			}
 		},
 
 		_validateAndMapData: function (oData) {
@@ -483,7 +491,25 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			oOutModel.setProperty("/GatePassType", oData.GatePassType || "");
 			oOutModel.setProperty("/GatePassDate", new Date().toLocaleDateString("en-GB").split("/").join("-"));
 			oOutModel.setProperty("/ReturnableDate", oData.ReturnableDate || null);
-			oOutModel.setProperty("/Requestor", oData.Requestor || oData.ReqUser || oData.Requser || oData.RequestedUser || oData.ReqEmpName || oData.CreatedBy || oData.Createdby || oData.Ernam || "");
+			var sReqName = oData.Requestor || oData.ReqUser || oData.Requser || oData.requser || oData.RequestedUser || oData.ReqEmpName || oData.ReqName || oData.RequestorName || oData.CreatedBy || oData.Createdby || oData.Ernam || oData.Uname || oData.Username || "";
+			if (!sReqName) {
+				try {
+					var oUserM = sap.ui.getCore().getModel("user");
+					if (oUserM) {
+						sReqName = oUserM.getProperty("/id") || oUserM.getProperty("/sUserId") || oUserM.getProperty("/User") || "";
+					}
+				} catch (e) {}
+			}
+			if (!sReqName) {
+				try {
+					var sLocalUser = localStorage.getItem("gpms_user");
+					if (sLocalUser) {
+						var oParsedUser = JSON.parse(sLocalUser);
+						sReqName = oParsedUser.id || oParsedUser.sUserId || oParsedUser.User || "";
+					}
+				} catch (e) {}
+			}
+			oOutModel.setProperty("/Requestor", sReqName);
 			oOutModel.setProperty("/Department", oData.Department);
 			oOutModel.setProperty("/Vendor", oData.Vendor || oData.Lifnr || "");
 			oOutModel.setProperty("/VendorName", oData.VendorName);
@@ -516,7 +542,32 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			oOutModel.setProperty("/EWayBillDate",    sEWayDate);
 			oOutModel.setProperty("/DCNotes",         sDCNotes);
 
-			oOutModel.setProperty("/VendorAddress", (oData.City || "") + ", " + (oData.ZipCode || ""));
+			var sStreetAddr = oData.Address || oData.VendorAddress || oData.Street || oData.Stras || oData.Address1 || "";
+			var sCityVal = oData.City || oData.Ort01 || "";
+			var sStateVal = oData.State || oData.Region || oData.District || "";
+			var sZipVal = oData.ZipCode || oData.PostalCode || oData.Pstlz || "";
+			var sCountryVal = oData.Country || oData.Land1 || "";
+			var sCityLineVal = [sCityVal, sZipVal, sCountryVal].filter(Boolean).join(" ");
+			var aLineParts = [];
+			if (sStreetAddr) { aLineParts.push(sStreetAddr); }
+			if (sCityLineVal) { aLineParts.push(sCityLineVal); }
+			var sFullVendorAddr = aLineParts.join("\n");
+			if (!sFullVendorAddr) {
+				var aAddrParts = [sStreetAddr, sCityVal, sStateVal, sZipVal, sCountryVal].map(function (s) { return (s || "").trim(); }).filter(Boolean);
+				var aUniqueParts = [];
+				aAddrParts.forEach(function (pt) { if (aUniqueParts.indexOf(pt) === -1) { aUniqueParts.push(pt); } });
+				sFullVendorAddr = aUniqueParts.join(", ");
+			}
+			oOutModel.setProperty("/Address", sStreetAddr);
+			oOutModel.setProperty("/City", sCityVal);
+			oOutModel.setProperty("/ZipCode", sZipVal);
+			oOutModel.setProperty("/Country", sCountryVal);
+			oOutModel.setProperty("/VendorAddress", sFullVendorAddr);
+
+			if (oData.Vendor || oData.VendorCode) {
+				this._enrichVendorAddressMaster(oData.Vendor || oData.VendorCode, oData.Plant || "2301", oOutModel);
+			}
+
 			oOutModel.setProperty("/VendorPerson", oData.VendorPerson || (oLocalLogistics ? oLocalLogistics.VendorPerson : "") || "");
 			oOutModel.setProperty("/UserRemarks", oData.Remarks || "");
 			oOutModel.setProperty("/HODRemarks", oData.HODRemarks || "");
@@ -527,9 +578,10 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			oOutModel.setProperty("/Plant", oData.Plant || oData.Werks || "");
 			oOutModel.setProperty("/Cocode", oData.Bukrs || oData.BUKRS || oData.Cocode || oData.CoCode || oData.CompanyCode || "");
 			oOutModel.setProperty("/CommonDesc", oData.CommonDesc || (oLocalLogistics ? oLocalLogistics.CommonDesc : "") || "");
-			var sInsReq = String(oData.InsuranceReq || oData.Insurance || "").trim().toUpperCase();
-			var bInsRequired = (sInsReq === "YES" || sInsReq === "X" || sInsReq === "Y" || sInsReq === "TRUE" || sInsReq === "1");
-			oOutModel.setProperty("/InsuranceReq", oData.InsuranceReq || "NO");
+			var sInsReq = String(oData.InsuranceReq || oData.Insurance || oData.InsuranceRequired || "").trim().toUpperCase();
+			var bInsRequired = (sInsReq === "YES" || sInsReq === "X" || sInsReq === "Y" || sInsReq === "TRUE" || sInsReq === "1" || oData.InsuranceReq === true || oData.InsuranceRequired === true) ||
+			                   (oLocalLogistics ? (oLocalLogistics.bInsured || oLocalLogistics.InsuranceRequired) : false);
+			oOutModel.setProperty("/InsuranceReq", bInsRequired ? "YES" : "NO");
 			oOutModel.setProperty("/InsuranceRequired", bInsRequired);
 			oOutModel.setProperty("/InsuranceDate", oData.InsuranceDate || "");
 			oOutModel.setProperty("/InsuranceAmount", oData.InsuranceAmount || 0);
@@ -575,6 +627,7 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			if ((oData.GatePassNo || "").trim()) {
 				var sChallan = oData.ChallanNumber || (oLocalLogistics ? oLocalLogistics.ChallanNumber : "") || "";
 				oOutModel.setProperty("/ChallanNumber", sChallan);
+				oOutModel.setProperty("/InsuranceRequired", !!(oData.InsuranceRequired || (oLocalLogistics && (oLocalLogistics.InsuranceRequired || oLocalLogistics.bInsured))));
 				oOutModel.setProperty("/ChallanDate", oData.ChallanDate || null);
 				oOutModel.setProperty("/EWayBillNo", oData.EWayBillNo || "");
 				oOutModel.setProperty("/EWayBillDate", oData.EWayBillDate || null);
@@ -695,7 +748,10 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 					var bIsSelf2 = (sSavedTransporter2 === "MEIL Neyveli Energy Private Limited");
 					oOutModel.setProperty("/TransportByIndex", bIsSelf2 ? 0 : 1);
 					// Restore DC option
-					oOutModel.setProperty("/DocOptionIndex", oGP.ChallanNumber ? 1 : 0);
+					var sChallanNum = oGP.ChallanNumber || oGP.Challanumber || oGP.ChallanNo || (oLocalLogistics2 ? oLocalLogistics2.ChallanNumber : "") || "";
+					oOutModel.setProperty("/ChallanNumber", sChallanNum);
+					oOutModel.setProperty("/DocOptionIndex", sChallanNum ? 1 : 0);
+					oOutModel.setProperty("/InsuranceRequired", !!(oGP.InsuranceRequired || (oLocalLogistics2 && (oLocalLogistics2.InsuranceRequired || oLocalLogistics2.bInsured))));
 					oOutModel.setProperty("/NoOfPackages", oGP.NoOfPacakages || 0);
 					oOutModel.refresh(true);
 
@@ -837,8 +893,132 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			window.open("https://10.5.18.54:44300/sap/bc/ui2/flp?sap-client=300&sap-language=EN", "_blank");
 		},
 
+		onDocOptionChange: function (oEvent) {
+			var iIndex = oEvent.getParameter("selectedIndex");
+			var oModel = this.getView().getModel("out");
+			oModel.setProperty("/DocOptionIndex", iIndex);
+		},
+
+		onTransportByChange: function (oEvent) {
+			var iIndex = oEvent.getParameter("selectedIndex");
+			var oModel = this.getView().getModel("out");
+			if (iIndex === 0) {
+				oModel.setProperty("/TransporterName", "MEIL Neyveli Energy Private Limited");
+				oModel.setProperty("/TransporterGST", "33AACCS2753B1ZV");
+			} else {
+				oModel.setProperty("/TransporterName", "");
+				oModel.setProperty("/TransporterGST", "");
+			}
+			oModel.setProperty("/TransportByIndex", iIndex);
+		},
+
+		onInsuranceRequiredCheckBoxSelect: function (oEvent) {
+			var bSelected = oEvent.getParameter("selected");
+			var oModel = this.getView().getModel("out");
+			var oData = oModel.getData();
+			if (bSelected) {
+				if (!this._pInsuranceDialog) {
+					this._pInsuranceDialog = sap.ui.core.Fragment.load({
+						id: this.getView().getId(),
+						name: "zgpms.meilpower.com.view.fragments.InwardInsuranceDialog",
+						controller: this
+					}).then(function (oDialog) {
+						this.getView().addDependent(oDialog);
+						oDialog.setModel(new sap.ui.model.json.JSONModel({}), "insurance");
+						return oDialog;
+					}.bind(this));
+				}
+				this._pInsuranceDialog.then(function (oDialog) {
+					var sLRVal = oData.LRNumber || oData.LRNnumber || oData.LRNo || "";
+					oDialog.getModel("insurance").setData({
+						InvoiceNo: oData.GatePassNo || "",
+						InsuranceDate: new Date().toLocaleDateString("en-GB").split("/").join("-"),
+						ReceivedDate: new Date().toLocaleDateString("en-GB").split("/").join("-"),
+						Vendor: oData.VendorName || oData.Vendor || "",
+						VendorAddress: oData.VendorAddress || "",
+						ModeOfTransport: oData.ModeOfTransport || "Road",
+						LRNumber: sLRVal,
+						LRNnumber: sLRVal,
+						VehicleNo: oData.VehicleNo || "",
+						InvoiceValue: oData.FinalTotal ? oData.FinalTotal.toString().replace(/,/g, "") : "",
+						RgpDescription: oData.CommonDesc || oData.UserRemarks || oData.DCNotes || ""
+					});
+					oDialog.open();
+				}).catch(function (oError) {
+					sap.ui.core.BusyIndicator.hide();
+					sap.m.MessageBox.error("Failed to load Insurance dialog: " + (oError.message || oError));
+				});
+			} else {
+				oModel.setProperty("/InsuranceRequired", false);
+				oModel.setProperty("/InsuranceAmount", "");
+				try {
+					var sKeyLog = oData.GatePassNo || oData.GatePassreqNo || "";
+					if (sKeyLog) {
+						var oExistingLog = {};
+						try { oExistingLog = JSON.parse(localStorage.getItem("logistics_" + sKeyLog) || "{}"); } catch (e) {}
+						oExistingLog.bInsured = false;
+						oExistingLog.InsuranceRequired = false;
+						localStorage.setItem("logistics_" + sKeyLog, JSON.stringify(oExistingLog));
+						localStorage.setItem("gp_logistics_" + sKeyLog, JSON.stringify(oExistingLog));
+					}
+				} catch (eLog) {}
+			}
+		},
+
+		onInsuranceSubmit: function () {
+			var oModel = this.getView().getModel("out");
+			this._pInsuranceDialog.then(function (oDialog) {
+				var oInsData = oDialog.getModel("insurance").getData();
+				var sDate = oInsData.InsuranceDate || "";
+				var aParts = sDate.split("-");
+				var sFormatted = (aParts.length === 3) ? aParts[2] + aParts[1] + aParts[0] : sDate;
+				var sLRSubmit = oInsData.LRNumber || oInsData.LRNnumber || "";
+				oModel.setProperty("/InsuranceRequired", true);
+				oModel.setProperty("/InsuranceDate", sFormatted);
+				oModel.setProperty("/InsuranceAmount", oInsData.InvoiceValue || "");
+				if (sLRSubmit) {
+					oModel.setProperty("/LRNumber", sLRSubmit);
+					oModel.setProperty("/LRNnumber", sLRSubmit);
+				}
+				var oData = oModel.getData() || {};
+				try {
+					var sKeyLog = oData.GatePassNo || oData.GatePassreqNo || "";
+					if (sKeyLog) {
+						var oExistingLog = {};
+						try { oExistingLog = JSON.parse(localStorage.getItem("logistics_" + sKeyLog) || "{}"); } catch (e) {}
+						oExistingLog.bInsured = true;
+						oExistingLog.InsuranceRequired = true;
+						oExistingLog.sInsDate = oInsData.InsuranceDate || "";
+						oExistingLog.InsuranceDate = oInsData.InsuranceDate || "";
+						oExistingLog.sInsAmount = oInsData.InvoiceValue || "";
+						oExistingLog.InsuranceAmount = oInsData.InvoiceValue || "";
+						if (sLRSubmit) {
+							oExistingLog.LRNumber = sLRSubmit;
+							oExistingLog.LRNnumber = sLRSubmit;
+							oExistingLog.sInsLRVehicleNo = sLRSubmit;
+							oExistingLog.OutwardInsLRV = sLRSubmit;
+						}
+						localStorage.setItem("logistics_" + sKeyLog, JSON.stringify(oExistingLog));
+						localStorage.setItem("gp_logistics_" + sKeyLog, JSON.stringify(oExistingLog));
+					}
+				} catch (eLog) {}
+				oDialog.close();
+			});
+			sap.m.MessageToast.show("Insurance details saved.");
+		},
+
+		onInsuranceCancel: function () {
+			var oModel = this.getView().getModel("out");
+			oModel.setProperty("/InsuranceRequired", false);
+			var oCB = this.byId("idInsuranceRequiredCheckBox");
+			if (oCB) { oCB.setSelected(false); }
+			this._pInsuranceDialog.then(function (oDialog) { oDialog.close(); });
+		},
+
 		onGenerateDC: async function (bGetBase64, bSkipOData) {
+			try {
 			var oOutModel = this.getView().getModel("out");
+			oOutModel.setProperty("/DocOptionIndex", 1);
 			var oOut = oOutModel.getData();
 
 			if (bSkipOData !== true && bGetBase64 !== true && typeof bGetBase64 !== "boolean") {
@@ -920,7 +1100,14 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			doc.text(sPersonName, col1X + pad + 8, gridY + 6);
 			doc.text(oOut.VendorName || oOut.Vendor || "", col1X + pad, gridY + 12);
 			doc.setFont("helvetica", "normal"); doc.setFontSize(7.5);
-			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || [oOut.City, oOut.ZipCode].filter(Boolean).join(", "), col1W - pad * 2);
+			var sDcCityLine = [oOut.City, oOut.ZipCode, oOut.Country].filter(Boolean).join(" ");
+			var aDcAddrLines = [];
+			if (oOut.Address) { aDcAddrLines.push(oOut.Address); }
+			if (sDcCityLine) { aDcAddrLines.push(sDcCityLine); }
+			var sDcAddrToPrint = (oOut.VendorAddress && oOut.VendorAddress.indexOf("\n") !== -1)
+				? oOut.VendorAddress
+				: (aDcAddrLines.length > 0 ? aDcAddrLines.join("\n") : (oOut.VendorAddress || ""));
+			var splitAddr = doc.splitTextToSize(sDcAddrToPrint, col1W - pad * 2);
 			doc.text(splitAddr, col1X + pad, gridY + 17);
 			doc.setLineWidth(0.2);
 			doc.line(col1X, gridY + gridH - 7, col2X, gridY + gridH - 7);
@@ -968,7 +1155,7 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 					item.materialName || item.MaterialDesc || item.MaterialName || item.Description || item.HSNDesc || item.material || "",
 					item.hsnCode || item.HSNCode || "",
 					item.uom || item.UOM || "",
-					parseFloat(item.sentQty || item.SentQuantity || 0).toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }),
+					parseFloat(item.sentQty || item.SentQuantity || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
 					parseFloat(item.rate || item.ItemNetPrice || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
 					parseFloat(item.amount || item.Totalvalue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 				];
@@ -1067,16 +1254,13 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			}
 
 			doc.save("DC_" + (oOut.GatePassNo || "Draft") + ".pdf");
-			
-			// Send base64 to backend silently to trigger email
-			try {
-				var sDCbase = doc.output('datauristring');
-				this._sendBase64ToBackendSilently(null, sDCbase);
-			} catch(e) {
-				console.error("Error sending DC base64 to backend:", e);
-			}
-
 			MessageToast.show("Delivery Challan Downloaded");
+			} catch (err) {
+				console.error("[GPMS] Error in onGenerateDC:", err);
+				if (bGetBase64 !== true) {
+					MessageBox.error("Failed to generate Delivery Challan PDF: " + (err.message || err));
+				}
+			}
 		},
 
 		onGenerateEWay: async function () {
@@ -1181,13 +1365,15 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 		},
 
 		onPrintGatePass: async function (bGetBase64) {
+			try {
 			var oOut = this.getView().getModel("out").getData();
 			if (!oOut.GatePassNo) {
 				MessageBox.warning("Please generate the Gate Pass first.");
 				return;
 			}
 
-			const { jsPDF } = window.jspdf;
+			const jsPDFLib = window.jspdf;
+			const jsPDF = (jsPDFLib && jsPDFLib.jsPDF) ? jsPDFLib.jsPDF : (window.jsPDF || window.jspdf);
 			// Landscape A4
 			var doc = new jsPDF('l', 'mm', 'a4');
 			var pageWidth = doc.internal.pageSize.width;    // 297mm
@@ -1210,18 +1396,25 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			var lColW = 105, mColW = 78, rColW = contentWidth - lColW - mColW;
 			var lColX = margin, mColX = margin + lColW, rColX = mColX + mColW;
 			var pad = 3;
-			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || [oOut.City, oOut.ZipCode].filter(Boolean).join(", "), lColW - pad * 2 - 2);
+			var sCityLine = [oOut.City, oOut.ZipCode, oOut.Country].filter(Boolean).join(" ");
+			var aAddrLines = [];
+			if (oOut.Address) { aAddrLines.push(oOut.Address); }
+			if (sCityLine) { aAddrLines.push(sCityLine); }
+			var sAddrToPrint = (oOut.VendorAddress && oOut.VendorAddress.indexOf("\n") !== -1)
+				? oOut.VendorAddress
+				: (aAddrLines.length > 0 ? aAddrLines.join("\n") : (oOut.VendorAddress || ""));
+			var splitAddr = doc.splitTextToSize(sAddrToPrint, lColW - pad * 2 - 2);
 
 			// ── ITEMS TABLE ──────────────────────────────────────────────────────
 			var tableData = (oOut.items || []).map(function (it, i) {
 				return [
 					i + 1,
-					it.materialName || "",
-					it.hsnCode || "",
-					parseFloat(it.sentQty || 0).toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }),
-					it.uom || "",
-					parseFloat(it.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-					parseFloat(it.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+					it.materialName || it.MaterialDesc || it.MaterialName || it.Description || it.HSNDesc || it.material || "",
+					it.hsnCode || it.HSNCode || "",
+					parseFloat(it.sentQty || it.SentQuantity || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+					it.uom || it.UOM || "",
+					parseFloat(it.rate || it.ItemNetPrice || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+					parseFloat(it.amount || it.Totalvalue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 				];
 			});
 			while (tableData.length < 5) { tableData.push(["", "", "", "", "", "", ""]); }
@@ -1352,7 +1545,24 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 
 					// Right Column Info (Metadata Col 2)
 					var rc = rColX + pad, ry = gridY + 5.5, rLblOff = 27;
-					var sReqName = oOut.Requestor || oOut.ReqUser || oOut.Requser || oOut.RequestedUser || oOut.ReqEmpName || oOut.CreatedBy || oOut.Createdby || oOut.Ernam || "";
+					var sReqName = oOut.Requestor || oOut.ReqUser || oOut.Requser || oOut.requser || oOut.RequestedUser || oOut.ReqEmpName || oOut.ReqName || oOut.RequestorName || oOut.CreatedBy || oOut.Createdby || oOut.Ernam || oOut.Uname || oOut.Username || "";
+					if (!sReqName) {
+						try {
+							var oUserM = sap.ui.getCore().getModel("user");
+							if (oUserM) {
+								sReqName = oUserM.getProperty("/id") || oUserM.getProperty("/sUserId") || oUserM.getProperty("/User") || "";
+							}
+						} catch (e) {}
+					}
+					if (!sReqName) {
+						try {
+							var sLocalUser = localStorage.getItem("gpms_user");
+							if (sLocalUser) {
+								var oParsedUser = JSON.parse(sLocalUser);
+								sReqName = oParsedUser.id || oParsedUser.sUserId || oParsedUser.User || "";
+							}
+						} catch (e) {}
+					}
 					doc.setFontSize(8);
 					doc.setFont("helvetica", "bold"); doc.text("DC NO :", rc, ry);
 					doc.setFont("helvetica", "normal"); doc.text(oOut.ChallanNumber || oOut.Challanumber || "", rc + rLblOff, ry); ry += 5.2;
@@ -1415,331 +1625,17 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			}
 
 			doc.save("GatePass_" + (oOut.GatePassNo || "Draft") + ".pdf");
-			
-			// Send base64 to backend silently to trigger email
-			try {
-				var sGPbase = doc.output('datauristring');
-				this._sendBase64ToBackendSilently(sGPbase, null);
-			} catch(e) {
-				console.error("Error sending base64 to backend:", e);
-			}
-
 			MessageToast.show("Gate Pass Printed");
+			} catch (err) {
+				console.error("[GPMS] Error in onPrintGatePass:", err);
+				if (bGetBase64 !== true) {
+					MessageBox.error("Failed to generate Gate Pass PDF: " + (err.message || err));
+				}
+			}
 		},
 
 		_sendBase64ToBackendSilently: function(sGPbase, sDCbase) {
-			var oOutModel = this.getView().getModel("out");
-			var oOut = oOutModel.getData();
-			var oODataModel = this.getModel();
-			if (!oOut.GatePassNo) { return; } // can't send without GP No
-
-			var fnFormatDate = function (oDate) {
-				if (!oDate) return "";
-				if (typeof oDate === "string" && oDate.length === 8 && !isNaN(oDate)) { return oDate; }
-				var d = new Date(oDate);
-				if (isNaN(d.getTime())) return "";
-				return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
-			};
-			var sToday = fnFormatDate(new Date());
-
-			var oPayload = {
-				GatePassreqNo: oOut.GatePassreqNo || "",
-				FiscalYear: oOut.FiscalYear || String(new Date().getFullYear()),
-				Plant: oOut.Plant || "",
-				GatePassNo: oOut.GatePassNo || "",
-				Vendor: oOut.Vendor || "",
-				VendorName: oOut.VendorName || "",
-				VendorGST: oOut.VendorGST || "",
-				VendorPerson: oOut.VendorPerson || "",
-				ZipCode: oOut.ZipCode || "",
-				City: oOut.City || "",
-				GatePassDate: sToday,
-				ChallanDate: fnFormatDate(oOut.ChallanDate) || sToday,
-				ReturnableDate: fnFormatDate(oOut.ReturnableDate) || "",
-				ExtReturnDate: fnFormatDate(oOut.ExtendedReturnableDate) || "",
-				CommonDesc: oOut.CommonDesc || "",
-				NoOfPacakages: parseInt(oOut.NoOfPackages || 0),
-				Department: oOut.Department || "",
-				Challanumber: oOut.ChallanNumber || "",
-				GenerateDC: oOut.ChallanNumber ? "X" : "",
-				GatePassType: oOut.GatePassType || "RGP",
-				VehicleNo: oOut.VehicleNo || "",
-				ModeOfDispatch: oOut.ModeOfTransport || "",
-				Remarks: oOut.UserRemarks || "",
-				GPStatus: oOut.Status || "",
-				Message: "",
-				GPbase64: sGPbase ? (sGPbase.split(',')[1] || sGPbase) : "",
-				DCbase64: sDCbase ? (sDCbase.split(',')[1] || sDCbase) : "",
-				LRNumber: oOut.LRNnumber || "",
-				TransporterName: oOut.TransporterName || "",
-				TransporterGST: oOut.TransporterGST || "",
-				Comment1: "", Comment2: "", Comment3: "", Comment4: "", Comment5: "",
-				Comment6: "", Comment7: "", Comment8: "", Comment9: "", Comment10: "",
-				Sno1: "", Sno2: "", Sno3: "", Sno4: "", Sno5: "",
-				Sno6: "", Sno7: "", Sno8: "", Sno9: "", Sno10: "",
-				cdate1: "", cdate2: "", cdate3: "", cdate4: "", cdate5: "",
-				cdate6: "", cdate7: "", cdate8: "", cdate9: "", cdate10: "",
-				DCNotes: oOut.DCNotes || "",
-				InsuranceReq: oOut.InsuranceRequired ? "X" : "",
-				InsuranceDate: oOut.InsuranceDate || "",
-				InsuranceAmount: String(oOut.InsuranceAmount || "0"),
-				OutgateNav: (oOut.items || []).map(function (it, index) {
-					return {
-						GatePassType: oOut.GatePassType || "RGP",
-						GatePassNo: oOut.GatePassNo || "",
-						ItemNo: String((index + 1) * 10).padStart(5, "0"),
-						Material: it.material || "",
-						MaterialDesc: it.materialName || it.hsnDesc || "",
-						HSNCode: it.hsnCode || "",
-						HSNDesc: it.hsnDesc || "",
-						UOM: it.uom || "",
-						ItemNetPrice: String(parseFloat(it.rate || 0).toFixed(2)),
-						SentQuantity: String(parseFloat(it.sentQty || 0).toFixed(3)),
-						RecievedQuantity: String(parseFloat(it.recvdQty || 0).toFixed(3)),
-						BalanceQuantity: String(parseFloat(it.balQty || 0).toFixed(3)),
-						Totalvalue: String(parseFloat(it.amount || 0).toFixed(2)),
-						GatePassReqNo: oOut.GatePassreqNo || "",
-						Remarks: it.itemRemarks || ""
-					};
-				})
-			};
-			var aOutComments = oOut.CommentsList || [];
-			for (var oci = 0; oci < 10; oci++) {
-				var oOutC = aOutComments[oci];
-				var oIdx = oci + 1;
-				var sRawDate = oOutC ? (oOutC.date || "") : "";
-				var sParts = sRawDate.split("-");
-				var sFmtDate = (sParts.length === 3 && sParts[2].length === 4) ? (sParts[2] + sParts[1] + sParts[0]) : fnFormatDate(sRawDate);
-				oPayload["Comment" + oIdx] = oOutC ? (oOutC.text || "") : "";
-				oPayload["Sno"     + oIdx] = oOutC ? (oOutC.sno  || String(oIdx)) : "";
-				oPayload["cdate"   + oIdx] = sFmtDate || "";
-			}
-
-			oODataModel.create("/OutGatePassSet", oPayload, {
-				success: function () {
-					console.log("[GPMS Debug] Silent Base64 Update Successful.");
-				},
-				error: function (e) {
-					console.error("[GPMS Debug] Silent Base64 Update Failed:", e);
-				}
-			});
-		},
-
-
-
-		_numberToWords: function (num) {
-			var a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
-			var b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-
-			if ((num = num.toString()).length > 9) return 'overflow';
-			var n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
-			if (!n) return '';
-			var str = '';
-			str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
-			str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
-			str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
-			str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
-			str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
-			return str;
-		},
-
-		onTransportByChange: function (oEvent) {
-			var iIndex = oEvent.getParameter("selectedIndex");
-			var oOutModel = this.getView().getModel("out");
-			if (iIndex === 0) {
-				// Self — auto-fill company name and GST
-				oOutModel.setProperty("/TransporterName", "MEIL Neyveli Energy Private Limited");
-				oOutModel.setProperty("/TransporterGST", "33AACCS2753B1ZV");
-			} else {
-				// Vendor — clear fields so store person can enter transporter details manually
-				oOutModel.setProperty("/TransporterName", "");
-				oOutModel.setProperty("/TransporterGST", "");
-			}
-			oOutModel.setProperty("/TransportByIndex", iIndex);
-		},
-
-		onDocOptionChange: function () {
-			// Logic to show/hide document buttons handled via visibility bindings in XML
-		},
-
-		onInsuranceRequiredCheckBoxSelect: function (oEvent) {
-			var bSelected = oEvent.getParameter("selected");
-			var oOutModel = this.getView().getModel("out");
-			var oOutData = oOutModel ? oOutModel.getData() : {};
-
-			if (bSelected) {
-				if (!this._pInsuranceDialog) {
-					this._pInsuranceDialog = sap.ui.core.Fragment.load({
-						id: this.getView().getId(),
-						name: "zgpms.meilpower.com.view.fragments.InwardInsuranceDialog",
-						controller: this
-					}).then(function (oDialog) {
-						this.getView().addDependent(oDialog);
-						var oModel = new sap.ui.model.json.JSONModel({});
-						oDialog.setModel(oModel, "insurance");
-						return oDialog;
-					}.bind(this));
-				}
-				this._pInsuranceDialog.then(function (oDialog) {
-					var oInsModel = oDialog.getModel("insurance");
-					oInsModel.setData({
-						InvoiceNo: oOutData.GatePassreqNo || "",
-						InsuranceDate: new Date().toLocaleDateString("en-GB").split("/").join("-"),
-						ReceivedDate: new Date().toLocaleDateString("en-GB").split("/").join("-"),
-						Vendor: oOutData.VendorName || "",
-						VendorAddress: oOutData.VendorAddress || "",
-						ModeOfTransport: oOutData.ModeOfTransport || "Road",
-						LRNumber: oOutData.LRNnumber || "",
-						VehicleNo: oOutData.VehicleNo || "",
-						InvoiceValue: oOutData.FinalTotal ? oOutData.FinalTotal.toString().replace(/,/g, "") : "",
-						RgpDescription: oOutData.CommonDesc || ""
-					});
-					oDialog.open();
-				});
-			}
-		},
-
-		onInsuranceSubmit: function () {
-			var oOutModel = this.getView().getModel("out");
-			var that = this;
-			this._pInsuranceDialog.then(function (oDialog) {
-				var oInsData = oDialog.getModel("insurance").getData();
-				var sDate = oInsData.InsuranceDate || "";
-				var aParts = sDate.split("-");
-				var sFormatted = (aParts.length === 3) ? aParts[2] + aParts[1] + aParts[0] : sDate;
-				oOutModel.setProperty("/InsuranceRequired", true);
-				oOutModel.setProperty("/InsuranceDate", sFormatted);
-				oOutModel.setProperty("/InsuranceAmount", oInsData.InvoiceValue || "");
-				oOutModel.setProperty("/OutwardInsLRV", oInsData.LRNnumber || oInsData.VehicleNo || "");
-				oOutModel.setProperty("/OutwardInsDesc", oInsData.RgpDescription || "");
-				oOutModel.setProperty("/OutwardInsDate", oInsData.InsuranceDate || "");
-				oOutModel.setProperty("/OutwardInsValue", oInsData.InvoiceValue || "");
-
-				var sReqNo = oOutModel.getProperty("/GatePassNo") || oOutModel.getProperty("/GatePassReqNo") || "";
-				var sReqNo2 = oOutModel.getProperty("/GatePassReqNo");
-				var oLogData = {
-					bInsured: true,
-					InsuranceRequired: true,
-					sInsAmount: oInsData.InvoiceValue || "",
-					InsuranceAmount: oInsData.InvoiceValue || "",
-					sInsLRVehicleNo: oInsData.LRNnumber || oInsData.VehicleNo || "",
-					OutwardInsLRV: oInsData.LRNnumber || oInsData.VehicleNo || "",
-					sInsDescription: oInsData.RgpDescription || "",
-					OutwardInsDesc: oInsData.RgpDescription || "",
-					sInsDate: oInsData.InsuranceDate || "",
-					OutwardInsDate: oInsData.InsuranceDate || "",
-					sInsValue: oInsData.InvoiceValue || "",
-					OutwardInsValue: oInsData.InvoiceValue || ""
-				};
-				if (sReqNo) { localStorage.setItem("gp_logistics_" + sReqNo, JSON.stringify(oLogData)); }
-				if (sReqNo2) { localStorage.setItem("gp_logistics_" + sReqNo2, JSON.stringify(oLogData)); }
-				oDialog.close();
-			});
-			sap.m.MessageToast.show("Insurance details saved.");
-		},
-
-		onInsuranceCancel: function () {
-			this.byId("idInsuranceRequiredCheckBox").setSelected(false);
-			this._pInsuranceDialog.then(function (oDialog) {
-				oDialog.close();
-			});
-		},
-
-		_resubmitAmendmentRequest: function () {
-			var oOut = this.getView().getModel("out").getData();
-			var oODataModel = this.getModel();
-			if (!oODataModel) {
-				MessageBox.warning("Backend service not available.");
-				return;
-			}
-
-			// Format dates as YYYYMMDD for SAP OData compatibility
-			var fnFormatDate = function (oDate) {
-				if (!oDate) return "";
-				if (typeof oDate === "string" && oDate.length === 8 && !isNaN(oDate)) {
-					return oDate;
-				}
-				var d = new Date(oDate);
-				if (isNaN(d.getTime())) return "";
-				var y = d.getFullYear();
-				var m = String(d.getMonth() + 1).padStart(2, '0');
-				var day = String(d.getDate()).padStart(2, '0');
-				return y + m + day;
-			};
-
-			var sToday = new Date().toISOString().split('T')[0];
-			var sGpDateSAP = fnFormatDate(sToday);
-			
-			// Map returnable date if RGP
-			var sReturnableDateSAP = "";
-			if (oOut.GatePassType === "RGP") {
-				sReturnableDateSAP = oOut.ExtendedReturnableDate ? fnFormatDate(oOut.ExtendedReturnableDate) : sGpDateSAP;
-			}
-
-			var oPayload = {
-				GatePassReqNo: oOut.GatePassreqNo || "",
-				GatePassType: oOut.GatePassType || "RGP",
-				Cocode: oOut.Cocode || "",
-				Plant: oOut.Plant || "",
-				FiscalYear: oOut.FiscalYear || String(new Date().getFullYear()),
-				GpDate: sGpDateSAP,
-				Vendor: oOut.Vendor || "",
-				VendorName: oOut.VendorName || "",
-				VendorGST: oOut.VendorGST || "",
-				ZipCode: oOut.ZipCode || "",
-				City: oOut.City || "",
-				ApprovalReq: "X",
-				Approval1: "",
-				Approval2: "",
-				Department: oOut.Department || "",
-				VehicleNo: oOut.VehicleNo || "",
-				ModeOfDispatch: oOut.ModeOfTransport || "",
-				Remarks: oOut.UserRemarks || "",
-				ReturnableDate: sReturnableDateSAP,
-
-				GateReqItemNav: (oOut.items || []).map(function (it, index) {
-					var fQty = parseFloat(it.sentQty || 0);
-					var fRate = parseFloat(it.rate || 0);
-					var fValue = fQty * fRate;
-
-					return {
-						GatePassType: oOut.GatePassType || "RGP",
-						ItemNo: String((index + 1) * 10).padStart(5, '0'),
-						Material: it.material || "",
-						MaterialDesc: it.materialName || "",
-						HSNCode: it.hsnCode || "",
-						HSNDesc: it.hsnDesc || "",
-						UOM: it.uom || "",
-						ItemNetPrice: fRate.toFixed(2),
-						RequestedQuantity: fQty.toFixed(3),
-						Totalvalue: fValue.toFixed(2),
-						Remarks: it.remarks || ""
-					};
-				})
-			};
-
-			sap.ui.core.BusyIndicator.show(0);
-			oODataModel.create("/GatePassReqHdrSet", oPayload, {
-				success: function (oData) {
-					sap.ui.core.BusyIndicator.hide();
-					var sReqNo = oData.GatePassReqNo || oOut.GatePassreqNo;
-					MessageBox.success("Gate Pass Request " + sReqNo + " has been successfully re-submitted and sent for approval to HOD & Stores!", {
-						onClose: function () {
-							this._resetModel();
-							this.getRouter().navTo("home");
-						}.bind(this)
-					});
-				}.bind(this),
-				error: function (oError) {
-					sap.ui.core.BusyIndicator.hide();
-					var sMsg = "Error re-submitting Gate Pass Request.";
-					try {
-						var oResp = JSON.parse(oError.responseText);
-						sMsg = (oResp.error && oResp.error.message && oResp.error.message.value) || sMsg;
-					} catch (e) { }
-					MessageBox.error(sMsg);
-				}
-			});
+			// PDF base64 is already persisted via onSaveLogistics into /OutGatePassSet
 		},
 
 		onSubmitOutgate: function () {
@@ -1763,12 +1659,24 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 
 			var oOut = oOutModel.getData();
 
-			var fnFormatDate = function (oDate) {
+						var fnFormatDate = function (oDate) {
 				if (!oDate) return "";
-				if (typeof oDate === "string" && oDate.length === 8 && !isNaN(oDate)) { return oDate; }
-				var d = new Date(oDate);
+				if (typeof oDate === "string") {
+					var sClean = oDate.trim();
+					if (sClean.length === 8 && !isNaN(sClean)) return sClean;
+					if (/^\d{2}[-\/]\d{2}[-\/]\d{4}$/.test(sClean)) {
+						return sClean.slice(6, 10) + sClean.slice(3, 5) + sClean.slice(0, 2);
+					}
+					if (/^\d{4}[-\/]\d{2}[-\/]\d{2}$/.test(sClean)) {
+						return sClean.slice(0, 4) + sClean.slice(5, 7) + sClean.slice(8, 10);
+					}
+				}
+				var d = (oDate instanceof Date) ? oDate : new Date(oDate);
 				if (isNaN(d.getTime())) return "";
-				return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+				var y = d.getFullYear();
+				var m = String(d.getMonth() + 1).padStart(2, '0');
+				var day = String(d.getDate()).padStart(2, '0');
+				return y + m + day;
 			};
 
 			// Format today's date as YYYY-MM-DD
@@ -1789,15 +1697,33 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 				DCNotes: oOut.DCNotes || "",
 				GPStatus: oOut.Status || "",
 				VendorPerson: oOut.VendorPerson || "",
-				CommonDesc: oOut.CommonDesc || ""
+				CommonDesc: oOut.CommonDesc || "",
+				HODRemarks: oOut.HODRemarks || "",
+				StoreRemarks: oOut.StoreRemarks || oOut.STORERemarks || "",
+				bInsured: !!oOut.InsuranceRequired,
+				InsuranceRequired: !!oOut.InsuranceRequired,
+				sInsAmount: oOut.InsuranceAmount || "",
+				InsuranceAmount: oOut.InsuranceAmount || "",
+				sInsDate: oOut.InsuranceDate || "",
+				InsuranceDate: oOut.InsuranceDate || "",
+				ReturnableDate: oOut.ReturnableDate || oOut.DueDate || "",
+				ExtendedReturnableDate: oOut.ExtendedReturnableDate || oOut.ExtReturnDate || ""
 			};
+			var sHODOut = oOut.HODRemarks || "";
+			var sStoreOut = oOut.StoreRemarks || oOut.STORERemarks || "";
 			if (oOut.GatePassNo) {
 				localStorage.setItem("logistics_" + String(oOut.GatePassNo).trim(), JSON.stringify(oLogistics));
 				localStorage.setItem("gp_logistics_" + String(oOut.GatePassNo).trim(), JSON.stringify(oLogistics));
 			}
 			if (oOut.GatePassreqNo) {
-				localStorage.setItem("logistics_" + String(oOut.GatePassreqNo).trim(), JSON.stringify(oLogistics));
-				localStorage.setItem("gp_logistics_" + String(oOut.GatePassreqNo).trim(), JSON.stringify(oLogistics));
+				var sRKey = String(oOut.GatePassreqNo).trim();
+				localStorage.setItem("logistics_" + sRKey, JSON.stringify(oLogistics));
+				localStorage.setItem("gp_logistics_" + sRKey, JSON.stringify(oLogistics));
+				if (sHODOut || sStoreOut) {
+					try {
+						localStorage.setItem("req_remarks_" + sRKey, JSON.stringify({ HODRemarks: sHODOut, StoreRemarks: sStoreOut }));
+					} catch (e) {}
+				}
 			}
 
 			var oPayload = {
@@ -1914,12 +1840,24 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 				return;
 			}
 
-			var fnFormatDate = function (oDate) {
+						var fnFormatDate = function (oDate) {
 				if (!oDate) return "";
-				if (typeof oDate === "string" && oDate.length === 8 && !isNaN(oDate)) { return oDate; }
-				var d = new Date(oDate);
+				if (typeof oDate === "string") {
+					var sClean = oDate.trim();
+					if (sClean.length === 8 && !isNaN(sClean)) return sClean;
+					if (/^\d{2}[-\/]\d{2}[-\/]\d{4}$/.test(sClean)) {
+						return sClean.slice(6, 10) + sClean.slice(3, 5) + sClean.slice(0, 2);
+					}
+					if (/^\d{4}[-\/]\d{2}[-\/]\d{2}$/.test(sClean)) {
+						return sClean.slice(0, 4) + sClean.slice(5, 7) + sClean.slice(8, 10);
+					}
+				}
+				var d = (oDate instanceof Date) ? oDate : new Date(oDate);
 				if (isNaN(d.getTime())) return "";
-				return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+				var y = d.getFullYear();
+				var m = String(d.getMonth() + 1).padStart(2, '0');
+				var day = String(d.getDate()).padStart(2, '0');
+				return y + m + day;
 			};
 
 			sap.ui.core.BusyIndicator.show(0);
@@ -2050,13 +1988,31 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 					oOutModel.setProperty("/ChallanNumber", sDC);
 					oOutModel.setProperty("/DocOptionIndex", 1);
 					
+					try {
+						var sKeyLog = oOut.GatePassNo || oOut.GatePassreqNo || "";
+						if (sKeyLog) {
+							var oLogToSave = {
+								bInsured: !!oOut.InsuranceRequired,
+								InsuranceRequired: !!oOut.InsuranceRequired,
+								VehicleNo: oOut.VehicleNo || "",
+								LRNnumber: oOut.LRNumber || oOut.LRNnumber || "",
+								LRNumber: oOut.LRNumber || oOut.LRNnumber || "",
+								ChallanNumber: sDC || ""
+							};
+							localStorage.setItem("gp_logistics_" + sKeyLog, JSON.stringify(oLogToSave));
+							localStorage.setItem("logistics_" + sKeyLog, JSON.stringify(oLogToSave));
+						}
+					} catch (eLog) {}
+
 					var sMsg = oData.Message || ("Delivery Challan (" + sDC + ") Generated & Saved successfully!");
+					if (bIsGenerateDC === true) {
+						that.onGenerateDC(false, true);
+					}
 					MessageBox.success(sMsg, {
 						onClose: function () {
 							if (bIsGenerateDC === true) {
+								// Ensure downloaded if popup had blocked it
 								that.onGenerateDC(false, true);
-							} else {
-								that.getRouter().navTo("NRGPList");
 							}
 						}
 					});
@@ -2124,8 +2080,14 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 		_getImageBase64: function (url) {
 			return new Promise(function (resolve, reject) {
 				var img = new Image();
+				var timer = setTimeout(function () {
+					img.onload = null;
+					img.onerror = null;
+					reject("Timeout loading image");
+				}, 1000);
 				img.crossOrigin = "Anonymous";
 				img.onload = function () {
+					clearTimeout(timer);
 					var canvas = document.createElement('canvas');
 					canvas.width = img.width;
 					canvas.height = img.height;
@@ -2134,10 +2096,102 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 					resolve(canvas.toDataURL('image/png'));
 				};
 				img.onerror = function (err) {
+					clearTimeout(timer);
 					reject(err);
 				};
 				img.src = url;
 			});
 		},
+
+		_numberToWords: function (num) {
+			var a = ["", "One ", "Two ", "Three ", "Four ", "Five ", "Six ", "Seven ", "Eight ", "Nine ", "Ten ", "Eleven ", "Twelve ", "Thirteen ", "Fourteen ", "Fifteen ", "Sixteen ", "Seventeen ", "Eighteen ", "Nineteen "];
+			var b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+			if ((num = (num || 0).toString()).length > 9) return "overflow";
+			var n = ("000000000" + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+			if (!n) return "";
+			var str = "";
+			str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + " " + a[n[1][1]]) + "Crore " : "";
+			str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + " " + a[n[2][1]]) + "Lakh " : "";
+			str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + " " + a[n[3][1]]) + "Thousand " : "";
+			str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + " " + a[n[4][1]]) + "Hundred " : "";
+			str += (n[5] != 0) ? ((str !== "") ? "and " : "") + (a[Number(n[5])] || b[n[5][0]] + " " + a[n[5][1]]) : "";
+			return str;
+		},
+
+		_applyVendorMasterData: function (v, oModel) {
+			if (!v || !oModel) return;
+			var sStreet = (v.Address || v.Street || v.Stras || "").trim();
+			var sCity = (v.City || oModel.getProperty("/City") || "").trim();
+			var sZip = (v.ZipCode || v.PostalCode || oModel.getProperty("/ZipCode") || "").trim();
+			var sCountry = (v.Country || "").trim();
+
+			var sCityLine = [sCity, sZip, sCountry].filter(Boolean).join(" ");
+			var aLines = [];
+			if (sStreet) { aLines.push(sStreet); }
+			if (sCityLine) { aLines.push(sCityLine); }
+
+			var sFormattedAddress = aLines.join("\n");
+			if (!sFormattedAddress) {
+				sFormattedAddress = [sStreet, sCity, sZip, sCountry].filter(Boolean).join(", ");
+			}
+
+			if (v.Name || v.VendorName) {
+				oModel.setProperty("/VendorName", v.Name || v.VendorName);
+			}
+			if (v.VendorGST) {
+				oModel.setProperty("/VendorGST", v.VendorGST);
+			}
+
+			oModel.setProperty("/Address", sStreet);
+			oModel.setProperty("/City", sCity);
+			oModel.setProperty("/ZipCode", sZip);
+			oModel.setProperty("/Country", sCountry);
+			if (sFormattedAddress) {
+				oModel.setProperty("/VendorAddress", sFormattedAddress);
+			}
+		},
+
+		_enrichVendorAddressMaster: function (sVendorCode, sPlant, oModel) {
+			if (!sVendorCode || !oModel) return;
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) return;
+
+			var sRawVendor = String(sVendorCode).trim();
+			var sPaddedVendor = sRawVendor;
+			if (sPaddedVendor && /^\d+$/.test(sPaddedVendor) && sPaddedVendor.length < 10) {
+				sPaddedVendor = sPaddedVendor.padStart(10, "0");
+			}
+
+			var sPlantFilter = sPlant || "2301";
+			var that = this;
+
+			oODataModel.read("/ZVendorSet", {
+				filters: [
+					new sap.ui.model.Filter("Vendor", sap.ui.model.FilterOperator.EQ, sPaddedVendor),
+					new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sPlantFilter)
+				],
+				success: function (oData) {
+					var aRes = oData.results || [];
+					if (aRes.length > 0) {
+						that._applyVendorMasterData(aRes[0], oModel);
+					} else if (sPaddedVendor !== sRawVendor) {
+						oODataModel.read("/ZVendorSet", {
+							filters: [
+								new sap.ui.model.Filter("Vendor", sap.ui.model.FilterOperator.EQ, sRawVendor),
+								new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sPlantFilter)
+							],
+							success: function (oData2) {
+								var aRes2 = oData2.results || [];
+								if (aRes2.length > 0) {
+									that._applyVendorMasterData(aRes2[0], oModel);
+								}
+							}
+						});
+					}
+				}
+			});
+		}
 	});
 });
+
+

@@ -169,7 +169,7 @@
 
 				<!-- Generated GP No banner -->
 				<MessageStrip
-					text="{= 'Gate Pass No generated: ' + ${pcpDetail>/GatepassNo}}"
+					text="{= 'Gate Pass No generated: ' + ${pcpDetail>/GatepassNo} + (${pcpDetail>/PCPNO} ? ' | PCP No: ' + ${pcpDetail>/PCPNO} : '')}"
 					type="Success"
 					showIcon="true"
 					visible="{= !!${pcpDetail>/GatepassNo} }"

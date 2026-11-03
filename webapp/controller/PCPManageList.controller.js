@@ -62,6 +62,7 @@ sap.ui.define([
 							Plant:        oItem.Plant        || "",
 							BudgetCode:   oItem.BudgetCode   || "",
 							GatepassNo:   (oItem.GatepassNo  || "").trim(),
+							PCPNO:        (oItem.PCPNO       || "").trim(),
 							TotalCost:    oItem.TotalCost    || "0.00",
 							EntryPoint:   oItem.EntryPoint   || "",
 							Remarks:      oItem.Remarks      || "",
@@ -171,7 +172,12 @@ sap.ui.define([
 						if (!sValue) return false;
 						var aParts = sValue.split("-");
 						if (aParts.length !== 3) return false;
-						var dVal = new Date(parseInt(aParts[2]), parseInt(aParts[1], 10) - 1, parseInt(aParts[0]));
+						var MONTHS_MAP = { JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11 };
+						var mIdx = isNaN(aParts[1]) ? MONTHS_MAP[aParts[1].toUpperCase()] : (parseInt(aParts[1], 10) - 1);
+						var dVal = aParts[0].length === 4
+							? new Date(parseInt(aParts[0], 10), mIdx, parseInt(aParts[2], 10))
+							: new Date(parseInt(aParts[2], 10), mIdx, parseInt(aParts[0], 10));
+						if (isNaN(dVal.getTime())) return false;
 						if (oFrom && dVal < oFrom) return false;
 						if (oTo && dVal > oTo) return false;
 						return true;
@@ -247,7 +253,8 @@ sap.ui.define([
 						"Entry": o.EntryPoint || "",
 						"Department": o.Department || "",
 						"PCP Date": fmtD(o.PCPDate),
-						"PCP No": o.GatepassNo || "",
+						"Gate Pass No": o.GatepassNo || "",
+						"PCP No": o.PCPNO || "",
 						"Vendor": o.Vendor || "",
 						"DC Date": fmtD(o.DCdate),
 						"DC/INV No": o.DCNumber || "",
@@ -273,7 +280,8 @@ sap.ui.define([
 							"Entry": o.EntryPoint || "",
 							"Department": o.Department || "",
 							"PCP Date": fmtD(o.PCPDate),
-							"PCP No": o.GatepassNo || "",
+							"Gate Pass No": o.GatepassNo || "",
+							"PCP No": o.PCPNO || "",
 							"Vendor": o.Vendor || "",
 							"DC Date": fmtD(o.DCdate),
 							"DC/INV No": o.DCNumber || "",
@@ -330,12 +338,13 @@ sap.ui.define([
 			sHtml += "th { background-color: #F2F4F4; color: #1F4E79; font-weight: bold; }";
 			sHtml += "tr:nth-child(even) { background-color: #F8F9F9; }</style></head><body>";
 			sHtml += "<h2>PCP List</h2><table><thead><tr>";
-			sHtml += "<th>PCP No</th><th>PCP Date</th><th>Entry</th><th>GE No</th><th>GE Date</th><th>Supplier</th><th>Items</th><th>DC/INV No</th><th>Status</th>";
+			sHtml += "<th>Gate Pass No</th><th>PCP No</th><th>PCP Date</th><th>Entry</th><th>GE No</th><th>GE Date</th><th>Supplier</th><th>Items</th><th>DC/INV No</th><th>Status</th>";
 			sHtml += "</tr></thead><tbody>";
 			aObjects.forEach(function (o) {
 				var sStatus = o.GatepassNo ? "Closed" : "Pending";
 				sHtml += "<tr>";
 				sHtml += "<td>" + (o.GatepassNo || "") + "</td>";
+				sHtml += "<td>" + (o.PCPNO || "") + "</td>";
 				sHtml += "<td>" + (o.PCPDate || "") + "</td>";
 				sHtml += "<td>" + (o.EntryPoint || "") + "</td>";
 				sHtml += "<td>" + (o.GateEntryNo || "") + "</td>";
@@ -370,12 +379,13 @@ sap.ui.define([
 				sap.m.MessageToast.show("No items to copy.");
 				return;
 			}
-			var sHeaders = ["PCP No", "PCP Date", "Entry", "GE No", "GE Date", "Supplier", "Items", "DC/INV No", "Status"];
+			var sHeaders = ["Gate Pass No", "PCP No", "PCP Date", "Entry", "GE No", "GE Date", "Supplier", "Items", "DC/INV No", "Status"];
 			var aLines = [sHeaders.join("\t")];
 			aObjects.forEach(function (o) {
 				var sStatus = o.GatepassNo ? "Closed" : "Pending";
 				aLines.push([
 					o.GatepassNo || "",
+					o.PCPNO || "",
 					o.PCPDate || "",
 					o.EntryPoint || "",
 					o.GateEntryNo || "",

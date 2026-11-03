@@ -32,8 +32,8 @@
                     </Select>
                 </contentMiddle>
                 <contentRight>
-                    <DatePicker id="idNRGPFromDatePicker" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" width="9rem" change=".onDatePickerChange" placeholder="From Date"/>
-                    <DatePicker id="idNRGPToDatePicker" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" width="9rem" change=".onDatePickerChange" placeholder="To Date"/>
+                    <DatePicker id="idNRGPFromDatePicker" displayFormat="dd-MMM-yyyy" valueFormat="yyyy-MM-dd" width="10.5rem" change=".onDatePickerChange" placeholder="From Date"/>
+                    <DatePicker id="idNRGPToDatePicker" displayFormat="dd-MMM-yyyy" valueFormat="yyyy-MM-dd" width="10.5rem" change=".onDatePickerChange" placeholder="To Date"/>
                     <Button icon="sap-icon://clear-filter" text="Reset" press=".onResetButtonPress" />
                 </contentRight>
             </Bar>

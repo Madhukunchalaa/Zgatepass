@@ -55,12 +55,14 @@
 								<tnt:NavigationListItem text="Add Inward Insurance"   icon="sap-icon://shield"                      key="AddInwardInsurance"    visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }"/>
 								<tnt:NavigationListItem text="Gate Pass Request List" icon="sap-icon://list"                        key="GatePassList"/>
 								<tnt:NavigationListItem text="Gate Pass List"         icon="sap-icon://document-text"               key="NRGPList"/>
+								<tnt:NavigationListItem text="Security Gate Control" icon="sap-icon://shield" key="SecurityGateControl" visible="{= ${user>/Plant} === '3121' }"/>
 								<tnt:NavigationListItem text="Gate Pass with PO/Petty Cash" icon="sap-icon://supplier"              key="GatePassWithPO"        visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }"/>
 								<tnt:NavigationListItem text="IRGP Workflow"          icon="sap-icon://process"                     key="IRGP"                  visible="{= !${user>/IsHodUser} }"/>
 								<tnt:NavigationListItem text="Scrap Request"          icon="sap-icon://delete"                      key="ScrapRequestCreation"  visible="{= !${user>/IsHodUser} }"/>
 								<tnt:NavigationListItem text="Scrap Request List"     icon="sap-icon://list"                        key="ScrapRequestList"/>
 								<tnt:NavigationListItem text="Add Scrap Gatepass"     icon="sap-icon://sales-document"              key="ScrapGatepassCreation" visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }"/>
 								<tnt:NavigationListItem text="Scrap Gatepass List"   icon="sap-icon://sales-order"                 key="ScrapGatepassList"     visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }"/>
+								<tnt:NavigationListItem text="Coal Gate Pass"         icon="sap-icon://cargo-train"                 key="CoalGatePassCreation"  visible="{= ${user>/Plant} === '3121' }"/>
 								<tnt:NavigationListItem text="Ash GP Request"         icon="sap-icon://factory"                     key="AshGatePassCreation"   visible="{= !${user>/IsHodUser} }"/>
 								<tnt:NavigationListItem text="Ash GP List"            icon="sap-icon://list"                        key="AshGatePassList"/>
 								<tnt:NavigationListItem text="Add PCP"                icon="sap-icon://lead"                        key="PCPList"               visible="{= !${user>/IsGatepassUserOnly} &amp;&amp; !${user>/IsHodUser} }"/>

@@ -1,0 +1,166 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.CoalGatePassCreation"
+	xmlns="sap.m"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:core="sap.ui.core"
+	xmlns:layout="sap.ui.layout"
+	height="100%">
+	<Page
+		id="coalGatePassCreationPage"
+		title="Coal Gate Pass (Plant 3121)"
+		showNavButton="true"
+		navButtonPress=".onNavBack"
+		class="gpmsPage">
+		<content>
+			<VBox class="gpmsContentWrapper sapUiMediumMargin">
+				
+				<!-- ─── 1. HEADER DETAILS (SALES ORDER BASED) ─── -->
+				<Panel class="gpmsSection" expandable="false">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<core:Icon src="sap-icon://sales-order" class="sapUiTinyMarginEnd"/>
+							<Label text="Coal Dispatch Header Information" class="gpmsSectionBarLabel"/>
+							<ToolbarSpacer/>
+							<ObjectStatus text="Plant: 3121 - SEPC" state="Information" icon="sap-icon://factory"/>
+						</Toolbar>
+					</headerToolbar>
+					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" hSpacing="1">
+						<VBox class="sapUiSmallMargin">
+							<Label text="GP Date" class="gpmsFieldLabel"/>
+							<DatePicker
+								dateValue="{coal>/GPDate}"
+								displayFormat="dd-MM-yyyy"
+								class="gpmsFieldInput"
+								width="100%"
+								editable="false"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Sales Document" required="true" class="gpmsFieldLabel"/>
+							<Input
+								id="idCoalSalesDocument"
+								value="{coal>/SalesDocument}"
+								placeholder="Select Sales Order for Coal..."
+								class="gpmsFieldInput"
+								showValueHelp="true"
+								valueHelpRequest=".onSalesDocValueHelp"
+								change=".onSalesDocChange"
+								width="100%"/>
+						</VBox>
+						
+						<VBox class="sapUiSmallMargin">
+							<Label text="Gate Pass Type" class="gpmsFieldLabel"/>
+							<Input value="Non-Returnable Gatepass (NRGP)" editable="false" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Customer (Sold-to Party)" class="gpmsFieldLabel"/>
+							<Input value="{coal>/SoldToParty}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+						
+						<VBox class="sapUiSmallMargin">
+							<Label text="Customer Name" class="gpmsFieldLabel"/>
+							<Input value="{coal>/CustomerName}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Customer's GST" class="gpmsFieldLabel"/>
+							<Input value="{coal>/CustomerGst}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="City" class="gpmsFieldLabel"/>
+							<Input value="{coal>/City}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Zip Code" class="gpmsFieldLabel"/>
+							<Input value="{coal>/ZipCode}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+						</VBox>
+					</layout:Grid>
+				</Panel>
+
+				<!-- ─── 2. TABLE OF COAL ITEMS ─── -->
+				<Panel class="gpmsSection" expandable="false">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<core:Icon src="sap-icon://table-view" class="sapUiTinyMarginEnd"/>
+							<Label text="Table of Coal Items" class="gpmsSectionBarLabel"/>
+						</Toolbar>
+					</headerToolbar>
+					<Table items="{coal>/COALItmNav}" noDataText="No Coal line items loaded. Please select a Sales Document." class="gpmsItemTable">
+						<columns>
+							<Column width="4rem"><Text text="Item" class="gpmsHeaderText"/></Column>
+							<Column width="8rem"><Text text="Material" class="gpmsHeaderText"/></Column>
+							<Column><Text text="Description" class="gpmsHeaderText"/></Column>
+							<Column width="9rem" hAlign="End"><Text text="SO Quantity" class="gpmsHeaderText"/></Column>
+							<Column width="10rem" hAlign="End"><Text text="Dispatch Qty" class="gpmsHeaderText"/></Column>
+							<Column width="6rem"><Text text="UOM" class="gpmsHeaderText"/></Column>
+						</columns>
+						<items>
+							<ColumnListItem>
+								<cells>
+									<Text text="{coal>ItemNo}"/>
+									<Text text="{coal>Material}"/>
+									<Text text="{coal>MaterialDescription}"/>
+									<Text text="{coal>OrderQuantity}"/>
+									<Input value="{coal>OrderQuantity}" class="gpmsFieldInput"/>
+									<Text text="{coal>UOM}"/>
+								</cells>
+							</ColumnListItem>
+						</items>
+					</Table>
+				</Panel>
+
+				<!-- ─── 3. LOGISTICS & TRANSPORTER DETAILS ─── -->
+				<Panel class="gpmsSection" expandable="false">
+					<headerToolbar>
+						<Toolbar class="gpmsSectionBar">
+							<core:Icon src="sap-icon://shipping-status" class="sapUiTinyMarginEnd"/>
+							<Label text="Dispatch &amp; Transporter Information" class="gpmsSectionBarLabel"/>
+						</Toolbar>
+					</headerToolbar>
+					<layout:Grid defaultSpan="XL6 L6 M6 S12" vSpacing="0" hSpacing="1">
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vehicle Number" required="true" class="gpmsFieldLabel"/>
+							<Input value="{coal>/VehicleNo}" placeholder="Enter Truck/Rake Number..." class="gpmsFieldInput" width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Weighment Slip / Ticket No" class="gpmsFieldLabel"/>
+							<Input value="{coal>/WeighmentTicket}" placeholder="Enter Weighment Slip Number..." class="gpmsFieldInput" width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Coal Handling / Storage Area" class="gpmsFieldLabel"/>
+							<Input value="{coal>/StorageArea}" placeholder="e.g. Coal Yard / Storage Area 1" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Transporter Name" class="gpmsFieldLabel"/>
+							<Input value="{coal>/TransporterName}" placeholder="Enter Transporter details..." class="gpmsFieldInput" width="100%"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<layoutData>
+								<layout:GridData span="XL12 L12 M12 S12"/>
+							</layoutData>
+							<Label text="Remarks / Instructions" class="gpmsFieldLabel"/>
+							<Input value="{coal>/Remarks}" placeholder="Enter remarks..." class="gpmsFieldInput" width="100%"/>
+						</VBox>
+					</layout:Grid>
+				</Panel>
+
+			</VBox>
+		</content>
+
+		<!-- Footer Actions -->
+		<footer>
+			<OverflowToolbar class="gpmsFooterBar">
+				<Button text="Back" press=".onNavBack"/>
+				<ToolbarSpacer/>
+				<Button text="Create Coal Gate Pass" type="Emphasized" icon="sap-icon://accept" press=".onSubmitCoalGatePass"/>
+			</OverflowToolbar>
+		</footer>
+	</Page>
+</mvc:View>

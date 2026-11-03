@@ -77,6 +77,9 @@
 							<unified:FileUploader
 								id="gpFileUploader"
 								buttonText="Choose File"
+								maximumFileSize="1"
+								fileSizeExceed=".onFileSizeExceed"
+								change=".onFileChange"
 								class="gpmsFieldInput"
 								width="100%"/>
 						</VBox>

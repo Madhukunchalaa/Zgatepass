@@ -254,8 +254,8 @@ sap.ui.define([
 					it.itemNo   || "",
 					it.material || "",
 					it.description || "",
-					parseFloat(it.orderQty   || 0).toLocaleString("en-IN", { minimumFractionDigits: 3 }),
-					parseFloat(it.sendoutQty || 0).toLocaleString("en-IN", { minimumFractionDigits: 3 }),
+					parseFloat(it.orderQty   || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+					parseFloat(it.sendoutQty || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
 					it.uom || ""
 				];
 			});

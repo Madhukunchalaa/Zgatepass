@@ -33,6 +33,7 @@ sap.ui.define([
 			sap.ui.core.BusyIndicator.show(0);
 
 			var fnProcessItem = function (oItem) {
+				that._oRawData = oItem;
 				// Format date
 				var sDateStr = that._formatDateSlash(oItem.RequestDate || oItem.ReqDate);
 
@@ -143,48 +144,50 @@ sap.ui.define([
 		},
 
 		onApprove: function () {
-			var oUserModel = sap.ui.getCore().getModel("user");
-			var bIsHod = oUserModel && oUserModel.getProperty("/IsHodUser");
-			
-			var sApprovalCode = bIsHod ? "A1" : "A2";
-			var sDisplayStatus = bIsHod ? "Store Approval Pending" : "Approved";
-			var sRemarks = this.getView().getModel("scrap").getProperty(bIsHod ? "/HODRemarks" : "/StoreRemarks") || "";
+			var sCurrentStatus = (this.getView().getModel("scrap").getProperty("/status") || "").trim();
+			var bLevel1 = sCurrentStatus !== "Store Approval Pending";
+			var sRole = bLevel1 ? "HOD" : "Store";
+			var sApprovalCode = bLevel1 ? "A1" : "A2";
+			var sDisplayStatus = bLevel1 ? "Store Approval Pending" : "Approved";
+			var sRemarks = this.getView().getModel("scrap").getProperty(bLevel1 ? "/HODRemarks" : "/StoreRemarks") || "";
 
 			MessageBox.confirm("Are you sure you want to Approve this request?", {
 				title: "Confirm Approval",
 				onClose: function (oAction) {
 					if (oAction === MessageBox.Action.OK) {
-						this._updateStatus(sApprovalCode, sDisplayStatus, sRemarks, bIsHod ? "HOD" : "Store");
+						this._updateStatus(sApprovalCode, sDisplayStatus, sRemarks, sRole);
 					}
 				}.bind(this)
 			});
 		},
 
 		onReject: function () {
-			var oUserModel = sap.ui.getCore().getModel("user");
-			var bIsHod = oUserModel && oUserModel.getProperty("/IsHodUser");
-			var sRemarks = this.getView().getModel("scrap").getProperty(bIsHod ? "/HODRemarks" : "/StoreRemarks") || "";
+			var sCurrentStatus = (this.getView().getModel("scrap").getProperty("/status") || "").trim();
+			var bLevel1 = sCurrentStatus !== "Store Approval Pending";
+			var sRole = bLevel1 ? "HOD" : "Store";
+			var sRemarks = this.getView().getModel("scrap").getProperty(bLevel1 ? "/HODRemarks" : "/StoreRemarks") || "";
 
 			MessageBox.confirm("Are you sure you want to Reject this request?", {
 				title: "Confirm Rejection",
 				onClose: function (oAction) {
 					if (oAction === MessageBox.Action.OK) {
-						this._updateStatus("R", "Rejected", sRemarks, bIsHod ? "HOD" : "Store");
+						this._updateStatus("R", "Rejected", sRemarks, sRole);
 					}
 				}.bind(this)
 			});
 		},
 
 		onAmend: function () {
-			var oUserModel = sap.ui.getCore().getModel("user");
-			var bIsHod = oUserModel && oUserModel.getProperty("/IsHodUser");
-			var sRemarks = this.getView().getModel("scrap").getProperty(bIsHod ? "/HODRemarks" : "/StoreRemarks") || "";
+			var sCurrentStatus = (this.getView().getModel("scrap").getProperty("/status") || "").trim();
+			var bLevel1 = sCurrentStatus !== "Store Approval Pending";
+			var sRole = bLevel1 ? "HOD" : "Store";
+			var sRemarks = this.getView().getModel("scrap").getProperty(bLevel1 ? "/HODRemarks" : "/StoreRemarks") || "";
 
 			MessageBox.confirm("Send back for amendment?", {
 				title: "Confirm Amendment",
 				onClose: function (oAction) {
 					if (oAction === MessageBox.Action.OK) {
-						this._updateStatus("AM", "Amendment", sRemarks, bIsHod ? "HOD" : "Store");
+						this._updateStatus("AM", "Amendment", sRemarks, sRole);
 					}
 				}.bind(this)
 			});
@@ -204,83 +207,124 @@ sap.ui.define([
 
 			sap.ui.core.BusyIndicator.show(0);
 
-			var oPayload = {
-				ApprovalReq: sApprovalCode === "AM" ? "AM" : (sApprovalCode === "R" ? "R" : "A"),
-				Remarks: sRemarks
-			};
-			if (sRole === "HOD") {
-				oPayload.Approval1 = sApprovalCode;
-			} else {
-				oPayload.Approval2 = sApprovalCode;
+			var oRaw = this._oRawData || {};
+			var aRawItems = (oRaw.ScrapReqItmNav && oRaw.ScrapReqItmNav.results) || (Array.isArray(oRaw.ScrapReqItmNav) ? oRaw.ScrapReqItmNav : []);
+			var aNavItems = aRawItems.map(function (item, index) {
+				var fQty = parseFloat(String(item.OrderQuantity || item.Quantity || item.Qty || 0).replace(/,/g, '')) || 0;
+				return {
+					GatePassReqNo: sRequestId,
+					SalesDocument: item.SalesDocument || sSalesDoc,
+					GatePassType: item.GatePassType || "NRGP",
+					ItemNo: item.ItemNo || String((index + 1) * 10).padStart(6, '0'),
+					Material: item.Material || "",
+					MaterialDesc: item.MaterialDesc || item.Description || "",
+					OrderQuantity: fQty.toFixed(3),
+					UOM: item.UOM || item.Uom || "KG"
+				};
+			});
+
+			if (aNavItems.length === 0) {
+				var aViewItems = oViewModel.getProperty("/items") || [];
+				aNavItems = aViewItems.map(function (item, index) {
+					var fQty = parseFloat(String(item.quantity || 0).replace(/,/g, '')) || 0;
+					return {
+						GatePassReqNo: sRequestId,
+						SalesDocument: sSalesDoc,
+						GatePassType: "NRGP",
+						ItemNo: String((index + 1) * 10).padStart(6, '0'),
+						Material: item.type || "",
+						MaterialDesc: item.description || "",
+						OrderQuantity: fQty.toFixed(3),
+						UOM: item.uom || "KG"
+					};
+				});
 			}
 
-			// Refresh CSRF token before update, then perform MERGE (not full PUT)
-			oODataModel.refreshSecurityToken(function () {
-				oODataModel.update("/ScrapReqHdrSet(GatePassReqNo='" + sRequestId + "',GatePassType='NRGP',SalesDocument='" + sSalesDoc + "')", oPayload, {
-					merge: true,
-					success: function () {
-						sap.ui.core.BusyIndicator.hide();
-						oViewModel.setProperty("/status", sDisplayStatus);
+			var fnFormatDate = function (d) {
+				if (!d) return "";
+				if (typeof d === "string") return d.replace(/[^0-9]/g, '').substring(0, 8);
+				var y = d.getFullYear();
+				var m = String(d.getMonth() + 1).padStart(2, '0');
+				var day = String(d.getDate()).padStart(2, '0');
+				return y + m + day;
+			};
 
-						// If Store approves (2nd level), add items to Scrap Inventory in localStorage
-						if (sRole === "Store" && sApprovalCode === "A2") {
-							try {
-								var oInventory = JSON.parse(localStorage.getItem("mockScrapInventory") || "{}");
-								var aItems = oViewModel.getProperty("/items") || [];
-								aItems.forEach(function (oItem) {
-									var sType = oItem.type;
-									var fQty = parseFloat(oItem.quantity) || 0;
-									if (sType) {
-										if (!oInventory[sType]) {
-											oInventory[sType] = { quantity: 0, uom: oItem.uom || "Kilogram" };
-										}
-										oInventory[sType].quantity = (parseFloat(oInventory[sType].quantity) || 0) + fQty;
-									}
-								});
-								localStorage.setItem("mockScrapInventory", JSON.stringify(oInventory));
-							} catch (e) {
-								console.error("Failed to update mock scrap inventory:", e);
-							}
-						}
+			var oPayload = {
+				GatePassReqNo: sRequestId,
+				GatePassType: oRaw.GatePassType || "NRGP",
+				SalesDocument: oRaw.SalesDocument || sSalesDoc,
+				RequestDate: fnFormatDate(oRaw.RequestDate || oViewModel.getProperty("/requestDate")),
+				SoldToParty: oRaw.SoldToParty || "",
+				CustomerName: oRaw.CustomerName || "",
+				City: oRaw.City || "",
+				PostalCode: oRaw.PostalCode || "",
+				CustomerGst: oRaw.CustomerGst || "",
+				ApprovalReq: sApprovalCode === "AM" ? "AM" : (sApprovalCode === "R" ? "R" : "A"),
+				Approval1: sRole === "HOD" ? sApprovalCode : (oRaw.Approval1 || "A1"),
+				Approval2: sRole === "Store" ? sApprovalCode : (oRaw.Approval2 || ""),
+				VehicleNo: oRaw.VehicleNo || oViewModel.getProperty("/vehicleDetails") || "",
+				WeighmentTicket: oRaw.WeighmentTicket || oViewModel.getProperty("/weighmentSlipNo") || "",
+				ChallanDate: oRaw.ChallanDate || oViewModel.getProperty("/challanDateTime") || "",
+				ScrapArea: oRaw.ScrapArea || oViewModel.getProperty("/collectArea") || "",
+				Remarks: sRemarks || oRaw.Remarks || oViewModel.getProperty("/remarks") || "",
+				Message: "",
+				ScrapReqItmNav: aNavItems
+			};
 
-						MessageToast.show("Status updated to " + sDisplayStatus);
-						setTimeout(function() {
-							that.onNavBack();
-						}, 1500);
-					},
-					error: function (oError) {
-						sap.ui.core.BusyIndicator.hide();
-						var sMsg = "Failed to update status.";
+			// Backend ABAP implements Scrap approval via CREATE_DEEP_ENTITY on /ScrapReqHdrSet
+			oODataModel.create("/ScrapReqHdrSet", oPayload, {
+				success: function (oResponse) {
+					sap.ui.core.BusyIndicator.hide();
+					oViewModel.setProperty("/status", sDisplayStatus);
+
+					// If Store approves (2nd level), add items to Scrap Inventory in localStorage
+					if (sRole === "Store" && sApprovalCode === "A2") {
 						try {
-							// Try JSON error body
-							var oBody = JSON.parse(oError.responseText);
-							if (oBody.error && oBody.error.message && oBody.error.message.value) {
-								sMsg = oBody.error.message.value;
-							}
-						} catch (e) {
-							// Try XML error body
-							try {
-								var sRaw = oError.responseText || "";
-								var oMatch = sRaw.match(/<message[^>]*>([^<]+)<\/message>/i);
-								if (oMatch && oMatch[1]) {
-									sMsg = oMatch[1];
+							var oInventory = JSON.parse(localStorage.getItem("mockScrapInventory") || "{}");
+							var aItems = oViewModel.getProperty("/items") || [];
+							aItems.forEach(function (oItem) {
+								var sType = oItem.type;
+								var fQty = parseFloat(oItem.quantity) || 0;
+								if (sType) {
+									if (!oInventory[sType]) {
+										oInventory[sType] = { quantity: 0, uom: oItem.uom || "Kilogram" };
+									}
+									oInventory[sType].quantity = (parseFloat(oInventory[sType].quantity) || 0) + fQty;
 								}
-							} catch (e2) {}
+							});
+							localStorage.setItem("mockScrapInventory", JSON.stringify(oInventory));
+						} catch (e) {
+							console.error("Failed to update mock scrap inventory:", e);
 						}
-						// Log full details for debugging
-						jQuery.sap.log.error("ScrapApproval UPDATE failed", JSON.stringify({
-							status: oError.statusCode || oError.status,
-							text: oError.statusText,
-							responseText: oError.responseText ? oError.responseText.substring(0, 500) : ""
-						}));
-						MessageBox.error(sMsg + "\n\nRequest: " + sRequestId + "\nRole: " + sRole);
 					}
-				});
-			}, function (oTokenError) {
-				sap.ui.core.BusyIndicator.hide();
-				MessageBox.error("Failed to refresh security token. Please reload the page.");
+
+					var sSuccessMsg = (oResponse && oResponse.Message) || ("Request status updated to " + sDisplayStatus);
+					MessageBox.success(sSuccessMsg, {
+						onClose: function () {
+							that.onNavBack();
+						}
+					});
+				},
+				error: function (oError) {
+					sap.ui.core.BusyIndicator.hide();
+					var sMsg = "Failed to update status.";
+					try {
+						var oBody = JSON.parse(oError.responseText);
+						if (oBody.error && oBody.error.message && oBody.error.message.value) {
+							sMsg = oBody.error.message.value;
+						}
+					} catch (e) {
+						try {
+							var sRaw = oError.responseText || "";
+							var oMatch = sRaw.match(/<message[^>]*>([^<]+)<\/message>/i);
+							if (oMatch && oMatch[1]) {
+								sMsg = oMatch[1];
+							}
+						} catch (e2) {}
+					}
+					MessageBox.error(sMsg);
+				}
 			});
 		}
-
 	});
 });

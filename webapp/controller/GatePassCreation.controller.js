@@ -310,6 +310,7 @@ sap.ui.define(["./BaseController",
 			if (!oModel) { return; }
 
 			// Header fields
+			var sUsername = this._getLoggedInUsername();
 			oModel.setProperty("/GatePassReqNo",  oRow.GatePassReqNo  || oRow.GatePassreqNo || "");
 			oModel.setProperty("/GatePassType",   oRow.GatePassType   || "");
 			oModel.setProperty("/isTypeEditable", false);
@@ -317,6 +318,7 @@ sap.ui.define(["./BaseController",
 			oModel.setProperty("/Cocode",         oRow.CoCode         || oRow.Cocode        || "");
 			oModel.setProperty("/Plant",          oRow.Plant          || "");
 			oModel.setProperty("/FiscalYear",     oRow.FiscalYear     || "");
+			oModel.setProperty("/ReqUser",        oRow.ReqUser        || oRow.Requser       || oRow.Zrequsername || sUsername);
 			oModel.setProperty("/vendor",         oRow.Vendor         || "");
 			oModel.setProperty("/vendorName",     oRow.VendorName     || "");
 			oModel.setProperty("/vendorGST",      oRow.VendorGST      || oRow.VendorGst     || "");
@@ -733,8 +735,10 @@ sap.ui.define(["./BaseController",
 				success: function (oData) {
 					var aResults = oData.results || [];
 					console.log("Total Vendors fetched from Backend:", aResults.length);
-					if (aResults.length === 0) { return; }
-					var aNormalized = aResults.map(function (v) {
+					var aNormalized = aResults.filter(function(v) {
+						var sVendorNo = String(v.Vendor || v.Lifnr || "").trim();
+						return !sVendorNo.startsWith("200");
+					}).map(function (v) {
 						return {
 							Vendor: v.Vendor || v.Lifnr || "",
 							VendorName: v.Name || v.VendorName || v.Name1 || "Unknown Vendor",
@@ -772,6 +776,11 @@ sap.ui.define(["./BaseController",
 			oGp.setProperty("/vendorZipCode", oVendor.PostalCode || "");
 		},
 
+		onFileSizeExceed: function (oEvent) {
+			var sFileName = oEvent.getParameter("fileName") || "File";
+			sap.m.MessageBox.error(sFileName + " exceeds the maximum file size limit of 1 MB. Please upload a smaller file.");
+		},
+
 		onFileChange: function (oEvent) {
 			var oModel = this.getView().getModel("gp");
 			var aFiles = oEvent.getParameter("files");
@@ -782,6 +791,15 @@ sap.ui.define(["./BaseController",
 					sap.m.MessageBox.error("You can only upload a maximum of 2 attachments.");
 					oEvent.getSource().clear();
 					return;
+				}
+
+				// Check each file size: 1 MB = 1048576 Bytes (enforce for all plants)
+				for (var f = 0; f < aFiles.length; f++) {
+					if (aFiles[f].size > 1048576) {
+						sap.m.MessageBox.error("File \"" + aFiles[f].name + "\" exceeds the maximum allowed size of 1 MB. Please upload a file under 1 MB.");
+						oEvent.getSource().clear();
+						return;
+					}
 				}
 				var readAndAdd = function (oFile) {
 					var reader = new FileReader();
@@ -975,8 +993,15 @@ sap.ui.define(["./BaseController",
 
 				var fnFormatDate = function (oDate) {
 					if (!oDate) return "";
-					if (typeof oDate === "string" && oDate.length === 8 && !isNaN(oDate)) {
-						return oDate;
+					if (typeof oDate === "string") {
+						var sClean = oDate.trim();
+						if (sClean.length === 8 && !isNaN(sClean)) return sClean;
+						if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(sClean)) {
+							return sClean.slice(6, 10) + sClean.slice(3, 5) + sClean.slice(0, 2);
+						}
+						if (/^\d{4}[-/]\d{2}[-/]\d{2}$/.test(sClean)) {
+							return sClean.slice(0, 4) + sClean.slice(5, 7) + sClean.slice(8, 10);
+						}
 					}
 					var d = (oDate instanceof Date) ? oDate : new Date(oDate);
 					if (isNaN(d.getTime())) return "";
@@ -1002,7 +1027,7 @@ sap.ui.define(["./BaseController",
 				var sAmendReqNo = this._sAmendReqNo || "";
 
 				// Get current logged-in user
-				var sLoggedInUser = this._getLoggedInUsername();
+				var sLoggedInUser = this._getLoggedInUsername() || oGp.ReqUser || oGp.Requestor || "";
 
 				var oPayload = {
 					GatePassType: oGp.GatePassType,
@@ -1078,6 +1103,10 @@ sap.ui.define(["./BaseController",
 					}
 					return null;
 				};
+
+				// Map ReqUser dynamically
+				var sKeyReqUser = getValidProperty("ReqUser") || getValidProperty("Requser") || "ReqUser";
+				oPayload[sKeyReqUser] = sLoggedInUser;
 
 				// Map attachment 1
 				var sKeyBase64Img1 = getValidProperty("Base64Img1") || getValidProperty("Base64img1") || "Base64Img1";

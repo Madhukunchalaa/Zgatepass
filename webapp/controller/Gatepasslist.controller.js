@@ -57,25 +57,52 @@ sap.ui.define([
 					sap.ui.core.BusyIndicator.hide();
 					
 					// Client-side sort by original backend Date object or fallback
+					var MONTHS_MAP = { JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11 };
 					aAllResults.sort(function (a, b) {
 						var parseDt = function(o) {
 							if (!o.GatePassDate) return new Date(0);
 							if (o.GatePassDate instanceof Date) return o.GatePassDate;
 							var p = String(o.GatePassDate).split("-");
 							if (p.length === 3) {
-								if (p[0].length === 4) return new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
-								return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+								var mIdx = isNaN(p[1]) ? MONTHS_MAP[p[1].toUpperCase()] : (parseInt(p[1], 10) - 1);
+								if (p[0].length === 4) return new Date(parseInt(p[0]), mIdx, parseInt(p[2]));
+								return new Date(parseInt(p[2]), mIdx, parseInt(p[0]));
 							}
 							return new Date(o.GatePassDate);
 						};
 						return parseDt(b) - parseDt(a);
 					});
 
+					var sUserPlant = that.getUserPlant();
+					if (sUserPlant) { aAllResults = that.filterResultsByPlant(aAllResults, sUserPlant); }
 					that.getView().getModel("gatePassList").setProperty("/items", aAllResults);
 					
 					// Apply search and status filters client-side on the updated list
 					that._applyClientFilters();
 				}
+			}
+
+			if (!this._mUserMap) {
+				this._mUserMap = {};
+				try {
+					var sCachedUsers = localStorage.getItem("gpms_user_name_map");
+					if (sCachedUsers) { this._mUserMap = JSON.parse(sCachedUsers); }
+				} catch (e) {}
+
+				oODataModel.read("/zdepartuserSet", {
+					success: function (oUserData) {
+						(oUserData.results || []).forEach(function (u) {
+							var sId = String(u.userid || u.Userid || u.UserId || u.Bname || "").trim().toUpperCase();
+							var sName = String(u.username || u.Username || u.NameText || u.Name || "").trim();
+							if (sId && sName && sId !== sName) {
+								that._mUserMap[sId] = sName;
+							}
+						});
+						try {
+							localStorage.setItem("gpms_user_name_map", JSON.stringify(that._mUserMap));
+						} catch (e) {}
+					}
+				});
 			}
 
 			sap.ui.core.BusyIndicator.show(0);
@@ -233,9 +260,11 @@ sap.ui.define([
 					if (isNaN(oItemDate.getTime())) {
 						var p = String(vDate).split("-");
 						if (p.length === 3) {
+							var MONTHS_MAP = { JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11 };
+							var mIdx = isNaN(p[1]) ? MONTHS_MAP[p[1].toUpperCase()] : (parseInt(p[1], 10) - 1);
 							oItemDate = p[0].length === 4
-								? new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]))
-								: new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+								? new Date(parseInt(p[0]), mIdx, parseInt(p[2]))
+								: new Date(parseInt(p[2]), mIdx, parseInt(p[0]));
 						}
 					}
 					if (isNaN(oItemDate.getTime())) { return false; }
@@ -575,6 +604,85 @@ sap.ui.define([
 			this.getRouter().navTo("OutGatePass", { reqNo: oItem.GatePassReqNo });
 		},
 
+		_resolveUserName: function (sUserIdOrName, oReqHeader) {
+			if (oReqHeader && oReqHeader.UserFullName) {
+				return String(oReqHeader.UserFullName).trim();
+			}
+			if (!sUserIdOrName && oReqHeader) {
+				sUserIdOrName = oReqHeader.UserFullName || oReqHeader.ReqEmpName || oReqHeader.RequestedUser || oReqHeader.Zrequsername || oReqHeader.Requestor || oReqHeader.ReqUser || oReqHeader.CreatedBy || "";
+			}
+			if (!sUserIdOrName) { return ""; }
+			var sTrimmed = String(sUserIdOrName).trim();
+			var sUpper = sTrimmed.toUpperCase();
+
+			if (oReqHeader) {
+				var sHeaderEmp = String(oReqHeader.UserFullName || oReqHeader.ReqEmpName || oReqHeader.Zrequsername || "").trim();
+				if (sHeaderEmp && sHeaderEmp !== sTrimmed && !/^[A-Z]?\d{2,6}$/i.test(sHeaderEmp)) {
+					return sHeaderEmp;
+				}
+			}
+
+			if (this._mUserMap && this._mUserMap[sUpper]) {
+				return this._mUserMap[sUpper];
+			}
+			try {
+				var sLocal = localStorage.getItem("username_" + sUpper) || localStorage.getItem("requser_" + sUpper);
+				if (sLocal) { return sLocal; }
+			} catch (e) {}
+
+			try {
+				var oU = sap.ui.getCore().getModel("user");
+				if (oU) {
+					var sCurId = String(oU.getProperty("/id") || oU.getProperty("/User") || "").toUpperCase();
+					var sCurName = oU.getProperty("/UserFullName") || oU.getProperty("/fullName") || oU.getProperty("/Username");
+					if (sCurId === sUpper && sCurName) {
+						return sCurName;
+					}
+				}
+			} catch (e) {}
+
+			return sTrimmed;
+		},
+
+		_resolveAllUserNames: function (aItems) {
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) return;
+			var that = this;
+			this._mUserMap = this._mUserMap || {};
+
+			var aIdsToFetch = [];
+			(aItems || []).forEach(function (it) {
+				var sUser = String(it.ReqUser || it.Requestor || it.RequestedUser || it.CreatedBy || "").trim().toUpperCase();
+				if (sUser && !that._mUserMap[sUser] && aIdsToFetch.indexOf(sUser) === -1) {
+					var sCached = localStorage.getItem("username_" + sUser);
+					if (sCached) {
+						that._mUserMap[sUser] = sCached;
+					} else {
+						aIdsToFetch.push(sUser);
+					}
+				}
+			});
+
+			if (aIdsToFetch.length === 0) return;
+
+			aIdsToFetch.forEach(function (sUserId) {
+				oODataModel.read("/ZUserdetSet", {
+					filters: [new sap.ui.model.Filter("User", sap.ui.model.FilterOperator.EQ, sUserId)],
+					success: function (oData) {
+						var oRes = (oData.results && oData.results[0]) || {};
+						var sFullName = String(oRes.UserFullName || oRes.UserName || oRes.NameText || oRes.Name || "").trim();
+						if (sFullName) {
+							that._mUserMap[sUserId] = sFullName;
+							try {
+								localStorage.setItem("username_" + sUserId, sFullName);
+								localStorage.setItem("gpms_user_name_map", JSON.stringify(that._mUserMap));
+							} catch (e) {}
+						}
+					}
+				});
+			});
+		},
+
 		formatStatus: function (sStatus, sApproval1, sApproval2, sApprovalReq, sStoreRemarks, sStoreAmmend) {
 			return this._deriveStatus({
 				Status: sStatus,
@@ -627,45 +735,82 @@ sap.ui.define([
 				if (aItems.length === 0) {
 					aItems = [{}];
 				}
-				aItems.forEach(function (itm) {
-					var sReqNoKey = o.GatePassNo || o.GatePassReqNo || o.GatePassreqNo || "";
-					var oSavedLogistics = {};
-					try {
-						oSavedLogistics = JSON.parse(localStorage.getItem("gp_logistics_" + sReqNoKey) || "{}");
-					} catch (e) {}
 
-					var bInsured = oSavedLogistics.bInsured || oSavedLogistics.InsuranceRequired || (o.InsuranceReq === "X" || o.InsuranceReq === "YES" || o.Insurance === "YES" || o.InsuranceReq === "Y" || o.InsuranceReq === "1");
-					var sInsAmount = oSavedLogistics.sInsAmount || oSavedLogistics.InsuranceAmount || o.InsuranceAmount || o.InsuranceValue || "";
-					var sInsLRV = oSavedLogistics.sInsLRVehicleNo || oSavedLogistics.OutwardInsLRV || o.OutwardInsLRV || o.InwardInsLRV || o.InwardLRVehicleNo || "";
-					var sInsDesc = oSavedLogistics.sInsDescription || oSavedLogistics.OutwardInsDesc || o.OutwardInsDesc || o.InwardInsDesc || o.InwardDescription || "";
-					var sInsDate = oSavedLogistics.sInsDate || oSavedLogistics.OutwardInsDate || o.OutwardInsDate || o.InwardInsDate || o.InwardDate || "";
-					var sInsVal = oSavedLogistics.sInsValue || oSavedLogistics.OutwardInsValue || o.OutwardInsValue || o.InwardInsValue || o.InwardValue || "";
+				var sGPKey = String(o.GatePassNo || "").trim();
+				var sReqKey = String(o.GatePassReqNo || o.GatePassreqNo || "").trim();
+				var oSavedLogistics = {};
+				[
+					"gp_logistics_" + sGPKey, "logistics_" + sGPKey,
+					"gp_logistics_" + sReqKey, "logistics_" + sReqKey
+				].forEach(function (k) {
+					if (k && !Object.keys(oSavedLogistics).length) {
+						try {
+							var sVal = localStorage.getItem(k);
+							if (sVal) { oSavedLogistics = JSON.parse(sVal); }
+						} catch (e) {}
+					}
+				});
+
+				var bInsured = oSavedLogistics.bInsured || oSavedLogistics.InsuranceRequired || (o.InsuranceReq === "X" || o.InsuranceReq === "YES" || o.Insurance === "YES" || o.InsuranceReq === "Y" || o.InsuranceReq === "1");
+				var sInsVal = oSavedLogistics.sInsValue || oSavedLogistics.OutwardInsValue || o.OutwardInsValue || o.InwardInsValue || o.InwardValue || "";
+				var sInsAmount = oSavedLogistics.sInsAmount || oSavedLogistics.InsuranceAmount || o.InsuranceAmount || o.InsuranceValue || (bInsured ? (sInsVal || o.TotalValue || "") : "0.00");
+				var sInsLRV = oSavedLogistics.sInsLRVehicleNo || oSavedLogistics.OutwardInsLRV || o.OutwardInsLRV || o.InwardInsLRV || o.InwardLRVehicleNo || [o.LRNumber, o.VehicleNo].filter(Boolean).join(" / ") || "";
+				var sInsDesc = oSavedLogistics.sInsDescription || oSavedLogistics.OutwardInsDesc || o.OutwardInsDesc || oSavedLogistics.CommonDesc || o.CommonDesc || "";
+				var sInsDate = oSavedLogistics.sInsDate || oSavedLogistics.OutwardInsDate || o.OutwardInsDate || o.InsuranceDate || o.GatePassDate || "";
+
+				var sDCNo = o.ChallanNumber || o.Challanumber || o.ChallanNo || o.DCNumber ||
+					(oSavedLogistics && (oSavedLogistics.ChallanNumber || oSavedLogistics.Challanumber || oSavedLogistics.DCNumber)) || "";
+				var sDCNotes = o.DCNotes || (oSavedLogistics && oSavedLogistics.DCNotes) || "";
+				var sCommonDesc = o.CommonDesc || (oSavedLogistics && oSavedLogistics.CommonDesc) || "";
+				var sReturnedDate = o.ReturnedDate || o.ActualReturnDate || o.cdate1 || (oSavedLogistics && oSavedLogistics.ReturnedDate) || "";
+				var sRawUser = o.UserFullName || o.Requestor || o.ReqUser || o.RequestedUser || o.ReqEmpName || o.CreatedBy || "";
+				var sRequestedUser = that._resolveUserName(sRawUser, o);
+				var sHODRemarks = o.HODRemarks || o.HodRemarks || "";
+				var sStoreRemarks = o.STORERemarks || o.StoreRemarks || "";
+
+				aItems.forEach(function (itm) {
+					var fSent = parseFloat(itm.SentQuantity || itm.Quantity || itm.Menge || 0);
+					var fRecvd = parseFloat(itm.RecievedQuantity || itm.ReceivedQuantity || itm.ReceivedQty || 0);
+					var fBal = 0;
+					var sGPType = o.GatePassType || "";
+					if (sGPType === "RGP") {
+						if (itm.BalanceQuantity !== undefined && itm.BalanceQuantity !== null && String(itm.BalanceQuantity).trim() !== "" && parseFloat(itm.BalanceQuantity) > 0) {
+							fBal = parseFloat(itm.BalanceQuantity);
+						} else {
+							fBal = Math.max(0, parseFloat((fSent - fRecvd).toFixed(3)));
+						}
+					} else {
+						fBal = 0;
+					}
+					var sQtySend = fSent > 0 ? fSent.toFixed(3) : (itm.SentQuantity || itm.Quantity || "");
+					var sQtyReceived = (fRecvd > 0 || sGPType === "RGP") ? fRecvd.toFixed(3) : (itm.RecievedQuantity || itm.ReceivedQuantity || "0.000");
+					var sQtyBalance = (fBal > 0 || sGPType === "RGP") ? fBal.toFixed(3) : (itm.BalanceQuantity || itm.BalanceQty || "0.000");
 
 					aRows.push({
 						"Sno": iSno++,
 						"GP No": o.GatePassNo || o.GatePassReqNo || "",
 						"Vendor Name": o.VendorName || "",
 						"Issue Date": that._formatDate(o.GatePassDate || o.CreatedOn),
-						"Common Description": o.CommonDesc || "",
+						"Common Description": sCommonDesc,
 						"Material Description": itm.MaterialDesc || itm.Description || itm.HSNDesc || "",
-						"Qty Send": itm.SentQuantity || itm.Quantity || "",
+						"Qty Send": sQtySend,
 						"Uom": itm.UOM || itm.uom || itm.Uom || "",
 						"HSN Code": itm.HSNCode || "",
-						"Qty Received": itm.RecievedQuantity || itm.ReceivedQuantity || itm.ReceivedQty || "",
-						"Balance Qty": itm.BalanceQuantity || itm.BalanceQty || "",
+						"Qty Received": sQtyReceived,
+						"Balance Qty": sQtyBalance,
 						"Due Date": that._formatDate(o.ReturnableDate || o.DueDate),
-						"Extend Due Date": that._formatDate(o.ExtReturnDate || o.Extreturndate || o.ExtendedReturnableDate || o.ReturnDate),
-						"Returned Date": that._formatDate(o.ReturnedDate),
+						"Extend Due Date": that._formatDate(o.ExtReturnDate || o.Extreturndate || o.ExtendedReturnableDate || o.ReturnDate || (oSavedLogistics && oSavedLogistics.ExtendedReturnableDate)),
+						"Returned Date": that._formatDate(sReturnedDate),
 						"UOP": itm.ItemNetPrice || itm.UnitPrice || "",
 						"Amount": itm.ItemNetPrice || itm.UnitPrice || itm.rate || "",
 						"Total Value": itm.Totalvalue || itm.amount || "",
-						"DC No": o.ChallanNumber || "",
-						"DC/DF Notes": o.CommonDesc || "",
-						"LR Number": o.LRNumber || o.LRNnumber || "",
-						"Vehicle No": o.VehicleNo || "",
-						"EWB No": o.EWBNo || o.EWBno || o.EwbNo || "",
-						"Transport Name": o.TransporterName || "",
-						"Transporter GST": o.TransporterGST || "",
+						"DC No": sDCNo,
+						"DC/DF Notes": sDCNotes,
+						"LR Number": o.LRNumber || o.LRNnumber || (oSavedLogistics && (oSavedLogistics.LRNumber || oSavedLogistics.LRNnumber)) || "",
+						"Vehicle No": o.VehicleNo || (oSavedLogistics && oSavedLogistics.VehicleNo) || "",
+						"EWB No": o.EWBNo || o.EWBno || o.EwbNo || (oSavedLogistics && (oSavedLogistics.EWayBillNo || oSavedLogistics.EWBNo)) || "",
+						"Transport Name": o.TransporterName || (oSavedLogistics && oSavedLogistics.TransporterName) || "",
+						"Transporter GST": o.TransporterGST || (oSavedLogistics && oSavedLogistics.TransporterGST) || "",
 						"Insurance Yes/ No": bInsured ? "YES" : "NO",
 						"Insurance Value": sInsAmount,
 						"Outward Insurance LR/Vehicle No": sInsLRV,
@@ -673,11 +818,11 @@ sap.ui.define([
 						"Outward Insurance Date": that._formatDate(sInsDate),
 						"Outward Insurance Value": sInsVal,
 						"GP Req No": o.GatePassReqNo || o.GatePassreqNo || "",
-						"Requested User": o.Requestor || o.ReqUser || o.RequestedUser || o.ReqEmpName || o.CreatedBy || "",
+						"Requested User": sRequestedUser,
 						"Department": o.Department || "",
 						"User Remarks": o.Remarks || "",
-						"Dept Remarks": o.HODRemarks || "",
-						"Store Remarks": o.STORERemarks || o.StoreRemarks || "",
+						"HOD Remarks": sHODRemarks,
+						"Store Remarks": sStoreRemarks,
 						"Status": o.Status || ""
 					});
 				});

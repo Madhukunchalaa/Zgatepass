@@ -44,20 +44,28 @@ sap.ui.define([], function () {
 		return s;
 	}
 
+	var MONTHS_LIST = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+	var MONTHS_MAP = { JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11 };
+
 	function _parseDate(v) {
 		if (!v) { return null; }
 		if (v instanceof Date) { return isNaN(v.getTime()) ? null : v; }
 		if (typeof v !== "string") { return null; }
 		var m = v.match(/\/Date\((\d+)/);
 		if (m) { return new Date(parseInt(m[1], 10)); }
-		var p = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+		var p = v.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})$/);
+		if (p) {
+			var mon = MONTHS_MAP[p[2].toUpperCase()];
+			if (mon !== undefined) { return new Date(parseInt(p[3], 10), mon, parseInt(p[1], 10)); }
+		}
+		p = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 		if (p) { return new Date(parseInt(p[1], 10), parseInt(p[2], 10) - 1, parseInt(p[3], 10)); }
 		p = v.match(/^(\d{2})-(\d{2})-(\d{4})$/);
 		if (p) { return new Date(parseInt(p[3], 10), parseInt(p[2], 10) - 1, parseInt(p[1], 10)); }
 		p = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
 		if (p) { return new Date(parseInt(p[3], 10), parseInt(p[2], 10) - 1, parseInt(p[1], 10)); }
 		if (/^\d{8}$/.test(v) && !/^0+$/.test(v)) {
-			return new Date(v.substring(0, 4) + "-" + v.substring(4, 6) + "-" + v.substring(6, 8));
+			return new Date(parseInt(v.substring(0, 4), 10), parseInt(v.substring(4, 6), 10) - 1, parseInt(v.substring(6, 8), 10));
 		}
 		var d = new Date(v);
 		return isNaN(d.getTime()) ? null : d;
@@ -83,7 +91,7 @@ sap.ui.define([], function () {
 	function _fmtDate(d) {
 		if (!d) { return ""; }
 		return d.getDate().toString().padStart(2, "0") + "-" +
-			(d.getMonth() + 1).toString().padStart(2, "0") + "-" +
+			MONTHS_LIST[d.getMonth()] + "-" +
 			d.getFullYear();
 	}
 

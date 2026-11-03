@@ -30,8 +30,7 @@ sap.ui.define(["./BaseController",
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (!oODataModel) { return; }
 
-			var oUserModel = sap.ui.getCore().getModel("user");
-			var sPlant = (oUserModel && oUserModel.getProperty("/Plant")) || "";
+			var sPlant = this.getUserPlant();
 			var aFilters = sPlant ? [new Filter("Plant", FilterOperator.EQ, sPlant)] : [];
 
 			sap.ui.core.BusyIndicator.show(0);
@@ -43,6 +42,11 @@ sap.ui.define(["./BaseController",
 					sap.ui.core.BusyIndicator.hide();
 					var aResults = oData.results || [];
 
+					// Strictly enforce plant-based filtering so only user plant records display
+					if (sPlant) {
+						aResults = that.filterResultsByPlant(aResults, sPlant);
+					}
+
 					aResults.forEach(function (oItem) {
 						oItem.PCPDate = that._formatSAPDateToDisplay(oItem.PCPDate);
 						oItem.GEDate = that._formatSAPDateToDisplay(oItem.GEDate);
@@ -50,9 +54,11 @@ sap.ui.define(["./BaseController",
 						oItem.FirstItemDesc = "";
 						if (oItem.PCPItmNav && oItem.PCPItmNav.results && oItem.PCPItmNav.results.length > 0) {
 							oItem.FirstItemDesc = oItem.PCPItmNav.results[0].ItemDescription || "";
-							oItem.PCPNo = oItem.PCPItmNav.results[0].GatepassNo || oItem.PCPItmNav.results[0].PCPNo || oItem.PurchaseOrder || oItem.GateEntryNo || "";
+							oItem.PCPNO = oItem.PCPNO || oItem.PCPItmNav.results[0].PCPNO || "";
+							oItem.PCPNo = oItem.PCPNO || oItem.PCPItmNav.results[0].GatepassNo || oItem.PCPItmNav.results[0].PCPNo || oItem.PurchaseOrder || oItem.GateEntryNo || "";
 						} else {
-							oItem.PCPNo = oItem.GatepassNo || oItem.PCPNo || oItem.PurchaseOrder || oItem.GateEntryNo || "";
+							oItem.PCPNO = oItem.PCPNO || "";
+							oItem.PCPNo = oItem.PCPNO || oItem.GatepassNo || oItem.PCPNo || oItem.PurchaseOrder || oItem.GateEntryNo || "";
 						}
 					});
 
@@ -136,7 +142,12 @@ sap.ui.define(["./BaseController",
 						if (!sValue) return false;
 						var aParts = sValue.split("-");
 						if (aParts.length !== 3) return false;
-						var dVal = new Date(parseInt(aParts[2]), parseInt(aParts[1], 10) - 1, parseInt(aParts[0]));
+						var MONTHS_MAP = { JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11 };
+						var mIdx = isNaN(aParts[1]) ? MONTHS_MAP[aParts[1].toUpperCase()] : (parseInt(aParts[1], 10) - 1);
+						var dVal = aParts[0].length === 4
+							? new Date(parseInt(aParts[0], 10), mIdx, parseInt(aParts[2], 10))
+							: new Date(parseInt(aParts[2], 10), mIdx, parseInt(aParts[0], 10));
+						if (isNaN(dVal.getTime())) return false;
 						if (oFrom && dVal < oFrom) return false;
 						if (oTo && dVal > oTo) return false;
 						return true;
@@ -159,27 +170,7 @@ sap.ui.define(["./BaseController",
 		},
 
 		_formatSAPDateToDisplay: function (vDate) {
-			if (!vDate) { return ""; }
-			var dDate;
-			if (vDate instanceof Date) {
-				dDate = vDate;
-			} else if (typeof vDate === "string") {
-				var oTsMatch = vDate.match(/\/Date\((\d+)[^)]*\)\//);
-				if (oTsMatch) {
-					dDate = new Date(parseInt(oTsMatch[1], 10));
-				} else if (/^\d{8}$/.test(vDate)) {
-					if (/^0+$/.test(vDate)) { return ""; }
-					dDate = new Date(vDate.substring(0, 4) + "-" + vDate.substring(4, 6) + "-" + vDate.substring(6, 8));
-				} else {
-					dDate = new Date(vDate);
-				}
-			}
-			if (dDate && !isNaN(dDate.getTime())) {
-				return String(dDate.getDate()).padStart(2, "0") + "-" +
-					String(dDate.getMonth() + 1).padStart(2, "0") + "-" +
-					dDate.getFullYear();
-			}
-			return vDate;
+			return this._formatDate(vDate);
 		},
 
 		onSort: function () {
@@ -285,7 +276,8 @@ sap.ui.define(["./BaseController",
 						"GE No": o.GateEntryNo || "",
 						"Plant": o.Plant || "",
 						"Source Type": o.SourceType || "",
-						"Gate Pass No": o.GatepassNo || o.PCPNo || "",
+						"Gate Pass No": o.GatepassNo || "",
+						"PCP No": o.PCPNO || o.PCPNo || "",
 						"Inv No": o.DCNumber || "",
 						"Dept": o.Department || "",
 						"Vendor": o.Vendor || "",
@@ -317,7 +309,8 @@ sap.ui.define(["./BaseController",
 							"GE No": o.GateEntryNo || "",
 							"Plant": o.Plant || "",
 							"Source Type": o.SourceType || "",
-							"Gate Pass No": o.GatepassNo || o.PCPNo || "",
+							"Gate Pass No": o.GatepassNo || "",
+							"PCP No": o.PCPNO || o.PCPNo || "",
 							"Inv No": o.DCNumber || "",
 							"Dept": o.Department || "",
 							"Vendor": o.Vendor || "",
@@ -404,8 +397,8 @@ sap.ui.define(["./BaseController",
 				Department: oItem.Department || "",
 				PurchaseOrder: oItem.PurchaseOrder || "",
 				RGPNumber: oItem.RGPNumber || "",
-				DCNumber: oItem.DCNumber || "",
-				DCdate: oItem.DCdate || "",
+				DCNumber: oItem.DCNumber || oItem.Dcnumber || oItem.DCno || oItem.DcNo || oItem.ChallanNumber || "",
+				DCdate: oItem.DCdate || oItem.Dcdate || oItem.DCDate || oItem.DcDate || oItem.ChallanDate || "",
 				GatepassNo: oItem.GatepassNo || "",
 				BudgetCode: oItem.BudgetCode || "",
 				TotalCost: oItem.TotalCost || "0.00",
@@ -638,14 +631,10 @@ sap.ui.define(["./BaseController",
 			return oDate.getFullYear() + String(oDate.getMonth() + 1).padStart(2, "0") + String(oDate.getDate()).padStart(2, "0");
 		},
 
-		// Convert display date (DD-MM-YYYY) back to SAP format (YYYYMMDD)
+		// Convert display date to SAP format (YYYYMMDD)
 		_toSAPDate: function (sDisplayDate) {
 			if (!sDisplayDate) return "";
-			var aParts = sDisplayDate.split("-");
-			if (aParts.length === 3 && aParts[0].length === 2) {
-				return aParts[2] + aParts[1] + aParts[0];
-			}
-			return sDisplayDate;
+			return this._dateToYYYYMMDD(sDisplayDate) || sDisplayDate;
 		},
 
 		onSubmitPCP: function () {
@@ -745,17 +734,32 @@ sap.ui.define(["./BaseController",
 				Department: oSourceData.Department,
 				DCNumber: oSourceData.DCNumber,
 				DCdate: formatBack(oSourceData.DCdate),
-				ItemDescription: oSourceData.FirstItemDesc,
-				RecievedQuantity: "0.00",
-				UOM: "",
 				BudgetCode: oSourceData.BudgetCode,
+				GatepassNo: oSourceData.GatepassNo || "",
+				PCPNO: oSourceData.PCPNO || oSourceData.PCPNo || "",
 				TotalCost: oSourceData.TotalCost || "0"
 			};
 
-			if (oSourceData.PCPItmNav && oSourceData.PCPItmNav.results && oSourceData.PCPItmNav.results.length > 0) {
-				oData.RecievedQuantity = oSourceData.PCPItmNav.results[0].RecievedQuantity || "0.00";
-				oData.UOM = this._mapUOMToDropdownKey(oSourceData.PCPItmNav.results[0].UOM || oSourceData.PCPItmNav.results[0].uom || oSourceData.PCPItmNav.results[0].Uom || "");
+			var aItems = [];
+			var aRawItems = (oSourceData.PCPItmNav && oSourceData.PCPItmNav.results) || [];
+			if (aRawItems.length === 0) {
+				aItems.push({
+					ItemDescription: oSourceData.FirstItemDesc || "",
+					UOM: "",
+					RecievedQuantity: "0.00",
+					TotalCost: oSourceData.TotalCost || "0"
+				});
+			} else {
+				aRawItems.forEach(function(it) {
+					aItems.push({
+						ItemDescription: it.ItemDescription || it.Description || it.MaterialDesc || "",
+						UOM: this._mapUOMToDropdownKey(it.UOM || it.uom || it.Uom || ""),
+						RecievedQuantity: it.RecievedQuantity || it.ReceivedQuantity || "0.00",
+						TotalCost: it.TotalCost || "0"
+					});
+				}.bind(this));
 			}
+			oData.items = aItems;
 
 			this._generatePDF(oData);
 		},
@@ -767,23 +771,23 @@ sap.ui.define(["./BaseController",
 			}
 
 			const { jsPDF } = window.jspdf;
-			var doc = new jsPDF('l', 'mm', 'a4');
+			var doc = new jsPDF('p', 'mm', 'a4'); // Changed to portrait to match the other view
 			var pageWidth = doc.internal.pageSize.width;
 			var margin = 14;
 
 			var sLogoUrl = sap.ui.require.toUrl("zgpms/meilpower/com/images/meil_logo.png");
 			try {
 				var sLogoBase64 = await this._getImageBase64(sLogoUrl);
-				doc.addImage(sLogoBase64, 'PNG', margin, 10, 30, 11);
+				doc.addImage(sLogoBase64, 'PNG', margin, 8, 28, 10);
 			} catch (e) {
-				doc.setFont("helvetica", "bold"); doc.setFontSize(18); doc.setTextColor(180, 0, 0);
-				doc.text("MEIL", margin, 18); doc.setTextColor(0, 0, 0);
+				doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(180, 0, 0);
+				doc.text("MEIL", margin, 16); doc.setTextColor(0, 0, 0);
 			}
 
 			doc.setTextColor(0, 0, 0);
-			doc.setFont("helvetica", "normal"); doc.setFontSize(16);
+			doc.setFont("helvetica", "bold"); doc.setFontSize(14);
 			doc.text("MEIL Neyveli Energy Private Limited", pageWidth / 2, 14, { align: "center" });
-			doc.setFontSize(8);
+			doc.setFont("helvetica", "normal"); doc.setFontSize(8);
 			doc.text("(Formerly TAQA Neyveli Power Company Private Limited)", pageWidth / 2, 19, { align: "center" });
 			doc.text("250MW LFPP, Uthangal, Neyveli, Tamilnadu - 607804, India.", pageWidth / 2, 23, { align: "center" });
 			doc.text("Tel : +91-4142-270300  |  Fax : +91-4142-270401", pageWidth / 2, 27, { align: "center" });
@@ -792,49 +796,72 @@ sap.ui.define(["./BaseController",
 
 			doc.setFontSize(11);
 			doc.setFont("helvetica", "bold");
-			doc.text("CASH PURCHASE NOTE", pageWidth / 2, 42, { align: "center" });
+			doc.text("CASH PURCHASE NOTE", pageWidth / 2, 41, { align: "center" });
 			var titleW = doc.getTextWidth("CASH PURCHASE NOTE");
 			doc.setLineWidth(0.3);
-			doc.line(pageWidth / 2 - titleW / 2, 43.5, pageWidth / 2 + titleW / 2, 43.5);
+			doc.line(pageWidth / 2 - titleW / 2, 42.5, pageWidth / 2 + titleW / 2, 42.5);
 
-			var y = 55;
+			var y = 52;
 			doc.setFontSize(9);
 			doc.setFont("helvetica", "normal");
 
+			doc.setFont("helvetica", "bold");
 			doc.text("Vendor", margin, y);
 			doc.text("Name:", margin, y + 5);
-			doc.text(oData.VendorDesc || "", margin + 18, y + 5);
+			doc.setFont("helvetica", "normal");
+			doc.text(oData.VendorDesc || "", margin + 20, y + 5);
 
-			var col2X = 100;
-			doc.text("PCP No:", col2X, y);
-			doc.text(oData.GateEntryNo ? "PCP-" + new Date().getFullYear() + "/" + oData.GateEntryNo : "", col2X + 22, y);
-			doc.text("PCP Date:", col2X, y + 6);
-			doc.text(oData.PCPDate || "", col2X + 22, y + 6);
-			doc.text("DC/Inv No:", col2X, y + 12);
-			doc.text(oData.DCNumber || "", col2X + 22, y + 12);
-			doc.text("Dept:", col2X, y + 18);
-			doc.text(oData.Department || "", col2X + 22, y + 18);
+			var col2 = 85;
+			var valCol2 = col2 + 22;
+			doc.setFont("helvetica", "bold");
+			doc.text("PCP No:", col2, y);
+			doc.text("GP No:", col2, y + 6);
+			doc.text("PCP Date:", col2, y + 12);
+			doc.text("DC/Inv No:", col2, y + 18);
+			doc.text("Dept:", col2, y + 24);
+			
+			doc.setFont("helvetica", "normal");
+			doc.text(oData.PCPNO || "-", valCol2, y);
+			doc.text(oData.GatepassNo || "-", valCol2, y + 6);
+			doc.text(oData.PCPDate || "-", valCol2, y + 12);
+			doc.text(oData.DCNumber || "-", valCol2, y + 18);
+			doc.text(oData.Department || "-", valCol2, y + 24);
 
-			var col3X = 180;
-			doc.text("GE No", col3X, y);
-			doc.text(oData.GateEntryNo || "", col3X + 25, y);
-			doc.text("GE Date:", col3X, y + 6);
-			doc.text(oData.GEDate || "", col3X + 25, y + 6);
-			doc.text("DC/Inv Date:", col3X, y + 12);
-			doc.text(oData.DCdate || "", col3X + 25, y + 12);
-			doc.text("Budget Code:", col3X, y + 18);
-			doc.text(oData.BudgetCode || "", col3X + 25, y + 18);
+			var col3 = 150;
+			var valCol3 = col3 + 25;
+			doc.setFont("helvetica", "bold");
+			doc.text("GE No", col3, y);
+			doc.text("GE Date:", col3, y + 6);
+			doc.text("DC/Inv Date:", col3, y + 12);
+			doc.text("Budget Code:", col3, y + 18);
+			
+			doc.setFont("helvetica", "normal");
+			doc.text(String(oData.GateEntryNo || "-"), valCol3, y);
+			doc.text(oData.GEDate || "-", valCol3, y + 6);
+			doc.text(oData.DCdate || "-", valCol3, y + 12);
+			doc.text(oData.BudgetCode || "-", valCol3, y + 18);
 
-			var tableY = y + 26;
-			var tableData = [
-				[
-					"1",
-					oData.ItemDescription || "",
-					oData.UOM || "",
-					parseFloat(oData.RecievedQuantity || 0).toFixed(2),
-					parseFloat(oData.TotalCost || 0).toFixed(2)
-				]
-			];
+			var tableY = y + 27;
+			var aItems = oData.items || [];
+			var totalAmt = 0;
+			var tableData = aItems.map(function(it, i) {
+				var fQty = parseFloat(it.RecievedQuantity || 0);
+				var fAmt = parseFloat(it.TotalCost || 0);
+				if (fAmt === 0 && aItems.length === 1) {
+					fAmt = parseFloat(oData.TotalCost || 0);
+				}
+				totalAmt += fAmt;
+				return [
+					i + 1,
+					it.ItemDescription || "",
+					it.UOM || "",
+					fQty.toFixed(2),
+					fAmt.toFixed(2)
+				];
+			});
+			if (tableData.length === 0) {
+				tableData = [["", "", "", "", ""]];
+			}
 
 			doc.autoTable({
 				startY: tableY,
@@ -843,12 +870,11 @@ sap.ui.define(["./BaseController",
 				theme: 'grid',
 				headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'normal', lineWidth: 0.3, lineColor: [0, 0, 0] },
 				bodyStyles: { textColor: [0, 0, 0], lineWidth: 0.3, lineColor: [0, 0, 0], cellPadding: 3 },
-				columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 35 }, 3: { cellWidth: 35 }, 4: { cellWidth: 35 } },
+				columnStyles: { 0: { cellWidth: 20 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 25 }, 3: { cellWidth: 25 }, 4: { cellWidth: 30 } },
 				margin: { left: margin, right: margin }
 			});
 
 			var finalY = doc.lastAutoTable.finalY;
-			var totalAmt = parseFloat(oData.TotalCost || 0);
 
 			var footH = 9;
 			doc.setLineWidth(0.3);

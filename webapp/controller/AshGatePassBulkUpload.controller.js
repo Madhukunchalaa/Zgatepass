@@ -581,7 +581,11 @@ sap.ui.define([
 					title: "Bulk Creation Failed"
 				});
 			}
-		}
+		},
 
+		onFileSizeExceed: function (oEvent) {
+			var sFileName = oEvent.getParameter("fileName") || "Excel file";
+			MessageBox.error(sFileName + " exceeds the maximum file size limit of 1 MB. Please upload a smaller file.");
+		}
 	});
 });

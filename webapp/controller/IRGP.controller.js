@@ -1,10 +1,11 @@
-sap.ui.define(["sap/ui/core/mvc/Controller",
+sap.ui.define([
+	"./BaseController",
 	"sap/ui/model/json/JSONModel",
 	"sap/m/MessageBox",
 	"sap/m/MessageToast",
 	"zgpms/meilpower/com/utils/ExcelExport",
 	"sap/ui/core/Fragment"
-], function (Controller, JSONModel, MessageBox, MessageToast, ExcelExport, Fragment) {
+], function (BaseController, JSONModel, MessageBox, MessageToast, ExcelExport, Fragment) {
 	"use strict";
 
 	// OData Status  →  internal StatusCode used by the view's filters/bindings
@@ -20,13 +21,14 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 		"CLOSED":               "Closed"
 	};
 
-	return Controller.extend("zgpms.meilpower.com.controller.IRGP", {
+	return BaseController.extend("zgpms.meilpower.com.controller.IRGP", {
 
 		// =========================================================================
 		// Lifecycle
 		// =========================================================================
 
 		onInit: function () {
+			this.getView().setModel(new JSONModel({}), "sortModel");
 			this._getRouter().getRoute("IRGP").attachPatternMatched(this._onRouteMatched, this);
 			this._resetFormModel();
 		},
@@ -36,11 +38,12 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			var sStep = oArgs.step ? oArgs.step.toUpperCase() : "CREATE";
 			var sGPNo = oArgs.gpNo || "";
 
+			this._loadMaterials();
+
 			if (sStep === "LIST") {
 				this._applyListMode();
 				this._loadList();
 			} else {
-				this._loadMaterials();
 				this._loadVendors();
 				this._loadDepartments();
 				if (sStep === "CREATE") {
@@ -77,14 +80,13 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 					var aAll = (oData.results || [])
 						.map(this._mapODataToDoc.bind(this))
 						.map(function (d) {
-							// If backend commit is lagging and returns PENDING_RESERVATION, but we already
-							// successfully linked the MRN locally (PENDING_RECEIPT), keep the local status
+							// If backend commit is lagging, keep a locally closed status.
+							// (Linked-MRN lag is already handled in _mapODataToDoc from the line MRNs;
+							// forcing PENDING_RECEIPT here hid resent balances from the User.)
 							var oOld = aOldDocs.find(function (old) { return old.IRGPNo === d.IRGPNo; });
-							if (oOld && oOld.StatusCode === "PENDING_RECEIPT" && d.StatusCode === "PENDING_RESERVATION") {
-								d.StatusCode = "PENDING_RECEIPT";
-							}
 							if (oOld && oOld.StatusCode === "CLOSED" && d.StatusCode !== "CLOSED") {
 								d.StatusCode = "CLOSED";
+								d.StatusDisplay = "CLOSED";
 							}
 							return d;
 						})
@@ -147,6 +149,35 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			});
 		},
 
+		_resolveFullReturnUser: function (sRetUser, sReqUser) {
+			sRetUser = (sRetUser || "").trim();
+			sReqUser = (sReqUser || "").trim();
+			if (!sRetUser) {
+				return sReqUser;
+			}
+			if (sReqUser) {
+				var sReqId = (sReqUser.split(" - ")[0] || "").trim();
+				var sRetId = (sRetUser.split(" - ")[0] || "").trim();
+				// If ReturnUser is a truncated prefix of RequestUser (e.g. "5006 - Muthu" vs "5006 - Muthuraman Arunachalam")
+				// or both share the same employee ID prefix
+				if (sReqUser.indexOf(sRetUser) === 0 || (sReqId && sRetId && sReqId === sRetId)) {
+					return sReqUser;
+				}
+			}
+			var oModel = this.getView() && this.getView().getModel("irgp");
+			var aUsers = oModel ? (oModel.getProperty("/dropdowns/users") || []) : [];
+			var sCheckId = (sRetUser.split(" - ")[0] || "").trim();
+			if (sCheckId && aUsers.length > 0) {
+				var oMatched = aUsers.find(function (u) {
+					return u.key === sCheckId || (u.text && u.text.indexOf(sRetUser) === 0);
+				});
+				if (oMatched && oMatched.text) {
+					return oMatched.text;
+				}
+			}
+			return sRetUser;
+		},
+
 		_applyDocToView: function (oDoc, sStep) {
 			var oData = JSON.parse(JSON.stringify(oDoc)); // deep clone
 			
@@ -163,7 +194,8 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 
 					it.PrevBalance = fBal;
 
-					if (sStep === "STORE_CLOSE") {
+					// Lines already fully received in an earlier round keep their quantities
+					if (sStep === "STORE_CLOSE" && fBal > 0) {
 						if (oData.RequestType === "Tools") {
 							it.RecievedQuantity = String(fBal);
 							it.BalanceQuantity = "0";
@@ -175,19 +207,27 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 				});
 			}
 
+			var sReqUser = oData.RequestUser || (oData.header && oData.header.RequestUser) || "";
+			var sRetUser = this._resolveFullReturnUser(oData.ReturnUser || (oData.header && oData.header.ReturnUser), sReqUser);
+			var sRetDate = this._displayDateToISO(oData.ReturnedDate || (oData.header && oData.header.ReturnedDate)) || new Date().toISOString().split("T")[0];
+			var sDueDate = this._displayDateToISO(oData.DueDate || (oData.header && oData.header.DueDate));
+			var sRevDate = this._displayDateToISO(oData.RevisedDueDate || (oData.header && oData.header.RevisedDueDate)) || sDueDate;
+
 			oData.dropdowns = this._getDefaultDropdowns();
 			oData.ui = this._buildUIFlags(sStep);
 			// wrap header fields so the form binding path (/header/...) works
 			if (!oData.header) {
 				oData.header = {
 					IRGPNo:               oData.IRGPNo               || "",
-					GEDate:               oData.GEDate               || "",
-					DueDate:              oData.DueDate              || "",
-					RevisedDueDate:       oData.RevisedDueDate       || "",
-					ReturnedDate:         oData.ReturnedDate         || "",
+					// List docs hold dates as DD-MM-YYYY; DatePickers and payloads need YYYY-MM-DD
+					GEDate:               this._displayDateToISO(oData.GEDate),
+					DueDate:              sDueDate,
+					RevisedDueDate:       sRevDate,
+					ReturnedDate:         sRetDate,
 					Department:           oData.Department           || "",
-					RequestUser:          oData.RequestUser          || "",
-					ReturnUser:           oData.ReturnUser           || "",
+					RequestUser:          sReqUser,
+					// Material is returned by the requested user
+					ReturnUser:           sRetUser,
 					ContractName:         oData.ContractName         || "",
 					ContractEmployeeName: oData.ContractEmployeeName || "",
 					RequestType:          oData.RequestType          || "IRGP",
@@ -196,9 +236,21 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 					StatusCode:           oData.StatusCode           || "",
 					Message:              oData.Message              || ""
 				};
+			} else {
+				oData.header.ReturnUser = sRetUser;
+				oData.header.RequestUser = sReqUser;
+				oData.header.ReturnedDate = sRetDate;
+				oData.header.RevisedDueDate = sRevDate;
 			}
 			var oModel = new JSONModel(oData);
 			this.getView().setModel(oModel, "irgp");
+
+			// Load users for the department if present so ComboBox displays properly
+			var sDept = oData.header.Department || oData.Department || "";
+			if (sDept) {
+				this._loadUsersForDepartment(sDept);
+			}
+
 			this._applyModeForStep(sStep);
 		},
 
@@ -207,6 +259,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 		// =========================================================================
 
 		onSubmit: async function () {
+			var that = this;
 			var oModel = this.getView().getModel("irgp");
 			var oHeader = oModel.getProperty("/header");
 			var aItems  = oModel.getProperty("/items");
@@ -258,15 +311,17 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 				Message:         "",
 				IRGPBase64:      sBase64,
 				IRGPItmNav: aItems.map(function (it, i) {
+					var bIsTool = (oHeader.RequestType === "Tools");
+					var sToolDesc = bIsTool ? (it.ItemDescription || it.ItemCode || "") : "";
 					return {
 						GatePassNo:        "",
 						ItemNo:            String((i + 1) * 10).padStart(5, "0"),
-						ItemCode:          it.ItemCode        || "",
-						ItemDescription:   it.ItemDescription || "",
+						ItemCode:          bIsTool ? sToolDesc : (it.ItemCode || ""),
+						ItemDescription:   bIsTool ? sToolDesc : (it.ItemDescription || ""),
 						SentQuantity:      parseFloat(it.SentQuantity || 0).toFixed(3),
 						RecievedQuantity:  "0.000",
 						BalanceQuantity:   parseFloat(it.SentQuantity || 0).toFixed(3),
-						UOM:               it.UOM             || "",
+						UOM:               that._toSAPUOM(it.UOM),
 						MRNumber:          "",
 						Location:          it.Location        || "",
 						OldMaterialRef:    it.OldMaterialRef  || "",
@@ -335,6 +390,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (!oODataModel) { return; }
 
+			var that = this;
 			var oPayload = {
 				GatePassNo:      oHeader.IRGPNo,
 				RequestDate:     this._toSAPDate(oHeader.GEDate || new Date().toISOString().split("T")[0]),
@@ -352,15 +408,17 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 				MRNumber:        aItems[0] ? aItems[0].MRNumber : "",
 				Message:         "",
 				IRGPItmNav:    aItems.map(function (it) {
+					var bIsTool = (oHeader.RequestType === "Tools");
+					var sToolDesc = bIsTool ? (it.ItemDescription || it.ItemCode || "") : "";
 					return {
 						GatePassNo:       oHeader.IRGPNo,
 						ItemNo:           it.ItemNo || String(it.SNo * 10).padStart(5, "0"),
-						ItemCode:         it.ItemCode         || "",
-						ItemDescription:  it.ItemDescription  || "",
+						ItemCode:         bIsTool ? sToolDesc : (it.ItemCode || ""),
+						ItemDescription:  bIsTool ? sToolDesc : (it.ItemDescription || ""),
 						SentQuantity:     it.SentQuantity     || "0.000",
 						RecievedQuantity: it.RecievedQuantity || "0.000",
 						BalanceQuantity:  it.BalanceQuantity  || "0.000",
-						UOM:              it.UOM              || "",
+						UOM:              that._toSAPUOM(it.UOM),
 						MRNumber:         it.MRNumber         || "",
 						Location:         it.Location         || "",
 						OldMaterialRef:   it.OldMaterialRef   || "",
@@ -416,6 +474,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (!oODataModel) { return; }
 
+			var that = this;
 			var oPayload = {
 				GatePassNo:      oHeader.IRGPNo,
 				RequestDate:     this._toSAPDate(oHeader.GEDate || new Date().toISOString().split("T")[0]),
@@ -433,15 +492,17 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 				Status:          STATUS_REVERSE[oHeader.StatusCode] || "Open",
 				Message:         "",
 				IRGPItmNav: aItems.map(function (it, i) {
+					var bIsTool = (oHeader.RequestType === "Tools");
+					var sToolDesc = bIsTool ? (it.ItemDescription || it.ItemCode || "") : "";
 					return {
 						GatePassNo:       oHeader.IRGPNo,
 						ItemNo:           it.ItemNo || String((i + 1) * 10).padStart(5, "0"),
-						ItemCode:         it.ItemCode        || "",
-						ItemDescription:  it.ItemDescription || "",
+						ItemCode:         bIsTool ? sToolDesc : (it.ItemCode || ""),
+						ItemDescription:  bIsTool ? sToolDesc : (it.ItemDescription || ""),
 						SentQuantity:     parseFloat(it.SentQuantity     || 0).toFixed(3),
 						RecievedQuantity: parseFloat(it.RecievedQuantity || 0).toFixed(3),
 						BalanceQuantity:  parseFloat(it.BalanceQuantity  || it.SentQuantity || 0).toFixed(3),
-						UOM:              it.UOM             || "",
+						UOM:              that._toSAPUOM(it.UOM),
 						MRNumber:         it.MRNumber        || "",
 						Location:         it.Location        || "",
 						OldMaterialRef:   it.OldMaterialRef  || "",
@@ -494,6 +555,122 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 		// =========================================================================
 		// OData: Update — Verify Returns & Close (STORE_CLOSE step)
 		// =========================================================================
+
+		onResendBalanceButtonPress: function () {
+			var oModel  = this.getView().getModel("irgp");
+			var oHeader = oModel.getProperty("/header");
+			var aItems  = oModel.getProperty("/items");
+
+			var bHasBalance = aItems.some(function (it) {
+				return parseFloat(it.BalanceQuantity) > 0 && parseFloat(it.RecievedQuantity) > 0;
+			});
+
+			if (!bHasBalance) {
+				sap.m.MessageBox.error("No valid balances to resend. Please ensure you have entered a partial received quantity.");
+				return;
+			}
+
+			sap.m.MessageBox.confirm("This will accept the received quantities and create new line items for the outstanding balance. The IRGP will be sent back to the user to link a new MRN. Continue?", {
+				onClose: function (oAction) {
+					if (oAction !== sap.m.MessageBox.Action.OK) { return; }
+
+					var oODataModel = this.getOwnerComponent().getModel();
+					if (!oODataModel) { return; }
+
+					var aNewItems = [];
+					var iMaxItemNo = 0;
+					
+					// Find the highest ItemNo to generate new ones
+					aItems.forEach(function(it) {
+						var iNo = parseInt(it.ItemNo, 10);
+						if (!isNaN(iNo) && iNo > iMaxItemNo) {
+							iMaxItemNo = iNo;
+						}
+					});
+
+					aItems.forEach(function (it) {
+						var fSent = parseFloat(it.SentQuantity || 0);
+						var fRec  = parseFloat(it.RecievedQuantity || 0);
+						var fBal  = parseFloat(it.BalanceQuantity || 0);
+
+						if (fBal > 0 && fRec > 0) {
+							// Update the original item to be fully received (Sent = Rec)
+							it.SentQuantity = fRec.toFixed(3);
+							it.BalanceQuantity = "0.000";
+
+							// Create the split item
+							iMaxItemNo += 10;
+							var oSplitItem = Object.assign({}, it);
+							oSplitItem.ItemNo = String(iMaxItemNo).padStart(5, "0");
+							oSplitItem.SNo = (iMaxItemNo / 10);
+							oSplitItem.SentQuantity = fBal.toFixed(3);
+							oSplitItem.RecievedQuantity = "0.000";
+							oSplitItem.BalanceQuantity = fBal.toFixed(3);
+							oSplitItem.MRNumber = ""; // Clear MRN so user has to relink
+							
+							aNewItems.push(oSplitItem);
+						}
+					});
+
+					// Combine original items (now balanced) with the new split items
+					var aCombinedItems = aItems.concat(aNewItems);
+
+					// We set status back to Open (PENDING_RESERVATION) so it hits the user's queue again
+					var oPayload = {
+						GatePassNo:      oHeader.IRGPNo,
+						RequestDate:     this._toSAPDate(oHeader.GEDate || new Date().toISOString().split("T")[0]),
+						DueDate:         this._toSAPDate(oHeader.DueDate),
+						Department:      oHeader.Department,
+						RequestedUser:   oHeader.RequestUser || "",
+						ContractName:    oHeader.ContractName,
+						TAQAEmployee:    oHeader.ContractEmployeeName,
+						RequestType:     oHeader.RequestType || "IRGP",
+						Remarks:         oHeader.Remarks || "",
+						RevisedDueDate:  this._toSAPDate(oHeader.RevisedDueDate || oHeader.DueDate),
+						ReturnedDate:    "", // Clear returned date
+						ReturnUser:      "",
+						Status:          "Open", 
+						MRNumber:        "",
+						Message:         "",
+						IRGPItmNav:    aCombinedItems.map(function (it) {
+							return {
+								GatePassNo:       oHeader.IRGPNo,
+								ItemNo:           it.ItemNo,
+								ItemCode:         it.ItemCode         || "",
+								ItemDescription:  it.ItemDescription  || "",
+								SentQuantity:     it.SentQuantity,
+								RecievedQuantity: it.RecievedQuantity,
+								BalanceQuantity:  it.BalanceQuantity,
+								UOM:              it.UOM              || "",
+								MRNumber:         it.MRNumber         || "",
+								Location:         it.Location         || "",
+								OldMaterialRef:   it.OldMaterialRef   || "",
+								Mp2ItmCode:       it.Mp2ItemCode       || "",
+								DefaultBin:       it.DefaultBin        || ""
+							};
+						})
+					};
+
+					sap.ui.core.BusyIndicator.show(0);
+					oODataModel.create("/IRGPHdrSet", oPayload, {
+						success: function (oData) {
+							sap.ui.core.BusyIndicator.hide();
+							this._updateCachedStatus(oHeader.IRGPNo, "PENDING_RESERVATION");
+							sap.m.MessageBox.success("Balance has been split and resent to the user queue.", {
+								onClose: function () {
+									oModel.setProperty("/ui/hasPendingChanges", false);
+									this._getRouter().navTo("IRGP", { step: "LIST", gpNo: "ALL" });
+								}.bind(this)
+							});
+						}.bind(this),
+						error: function (oError) {
+							sap.ui.core.BusyIndicator.hide();
+							sap.m.MessageBox.error("Failed to resend balance.");
+						}.bind(this)
+					});
+				}.bind(this)
+			});
+		},
 
 		onSaveAmpCloseIRGPButtonPress: function () {
 			this.onCloseIRGP();
@@ -592,7 +769,11 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			if (!sVal) { return ""; }
 			var sTrim = sVal.trim();
 			if (/^0+$/.test(sTrim)) { return ""; }
-			return sTrim.replace(/^0+/, "");
+			// If purely digits with leading zeros, trim leading zeros; otherwise keep alphanumeric intact
+			if (/^\d+$/.test(sTrim)) {
+				return sTrim.replace(/^0+/, "");
+			}
+			return sTrim;
 		},
 
 		// Normalise any SAP date format to "YYYY-MM-DD" for DatePicker valueFormat
@@ -612,6 +793,10 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 				// YYYYMMDD (all-zero = empty)
 				if (/^\d{8}$/.test(vDate)) {
 					if (/^0+$/.test(vDate)) { return ""; }
+					// Older saves sent DDMMYYYY (e.g. 17092026) — read those back correctly
+					if (parseInt(vDate.slice(0, 4), 10) < 1900 && parseInt(vDate.slice(4, 8), 10) >= 1900) {
+						return vDate.slice(4, 8) + "-" + vDate.slice(2, 4) + "-" + vDate.slice(0, 2);
+					}
 					return vDate.slice(0, 4) + "-" + vDate.slice(4, 6) + "-" + vDate.slice(6, 8);
 				}
 				// Already ISO — trim any time part
@@ -622,17 +807,22 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			return "";
 		},
 
-		_formatSAPDateToDisplay: function (vDate) {
-			var sIso = this._formatSAPDate(vDate);
-			if (!sIso) { return ""; }
-			var aParts = sIso.split("-");
-			return aParts[2] + "-" + aParts[1] + "-" + aParts[0];
+		// "DD-MM-YYYY" (list display) -> "YYYY-MM-DD"; ISO passes through; "NA"/empty -> ""
+		_displayDateToISO: function (sDate) {
+			if (!sDate || sDate === "NA") { return ""; }
+			var aMatch = /^(\d{2})-(\d{2})-(\d{4})$/.exec(sDate);
+			if (aMatch) { return aMatch[3] + "-" + aMatch[2] + "-" + aMatch[1]; }
+			return this._formatSAPDate(sDate);
 		},
 
-		// Format "YYYY-MM-DD" to "YYYYMMDD" for backend SAP payloads
+		_formatSAPDateToDisplay: function (vDate) {
+			return this._formatDate(vDate);
+		},
+
+		// Format display date to "YYYYMMDD" for backend SAP payloads
 		_toSAPDate: function (sDate) {
 			if (!sDate) { return ""; }
-			return sDate.replace(/-/g, "");
+			return this._dateToYYYYMMDD(sDate);
 		},
 
 		_mapODataToDoc: function (oData) {
@@ -651,21 +841,36 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 				sMappedStatus = "PENDING_RESERVATION";
 			}
 
-			// If backend failed to update the status but saved the MR Number, 
-			// dynamically derive the correct status.
+			// If backend failed to update the status but saved the MR Numbers,
+			// dynamically derive the correct status. After a "Resend Balance" the
+			// already-received lines keep their MRN while the new balance lines have
+			// none, so only lines with an open balance decide whether the User still
+			// has to link an MRN.
 			if (sMappedStatus === "PENDING_RESERVATION") {
 				var that = this;
-				var bHasMRN = aRaw.some(function(it) {
-					return that._sanitizeMRN(it.MRNumber) !== "";
+				var aOpenLines = aRaw.filter(function (it) {
+					var fSent = parseFloat(it.SentQuantity) || 0;
+					var fRec  = parseFloat(it.RecievedQuantity) || 0;
+					var fBal  = parseFloat(it.BalanceQuantity);
+					if (isNaN(fBal) || (fBal === 0 && fRec === 0)) { fBal = fSent; }
+					return fBal > 0;
 				});
-				// Also check header MRNumber just in case
-				if (bHasMRN || this._sanitizeMRN(oData.MRNumber) !== "") {
+				var bAwaitingMRN = aOpenLines.some(function (it) {
+					return that._sanitizeMRN(it.MRNumber) === "";
+				});
+				var bAllLinked = aOpenLines.length > 0
+					? !bAwaitingMRN
+					: this._sanitizeMRN(oData.MRNumber) !== "";
+				if (bAllLinked) {
 					sMappedStatus = "PENDING_RECEIPT";
 				}
 				if (oData.RequestType === "Tools") {
 					sMappedStatus = "PENDING_RECEIPT";
 				}
 			}
+
+			var sReqUser = oData.RequestedUser || "";
+			var sRetUser = this._resolveFullReturnUser(oData.ReturnUser, sReqUser);
 
 			return {
 				IRGPNo:               oData.GatePassNo     || "",
@@ -675,24 +880,40 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 				RevisedDueDate:       this._formatSAPDateToDisplay(oData.RevisedDueDate),
 				ReturnedDate:         this._formatSAPDateToDisplay(oData.ReturnedDate) || "NA",
 				Department:           oData.Department     || "",
-				RequestUser:          oData.RequestedUser  || "",
-				ReturnUser:           oData.ReturnUser     || "",
+				RequestUser:          sReqUser,
+				ReturnUser:           sRetUser,
 				ContractName:         oData.ContractName   || "",
 				ContractEmployeeName: oData.TAQAEmployee   || "",
 				RequestType:          oData.RequestType    || "IRGP",
 				Remarks:              oData.Remarks        || "",
 				MRNumber:             this._sanitizeMRN(oData.MRNumber),
 				StatusCode:           sMappedStatus,
+				StatusDisplay:        sMappedStatus === "CLOSED" ? "CLOSED" : "OPEN",
 				Message:              oData.Message        || "",
 				items: aRaw.map(function (it, i) {
 					// SAP item numbers are multiples of 10 ("00010","00020"…)
 					var iSNo = it.ItemNo ? Math.round(parseInt(it.ItemNo, 10) / 10) : (i + 1);
 					if (iSNo < 1) { iSNo = i + 1; }
+					var sMatKey = (it.ItemCode || "").trim();
+					var sMatTrim = sMatKey.replace(/^0+/, "");
+					var aMaterials = (this.getView().getModel("materials") && this.getView().getModel("materials").getProperty("/results")) || [];
+					var oMatFound = aMaterials.find(function (m) {
+						var sM = (m.Material || "").trim();
+						return sM === sMatKey || (sMatTrim && sM.replace(/^0+/, "") === sMatTrim);
+					});
+					var sOldMat = it.OldMaterialRef || (oMatFound ? oMatFound.OldMaterialRef : "") || "";
+					var bIsTool = (oData.RequestType === "Tools") || (oData.RequestType && oData.RequestType.toUpperCase().indexOf("TOOL") !== -1);
+					var sDesc = it.ItemDescription || (bIsTool ? it.ItemCode : "") || (oMatFound ? oMatFound.MaterialName : "") || "";
+					var sCode = bIsTool ? sDesc : (it.ItemCode || "");
+					var sMatLongDes = it.MatLongDes || it.matLongDes || it.Matlongdes || (oMatFound ? (oMatFound.MatLongDes || oMatFound.matLongDes || oMatFound.Matlongdes) : "") || "";
+					var sLongDesc = sMatLongDes;
 					return {
 						SNo:              iSNo,
 						ItemNo:           it.ItemNo || String((i + 1) * 10).padStart(5, "0"),
-						ItemCode:         it.ItemCode         || "",
-						ItemDescription:  it.ItemDescription  || "",
+						ItemCode:         sCode,
+						ItemDescription:  sDesc,
+						MatLongDes:       sMatLongDes,
+						LongDescription:  sLongDesc,
 						SentQuantity:     it.SentQuantity     || "0",
 						RecievedQuantity: it.RecievedQuantity || "0",
 						BalanceQuantity:  it.BalanceQuantity  || "0",
@@ -700,7 +921,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 						HSNCode:          it.HSNCode          || "",
 						MRNumber:         this._sanitizeMRN(it.MRNumber),
 						Location:         it.Location         || "",
-						OldMaterialRef:   it.OldMaterialRef   || "",
+						OldMaterialRef:   sOldMat,
 						Mp2ItemCode:      it.Mp2ItmCode        || "",
 						DefaultBin:       it.DefaultBin       || ""
 					};
@@ -736,6 +957,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			oModel.setProperty("/ui/submitResVisible",false);
 			oModel.setProperty("/ui/closeVisible",    false);
 			oModel.setProperty("/ui/printVisible",    false);
+			oModel.setProperty("/ui/resendBalanceVisible", false);
 		},
 
 		_applyUserUpdateMode: function () {
@@ -752,6 +974,17 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			oModel.setProperty("/ui/submitResVisible",true);
 			oModel.setProperty("/ui/closeVisible",    false);
 			oModel.setProperty("/ui/printVisible",    false);
+			oModel.setProperty("/ui/resendBalanceVisible", false);
+
+			if (!oModel.getProperty("/header/ReturnedDate")) {
+				oModel.setProperty("/header/ReturnedDate", new Date().toISOString().split("T")[0]);
+			}
+			if (!oModel.getProperty("/header/RevisedDueDate")) {
+				oModel.setProperty("/header/RevisedDueDate", oModel.getProperty("/header/DueDate") || "");
+			}
+			var sCurReq = oModel.getProperty("/header/RequestUser") || "";
+			var sCurRet = this._resolveFullReturnUser(oModel.getProperty("/header/ReturnUser"), sCurReq);
+			oModel.setProperty("/header/ReturnUser", sCurRet);
 		},
 
 		_applyStoreCloseMode: function () {
@@ -765,20 +998,21 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			oModel.setProperty("/ui/mrNumberEditable",    true);
 			oModel.setProperty("/ui/receivedQtyEditable", true);
 			oModel.setProperty("/ui/storeStatusEditable", true);
+			oModel.setProperty("/ui/revisedDueDateEditable", true);
+			oModel.setProperty("/ui/returnedDateEditable", true);
 			oModel.setProperty("/ui/submitVisible",       false);
 			oModel.setProperty("/ui/submitResVisible",    false);
 			oModel.setProperty("/ui/closeVisible",        true);
 			oModel.setProperty("/ui/printVisible",        true);
+			oModel.setProperty("/ui/resendBalanceVisible",true);
 
 			// Auto-fill Returned Date and User for the Store Person
 			if (!oModel.getProperty("/header/ReturnedDate")) {
 				oModel.setProperty("/header/ReturnedDate", new Date().toISOString().split("T")[0]);
 			}
-			if (!oModel.getProperty("/header/ReturnUser")) {
-				var oUserModel = sap.ui.getCore().getModel("user");
-				var sUser = oUserModel ? (oUserModel.getProperty("/id") || oUserModel.getProperty("/User") || "Store User") : "Store User";
-				oModel.setProperty("/header/ReturnUser", sUser);
-			}
+			var sCurReq = oModel.getProperty("/header/RequestUser") || "";
+			var sCurRet = this._resolveFullReturnUser(oModel.getProperty("/header/ReturnUser"), sCurReq);
+			oModel.setProperty("/header/ReturnUser", sCurRet);
 		},
 
 		_applyClosedMode: function () {
@@ -791,10 +1025,24 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			oModel.setProperty("/ui/itemsEditable",   false);
 			oModel.setProperty("/ui/mrNumberEditable",false);
 			oModel.setProperty("/ui/receivedQtyEditable", false);
+			oModel.setProperty("/ui/revisedDueDateEditable", false);
+			oModel.setProperty("/ui/returnedDateEditable", false);
 			oModel.setProperty("/ui/submitVisible",   false);
 			oModel.setProperty("/ui/submitResVisible",false);
 			oModel.setProperty("/ui/closeVisible",    false);
-			oModel.setProperty("/ui/printVisible",    true);
+			oModel.setProperty("/ui/printVisible",        true);
+			oModel.setProperty("/ui/resendBalanceVisible", false);
+
+			// Auto-fill Returned Date, Revised Due Date, and Return User (same as edit screen)
+			if (!oModel.getProperty("/header/ReturnedDate")) {
+				oModel.setProperty("/header/ReturnedDate", new Date().toISOString().split("T")[0]);
+			}
+			if (!oModel.getProperty("/header/RevisedDueDate")) {
+				oModel.setProperty("/header/RevisedDueDate", oModel.getProperty("/header/DueDate") || "");
+			}
+			var sCurReq = oModel.getProperty("/header/RequestUser") || "";
+			var sCurRet = this._resolveFullReturnUser(oModel.getProperty("/header/ReturnUser"), sCurReq);
+			oModel.setProperty("/header/ReturnUser", sCurRet);
 		},
 
 		_applyEditMode: function () {
@@ -805,13 +1053,36 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			oModel.setProperty("/ui/bannerType",           "Warning");
 			oModel.setProperty("/ui/headerEditable",        true);
 			oModel.setProperty("/ui/itemsEditable",         true);
-			oModel.setProperty("/ui/mrNumberEditable",      false);
-			oModel.setProperty("/ui/receivedQtyEditable",   false);
+			oModel.setProperty("/ui/mrNumberEditable",      true);
+			oModel.setProperty("/ui/revisedDueDateEditable", true);
 			oModel.setProperty("/ui/submitVisible",         false);
 			oModel.setProperty("/ui/submitResVisible",      false);
-			oModel.setProperty("/ui/closeVisible",          false);
 			oModel.setProperty("/ui/printVisible",          false);
 			oModel.setProperty("/ui/submitEditVisible",     true);
+
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var bIsStoreUser = oUserModel && oUserModel.getProperty("/IsStoreUser");
+			if (bIsStoreUser) {
+				oModel.setProperty("/ui/receivedQtyEditable",   true);
+				oModel.setProperty("/ui/storeStatusEditable",   true);
+				oModel.setProperty("/ui/returnedDateEditable",  true);
+				oModel.setProperty("/ui/closeVisible",          true);
+				oModel.setProperty("/ui/resendBalanceVisible",  true);
+
+				// Auto-fill Returned Date with today's date if not set
+				if (!oModel.getProperty("/header/ReturnedDate")) {
+					oModel.setProperty("/header/ReturnedDate", new Date().toISOString().split("T")[0]);
+				}
+				var sCurReq = oModel.getProperty("/header/RequestUser") || "";
+				var sCurRet = this._resolveFullReturnUser(oModel.getProperty("/header/ReturnUser"), sCurReq);
+				oModel.setProperty("/header/ReturnUser", sCurRet);
+			} else {
+				oModel.setProperty("/ui/receivedQtyEditable",   false);
+				oModel.setProperty("/ui/storeStatusEditable",   false);
+				oModel.setProperty("/ui/returnedDateEditable",  false);
+				oModel.setProperty("/ui/closeVisible",          false);
+				oModel.setProperty("/ui/resendBalanceVisible",  false);
+			}
 		},
 
 		_applyModeForStep: function (sStep) {
@@ -833,7 +1104,8 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 				mrNumberEditable:     sStep === "STORE_CLOSE",
 				receivedQtyEditable:  sStep === "STORE_CLOSE",
 				storeStatusEditable:  sStep === "STORE_CLOSE",
-				revisedDueDateEditable: sStep === "STORE_CLOSE",
+				revisedDueDateEditable: sStep === "STORE_CLOSE" || sStep === "EDIT",
+				returnedDateEditable:   sStep === "STORE_CLOSE",
 				submitVisible:        false,
 				submitResVisible:     sStep === "USER_UPDATE",
 				submitEditVisible:    sStep === "EDIT",
@@ -874,11 +1146,47 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 				return;
 			}
 
-			var STATUS_LABELS = {
-				"PENDING_RESERVATION": "Pending Reservation",
-				"PENDING_RECEIPT": "Completed Reservation",
-				"CLOSED": "Closed & Archived"
-			};
+			var that = this;
+			sap.ui.core.BusyIndicator.show(0);
+			this._ensureMaterials(aObjects).then(function (aMatList) {
+				sap.ui.core.BusyIndicator.hide();
+				that._executeExcelDownload(aObjects, aMatList, dFrom, dTo);
+			}).catch(function () {
+				sap.ui.core.BusyIndicator.hide();
+				that._executeExcelDownload(aObjects, [], dFrom, dTo);
+			});
+		},
+
+		_executeExcelDownload: function (aObjects, aMatList, dFrom, dTo) {
+			aMatList = aMatList || [];
+			var mMatMap = {};
+			aMatList.forEach(function (m) {
+				if (m.Material) {
+					var sMCode = String(m.Material).trim();
+					var sMCodeTrim = sMCode.replace(/^0+/, "");
+					var sMCodePad = sMCode.padStart(18, "0");
+					var bHasDesc = !!(m.MatLongDes || m.LongDescription);
+					var oExisting = mMatMap[sMCode] || mMatMap[sMCodeTrim];
+					var bExistingHasDesc = !!(oExisting && (oExisting.MatLongDes || oExisting.LongDescription));
+
+					if (!oExisting || (!bExistingHasDesc && bHasDesc)) {
+						mMatMap[sMCode] = m;
+						mMatMap[sMCodeTrim] = m;
+						if (sMCode.length < 18) {
+							mMatMap[sMCodePad] = m;
+						}
+					}
+				}
+				if (m.OldMaterialRef) {
+					var sHex = String(m.OldMaterialRef).trim();
+					var oExistingHex = mMatMap[sHex];
+					var bExistingHexHasDesc = !!(oExistingHex && (oExistingHex.MatLongDes || oExistingHex.LongDescription));
+					var bHasDescHex = !!(m.MatLongDes || m.LongDescription);
+					if (!oExistingHex || (!bExistingHexHasDesc && bHasDescHex)) {
+						mMatMap[sHex] = m;
+					}
+				}
+			});
 
 			var aRows = [];
 			aObjects.forEach(function (o) {
@@ -890,8 +1198,10 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 						"Req Type": o.RequestType || "",
 						"Item": "",
 						"Location": "",
+						"Hexagon Code": "",
 						"Mp2ItemCode": "",
 						"Description": "",
+						"Long Description": "",
 						"DefaultBin": "",
 						"QTY Issued": "",
 						"Qty Received": "",
@@ -910,14 +1220,32 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 					});
 				} else {
 					aItems.forEach(function (item) {
+						var sMatKey = String(item.ItemCode || item.Material || "").trim();
+						var sHexKey = String(item.OldMaterialRef || item.HexagonCode || "").trim();
+						var oMat = mMatMap[sMatKey] || mMatMap[sMatKey.replace(/^0+/, "")] || mMatMap[sMatKey.padStart(18, "0")] || (sHexKey ? mMatMap[sHexKey] : null) || {};
+						var sHexCode = item.OldMaterialRef || item.HexagonCode || oMat.OldMaterialRef || "";
+						var sRawLongDesc = (oMat && (oMat.MatLongDes || oMat.LongDescription)) || item.MatLongDes || item.LongDescription || "";
+						var sLongDesc = sRawLongDesc ? String(sRawLongDesc).replace(/<\(><<\)>!-- RICH TEXT -->/gi, "").replace(/<[^>]*>/g, "").trim() : "";
+						var sDesc = item.ItemDescription || (oMat ? oMat.MaterialName : "") || "";
+
+						console.warn("=== EXCEL ITEM LONG DESCRIPTION ===", {
+							IRGPNo: o.IRGPNo,
+							ItemCode: item.ItemCode,
+							RawLongDescFromBackend: sRawLongDesc,
+							CleanedLongDesc: sLongDesc,
+							MatchedMaterialMaster: oMat
+						});
+
 						aRows.push({
 							"IRGP No": o.IRGPNo || "",
 							"Req Date": o.GEDate || "",
 							"Req Type": o.RequestType || "",
 							"Item": item.ItemCode || "",
 							"Location": item.Location || "",
+							"Hexagon Code": sHexCode,
 							"Mp2ItemCode": item.Mp2ItemCode || "",
-							"Description": item.ItemDescription || "",
+							"Description": sDesc,
+							"Long Description": sLongDesc,
 							"DefaultBin": item.DefaultBin || "",
 							"QTY Issued": item.SentQuantity || "0",
 							"Qty Received": item.RecievedQuantity || "0",
@@ -937,7 +1265,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 					});
 				}
 			});
-
+            
 			var sTabKey = this.byId("idIRGPIconTabBar").getSelectedKey();
 			var aParts = ["IRGP"];
 			if (sTabKey && sTabKey !== "ALL") { aParts.push(sTabKey.replace(/\s+/g, "_")); }
@@ -945,8 +1273,8 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			if (dTo) { aParts.push("to_" + ExcelExport.fmtDate(dTo)); }
 			var sFileName = aParts.join("_") + ".xlsx";
 			var sSheetName = aParts.join(" ");
-			ExcelExport.download(aRows, sSheetName, sFileName, 14);
-		},
+			ExcelExport.download(aRows, sSheetName, sFileName, 24);
+		},  
 
 		onFilterIRGPList: function () {
 			this._applyTableFilters();
@@ -1233,44 +1561,218 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 				SNo: aItems.length + 1,
 				ItemCode: "", ItemDescription: "",
 				SentQuantity: "", RecievedQuantity: "0", BalanceQuantity: "0",
-				UOM: "", MRNumber: "", Location: "", OldMaterialRef: "", Mp2ItemCode: "", DefaultBin: ""
+				UOM: "", MRNumber: "", Location: "", OldMaterialRef: "", HSNCode: "", Mp2ItemCode: "", DefaultBin: ""
 			});
 			oModel.setProperty("/items", aItems);
 			oModel.setProperty("/ui/hasPendingChanges", true);
 			MessageToast.show("Row added.");
 		},
 
-		_loadMaterials: function () {
-			var oMaterialsModel = new JSONModel({ results: [] });
-			this.getView().setModel(oMaterialsModel, "materials");
+		_ensureMaterials: function (aObjects) {
+			var that = this;
+			return new Promise(function (resolve) {
+				var oODataModel = that.getOwnerComponent().getModel();
+				if (!oODataModel) {
+					return resolve([]);
+				}
+
+				var oMaterialsModel = that.getView().getModel("materials");
+				if (!oMaterialsModel) {
+					oMaterialsModel = new JSONModel({ results: [] });
+					oMaterialsModel.setSizeLimit(100000);
+					that.getView().setModel(oMaterialsModel, "materials");
+				}
+
+				var aCurrentList = oMaterialsModel.getProperty("/results") || [];
+				var mExisting = {};
+				aCurrentList.forEach(function (m) {
+					if (m.Material) {
+						var sM = String(m.Material).trim();
+						mExisting[sM] = m;
+						mExisting[sM.replace(/^0+/, "")] = m;
+					}
+					if (m.OldMaterialRef) {
+						mExisting[String(m.OldMaterialRef).trim()] = m;
+					}
+				});
+
+				// Collect unique material codes from aObjects that need MatLongDes
+				var aNeededCodes = [];
+				(aObjects || []).forEach(function (o) {
+					(o.items || []).forEach(function (it) {
+						var c = (it.ItemCode || it.Material || "").trim();
+						if (c) {
+							var cTrim = c.replace(/^0+/, "");
+							var oFound = mExisting[c] || mExisting[cTrim];
+							if (!oFound || !oFound.MatLongDes) {
+								if (aNeededCodes.indexOf(c) === -1) {
+									aNeededCodes.push(c);
+								}
+								if (cTrim && aNeededCodes.indexOf(cTrim) === -1) {
+									aNeededCodes.push(cTrim);
+								}
+							}
+						}
+					});
+				});
+
+				// If all materials are already in memory with MatLongDes, resolve immediately
+				if (aNeededCodes.length === 0 && aCurrentList.length > 0) {
+					return resolve(aCurrentList);
+				}
+
+				var aUniqueCodes = [];
+				aNeededCodes.forEach(function (c) {
+					if (aUniqueCodes.indexOf(c) === -1) { aUniqueCodes.push(c); }
+				});
+
+				var fnProcessMaterialItem = function (m) {
+					var sOldMat = m.OldMaterialRef || m.Bismt || m.BISMT || m.OldMatnr || m.OldMaterialCode || m.HexagonCode || "";
+					var sHsn = m.HSNCode || m.HsnCode || m.ControlCode || m.Steuc || "";
+					var sHsnDesc = m.HSNDesc || m.HsnDesc || "";
+					var sRawLongDes = m.MatLongDes || m.matLongDes || m.Matlongdes || "";
+					var sMatLongDes = sRawLongDes ? String(sRawLongDes).replace(/<\(><<\)>!-- RICH TEXT -->/gi, "").replace(/<[^>]*>/g, "").trim() : "";
+					return {
+						Material: m.Material || m.Matnr || "",
+						MaterialName: m.MaterialDesc || m.MaterialDescription || m.Arktx || m.MaterialName || m.Maktx || "",
+						MatLongDes: sMatLongDes,
+						LongDescription: sMatLongDes,
+						UOM: m.UOM || m.Meins || "",
+						Location: m.Location || m.Lgort || m.StorageLocation || "",
+						OldMaterialRef: sOldMat,
+						HSNCode: sHsn,
+						HsnCode: sHsn,
+						HSNDesc: sHsnDesc,
+						HsnDesc: sHsnDesc,
+						Mp2ItemCode: m.MP2ItemCode || m.Mp2ItemCode || m.Mp2ItmCode || m.Mp2itemcode || "",
+						DefaultBin: m.DefaultBin || m.Bin || m.Lgpla || m.Defaultbin || ""
+					};
+				};
+
+				var fnFetchSingleMaterial = function (sCode) {
+					return new Promise(function (res) {
+						var sActivePlant = that.getUserPlant() || "2301";
+						var aF = [
+							new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sActivePlant),
+							new sap.ui.model.Filter("Material", sap.ui.model.FilterOperator.EQ, sCode)
+						];
+						oODataModel.read("/ZMaterialSet", {
+							filters: aF,
+							success: function (oData) {
+								var aResults = oData.results || [];
+								console.warn("Fetched single material from OData for:", sCode, aResults);
+								if (aResults.length > 0) {
+									return res(aResults.map(fnProcessMaterialItem));
+								}
+								if (sCode.length < 18) {
+									var aFPadded = [
+										new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sActivePlant),
+										new sap.ui.model.Filter("Material", sap.ui.model.FilterOperator.EQ, sCode.padStart(18, "0"))
+									];
+									oODataModel.read("/ZMaterialSet", {
+										filters: aFPadded,
+										success: function (oDataPadded) {
+											var aResultsPadded = oDataPadded.results || [];
+											console.warn("Fetched padded material from OData for:", sCode, aResultsPadded);
+											res(aResultsPadded.map(fnProcessMaterialItem));
+										},
+										error: function (err) {
+											console.warn("Error fetching padded material for:", sCode, err);
+											res([]);
+										}
+									});
+								} else {
+									res([]);
+								}
+							},
+							error: function (err) {
+								console.warn("Error fetching single material for:", sCode, err);
+								res([]);
+							}
+						});
+					});
+				};
+
+				Promise.all(aUniqueCodes.map(fnFetchSingleMaterial)).then(function (aArrays) {
+					aArrays.forEach(function (arr) {
+						arr.forEach(function (item) {
+							var sKey = String(item.Material).trim();
+							var sKeyTrim = sKey.replace(/^0+/, "");
+							var bFound = false;
+							aCurrentList.forEach(function (c) {
+								var cKey = String(c.Material).trim();
+								if (cKey === sKey || cKey.replace(/^0+/, "") === sKeyTrim) {
+									bFound = true;
+									if (item.MatLongDes) {
+										c.MatLongDes = item.MatLongDes;
+										c.LongDescription = item.LongDescription;
+									}
+								}
+							});
+							if (!bFound) {
+								aCurrentList.push(item);
+							}
+						});
+					});
+
+					oMaterialsModel.setProperty("/results", aCurrentList);
+					resolve(aCurrentList);
+				});
+			});
+		},
+
+		_loadMaterials: function (fnCallback) {
+			var oMaterialsModel = this.getView().getModel("materials");
+			if (!oMaterialsModel) {
+				oMaterialsModel = new JSONModel({ results: [] });
+				oMaterialsModel.setSizeLimit(100000);
+				this.getView().setModel(oMaterialsModel, "materials");
+			} else {
+				oMaterialsModel.setSizeLimit(100000);
+			}
 
 			var oODataModel = this.getOwnerComponent().getModel();
-			if (!oODataModel) { return; }
+			if (!oODataModel) {
+				if (typeof fnCallback === "function") { fnCallback([]); }
+				return;
+			}
 
-			var oUserModel = sap.ui.getCore().getModel("user");
-			var sPlant = oUserModel ? (oUserModel.getProperty("/plant") || oUserModel.getProperty("/Plant") || "") : "";
-			if (!sPlant) { return; }
+			var sPlant = this.getUserPlant() || "2301";
 
-			var aFilters = [new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sPlant)];
+			var aFilters = sPlant ? [new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sPlant)] : [];
 
 			var that = this;
 			oODataModel.read("/ZMaterialSet", {
 				filters: aFilters,
 				success: function (oData) {
 					var aNormalized = (oData.results || []).map(function (m) {
+						var sOldMat = m.OldMaterialRef || m.Bismt || m.BISMT || m.OldMatnr || m.OldMaterialCode || m.HexagonCode || "";
+						var sHsn = m.HSNCode || m.HsnCode || m.ControlCode || m.Steuc || "";
+						var sHsnDesc = m.HSNDesc || m.HsnDesc || "";
+						var sRawLongDes = m.MatLongDes || m.matLongDes || m.Matlongdes || "";
+						var sMatLongDes = sRawLongDes ? String(sRawLongDes).replace(/<\(><<\)>!-- RICH TEXT -->/gi, "").replace(/<[^>]*>/g, "").trim() : "";
 						return {
 							Material: m.Material || m.Matnr || "",
 							MaterialName: m.MaterialDesc || m.MaterialDescription || m.Arktx || m.MaterialName || m.Maktx || "",
+							MatLongDes: sMatLongDes,
+							LongDescription: sMatLongDes,
 							UOM: m.UOM || m.Meins || "",
 							Location: m.Location || m.Lgort || m.StorageLocation || "",
-							OldMaterialRef: m.OldMaterialRef || "",
+							OldMaterialRef: sOldMat,
+							HSNCode: sHsn,
+							HsnCode: sHsn,
+							HSNDesc: sHsnDesc,
+							HsnDesc: sHsnDesc,
 							Mp2ItemCode: m.MP2ItemCode || m.Mp2ItemCode || m.Mp2ItmCode || m.Mp2itemcode || "",
 							DefaultBin: m.DefaultBin || m.Bin || m.Lgpla || m.Defaultbin || ""
 						};
 					});
 					oMaterialsModel.setProperty("/results", aNormalized);
+					if (typeof fnCallback === "function") { fnCallback(aNormalized); }
 				},
-				error: function () {}
+				error: function () {
+					if (typeof fnCallback === "function") { fnCallback([]); }
+				}
 			});
 		},
 
@@ -1319,11 +1821,27 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 
 			oModel.setProperty(sPath + "/ItemCode", oSelectedMaterial.Material);
 			oModel.setProperty(sPath + "/ItemDescription", oSelectedMaterial.MaterialName);
+			oModel.setProperty(sPath + "/MatLongDes", oSelectedMaterial.MatLongDes || oSelectedMaterial.LongDescription || "");
+			oModel.setProperty(sPath + "/LongDescription", oSelectedMaterial.LongDescription || oSelectedMaterial.MatLongDes || "");
 			oModel.setProperty(sPath + "/UOM", oSelectedMaterial.UOM);
 			oModel.setProperty(sPath + "/Location", oSelectedMaterial.Location || "");
 			oModel.setProperty(sPath + "/OldMaterialRef", oSelectedMaterial.OldMaterialRef || "");
+			oModel.setProperty(sPath + "/HSNCode", oSelectedMaterial.HSNCode || "");
 			oModel.setProperty(sPath + "/Mp2ItemCode", oSelectedMaterial.Mp2ItemCode || "");
 			oModel.setProperty(sPath + "/DefaultBin", oSelectedMaterial.DefaultBin || "");
+		},
+
+		onToolDescriptionChange: function (oEvent) {
+			var oInput = oEvent.getSource();
+			var sVal = (oInput.getValue() || "").trim();
+			var oRowCtx = oInput.getBindingContext("irgp");
+			if (!oRowCtx) return;
+
+			var oModel = this.getView().getModel("irgp");
+			var sPath = oRowCtx.getPath();
+			oModel.setProperty(sPath + "/ItemDescription", sVal);
+			oModel.setProperty(sPath + "/ItemCode", sVal);
+			oModel.setProperty("/ui/hasPendingChanges", true);
 		},
 
 		onItemCodeChange: function (oEvent) {
@@ -1334,12 +1852,19 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 
 			var oModel = this.getView().getModel("irgp");
 			var sPath = oRowCtx.getPath();
+			var sReqType = oModel.getProperty("/header/RequestType");
+			if (sReqType === "Tools") {
+				oModel.setProperty(sPath + "/ItemDescription", sVal);
+				oModel.setProperty(sPath + "/ItemCode", sVal);
+				return;
+			}
 
 			if (!sVal) {
 				oModel.setProperty(sPath + "/ItemDescription", "");
 				oModel.setProperty(sPath + "/UOM", "");
 				oModel.setProperty(sPath + "/Location", "");
 				oModel.setProperty(sPath + "/OldMaterialRef", "");
+				oModel.setProperty(sPath + "/HSNCode", "");
 				oModel.setProperty(sPath + "/Mp2ItemCode", "");
 				oModel.setProperty(sPath + "/DefaultBin", "");
 				return;
@@ -1354,22 +1879,108 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			if (oFound) {
 				oModel.setProperty(sPath + "/ItemCode", oFound.Material);
 				oModel.setProperty(sPath + "/ItemDescription", oFound.MaterialName);
+				oModel.setProperty(sPath + "/MatLongDes", oFound.MatLongDes || oFound.LongDescription || "");
+				oModel.setProperty(sPath + "/LongDescription", oFound.LongDescription || oFound.MatLongDes || "");
 				oModel.setProperty(sPath + "/UOM", oFound.UOM);
 				oModel.setProperty(sPath + "/Location", oFound.Location || "");
 				oModel.setProperty(sPath + "/OldMaterialRef", oFound.OldMaterialRef || "");
+				oModel.setProperty(sPath + "/HSNCode", oFound.HSNCode || "");
 				oModel.setProperty(sPath + "/Mp2ItemCode", oFound.Mp2ItemCode || "");
 				oModel.setProperty(sPath + "/DefaultBin", oFound.DefaultBin || "");
 			} else {
 				oModel.setProperty(sPath + "/ItemDescription", "");
+				oModel.setProperty(sPath + "/MatLongDes", "");
+				oModel.setProperty(sPath + "/LongDescription", "");
 				oModel.setProperty(sPath + "/UOM", "");
 				oModel.setProperty(sPath + "/Location", "");
 				oModel.setProperty(sPath + "/OldMaterialRef", "");
+				oModel.setProperty(sPath + "/HSNCode", "");
 				oModel.setProperty(sPath + "/Mp2ItemCode", "");
 				oModel.setProperty(sPath + "/DefaultBin", "");
 			}
 		},
 
 		onMaterialValueHelpCancel: function () {},
+
+		onMaximoValueHelp: function (oEvent) {
+			this._oInputSource = oEvent.getSource();
+			this._oRowContext = this._oInputSource.getBindingContext("irgp");
+
+			if (!this._pMaximoValueHelp) {
+				this._pMaximoValueHelp = sap.ui.core.Fragment.load({
+					id: this.getView().getId(),
+					name: "zgpms.meilpower.com.view.fragments.MaximoValueHelp",
+					controller: this
+				}).then(function (oDialog) {
+					this.getView().addDependent(oDialog);
+					return oDialog;
+				}.bind(this));
+			}
+
+			this._pMaximoValueHelp.then(function (oDialog) {
+				oDialog.getBinding("items").filter([]);
+				oDialog.open();
+			});
+		},
+
+		onMaximoValueHelpSearch: function (oEvent) {
+			var sValue = oEvent.getParameter("value");
+			var oFilter = new sap.ui.model.Filter({
+				filters: [
+					new sap.ui.model.Filter("OldMaterialRef", sap.ui.model.FilterOperator.Contains, sValue),
+					new sap.ui.model.Filter("HSNCode", sap.ui.model.FilterOperator.Contains, sValue),
+					new sap.ui.model.Filter("MaterialName", sap.ui.model.FilterOperator.Contains, sValue),
+					new sap.ui.model.Filter("Material", sap.ui.model.FilterOperator.Contains, sValue)
+				],
+				and: false
+			});
+			oEvent.getSource().getBinding("items").filter([oFilter]);
+		},
+
+		onMaximoCodeChange: function (oEvent) {
+			var oInput = oEvent.getSource();
+			var sVal = (oInput.getValue() || "").trim();
+			var oRowCtx = oInput.getBindingContext("irgp");
+			if (!oRowCtx) return;
+
+			var oModel = this.getView().getModel("irgp");
+			var sPath = oRowCtx.getPath();
+
+			if (!sVal) {
+				oModel.setProperty(sPath + "/ItemCode", "");
+				oModel.setProperty(sPath + "/ItemDescription", "");
+				oModel.setProperty(sPath + "/MatLongDes", "");
+				oModel.setProperty(sPath + "/LongDescription", "");
+				oModel.setProperty(sPath + "/UOM", "");
+				oModel.setProperty(sPath + "/Location", "");
+				oModel.setProperty(sPath + "/OldMaterialRef", "");
+				oModel.setProperty(sPath + "/HSNCode", "");
+				oModel.setProperty(sPath + "/Mp2ItemCode", "");
+				oModel.setProperty(sPath + "/DefaultBin", "");
+				return;
+			}
+
+			var oMaterialsModel = this.getView().getModel("materials");
+			var aResults = oMaterialsModel ? (oMaterialsModel.getProperty("/results") || []) : [];
+			var oFound = aResults.find(function (m) {
+				return (m.OldMaterialRef || "").trim().toLowerCase() === sVal.toLowerCase();
+			});
+
+			if (oFound) {
+				oModel.setProperty(sPath + "/ItemCode", oFound.Material);
+				oModel.setProperty(sPath + "/ItemDescription", oFound.MaterialName);
+				oModel.setProperty(sPath + "/MatLongDes", oFound.MatLongDes || oFound.LongDescription || "");
+				oModel.setProperty(sPath + "/LongDescription", oFound.LongDescription || oFound.MatLongDes || "");
+				oModel.setProperty(sPath + "/UOM", oFound.UOM);
+				oModel.setProperty(sPath + "/Location", oFound.Location || "");
+				oModel.setProperty(sPath + "/OldMaterialRef", oFound.OldMaterialRef || sVal);
+				oModel.setProperty(sPath + "/HSNCode", oFound.HSNCode || "");
+				oModel.setProperty(sPath + "/Mp2ItemCode", oFound.Mp2ItemCode || "");
+				oModel.setProperty(sPath + "/DefaultBin", oFound.DefaultBin || "");
+			} else {
+				oModel.setProperty(sPath + "/OldMaterialRef", sVal);
+			}
+		},
 
 		onDeleteItem: function (oEvent) {
 			var oCtx   = oEvent.getSource().getBindingContext("irgp");
@@ -1437,20 +2048,48 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 				return dd + "-" + mm + "-" + yy;
 			};
 
+			// ── Old Maximo Code: backend doesn't return it on saved IRGPs, so fall
+			//    back to the loaded material master (matched by SAP item code) ──
+			var oMaterialsModel = this.getView().getModel("materials");
+			var aMaterials = (oMaterialsModel && oMaterialsModel.getProperty("/results")) || [];
+			var fnMaximoCode = function (it) {
+				if (it.OldMaterialRef) { return it.OldMaterialRef; }
+				var sCode = (it.ItemCode || "").trim();
+				var oMat = sCode && aMaterials.find(function (m) { return m.Material === sCode; });
+				return (oMat && oMat.OldMaterialRef) || "";
+			};
+
+			// ── Prepared Name = store person logged in ───────────────────────────
+			var oUserModel = sap.ui.getCore().getModel("user");
+			var sPreparedName = oUserModel
+				? (oUserModel.getProperty("/fullName") || oUserModel.getProperty("/id") || oUserModel.getProperty("/User") || "")
+				: "";
+
+			var bIsTools = (oHeader.RequestType === "Tools") ||
+				(oHeader.RequestType && oHeader.RequestType.toUpperCase().indexOf("TOOL") !== -1);
+
 			// ── Build items rows (pad to at least 5) ─────────────────────────────
 			var tableData = (aItems || []).map(function (it, i) {
+				var bItemIsTool = bIsTools || (!it.ItemDescription && it.ItemCode && isNaN(it.ItemCode));
+				var sItemCode = bItemIsTool ? "" : (it.ItemCode || "");
+				var sDesc = bItemIsTool ? (it.ItemDescription || it.ItemCode || "") : (it.ItemDescription || "");
+				var sMaximo = bItemIsTool ? "" : fnMaximoCode(it);
+				var sLoc = it.Location || "";
+				var sMp2 = it.Mp2ItemCode || "";
+				var sBin = it.DefaultBin || "";
 				return [
 					i + 1,
-					it.ItemCode        || "",
-					it.Location        || "",
-					it.Mp2ItemCode     || "",
-					it.ItemDescription || "",
+					sItemCode,
+					sMaximo,
+					sLoc,
+					sMp2,
+					sDesc,
 					parseFloat(it.SentQuantity || 0).toFixed(2),
 					it.UOM             || "",
-					it.DefaultBin      || ""
+					sBin
 				];
 			});
-			while (tableData.length < 5) { tableData.push(["", "", "", "", "", "", "", ""]); }
+			while (tableData.length < 5) { tableData.push(["", "", "", "", "", "", "", "", ""]); }
 
 			// ═══════════════════════════════════════════════════════════════════
 			// didDrawPage  –  header drawn on every page
@@ -1486,32 +2125,29 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 
 				// ── Info row: left (IRGP No + tagline) / right (Req Dept / GP Date / Due Date) ──
 				y += 7;
-				var rightLabelX = pageWidth - margin - 56;
+				var rightLabelX = pageWidth - margin - 62;
 				var rightValueX = pageWidth - margin - 2;
 
-				// IRGP No – bold
-				doc.setFont("helvetica", "bold"); doc.setFontSize(9.5);
+				// IRGP No – bold & increased size
+				doc.setFont("helvetica", "bold"); doc.setFontSize(11.5);
 				doc.text("IRGP No: " + (oHeader.IRGPNo || ""), margin, y);
-				// Tagline below
-				doc.setFont("helvetica", "normal"); doc.setFontSize(8);
-				doc.text("To take out the following material", margin, y + 5);
+				// Tagline below – bold & increased size
+				doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+				doc.text("To take out the following material", margin, y + 5.5);
 
-				// Right: Req Dept
-				doc.setFont("helvetica", "bold"); doc.setFontSize(8.5);
+				// Right: Req Dept – bold & increased size
+				doc.setFont("helvetica", "bold"); doc.setFontSize(10);
 				doc.text("Req Dept:", rightLabelX, y);
-				doc.setFont("helvetica", "normal");
 				doc.text(oHeader.Department || "", rightValueX, y, { align: "right" });
 
-				// GP Date
-				doc.setFont("helvetica", "bold");
+				// GP Date – bold & increased size
+				doc.setFont("helvetica", "bold"); doc.setFontSize(10);
 				doc.text("GP Date:", rightLabelX, y + 5);
-				doc.setFont("helvetica", "normal");
 				doc.text(fmtDate(oHeader.GEDate), rightValueX, y + 5, { align: "right" });
 
-				// Due Date
-				doc.setFont("helvetica", "bold");
+				// Due Date – bold & increased size
+				doc.setFont("helvetica", "bold"); doc.setFontSize(10);
 				doc.text("Due Date:", rightLabelX, y + 10);
-				doc.setFont("helvetica", "normal");
 				doc.text(fmtDate(oHeader.DueDate), rightValueX, y + 10, { align: "right" });
 			};
 
@@ -1521,7 +2157,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			// ── Draw the items table ─────────────────────────────────────────────
 			doc.autoTable({
 				startY: tableStartY,
-				head: [['S.No', 'Item Code', 'Location', 'Mp2ItemCode', 'DESCRIPTION', 'QTY', 'UOM', 'DefaultBin']],
+				head: [['S.No', 'SAP Item Code', 'Maximo Code', 'Location', 'Mp2ItemCode', 'DESCRIPTION', 'QTY', 'UOM', 'DefaultBin']],
 				body: tableData,
 				theme: 'grid',
 				headStyles: {
@@ -1547,21 +2183,31 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 				alternateRowStyles: { fillColor: [255, 255, 255] },
 				columnStyles: {
 					0: { cellWidth: 12,    halign: 'center' },
-					1: { cellWidth: 34,    halign: 'left'   },
-					2: { cellWidth: 22,    halign: 'left'   },
-					3: { cellWidth: 28,    halign: 'left'   },
-					4: { cellWidth: 'auto', halign: 'left' },
-					5: { cellWidth: 16,    halign: 'center' },
-					6: { cellWidth: 18,    halign: 'left'   },
-					7: { cellWidth: 30,    halign: 'left'   }
+					1: { cellWidth: 30,    halign: 'left'   },
+					2: { cellWidth: 30,    halign: 'left'   },
+					3: { cellWidth: 20,    halign: 'left'   },
+					4: { cellWidth: 28,    halign: 'left'   },
+					5: { cellWidth: 'auto', halign: 'left' },
+					6: { cellWidth: 16,    halign: 'center' },
+					7: { cellWidth: 16,    halign: 'left'   },
+					8: { cellWidth: 28,    halign: 'left'   }
 				},
-				margin: { left: margin, right: margin },
+				margin: { top: tableStartY, left: margin, right: margin, bottom: 25 },
 				didDrawPage: function () { drawHeader(); }
 			});
 
 			// ── Remarks row (full width, below table) ────────────────────────────
 			var finalY = doc.lastAutoTable.finalY;
 			var remH   = 8;
+			var sigY   = pageHeight - 22;
+
+			// If remarks + footer info would collide with signature area, push to new page
+			if (finalY + remH + 35 > sigY) {
+				doc.addPage();
+				drawHeader();
+				finalY = tableStartY;
+			}
+
 			doc.setLineWidth(0.3);
 			doc.rect(margin, finalY, cW, remH);
 			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
@@ -1573,34 +2219,30 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			doc.text(sRem, margin + 23, finalY + 5.5);
 
 			// ── Footer info block ────────────────────────────────────────────────
-			var footY = finalY + remH + 10;
+			var footY = finalY + remH + 8;
 			var halfW = cW / 2;
 
-			// Left: Prepared Name
-			doc.setFont("helvetica", "bold"); doc.setFontSize(8.5);
+			// Left: Prepared Name – bold
+			doc.setFont("helvetica", "bold"); doc.setFontSize(9);
 			doc.text("Prepared Name:", margin, footY);
-			doc.setFont("helvetica", "normal");
-			doc.text(oHeader.RequestUser || "", margin + 32, footY);
+			doc.text(sPreparedName, margin + 35, footY);
 
-			// Right: Req Name
-			doc.setFont("helvetica", "bold");
+			// Right: Req Name – bold
+			doc.setFont("helvetica", "bold"); doc.setFontSize(9);
 			doc.text("Req Name:", margin + halfW, footY);
-			doc.setFont("helvetica", "normal");
-			doc.text(oHeader.RequestUser || "", margin + halfW + 22, footY);
+			doc.text(oHeader.RequestUser || "", margin + halfW + 24, footY);
 
-			// Left: Contract Name
-			doc.setFont("helvetica", "bold"); doc.setFontSize(8.5);
+			// Left: Contract Name – bold
+			doc.setFont("helvetica", "bold"); doc.setFontSize(9);
 			doc.text("Contract Name:", margin, footY + 8);
-			doc.setFont("helvetica", "normal");
-			var sContract = doc.splitTextToSize(oHeader.ContractName || "", halfW - 34);
-			doc.text(sContract, margin + 32, footY + 8);
+			var sContract = doc.splitTextToSize(oHeader.ContractName || "", halfW - 37);
+			doc.text(sContract, margin + 35, footY + 8);
 
-			// Right: Contract/Employee Name
-			doc.setFont("helvetica", "bold");
+			// Right: Contract/Employee Name – bold
+			doc.setFont("helvetica", "bold"); doc.setFontSize(9);
 			doc.text("Contract/Employee Name:", margin + halfW, footY + 8);
-			doc.setFont("helvetica", "normal");
-			var sEmpName = doc.splitTextToSize(oHeader.ContractEmployeeName || "", halfW - 46);
-			doc.text(sEmpName, margin + halfW + 46, footY + 8);
+			var sEmpName = doc.splitTextToSize(oHeader.ContractEmployeeName || "", halfW - 53);
+			doc.text(sEmpName, margin + halfW + 51, footY + 8);
 
 			// ── Signature area ───────────────────────────────────────────────────
 			var sigY = pageHeight - 22;
@@ -1686,6 +2328,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			var oDoc = aDocs.find(function (d) { return d.IRGPNo === sIRGPNo; });
 			if (oDoc) {
 				oDoc.StatusCode = sNewStatusCode;
+				oDoc.StatusDisplay = sNewStatusCode === "CLOSED" ? "CLOSED" : "OPEN";
 				oGlobalModel.setProperty("/documents", aDocs);
 			}
 		},
@@ -1839,8 +2482,14 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			var oODataModel = this.getOwnerComponent().getModel();
 			if (!oODataModel) { return; }
 
+			var oIrgpModel = this.getView().getModel("irgp");
+			var sPlant = (oIrgpModel && oIrgpModel.getProperty("/header/Plant")) || this.getUserPlant() || "3121";
+			var aFilters = sPlant ? [new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sPlant)] : [];
+
 			var that = this;
+			console.log("[IRGP] Loading departments for Plant:", sPlant);
 			oODataModel.read("/zdepartmentSet", {
+				filters: aFilters,
 				success: function (oData) {
 					var aNormalized = (oData.results || []).map(function (d) {
 						var sKey = d.Kostl || d.Department || d.Dept || d.Id || d.Code || d.Zdept || "";
@@ -1871,6 +2520,50 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			});
 		},
 
+		_loadUsersForDepartment: function (sDepartment) {
+			if (!sDepartment) { return; }
+			var oModel = this.getView().getModel("irgp");
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) { return; }
+
+			oODataModel.read("/zdepartuserSet", {
+				filters: [new sap.ui.model.Filter("department", sap.ui.model.FilterOperator.EQ, sDepartment)],
+				success: function (oData) {
+					var aUsers = (oData.results || []).map(function (u) {
+						var sId = u.userid || u.Userid || u.UserId || u.Bname || "";
+						var sName = u.username || u.Username || u.NameText || u.Name || sId;
+						return {
+							key: sId,
+							text: sId && sName && sId !== sName ? sId + " - " + sName : sName
+						};
+					});
+					if (oModel) {
+						oModel.setProperty("/dropdowns/users", aUsers);
+					}
+				},
+				error: function () {
+					if (oModel) {
+						oModel.setProperty("/dropdowns/users", []);
+					}
+				}
+			});
+		},
+
+		onDepartmentChange: function (oEvent) {
+			var oComboBox = oEvent.getSource();
+			var sDepartment = oComboBox.getSelectedKey() || oComboBox.getValue();
+			var oModel = this.getView().getModel("irgp");
+			
+			console.log("Department changed to:", sDepartment);
+
+			if (!sDepartment) {
+				if (oModel) { oModel.setProperty("/dropdowns/users", []); }
+				return;
+			}
+
+			this._loadUsersForDepartment(sDepartment);
+		},
+
 		_mapUOMToDropdownKey: function (sUom) {
 			if (!sUom) return "";
 			var sClean = sUom.trim().toUpperCase();
@@ -1883,7 +2576,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			if (sClean === "M" || sClean === "MTR" || sClean === "METERS" || sClean === "METER") {
 				return "Meters";
 			}
-			if (sClean === "MT" || sClean === "TON" || sClean === "TONS" || sClean === "METRIC TONS") {
+			if (sClean === "MT" || sClean === "TON" || sClean === "TONS" || sClean === "METRIC TONS" || sClean === "TO") {
 				return "Metric Tons";
 			}
 			if (sClean === "FT" || sClean === "FEET") {
@@ -1891,6 +2584,18 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			}
 			if (sClean === "L" || sClean === "LTR" || sClean === "LITRE" || sClean === "LITRES") {
 				return "Litre";
+			}
+			if (sClean === "M3" || sClean === "CBM" || sClean === "CUBIC METER") {
+				return "Cubic Meter";
+			}
+			if (sClean === "FT3" || sClean === "CFT" || sClean === "CUBIC FEET") {
+				return "Cubic Feet";
+			}
+			if (sClean === "M2" || sClean === "SQM" || sClean === "SQUARE METER") {
+				return "Square Meter";
+			}
+			if (sClean === "FT2" || sClean === "SQFT" || sClean === "SQUARE FEET") {
+				return "Square Feet";
 			}
 			if (sClean === "SET" || sClean === "SETS") {
 				return "Set";
@@ -1904,7 +2609,146 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 			if (sClean === "BAG" || sClean === "BAGS") {
 				return "Bag";
 			}
+			if (sClean === "CAN" || sClean === "CANS") {
+				return "Can";
+			}
+			if (sClean === "CAR" || sClean === "CARTON") {
+				return "Carton";
+			}
+			if (sClean === "DR" || sClean === "DRUM") {
+				return "Drum";
+			}
+			if (sClean === "PR" || sClean === "PAIR") {
+				return "Pair";
+			}
+			if (sClean === "UNT" || sClean === "UNIT") {
+				return "Unit";
+			}
 			return sUom.charAt(0).toUpperCase() + sUom.slice(1).toLowerCase();
+		},
+
+		_toSAPUOM: function (sUom) {
+			if (!sUom) return "";
+			var sClean = String(sUom).trim().toUpperCase();
+			var mMap = {
+				"CUBIC METER": "M3",
+				"CBM":         "M3",
+				"M3":          "M3",
+				"CUBIC FEET":  "FT3",
+				"CFT":         "FT3",
+				"FT3":         "FT3",
+				"SQUARE METER":"M2",
+				"SQM":         "M2",
+				"M2":          "M2",
+				"SQUARE FEET": "FT2",
+				"SQFT":        "FT2",
+				"FT2":         "FT2",
+				"KILOGRAM":    "KG",
+				"KGS":         "KG",
+				"KG":          "KG",
+				"METERS":      "M",
+				"METER":       "M",
+				"MTR":         "M",
+				"M":           "M",
+				"METRIC TONS": "TO",
+				"TONS":        "TO",
+				"TON":         "TO",
+				"MT":          "TO",
+				"TO":          "TO",
+				"NUMBER":      "NO",
+				"NUMBERS":     "NO",
+				"NUM":         "NO",
+				"NOS":         "NO",
+				"NO":          "NO",
+				"EA":          "EA",
+				"PC":          "PC",
+				"ST":          "ST",
+				"LITRE":       "L",
+				"LITRES":      "L",
+				"LTR":         "L",
+				"L":           "L",
+				"FEET":        "FT",
+				"FOOT":        "FT",
+				"FT":          "FT",
+				"ROLL":        "ROL",
+				"ROLLS":       "ROL",
+				"ROL":         "ROL",
+				"BARREL":      "BBL",
+				"BARRELS":     "BBL",
+				"BBL":         "BBL",
+				"BOTTLE":      "BOT",
+				"BOTTLES":     "BOT",
+				"BOT":         "BOT",
+				"BUNDLE":      "BDL",
+				"BUNDLES":     "BDL",
+				"BDL":         "BDL",
+				"CAN":         "CAN",
+				"CANS":        "CAN",
+				"CARTON":      "CAR",
+				"CARTONS":     "CAR",
+				"CAR":         "CAR",
+				"CARTRIDGE":   "CTG",
+				"CARTRIDGES":  "CTG",
+				"CTG":         "CTG",
+				"COIL":        "COI",
+				"COILS":       "COI",
+				"COI":         "COI",
+				"CYLINDER":    "CYL",
+				"CYLINDERS":   "CYL",
+				"CYL":         "CYL",
+				"DRUM":        "DR",
+				"DRUMS":       "DR",
+				"DR":          "DR",
+				"LENGTH":      "LEN",
+				"LENGTHS":     "LEN",
+				"LEN":         "LEN",
+				"LOAD":        "LOD",
+				"LOADS":       "LOD",
+				"LOD":         "LOD",
+				"LOT":         "LOT",
+				"LOTS":        "LOT",
+				"MONTH":       "MON",
+				"MONTHS":      "MON",
+				"MON":         "MON",
+				"PAIR":        "PR",
+				"PAIRS":       "PR",
+				"PR":          "PR",
+				"SHEET":       "SHT",
+				"SHEETS":      "SHT",
+				"SHT":         "SHT",
+				"ITEM":        "ITM",
+				"ITEMS":       "ITM",
+				"ITM":         "ITM",
+				"PACK":        "PAC",
+				"PACKS":       "PAC",
+				"PAC":         "PAC",
+				"DAYS":        "DAY",
+				"DAY":         "DAY",
+				"POCKET":      "PKT",
+				"POCKETS":     "PKT",
+				"PKT":         "PKT",
+				"REAM":        "REM",
+				"REAMS":       "REM",
+				"REM":         "REM",
+				"UNIT":        "UNT",
+				"UNITS":       "UNT",
+				"UNT":         "UNT",
+				"AMPS":        "AMP",
+				"AMP":         "AMP",
+				"BOX":         "BOX",
+				"BOXES":       "BOX",
+				"BAG":         "BAG",
+				"BAGS":        "BAG",
+				"SET":         "SET",
+				"SETS":        "SET"
+			};
+			if (mMap[sClean]) {
+				return mMap[sClean];
+			}
+			if (sClean.length <= 3) {
+				return sClean;
+			}
+			return sClean.substring(0, 3);
 		},
 
 		onSort: function () {
@@ -1918,9 +2762,10 @@ sap.ui.define(["sap/ui/core/mvc/Controller",
 				{ key: "Department", text: "Req Dept" },
 				{ key: "ContractName", text: "Contract Name" },
 				{ key: "ContractEmployeeName", text: "Contract Employee Name" },
-				{ key: "StatusCode", text: "Status" }
+				{ key: "StatusDisplay", text: "Status" }
 			]);
 		}
 
 	});
 });
+

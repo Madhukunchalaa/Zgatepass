@@ -35,9 +35,10 @@ sap.ui.define([
 					sap.ui.core.BusyIndicator.hide();
 					// AshHdrSet holds both requests and generated gate passes —
 					// this list shows only rows that went through the request flow.
-					var aRequests = (oData.results || []).filter(function (r) {
+					var aRaw = (oData.results || []).filter(function (r) {
 						return (r.GatePassReqNo || "").trim() !== "";
 					});
+					var aRequests = that.filterResultsByPlant(aRaw);
 					that.getView().setModel(new JSONModel({ results: aRequests }), "ashReqList");
 					that._applyFilters();
 				},
@@ -144,10 +145,19 @@ sap.ui.define([
 						if (vDate instanceof Date) {
 							dVal = vDate;
 						} else if (typeof vDate === "string") {
-							if (vDate.length === 8) {
-								dVal = new Date(parseInt(vDate.substr(0, 4)), parseInt(vDate.substr(4, 2), 10) - 1, parseInt(vDate.substr(6, 2)));
+							if (vDate.length === 8 && /^\d{8}$/.test(vDate)) {
+								dVal = new Date(parseInt(vDate.substr(0, 4), 10), parseInt(vDate.substr(4, 2), 10) - 1, parseInt(vDate.substr(6, 2), 10));
 							} else {
-								dVal = new Date(vDate);
+								var p = vDate.split("-");
+								if (p.length === 3) {
+									var MONTHS_MAP = { JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11 };
+									var mIdx = isNaN(p[1]) ? MONTHS_MAP[p[1].toUpperCase()] : (parseInt(p[1], 10) - 1);
+									dVal = p[0].length === 4
+										? new Date(parseInt(p[0], 10), mIdx, parseInt(p[2], 10))
+										: new Date(parseInt(p[2], 10), mIdx, parseInt(p[0], 10));
+								} else {
+									dVal = new Date(vDate);
+								}
 							}
 						}
 						if (!dVal || isNaN(dVal.getTime())) return false;
@@ -326,22 +336,7 @@ sap.ui.define([
 		},
 
 		formatDate: function (vDate) {
-			if (!vDate) return "";
-			if (vDate instanceof Date) {
-				return vDate.toLocaleDateString('en-GB');
-			}
-			if (typeof vDate === "string") {
-				if (vDate.length === 8 && !vDate.includes("-")) {
-					return vDate.substr(6, 2) + "/" + vDate.substr(4, 2) + "/" + vDate.substr(0, 4);
-				}
-				if (vDate.includes("-")) {
-					var parts = vDate.split("-");
-					if (parts.length === 3) {
-						return parts[2] + "/" + parts[1] + "/" + parts[0];
-					}
-				}
-			}
-			return vDate;
+			return this._formatDate(vDate);
 		},
 
 		onSort: function () {

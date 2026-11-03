@@ -271,7 +271,7 @@
 								<cells>
 									<Input value="{gpo>ItemDescription}" placeholder="Item Description" class="gpmsTableInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
 									<Input value="{gpo>RecievedQuantity}" placeholder="0.00" type="Number" textAlign="Right" class="gpmsTableInput" editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }"/>
-									<ComboBox selectedKey="{gpo>UOM}" items="{gpo>/dropdowns/uoms}" class="gpmsTableInput" width="100%"
+									<ComboBox value="{gpo>UOM}" selectedKey="{gpo>UOM}" items="{gpo>/dropdowns/uoms}" class="gpmsTableInput" width="100%"
 										editable="{= !${gpo>/isExisting} || ${gpo>/isEditMode} }" placeholder="UOM">
 										<core:Item key="{gpo>key}" text="{gpo>text}" />
 									</ComboBox>

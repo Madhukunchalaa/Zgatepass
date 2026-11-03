@@ -44,6 +44,13 @@ sap.ui.define([
 					String(oToday.getDate()).padStart(2, "0");
 			}
 
+			var aMappedItems = this._mapItems(oRow.PCPItmNav);
+			var fRowTotal = parseFloat(oRow.TotalCost || 0);
+			if (fRowTotal === 0 && aMappedItems.length > 0) {
+				fRowTotal = aMappedItems.reduce(function(sum, it) { return sum + parseFloat(it.TotalCost || 0); }, 0);
+			}
+			var sFinalTotal = fRowTotal > 0 ? fRowTotal.toFixed(2) : (oRow.TotalCost || "");
+
 			this.getView().getModel("pcpDetail").setData({
 				pageTitle:        sTitle,
 				editable:         bEditable,
@@ -63,10 +70,12 @@ sap.ui.define([
 				Plant:            oRow.Plant             || "",
 				BudgetCode:       oRow.BudgetCode        || "",
 				GatepassNo:       (oRow.GatepassNo       || "").trim(),
+				PCPNO:            oRow.PCPNO            || "",
+				TotalCost:        sFinalTotal,
 				Remarks:          oRow.Remarks           || "",
 				InspectionStatus: oRow.InspectionStatus  || "",
 				Inspectiondate:   this._toYMD(oRow.Inspectiondate || ""),
-				items:            this._mapItems(oRow.PCPItmNav)
+				items:            aMappedItems
 			});
 		},
 
@@ -202,6 +211,7 @@ sap.ui.define([
 					oModel.setProperty("/RRNo",        oItem.RRNo        || "");
 					oModel.setProperty("/RGPNumber",   oItem.RGPNumber   || "");
 					oModel.setProperty("/GatepassNo",  (oItem.GatepassNo || "").trim());
+					oModel.setProperty("/PCPNO",       oItem.PCPNO       || "");
 					oModel.setProperty("/GEDateRaw",   oItem.GEDate      || "");
 					oModel.setProperty("/EntryPoint",  oItem.EntryPoint  || "");
 					var sDC = that._toYMD(oItem.DCdate || "");
@@ -276,6 +286,7 @@ sap.ui.define([
 				RRNo:         oData.RRNo        || "",
 				GateEntryNo:  oData.GateEntryNo || "",
 				GatepassNo:   "",
+				PCPNO:        "",
 				PCPDate:      sPCPDateSAP,
 				DCdate:       sDCDateSAP,
 				BudgetCode:   oData.BudgetCode  || "",
@@ -308,22 +319,48 @@ sap.ui.define([
 					success: function (oResponse) {
 						sap.ui.core.BusyIndicator.hide();
 						var sGP = ((oResponse && (oResponse.GatepassNo || oResponse.Message)) || "").trim();
+						var sPCPNO = ((oResponse && oResponse.PCPNO) || "").trim();
 
-						// Lock the form — PCP is now processed / gate entry closed
 						that.getView().getModel("pcpDetail").setProperty("/GatepassNo", sGP || "GENERATED");
 						that.getView().getModel("pcpDetail").setProperty("/editable",   false);
 
-						var sMsg = sGP
-							? "PCP submitted successfully!\nGate Pass No: " + sGP + "\n\nThe Gate Entry status is now Closed."
-							: "PCP submitted successfully. Gate Entry status is now Closed.";
-
-						MessageBox.success(sMsg, {
-							title: "Success",
-							onClose: function () {
-								// Auto-print after submit
-								that.onPrint();
+						var showPopup = function(finalPCPNo) {
+							that.getView().getModel("pcpDetail").setProperty("/PCPNO", finalPCPNo);
+							var sMsg = "PCP submitted successfully!";
+							if (finalPCPNo) {
+								sMsg += "\nPCP No: " + finalPCPNo;
 							}
-						});
+							if (sGP && sGP !== finalPCPNo) {
+								sMsg += "\nGate Pass No: " + sGP;
+							}
+							sMsg += "\n\nThe Gate Entry status is now Closed.";
+
+							MessageBox.success(sMsg, {
+								title: "Success",
+								onClose: function () {
+									that.onPrint();
+								}
+							});
+						};
+
+						// Workaround: If backend didn't return PCPNO, fetch it manually using GateEntryNo
+						if (!sPCPNO && oData.GateEntryNo) {
+							oODataModel.read("/PCPHdrSet", {
+								filters: [new Filter("GateEntryNo", FilterOperator.EQ, oData.GateEntryNo)],
+								success: function (oReadData) {
+									var fetchedPCP = "";
+									if (oReadData.results && oReadData.results.length > 0) {
+										fetchedPCP = oReadData.results[0].PCPNO || "";
+									}
+									showPopup(fetchedPCP);
+								},
+								error: function () {
+									showPopup(""); // Show without PCP if fetch fails
+								}
+							});
+						} else {
+							showPopup(sPCPNO);
+						}
 					},
 					error: function (oError) {
 						sap.ui.core.BusyIndicator.hide();
@@ -361,9 +398,17 @@ sap.ui.define([
 				if (m) { return m[3] + "-" + m[2] + "-" + m[1]; }
 				return s;
 			};
+			
+			// Handle items array whether it comes from the local model (items) or direct navigation (PCPItmNav)
+			var aItems = oData.items;
+			if (!aItems || aItems.length === 0) {
+				aItems = this._mapItems(oData.PCPItmNav);
+			}
+
 			return {
 				GateEntryNo:      oData.GateEntryNo      || "",
 				GatepassNo:       oData.GatepassNo        || "",
+				PCPNO:            oData.PCPNO             || "",
 				PCPDate:          fnFmt(oData.PCPDate),
 				GEDate:           fnFmt(oData.GEDate),
 				EntryPoint:       oData.EntryPoint        || "",
@@ -372,7 +417,8 @@ sap.ui.define([
 				DCNumber:         oData.DCNumber          || "",
 				DCdate:           fnFmt(oData.DCdate),
 				BudgetCode:       oData.BudgetCode        || "",
-				items:            oData.items             || []
+				TotalCost:        oData.TotalCost         || "0.00",
+				items:            aItems
 			};
 		},
 
@@ -431,19 +477,21 @@ sap.ui.define([
 			doc.setFont("helvetica", "normal");
 			doc.text(oData.VendorDesc || "", margin + 20, y + 5);
 
-			// Middle: PCP No, PCP Date, DC/Inv No, Dept
+			// Middle: PCP No, GP No, PCP Date, DC/Inv No, Dept
 			var col2 = 85;
 			var valCol2 = col2 + 22;
 			doc.setFont("helvetica", "bold");
 			doc.text("PCP No:",     col2, y);
-			doc.text("PCP Date:",   col2, y + 6);
-			doc.text("DC/Inv No:",  col2, y + 12);
-			doc.text("Dept:",       col2, y + 18);
+			doc.text("GP No:",      col2, y + 6);
+			doc.text("PCP Date:",   col2, y + 12);
+			doc.text("DC/Inv No:",  col2, y + 18);
+			doc.text("Dept:",       col2, y + 24);
 			doc.setFont("helvetica", "normal");
-			doc.text(oData.GatepassNo || "-",     valCol2, y);
-			doc.text(oData.PCPDate    || "-",     valCol2, y + 6);
-			doc.text(oData.DCNumber   || "-",     valCol2, y + 12);
-			doc.text(oData.Department || "-",     valCol2, y + 18);
+			doc.text(oData.PCPNO      || "-",     valCol2, y);
+			doc.text(oData.GatepassNo || "-",     valCol2, y + 6);
+			doc.text(oData.PCPDate    || "-",     valCol2, y + 12);
+			doc.text(oData.DCNumber   || "-",     valCol2, y + 18);
+			doc.text(oData.Department || "-",     valCol2, y + 24);
 
 			// Right: GE No, GE Date, DC/Inv Date, Budget Code
 			var col3 = 150;
@@ -462,13 +510,17 @@ sap.ui.define([
 			// ── Items table ───────────────────────────────────────────────
 			var tableY = y + 27;
 			var aItems = oData.items || [];
+			var totalAmt = 0;
 			var tableBody = aItems.map(function (it, i) {
 				var fQty = parseFloat(it.RecievedQuantity || 0);
 				var fAmt = parseFloat(it.TotalCost || 0);
+				if (fAmt === 0 && aItems.length === 1) {
+					fAmt = parseFloat(oData.TotalCost || 0);
+				}
+				totalAmt += fAmt;
 				return [i + 1, it.ItemDescription || "", it.UOM || "", fQty.toFixed(2), fAmt.toFixed(2)];
 			});
 			if (tableBody.length === 0) { tableBody = [["", "", "", "", ""]]; }
-			var fAmt = aItems.reduce(function (sum, it) { return sum + parseFloat(it.TotalCost || 0); }, 0);
 
 			doc.autoTable({
 				startY: tableY,
@@ -495,11 +547,11 @@ sap.ui.define([
 			doc.line(margin + inWordsW + totalLabelW, finalY, margin + inWordsW + totalLabelW, finalY + footH);
 
 			doc.setFontSize(9); doc.setFont("helvetica", "normal");
-			doc.text("In Words - Rupees " + this._numberToWords(Math.round(fAmt)) + " Only.", margin + 3, finalY + 6);
+			doc.text("In Words - Rupees " + this._numberToWords(Math.round(totalAmt)) + " Only.", margin + 3, finalY + 6);
 			doc.setFont("helvetica", "bold");
 			doc.text("Total",              margin + inWordsW + 3,              finalY + 6);
 			doc.setFont("helvetica", "normal");
-			doc.text(fAmt.toFixed(2),      margin + inWordsW + totalLabelW + 3, finalY + 6);
+			doc.text(totalAmt.toFixed(2),      margin + inWordsW + totalLabelW + 3, finalY + 6);
 
 			// ── Signature ─────────────────────────────────────────────────
 			doc.text("For MEIL Neyveli Energy Private Limited", pageW - margin, finalY + 45, { align: "right" });

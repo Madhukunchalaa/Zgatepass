@@ -23,7 +23,10 @@
 						
 						<HBox class="sapUiSmallMarginTop" alignItems="Center">
 							<Button icon="sap-icon://excel-attachment" text="Download Template" press=".onDownloadTemplate" type="Ghost" class="sapUiSmallMarginEnd"/>
-							<u:FileUploader id="excelFileUploader" buttonText="Choose Excel File" fileType="xlsx,xls" change=".onExcelUpload" tooltip="Choose Excel file to import"/>
+							<u:FileUploader id="excelFileUploader" buttonText="Choose Excel File" fileType="xlsx,xls"
+							maximumFileSize="1"
+							fileSizeExceed=".onFileSizeExceed"
+							change=".onExcelUpload" tooltip="Choose Excel file to import"/>
 						</HBox>
 					</VBox>
 				</Panel>

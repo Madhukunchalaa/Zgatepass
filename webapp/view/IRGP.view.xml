@@ -21,8 +21,8 @@
 						<FlexBox wrap="Wrap" alignItems="Center">
 							<Button text="Create New IRGP" icon="sap-icon://add" type="Emphasized" press="onPressCreateNewIRGP" class="sapUiSmallMarginEnd sapUiTinyMarginBottom"
 							visible="{= !${user>/IsGatepassUserOnly} }"/>
-							<DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MM-yyyy" width="150px" change="onDateFilterChange" class="sapUiSmallMarginEnd sapUiTinyMarginBottom"/>
-							<DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MM-yyyy" width="150px" change="onDateFilterChange" class="sapUiSmallMarginEnd sapUiTinyMarginBottom"/>
+							<DatePicker id="idExcelFromDate" placeholder="From Date" displayFormat="dd-MMM-yyyy" width="150px" change="onDateFilterChange" class="sapUiSmallMarginEnd sapUiTinyMarginBottom"/>
+							<DatePicker id="idExcelToDate" placeholder="To Date" displayFormat="dd-MMM-yyyy" width="150px" change="onDateFilterChange" class="sapUiSmallMarginEnd sapUiTinyMarginBottom"/>
 							<SearchField id="idIRGPSearchField" placeholder="Search..." width="250px" search="onDateFilterChange" liveChange="onDateFilterChange" class="sapUiSmallMarginEnd sapUiTinyMarginBottom"/>
 							<Button icon="sap-icon://download" text="Download Excel" press=".onDownloadExcel" tooltip="Export to Excel" class="sapUiSmallMarginEnd sapUiTinyMarginBottom"/>
 							<Button icon="sap-icon://sort" tooltip="Sort" press=".onSort" type="Transparent" class="sapUiSmallMarginEnd sapUiTinyMarginBottom"/>
@@ -45,34 +45,34 @@
 							<Table id="idIRGPListTable" items="{irgpGlobal>/documents}" noDataText="No Internal Returnable Gate Pass records found." alternateRowColors="true" growing="true" class="sapUiSizeCompact gpmsItemTable">
 								<columns>
 									<Column width="110px">
-										<Button text="IRGP Date" icon="{= ${sortModel>/GEDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GEDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GEDate"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
+										<Button text="IRGP Date" iconFirst="false" icon="{= ${sortModel>/GEDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/GEDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="GEDate"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
 									</Column>
 									<Column width="160px">
-										<Button text="IRGP No" icon="{= ${sortModel>/IRGPNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/IRGPNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="IRGPNo"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
+										<Button text="IRGP No" iconFirst="false" icon="{= ${sortModel>/IRGPNo} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/IRGPNo} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="IRGPNo"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
 									</Column>
 									<Column width="120px">
-										<Button text="IRGP Type" icon="{= ${sortModel>/RequestType} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/RequestType} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="RequestType"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
+										<Button text="IRGP Type" iconFirst="false" icon="{= ${sortModel>/RequestType} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/RequestType} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="RequestType"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
 									</Column>
 									<Column width="110px">
-										<Button text="Due Date" icon="{= ${sortModel>/DueDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/DueDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="DueDate"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
+										<Button text="Due Date" iconFirst="false" icon="{= ${sortModel>/DueDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/DueDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="DueDate"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
 									</Column>
 									<Column width="100px">
-										<Button text="Ret Date" icon="{= ${sortModel>/ReturnedDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/ReturnedDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="ReturnedDate"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
+										<Button text="Ret Date" iconFirst="false" icon="{= ${sortModel>/ReturnedDate} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/ReturnedDate} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="ReturnedDate"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
 									</Column>
 									<Column width="130px">
-										<Button text="Req User" icon="{= ${sortModel>/RequestUser} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/RequestUser} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="RequestUser"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
+										<Button text="Req User" iconFirst="false" icon="{= ${sortModel>/RequestUser} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/RequestUser} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="RequestUser"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
 									</Column>
 									<Column width="130px">
-										<Button text="Req Dept" icon="{= ${sortModel>/Department} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/Department} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="Department"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
+										<Button text="Req Dept" iconFirst="false" icon="{= ${sortModel>/Department} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/Department} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="Department"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
 									</Column>
 									<Column width="150px">
-										<Button text="Contract Name" icon="{= ${sortModel>/ContractName} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/ContractName} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="ContractName"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
+										<Button text="Contract Name" iconFirst="false" icon="{= ${sortModel>/ContractName} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/ContractName} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="ContractName"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
 									</Column>
 									<Column width="180px">
-										<Button text="Contract Employee Name" icon="{= ${sortModel>/ContractEmployeeName} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/ContractEmployeeName} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="ContractEmployeeName"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
+										<Button text="Contract Employee" iconFirst="false" icon="{= ${sortModel>/ContractEmployeeName} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/ContractEmployeeName} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="ContractEmployeeName"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
 									</Column>
 									<Column width="100px">
-										<Button text="Status" icon="{= ${sortModel>/StatusCode} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/StatusCode} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="StatusCode"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
+										<Button text="Status" iconFirst="false" icon="{= ${sortModel>/StatusDisplay} === 'Asc' ? 'sap-icon://sort-ascending' : ${sortModel>/StatusDisplay} === 'Desc' ? 'sap-icon://sort-descending' : 'sap-icon://sort' }" press=".onColumnHeaderSort" type="Transparent" class="gpmsTableHeaderBtn"><customData><core:CustomData key="sortKey" value="StatusDisplay"/><core:CustomData key="tableName" value="idIRGPListTable"/></customData></Button>
 									</Column>
 									<Column width="260px" hAlign="Right">
 										<Text text="Action" class="gpmsHeaderText"/>
@@ -93,8 +93,8 @@
 											
 											<!-- Workflow Status Mappings -->
 											<ObjectStatus
-												text="{= ${irgpGlobal>StatusCode} === 'CLOSED' ? 'CLOSED' : 'OPEN' }"
-												state="{= ${irgpGlobal>StatusCode} === 'CLOSED' ? 'Success' : 'Warning' }"/>
+												text="{irgpGlobal>StatusDisplay}"
+												state="{= ${irgpGlobal>StatusDisplay} === 'CLOSED' ? 'Success' : 'Warning' }"/>
 
 											<!-- Dynamic Actions matching stage -->
 											<HBox justifyContent="End" alignItems="Center" wrap="Wrap">
@@ -120,7 +120,7 @@
 
 												<!-- Verify &amp; Close (Store Mode) -->
 												<Button text="Verify &amp; Close" type="Emphasized" icon="sap-icon://task" press="onAddQtyAmpCloseButtonPress"
-													visible="{= ${irgpGlobal>StatusCode} === 'PENDING_RECEIPT' }"
+													visible="{= ${irgpGlobal>StatusCode} !== 'CLOSED' &amp;&amp; ${user>/IsStoreUser} }"
 													class="sapUiTinyMarginEnd"/>
 
 											</HBox>
@@ -177,7 +177,7 @@
 									<layout:GridData span="XL6 L6 M6 S12"/>
 								</layoutData>
 								<Label text="Department" class="gpmsFieldLabel"/>
-								<ComboBox value="{irgp>/header/Department}" editable="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%" items="{irgp>/dropdowns/departments}">
+								<ComboBox value="{irgp>/header/Department}" editable="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%" items="{irgp>/dropdowns/departments}" change=".onDepartmentChange">
 									<core:Item key="{irgp>key}" text="{irgp>text}"/>
 								</ComboBox>
 							</VBox>
@@ -204,12 +204,12 @@
 								</ComboBox>
 							</VBox>
 
-							<!-- Contract/TAQA Employee Name -->
+							<!-- Contract/Employee Name -->
 							<VBox>
 								<layoutData>
 									<layout:GridData span="XL6 L6 M6 S12"/>
 								</layoutData>
-								<Label text="Contract/TAQA Employee Name" class="gpmsFieldLabel"/>
+								<Label text="Contract/Employee Name" class="gpmsFieldLabel"/>
 								<Input value="{irgp>/header/ContractEmployeeName}" editable="{irgp>/ui/headerEditable}" class="gpmsFieldInput" placeholder="Enter Employee Name" width="100%"/>
 							</VBox>
 
@@ -220,7 +220,7 @@
 								</layoutData>
 								<Label text="Request Type" class="gpmsFieldLabel"/>
 								<Select selectedKey="{irgp>/header/RequestType}" enabled="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%">
-									<core:Item key="HxGN EAM" text="HxGN EAM"/>
+									<core:Item key="SAP" text="SAP"/>
 									<core:Item key="Tools" text="Tools"/>
 								</Select>
 							</VBox>
@@ -270,25 +270,16 @@
 									<layout:GridData span="XL6 L6 M6 S12"/>
 								</layoutData>
 								<Label text="Returned date" class="gpmsFieldLabel"/>
-								<DatePicker value="{irgp>/header/ReturnedDate}" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
+								<DatePicker value="{irgp>/header/ReturnedDate}" displayFormat="dd-MM-yyyy" valueFormat="yyyy-MM-dd" editable="{irgp>/ui/returnedDateEditable}" class="{= ${irgp>/ui/returnedDateEditable} ? 'gpmsFieldInput' : 'gpmsFieldInput gpmsFieldInputReadonly' }" width="100%"/>
 							</VBox>
 
 							<!-- Return User -->
 							<VBox>
 								<layoutData>
-									<layout:GridData span="XL3 L3 M3 S12"/>
+									<layout:GridData span="XL6 L6 M6 S12"/>
 								</layoutData>
 								<Label text="Return User" class="gpmsFieldLabel"/>
 								<Input value="{irgp>/header/ReturnUser}" editable="false" class="gpmsFieldInput gpmsFieldInputReadonly" width="100%"/>
-							</VBox>
-
-							<!-- MR Number -->
-							<VBox>
-								<layoutData>
-									<layout:GridData span="XL3 L3 M3 S12"/>
-								</layoutData>
-								<Label text="MR Number" class="gpmsFieldLabel"/>
-								<Input value="{irgp>/header/MRNumber}" editable="{= ${irgp>/ui/currentStep} === 'USER_UPDATE' || ${irgp>/ui/currentStep} === 'EDIT' }" class="gpmsFieldInput" placeholder="Enter MR Number" width="100%"/>
 							</VBox>
 
 							<!-- Requested User -->
@@ -324,12 +315,12 @@
 								</ComboBox>
 							</VBox>
 
-							<!-- Contract/TAQA Employee Name -->
+							<!-- Contract/Employee Name -->
 							<VBox>
 								<layoutData>
 									<layout:GridData span="XL6 L6 M6 S12"/>
 								</layoutData>
-								<Label text="Contract/TAQA Employee Name" class="gpmsFieldLabel"/>
+								<Label text="Contract/Employee Name" class="gpmsFieldLabel"/>
 								<Input value="{irgp>/header/ContractEmployeeName}" editable="{irgp>/ui/headerEditable}" class="gpmsFieldInput" placeholder="Enter Employee Name" width="100%"/>
 							</VBox>
 
@@ -340,7 +331,7 @@
 								</layoutData>
 								<Label text="Request Type" class="gpmsFieldLabel"/>
 								<Select selectedKey="{irgp>/header/RequestType}" enabled="{irgp>/ui/headerEditable}" class="gpmsFieldInput" width="100%">
-									<core:Item key="HxGN EAM" text="HxGN EAM"/>
+									<core:Item key="SAP" text="SAP"/>
 									<core:Item key="Tools" text="Tools"/>
 								</Select>
 							</VBox>
@@ -377,9 +368,9 @@
 									</t:template>
 								</t:Column>
 
-								<!-- Item Code / Tools -->
-								<t:Column width="160px">
-									<Label text="{= ${irgp>/ui/currentStep} === 'CREATE' ? 'Item Code/Tools' : 'Item Code' }" class="gpmsHeaderText"/>
+								<!-- Item Code (SAP Materials only) -->
+								<t:Column width="160px" visible="{= ${irgp>/header/RequestType} !== 'Tools' }">
+									<Label text="Item Code" class="gpmsHeaderText"/>
 									<t:template>
 										<Input value="{irgp>ItemCode}"
 											editable="{irgp>/ui/itemsEditable}"
@@ -392,15 +383,35 @@
 									</t:template>
 								</t:Column>
 
-								<!-- Old Material Code -->
-								<t:Column width="160px" visible="{= ${irgp>/header/RequestType} !== 'Tools' }">
-									<Label text="Old Material Code" class="gpmsHeaderText"/>
+								<!-- Tool Description (Tools only) -->
+								<t:Column width="280px" visible="{= ${irgp>/header/RequestType} === 'Tools' }">
+									<Label text="Tool Description" class="gpmsHeaderText"/>
 									<t:template>
-										<Input value="{irgp>OldMaterialRef}" editable="false" class="gpmsTableInput gpmsFieldInputReadonly" width="100%"/>
+										<Input value="{irgp>ItemDescription}"
+											editable="{irgp>/ui/itemsEditable}"
+											placeholder="Enter tool description"
+											class="{= ${irgp>/ui/itemsEditable} ? 'gpmsTableInput' : 'gpmsTableInput gpmsFieldInputReadonly' }"
+											width="100%"
+											change=".onToolDescriptionChange"/>
 									</t:template>
 								</t:Column>
 
-								<!-- Item Description -->
+								<!-- Old Material Code (Maximo Code) -->
+								<t:Column width="160px" visible="{= ${irgp>/header/RequestType} !== 'Tools' }">
+									<Label text="Maximo Code" class="gpmsHeaderText"/>
+									<t:template>
+										<Input value="{irgp>OldMaterialRef}"
+											editable="{irgp>/ui/itemsEditable}"
+											placeholder="Select Maximo Code"
+											class="{= ${irgp>/ui/itemsEditable} ? 'gpmsTableInput' : 'gpmsTableInput gpmsFieldInputReadonly' }"
+											width="100%"
+											showValueHelp="true"
+											valueHelpRequest=".onMaximoValueHelp"
+											change=".onMaximoCodeChange"/>
+									</t:template>
+								</t:Column>
+
+								<!-- Item Description (SAP Materials only) -->
 								<t:Column width="280px" visible="{= ${irgp>/header/RequestType} !== 'Tools' }">
 									<Label text="Item Description" class="gpmsHeaderText"/>
 									<t:template>
@@ -434,10 +445,10 @@
 									<t:template>
 										<Input value="{irgp>RecievedQuantity}"
 											type="Text"
-											editable="{irgp>/ui/receivedQtyEditable}"
+											editable="{= ${irgp>/ui/receivedQtyEditable} || (${user>/IsStoreUser} &amp;&amp; ${irgp>/ui/currentStep} !== 'CLOSED' &amp;&amp; ${irgp>/ui/currentStep} !== 'LIST') }"
 											liveChange=".onRecievedQuantityInputLiveChange"
 											textAlign="Right"
-											class="{= ${irgp>/ui/receivedQtyEditable} ? 'gpmsTableInput' : 'gpmsTableInput gpmsFieldInputReadonly' }"/>
+											class="{= (${irgp>/ui/receivedQtyEditable} || (${user>/IsStoreUser} &amp;&amp; ${irgp>/ui/currentStep} !== 'CLOSED' &amp;&amp; ${irgp>/ui/currentStep} !== 'LIST')) ? 'gpmsTableInput' : 'gpmsTableInput gpmsFieldInputReadonly' }"/>
 									</t:template>
 								</t:Column>
 
@@ -450,17 +461,25 @@
 								</t:Column>
 
 								<!-- UOM -->
-								<t:Column width="110px">
+								<t:Column width="130px">
 									<Label text="UOM" class="gpmsHeaderText"/>
 									<t:template>
-										<Input value="{irgp>UOM}" editable="{irgp>/ui/itemsEditable}" class="gpmsTableInput" width="100%"/>
+										<ComboBox value="{irgp>UOM}"
+											selectedKey="{irgp>UOM}"
+											items="{irgp>/dropdowns/uoms}"
+											editable="{irgp>/ui/itemsEditable}"
+											class="{= ${irgp>/ui/itemsEditable} ? 'gpmsTableInput' : 'gpmsTableInput gpmsFieldInputReadonly' }"
+											width="100%"
+											placeholder="Select UOM">
+											<core:Item key="{irgp>key}" text="{irgp>text}"/>
+										</ComboBox>
 									</t:template>
 								</t:Column>
 
 								<t:Column width="160px" visible="{= ${irgp>/ui/currentStep} !== 'CREATE' &amp;&amp; ${irgp>/header/RequestType} !== 'Tools' }">
 									<Label text="MRNumber" class="gpmsHeaderText"/>
 									<t:template>
-										<Input value="{irgp>MRNumber}" editable="{= (${user>/IsStoreUser} || ${irgp>/ui/currentStep} === 'USER_UPDATE' || ${irgp>/ui/currentStep} === 'EDIT') &amp;&amp; ${irgp>/ui/currentStep} !== 'CLOSED' &amp;&amp; ${irgp>/ui/currentStep} !== 'LIST' }" placeholder="Enter MR Number" maxLength="10" class="gpmsTableInput"/>
+										<Input value="{irgp>MRNumber}" editable="{= (${user>/IsStoreUser} || ${irgp>/ui/currentStep} === 'USER_UPDATE' || ${irgp>/ui/currentStep} === 'EDIT') &amp;&amp; ${irgp>/ui/currentStep} !== 'CLOSED' &amp;&amp; ${irgp>/ui/currentStep} !== 'LIST' }" placeholder="Enter MR Number" class="gpmsTableInput"/>
 									</t:template>
 								</t:Column>
 
@@ -542,6 +561,7 @@
 							<Button text="Update IRGP" type="Emphasized" press="onSubmitEdit" visible="{irgp>/ui/submitEditVisible}" class="gpmsSubmitBtn sapUiTinyMarginEnd"/>
 							<Button text="Submit Reservation" type="Emphasized" press="onSubmitReservation" visible="{irgp>/ui/submitResVisible}" class="gpmsSubmitBtn sapUiTinyMarginEnd"/>
 							<Button text="Save &amp; Close IRGP" type="Accept" press="onSaveAmpCloseIRGPButtonPress" visible="{irgp>/ui/closeVisible}" class="gpmsSubmitBtn sapUiTinyMarginEnd"/>
+							<Button text="Resend Balance" type="Attention" press="onResendBalanceButtonPress" visible="{irgp>/ui/resendBalanceVisible}" class="gpmsSubmitBtn sapUiTinyMarginEnd" icon="sap-icon://forward"/>
 							<Button text="Print Slip" type="Default" icon="sap-icon://print" press="onPrint" visible="{irgp>/ui/printVisible}" class="sapUiTinyMarginEnd"/>
 							<Button text="Back" type="Reject" press="onNavHome"/>
 

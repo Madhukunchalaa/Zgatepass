@@ -9,75 +9,111 @@ sap.ui.define([
 
     return BaseController.extend("zgpms.meilpower.com.controller.Login", {
 
+        // 1. Starts automatically when the app loads
         onInit: function () {
-            this._authenticate();
+            this.hello();
+            this.authenticate();
         },
 
-        _authenticate: function () {
-			var oModel = new JSONModel();
-			oModel.loadData("/sap/bc/ui2/start_up");
-			oModel.attachRequestCompleted(function (oEvent) {
-				if (oEvent.getParameter("success")) {
-					var oUserData = oEvent.getSource().getData();
-					oUserData.IsGatepassUserOnly = false;
-					
-					var oUserModel = sap.ui.getCore().getModel("user");
-					if (!oUserModel) {
-						oUserModel = new JSONModel();
-						sap.ui.getCore().setModel(oUserModel, "user");
-						this.getOwnerComponent().setModel(oUserModel, "user");
-					}
-					oUserModel.setData(oUserData);
-					
-					var sUserId = oUserData.id || "";
-					this._loadUserDetails(sUserId);
-				} else {
-                    MessageBox.error(
-                        "Authentication failed. Please reload the page and try again.",
-                        { title: "Sign In Failed" }
-                    );
+        hello: function () {
+            console.log("onInit function is triggering");
+        },
+
+        // 2. Fetch logged-in user session from SAP
+        authenticate: function () {
+            var that = this;
+            var oModel = new JSONModel();
+            oModel.loadData("/sap/bc/ui2/start_up");
+
+            oModel.attachRequestCompleted(function (oEvent) {
+                var bSuccess = oEvent.getParameter("success");
+
+                if (!bSuccess) {
+                    MessageBox.error("Authentication failed. Please check your SAP connection.");
+                    return;
                 }
-            }.bind(this));
+
+                var oUserData = oModel.getData();
+                var sUserId = oUserData.id || "";
+                console.log("Authenticated User ID:", sUserId);
+
+                // Pass the user ID to the next step
+                that.loadUserDetails(sUserId);
+            });
         },
 
-        _loadUserDetails: function (sUserId) {
-            var fnNavigate = function () {
-                this.getRouter().navTo("home");
-            }.bind(this);
+        // 3. Fetch plant, role, and department from SAP table via /ZUserdetSet
+        loadUserDetails: function (userID) {
+            var that = this;
 
-            var oODataModel = this.getOwnerComponent().getModel();
-            if (!oODataModel || !sUserId) {
-                fnNavigate();
+            var oDataModel = this.getOwnerComponent().getModel();
+            if (!oDataModel) {
+                console.error("Failed to fetch the OData model");
+                MessageBox.error("OData model not found");
                 return;
             }
 
-            oODataModel.read("/ZUserdetSet", {
-                filters: [new Filter("User", FilterOperator.EQ, sUserId)],
-                success: function (oData) {
-                    var oResult = (oData.results && oData.results[0]) || {};
+            var oUserFilter = new Filter("User", FilterOperator.EQ, userID);
+
+            oDataModel.read("/ZUserdetSet", {
+                filters: [ oUserFilter ],
+                success: function (odata) {
+                    console.log("OData fetched successfully:", odata);
+
+                    // Pick first record safely
+                    var userResults = (odata.results && odata.results[ 0 ]) || {};
+
+                    var sRole = (userResults.Role || "").trim().toUpperCase();
+                    var sDepartment = (userResults.Department || "").trim();
+                    var sPlant = (userResults.Plant || "").trim();
+                    var sFullName = (userResults.UserFullName || userResults.UserName || userID).trim();
+
+                    console.log("user:", userID);
+                    console.log("role:", sRole);
+                    console.log("dept:", sDepartment);
+                    console.log("plant:", sPlant);
+
+                    // 4. Evaluate Roles (HOD, Store, or Requester)
+                    var bIsHod = sRole.indexOf("HOD") !== -1 || sDepartment.toUpperCase().indexOf("HOD") !== -1;
+                    var bIsStoreUser = sRole.indexOf("STORE") !== -1 || sDepartment.toUpperCase().indexOf("STORE") !== -1;
+                    var bIsUserOnly = !bIsHod && !bIsStoreUser;
+
+                    // 5. Store everything into the global "user" model so all screens can use it
                     var oUserModel = sap.ui.getCore().getModel("user");
-                    if (oUserModel) {
-                        var sRole = (oResult.Role || "").trim().toUpperCase();
-                        oUserModel.setProperty("/Plant", oResult.Plant || "");
-                        oUserModel.setProperty("/Cocode", oResult.Cocode || "");
-                        oUserModel.setProperty("/Department", oResult.Department || "");
-                        oUserModel.setProperty("/Role", sRole);
-                        var bIsHod = sRole.indexOf("HOD") !== -1 || sRole === "ZC_MM_GATEPASS_HOD_FRONT_VIEW" || sRole === "ZC_MM_GATEPASS_HOD_FRONTVIEW" || sRole === "Z_MM_GATEPASS_HOD_FRONT_VIEW" || sRole === "Z_MM_GATEPASS_HOD_FRONTVIEW";
-                        var bIsStoreUser = sRole.indexOf("STORE") !== -1 || sRole === "ZC_MM_GATEPASS_STORE_FRONTVIEW" || sRole === "ZC_MM_GATEPASS_STORE_FRONT_VIEW" || sRole === "Z_MM_GATEPASS_STORE_FRONTVIEW" || sRole === "Z_MM_GATEPASS_STORE_FRONT_VIEW";
-                        var bIsUserOnly = (!bIsHod && !bIsStoreUser) && (sRole.indexOf("USER") !== -1 || sRole.indexOf("REQUESTER") !== -1 || sRole === "ZC_MM_GATEPASS_USER_FRONT_VIEW" || sRole === "ZC_MM_GATEPASS_USER_FRONTVIEW" || sRole === "Z_MM_GATEPASS_USER_FRONT_VIEW" || sRole === "Z_MM_GATEPASS_USER_FRONTVIEW");
-                        
-                        oUserModel.setProperty("/IsGatepassUserOnly", bIsUserOnly);
-                        oUserModel.setProperty("/IsHodUser", bIsHod);
-                        oUserModel.setProperty("/IsStoreUser", bIsStoreUser);
-                        localStorage.setItem("gpms_user", JSON.stringify(oUserModel.getData()));
+                    if (!oUserModel) {
+                        oUserModel = new JSONModel();
+                        sap.ui.getCore().setModel(oUserModel, "user");
+                        that.getOwnerComponent().setModel(oUserModel, "user");
                     }
-                    fnNavigate();
+
+                    oUserModel.setProperty("/id", userID);
+                    oUserModel.setProperty("/fullName", sFullName);
+                    oUserModel.setProperty("/Username", sFullName);
+                    oUserModel.setProperty("/Plant", sPlant);
+                    oUserModel.setProperty("/Department", sDepartment);
+                    oUserModel.setProperty("/Role", sRole);
+                    oUserModel.setProperty("/IsHodUser", bIsHod);
+                    oUserModel.setProperty("/IsStoreUser", bIsStoreUser);
+                    oUserModel.setProperty("/IsGatepassUserOnly", bIsUserOnly);
+
+                    // Save to browser localStorage so it persists across reloads
+                    localStorage.setItem("gpms_user", JSON.stringify(oUserModel.getData()));
+
+                    // 6. Navigate to the Home dashboard!
+                    that.navigateHome();
                 },
                 error: function (oError) {
-                    console.error("[ZUserdetSet] Error:", oError.statusCode, oError.responseText);
-                    fnNavigate();
+                    console.error("Failed to read /ZUserdetSet:", oError);
+                    // Even if user record is missing, allow navigating to Home
+                    that.navigateHome();
                 }
             });
+        },
+
+        // 7. Router navigation helper
+        navigateHome: function () {
+            console.log("Navigating to Home screen...");
+            this.getRouter().navTo("home");
         }
 
     });

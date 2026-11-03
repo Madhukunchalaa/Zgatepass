@@ -259,16 +259,58 @@ sap.ui.define(["./BaseController",
 			oModel.setProperty("/Plant", oData.Plant || "");
 			oModel.setProperty("/FiscalYear", oData.FiscalYear || "");
 			oModel.setProperty("/Department", oData.Department || "");
-			oModel.setProperty("/Requestor", oData.Requestor || oData.ReqUser || oData.Requser || oData.RequestedUser || oData.ReqEmpName || oData.CreatedBy || oData.Createdby || oData.Ernam || "");
+			var sReqName = oData.Requestor || oData.ReqUser || oData.Requser || oData.requser || oData.RequestedUser || oData.ReqEmpName || oData.ReqName || oData.RequestorName || oData.CreatedBy || oData.Createdby || oData.Ernam || oData.Uname || oData.Username ||
+				(oNavData ? (oNavData.Requestor || oNavData.ReqUser || oNavData.Requser || oNavData.requser || oNavData.RequestedUser || oNavData.ReqEmpName || oNavData.ReqName || oNavData.RequestorName || oNavData.CreatedBy || oNavData.Createdby || oNavData.Ernam) : "");
+			if (!sReqName) {
+				try {
+					var oUserM = sap.ui.getCore().getModel("user");
+					if (oUserM) {
+						sReqName = oUserM.getProperty("/id") || oUserM.getProperty("/sUserId") || oUserM.getProperty("/User") || "";
+					}
+				} catch (e) {}
+			}
+			if (!sReqName) {
+				try {
+					var sLocalUser = localStorage.getItem("gpms_user");
+					if (sLocalUser) {
+						var oParsedUser = JSON.parse(sLocalUser);
+						sReqName = oParsedUser.id || oParsedUser.sUserId || oParsedUser.User || "";
+					}
+				} catch (e) {}
+			}
+			oModel.setProperty("/Requestor", sReqName);
 			oModel.setProperty("/VendorCode", oData.Vendor || "");
 			oModel.setProperty("/VendorName", oData.VendorName || "");
 			oModel.setProperty("/Vendor", oData.VendorName || oData.Vendor || "");
 			oModel.setProperty("/VendorGST", oData.VendorGST || "");
 			oModel.setProperty("/VendorPerson", oData.VendorPerson || (oLocalLogistics ? oLocalLogistics.VendorPerson : "") || "");
 			oModel.setProperty("/CommonDesc", oData.CommonDesc || (oLocalLogistics ? oLocalLogistics.CommonDesc : "") || "");
-			oModel.setProperty("/City", oData.City || "");
-			oModel.setProperty("/ZipCode", oData.ZipCode || "");
-			oModel.setProperty("/VendorAddress", [oData.City, oData.ZipCode].filter(Boolean).join(", "));
+			var sStreetAddr = oData.Address || oData.VendorAddress || oData.Street || oData.Stras || oData.Address1 || (oNavData ? (oNavData.Address || oNavData.VendorAddress || oNavData.Street || oNavData.Stras) : "") || "";
+			var sCityVal = oData.City || oData.Ort01 || (oNavData ? (oNavData.City || oNavData.Ort01) : "") || "";
+			var sStateVal = oData.State || oData.Region || oData.District || (oNavData ? (oNavData.State || oNavData.Region) : "") || "";
+			var sZipVal = oData.ZipCode || oData.PostalCode || oData.Pstlz || (oNavData ? (oNavData.ZipCode || oNavData.PostalCode) : "") || "";
+			var sCountryVal = oData.Country || oData.Land1 || (oNavData ? (oNavData.Country || oNavData.Land1) : "") || "";
+			var sCityLineVal = [sCityVal, sZipVal, sCountryVal].filter(Boolean).join(" ");
+			var aLineParts = [];
+			if (sStreetAddr) { aLineParts.push(sStreetAddr); }
+			if (sCityLineVal) { aLineParts.push(sCityLineVal); }
+			var sFullVendorAddr = aLineParts.join("\n");
+			if (!sFullVendorAddr) {
+				var aAddrParts = [sStreetAddr, sCityVal, sStateVal, sZipVal, sCountryVal].map(function (s) { return (s || "").trim(); }).filter(Boolean);
+				var aUniqueParts = [];
+				aAddrParts.forEach(function (pt) { if (aUniqueParts.indexOf(pt) === -1) { aUniqueParts.push(pt); } });
+				sFullVendorAddr = aUniqueParts.join(", ");
+			}
+			oModel.setProperty("/Address", sStreetAddr);
+			oModel.setProperty("/City", sCityVal);
+			oModel.setProperty("/ZipCode", sZipVal);
+			oModel.setProperty("/Country", sCountryVal);
+			oModel.setProperty("/VendorAddress", sFullVendorAddr);
+
+			if (oData.Vendor || oData.VendorCode) {
+				this._enrichVendorAddressMaster(oData.Vendor || oData.VendorCode, oData.Plant || "2301", oModel);
+			}
+
 			oModel.setProperty("/PurchasingDoc", oData.PurchasingDoc || "");
 			oModel.setProperty("/NoOfPacakages", oData.NoOfPacakages || 0);
 			oModel.setProperty("/VehicleNo", oData.VehicleNo || (oLocalLogistics ? oLocalLogistics.VehicleNo : "") || "");
@@ -283,8 +325,10 @@ sap.ui.define(["./BaseController",
 			oModel.setProperty("/UserRemarks", oData.Remarks || "");
 			oModel.setProperty("/HODRemarks", oData.HODRemarks || "");
 			oModel.setProperty("/StoreRemarks", oData.STORERemarks || oData.StoreRemarks || "");
-			oModel.setProperty("/ReturnableDate", this._formatDate(oData.ReturnableDate || oData.Returnabledate || oData.DueDate || oData.Duedate || (oLocalLogistics ? oLocalLogistics.ReturnableDate : "")));
-			oModel.setProperty("/ExtReturnDate", this._formatDate(oData.ExtReturnDate || oData.Extreturndate || oData.ExtendedReturnableDate || oData.ExtendedreturnableDate || (oLocalLogistics ? oLocalLogistics.ExtendedReturnableDate : "")));
+			var sRet = this._formatDate(oData.ReturnableDate || oData.Returnabledate || oData.ReturnDate || oData.DueDate || oData.Duedate || (oLocalLogistics ? oLocalLogistics.ReturnableDate : ""));
+			var sExt = this._formatDate(oData.ExtReturnDate || oData.Extreturndate || oData.ExtendedReturnableDate || oData.ExtendedreturnableDate || oData.ReturnDate || (oLocalLogistics ? oLocalLogistics.ExtendedReturnableDate : ""));
+			oModel.setProperty("/ReturnableDate", (sRet && sRet !== "-") ? sRet : ((sExt && sExt !== "-") ? sExt : ""));
+			oModel.setProperty("/ExtReturnDate", sExt);
 			var sDCVal = oData.ChallanNumber || oData.Challanumber || (oLocalLogistics ? oLocalLogistics.ChallanNumber : "") || "";
 			oModel.setProperty("/ChallanNumber", sDCVal);
 			oModel.setProperty("/GateEntryNo", oData.GateEntryNo || "");
@@ -292,7 +336,11 @@ sap.ui.define(["./BaseController",
 			oModel.setProperty("/EWayBillNo", oData.EWayBillNo || "");
 			oModel.setProperty("/EWayBillDate", oData.EWayBillDate || null);
 			oModel.setProperty("/DCNotes", oData.DCNotes || (oLocalLogistics ? oLocalLogistics.DCNotes : "") || "");
-			oModel.setProperty("/InsuranceRequired", (oData.InsuranceReq || "").toUpperCase() === "YES");
+
+			var sInsStr = String(oData.InsuranceReq || oData.Insurance || oData.InsuranceRequired || "").toUpperCase().trim();
+			var bInsured = (sInsStr === "X" || sInsStr === "YES" || sInsStr === "Y" || sInsStr === "TRUE" || sInsStr === "1" || oData.InsuranceReq === true || oData.InsuranceRequired === true) ||
+			               (oLocalLogistics ? (oLocalLogistics.bInsured || oLocalLogistics.InsuranceRequired) : false);
+			oModel.setProperty("/InsuranceRequired", bInsured);
 
 			var sGPStatus = (oData.GPStatus || "").trim().toUpperCase();
 			oModel.setProperty("/GPStatus", sGPStatus);
@@ -322,6 +370,16 @@ sap.ui.define(["./BaseController",
 					Remarks: it.Remarks || ""
 				};
 			});
+
+			var bAllReceived = aMapped.length > 0 && aMapped.every(function(it) {
+				return it.BalanceQuantity <= 0;
+			});
+
+			if (bAllReceived && sGPStatus !== "CLOSED" && sGPStatus !== "CANCELLED") {
+				sGPStatus = "CLOSED";
+				oModel.setProperty("/GPStatus", "CLOSED");
+				oModel.setProperty("/isEditable", false);
+			}
 
 			oModel.setProperty("/items", aMapped);
 
@@ -358,8 +416,7 @@ sap.ui.define(["./BaseController",
 
 			oODataModel.read("/GateReqHdrSet", {
 				filters: [
-					new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo),
-					new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, sGPType)
+					new sap.ui.model.Filter("GatePassReqNo", sap.ui.model.FilterOperator.EQ, sReqNo)
 				],
 				success: function (oData) {
 					var oResult = oData.results && oData.results[0];
@@ -375,7 +432,7 @@ sap.ui.define(["./BaseController",
 						oModel.setProperty("/CommonDesc", oResult.CommonDesc);
 					}
 					if (!oModel.getProperty("/ReturnableDate")) {
-						var sRetDate = this._formatDate(oResult.ReturnableDate || oResult.DueDate);
+						var sRetDate = this._formatDate(oResult.ReturnableDate || oResult.ReturnDate || oResult.DueDate || oResult.ExtReturnDate || oResult.Extreturndate || oResult.ExtendedReturnableDate);
 						if (sRetDate) { oModel.setProperty("/ReturnableDate", sRetDate); }
 					}
 					if (!oModel.getProperty("/ExtReturnDate")) {
@@ -405,15 +462,14 @@ sap.ui.define(["./BaseController",
 			// (ChallanNumber, ExtReturnDate, etc.) that may be cleared when queried by GatePassNo after inward
 			oODataModel.read("/OutGatePassSet", {
 				filters: [
-					new sap.ui.model.Filter("GatePassreqNo", sap.ui.model.FilterOperator.EQ, sReqNo),
-					new sap.ui.model.Filter("GatePassType", sap.ui.model.FilterOperator.EQ, sGPType)
+					new sap.ui.model.Filter("GatePassreqNo", sap.ui.model.FilterOperator.EQ, sReqNo)
 				],
 				success: function (oData) {
 					var aResults = oData.results || [];
 					if (aResults.length === 0) { return; }
 					var oGP = aResults[0];
 					if (!oModel.getProperty("/ReturnableDate")) {
-						var sRet = this._formatDate(oGP.ReturnableDate || oGP.DueDate);
+						var sRet = this._formatDate(oGP.ReturnableDate || oGP.ReturnDate || oGP.DueDate || oGP.ExtReturnDate || oGP.Extreturndate || oGP.ExtendedReturnableDate);
 						if (sRet) { oModel.setProperty("/ReturnableDate", sRet); }
 					}
 					if (!oModel.getProperty("/ExtReturnDate")) {
@@ -600,7 +656,7 @@ sap.ui.define(["./BaseController",
 				GenerateDC: bIsGenerateDC === true ? "X" : (oData.ChallanNumber ? "X" : ""),
 				GatePassType: "RGP",
 				VehicleNo: oData.VehicleNo || "",
-				LRNumber: oData.LRNumber || "",
+				LRNumber: oData.LRNumber || oData.LRNnumber || "",
 				ModeOfDispatch: oData.ModeOfTransport || "",
 				Remarks: oData.Remarks || "",
 				GPStatus: oData.GPStatus || "",
@@ -616,9 +672,9 @@ sap.ui.define(["./BaseController",
 				cdate1: "", cdate2: "", cdate3: "", cdate4: "", cdate5: "",
 				cdate6: "", cdate7: "", cdate8: "", cdate9: "", cdate10: "",
 				DCNotes: oData.DCNotes || "",
-				InsuranceReq: oData.InsuranceRequired ? "Yes" : "",
+				InsuranceReq: oData.InsuranceRequired ? "X" : "",
 				InsuranceDate: oData.InsuranceDate || "",
-				InsuranceAmount: oData.InsuranceAmount || "0",
+				InsuranceAmount: String(oData.InsuranceAmount || "0"),
 				OutgateNav: (oData.items || []).map(function (it, i) {
 					return {
 						GatePassType: "RGP",
@@ -664,6 +720,22 @@ sap.ui.define(["./BaseController",
 					oModel.setProperty("/ChallanNumber", sDC);
 					oModel.setProperty("/DocOptionIndex", 1);
 					
+					try {
+						var sKeyLog = sAuthorativeGPNo || oData.GatePassreqNo || "";
+						if (sKeyLog) {
+							var oLogToSave = {
+								bInsured: !!oData.InsuranceRequired,
+								InsuranceRequired: !!oData.InsuranceRequired,
+								VehicleNo: oData.VehicleNo || "",
+								LRNnumber: oData.LRNumber || oData.LRNnumber || "",
+								LRNumber: oData.LRNumber || oData.LRNnumber || "",
+								ChallanNumber: sDC || ""
+							};
+							localStorage.setItem("gp_logistics_" + sKeyLog, JSON.stringify(oLogToSave));
+							localStorage.setItem("logistics_" + sKeyLog, JSON.stringify(oLogToSave));
+						}
+					} catch (eLog) {}
+
 					var sMsg = oResponse.Message || ("Delivery Challan (" + sDC + ") Generated & Saved successfully!");
 					MessageBox.success(sMsg, {
 						onClose: function () {
@@ -798,6 +870,7 @@ sap.ui.define(["./BaseController",
 					}.bind(this));
 				}
 				this._pInsuranceDialog.then(function (oDialog) {
+					var sLRVal = oData.LRNumber || oData.LRNnumber || oData.LRNo || "";
 					oDialog.getModel("insurance").setData({
 						InvoiceNo: oData.GatePassNo || "",
 						InsuranceDate: new Date().toLocaleDateString("en-GB").split("/").join("-"),
@@ -805,10 +878,11 @@ sap.ui.define(["./BaseController",
 						Vendor: oData.VendorName || oData.Vendor || "",
 						VendorAddress: oData.VendorAddress || "",
 						ModeOfTransport: oData.ModeOfTransport || "Road",
-						LRNnumber: oData.LRNnumber || "",
+						LRNumber: sLRVal,
+						LRNnumber: sLRVal,
 						VehicleNo: oData.VehicleNo || "",
 						InvoiceValue: oData.FinalTotal ? oData.FinalTotal.toString().replace(/,/g, "") : "",
-						RgpDescription: oData.UserRemarks || ""
+						RgpDescription: oData.CommonDesc || oData.UserRemarks || oData.DCNotes || ""
 					});
 					oDialog.open();
 				});
@@ -822,9 +896,36 @@ sap.ui.define(["./BaseController",
 				var sDate = oInsData.InsuranceDate || "";
 				var aParts = sDate.split("-");
 				var sFormatted = (aParts.length === 3) ? aParts[2] + aParts[1] + aParts[0] : sDate;
+				var sLRSubmit = oInsData.LRNumber || oInsData.LRNnumber || "";
 				oModel.setProperty("/InsuranceRequired", true);
 				oModel.setProperty("/InsuranceDate", sFormatted);
 				oModel.setProperty("/InsuranceAmount", oInsData.InvoiceValue || "");
+				if (sLRSubmit) {
+					oModel.setProperty("/LRNumber", sLRSubmit);
+					oModel.setProperty("/LRNnumber", sLRSubmit);
+				}
+				var oData = oModel.getData() || {};
+				try {
+					var sKeyLog = oData.GatePassNo || oData.GatePassreqNo || "";
+					if (sKeyLog) {
+						var oExistingLog = {};
+						try { oExistingLog = JSON.parse(localStorage.getItem("logistics_" + sKeyLog) || "{}"); } catch (e) {}
+						oExistingLog.bInsured = true;
+						oExistingLog.InsuranceRequired = true;
+						oExistingLog.sInsDate = oInsData.InsuranceDate || "";
+						oExistingLog.InsuranceDate = oInsData.InsuranceDate || "";
+						oExistingLog.sInsAmount = oInsData.InvoiceValue || "";
+						oExistingLog.InsuranceAmount = oInsData.InvoiceValue || "";
+						if (sLRSubmit) {
+							oExistingLog.LRNumber = sLRSubmit;
+							oExistingLog.LRNnumber = sLRSubmit;
+							oExistingLog.sInsLRVehicleNo = sLRSubmit;
+							oExistingLog.OutwardInsLRV = sLRSubmit;
+						}
+						localStorage.setItem("logistics_" + sKeyLog, JSON.stringify(oExistingLog));
+						localStorage.setItem("gp_logistics_" + sKeyLog, JSON.stringify(oExistingLog));
+					}
+				} catch (eLog) {}
 				oDialog.close();
 			});
 			sap.m.MessageToast.show("Insurance details saved.");
@@ -880,30 +981,36 @@ sap.ui.define(["./BaseController",
 			var lColW = 105, mColW = 78, rColW = contentWidth - lColW - mColW;
 			var lColX = margin, mColX = margin + lColW, rColX = mColX + mColW;
 			var pad = 3;
-			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || [oOut.City, oOut.ZipCode].filter(Boolean).join(", "), lColW - pad * 2 - 2);
+			var sCityLine = [oOut.City, oOut.ZipCode, oOut.Country].filter(Boolean).join(" ");
+			var aAddrLines = [];
+			if (oOut.Address) { aAddrLines.push(oOut.Address); }
+			if (sCityLine) { aAddrLines.push(sCityLine); }
+			var sAddrToPrint = (oOut.VendorAddress && oOut.VendorAddress.indexOf("\n") !== -1)
+				? oOut.VendorAddress
+				: (aAddrLines.length > 0 ? aAddrLines.join("\n") : (oOut.VendorAddress || ""));
+			var splitAddr = doc.splitTextToSize(sAddrToPrint, lColW - pad * 2 - 2);
 
 			var tableData = (oOut.items || []).map(function (it, i) {
 				return [
 					i + 1,
 					it.MaterialDesc || it.MaterialName || it.Description || it.HSNDesc || it.Material || "",
 					it.HSNCode || "",
-					parseFloat(it.SentQuantity || 0).toLocaleString("en-IN", { minimumFractionDigits: 3 }),
-					parseFloat(it.RecievedQuantity || 0).toLocaleString("en-IN", { minimumFractionDigits: 3 }),
+					parseFloat(it.SentQuantity || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
 					it.UOM || "",
 					parseFloat(it.ItemNetPrice || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 }),
 					parseFloat(it.Totalvalue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })
 				];
 			});
-			while (tableData.length < 5) { tableData.push(["", "", "", "", "", "", "", ""]); }
+			while (tableData.length < 5) { tableData.push(["", "", "", "", "", "", ""]); }
 
 			doc.autoTable({
 				startY: 76,
-				head: [["S.No", "DESCRIPTION OF GOODS", "HSN Code", "Outward QTY", "Recvd QTY", "UOM", "Rate (Rs.)", "Value (Rs.)"]],
+				head: [["S.No", "DESCRIPTION OF GOODS", "HSN Code", "Outward QTY", "UOM", "Rate (Rs.)", "Value (Rs.)"]],
 				body: tableData,
 				theme: "grid",
 				headStyles: { fillColor: [235, 235, 235], textColor: [0, 0, 0], fontStyle: "bold", fontSize: 8.5, halign: "center", valign: "middle", cellPadding: 2, lineWidth: 0.3, lineColor: [0, 0, 0] },
 				bodyStyles: { fontSize: 8.5, cellPadding: { top: 2, bottom: 2, left: 2.5, right: 2.5 }, lineColor: [0, 0, 0], lineWidth: 0.25, valign: "middle" },
-				columnStyles: { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: "auto" }, 2: { cellWidth: 24, halign: "center" }, 3: { cellWidth: 28, halign: "right" }, 4: { cellWidth: 28, halign: "right" }, 5: { cellWidth: 16, halign: "center" }, 6: { cellWidth: 28, halign: "right" }, 7: { cellWidth: 30, halign: "right" } },
+				columnStyles: { 0: { cellWidth: 14, halign: "center" }, 1: { cellWidth: "auto" }, 2: { cellWidth: 26, halign: "center" }, 3: { cellWidth: 30, halign: "right" }, 4: { cellWidth: 18, halign: "center" }, 5: { cellWidth: 30, halign: "right" }, 6: { cellWidth: 34, halign: "right" } },
 				margin: { top: 76, left: margin, right: margin, bottom: 25 },
 				didDrawPage: function (data) {
 					doc.setLineWidth(0.6);
@@ -994,7 +1101,24 @@ sap.ui.define(["./BaseController",
 
 					// Right Column Info (Metadata Col 2)
 					var rc = rColX + pad, ry = gridY + 5.5, rLblOff = 27;
-					var sReqName = oOut.Requestor || oOut.ReqUser || oOut.Requser || oOut.RequestedUser || oOut.ReqEmpName || oOut.CreatedBy || oOut.Createdby || oOut.Ernam || "";
+					var sReqName = oOut.Requestor || oOut.ReqUser || oOut.Requser || oOut.requser || oOut.RequestedUser || oOut.ReqEmpName || oOut.ReqName || oOut.RequestorName || oOut.CreatedBy || oOut.Createdby || oOut.Ernam || oOut.Uname || oOut.Username || "";
+					if (!sReqName) {
+						try {
+							var oUserM = sap.ui.getCore().getModel("user");
+							if (oUserM) {
+								sReqName = oUserM.getProperty("/id") || oUserM.getProperty("/sUserId") || oUserM.getProperty("/User") || "";
+							}
+						} catch (e) {}
+					}
+					if (!sReqName) {
+						try {
+							var sLocalUser = localStorage.getItem("gpms_user");
+							if (sLocalUser) {
+								var oParsedUser = JSON.parse(sLocalUser);
+								sReqName = oParsedUser.id || oParsedUser.sUserId || oParsedUser.User || "";
+							}
+						} catch (e) {}
+					}
 					doc.setFontSize(8);
 					doc.setFont("helvetica", "bold"); doc.text("DC NO :", rc, ry);
 					doc.setFont("helvetica", "normal"); doc.text(oOut.ChallanNumber || oOut.Challanumber || "", rc + rLblOff, ry); ry += 5.2;
@@ -1128,8 +1252,14 @@ sap.ui.define(["./BaseController",
 			doc.setFont("helvetica", "bold"); doc.setFontSize(8);
 			doc.text(sPersonName, col1X + pad + 8, gridY + 6);
 			doc.text(oOut.VendorName || oOut.Vendor || "", col1X + pad, gridY + 12);
-			doc.setFont("helvetica", "normal"); doc.setFontSize(7.5);
-			var splitAddr = doc.splitTextToSize(oOut.VendorAddress || [oOut.City, oOut.ZipCode].filter(Boolean).join(", "), col1W - pad * 2);
+			var sDcCityLine = [oOut.City, oOut.ZipCode, oOut.Country].filter(Boolean).join(" ");
+			var aDcAddrLines = [];
+			if (oOut.Address) { aDcAddrLines.push(oOut.Address); }
+			if (sDcCityLine) { aDcAddrLines.push(sDcCityLine); }
+			var sDcAddrToPrint = (oOut.VendorAddress && oOut.VendorAddress.indexOf("\n") !== -1)
+				? oOut.VendorAddress
+				: (aDcAddrLines.length > 0 ? aDcAddrLines.join("\n") : (oOut.VendorAddress || ""));
+			var splitAddr = doc.splitTextToSize(sDcAddrToPrint, col1W - pad * 2);
 			doc.text(splitAddr, col1X + pad, gridY + 17);
 			doc.setLineWidth(0.2);
 			doc.line(col1X, gridY + gridH - 7, col2X, gridY + gridH - 7);
@@ -1176,7 +1306,7 @@ sap.ui.define(["./BaseController",
 					item.MaterialDesc || item.MaterialDescription || item.MaterialName || item.Description || item.HSNDesc || item.Material || "",
 					item.HSNCode || "",
 					item.UOM || "",
-					parseFloat(item.SentQuantity || 0).toLocaleString("en-IN", { minimumFractionDigits: 3 }),
+					parseFloat(item.SentQuantity || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
 					parseFloat(item.ItemNetPrice || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 }),
 					parseFloat(item.Totalvalue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })
 				];
@@ -1253,12 +1383,24 @@ sap.ui.define(["./BaseController",
 
 			var sToday = new Date().toISOString().split("T")[0];
 			var sChallanDate = oData.ChallanDate ? new Date(oData.ChallanDate).toISOString().split("T")[0] : sToday;
-			var fnFormatDate = function (oDate) {
+						var fnFormatDate = function (oDate) {
 				if (!oDate) return "";
-				if (typeof oDate === "string" && oDate.length === 8 && !isNaN(oDate)) { return oDate; }
-				var d = new Date(oDate);
+				if (typeof oDate === "string") {
+					var sClean = oDate.trim();
+					if (sClean.length === 8 && !isNaN(sClean)) return sClean;
+					if (/^\d{2}[-\/]\d{2}[-\/]\d{4}$/.test(sClean)) {
+						return sClean.slice(6, 10) + sClean.slice(3, 5) + sClean.slice(0, 2);
+					}
+					if (/^\d{4}[-\/]\d{2}[-\/]\d{2}$/.test(sClean)) {
+						return sClean.slice(0, 4) + sClean.slice(5, 7) + sClean.slice(8, 10);
+					}
+				}
+				var d = (oDate instanceof Date) ? oDate : new Date(oDate);
 				if (isNaN(d.getTime())) return "";
-				return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+				var y = d.getFullYear();
+				var m = String(d.getMonth() + 1).padStart(2, '0');
+				var day = String(d.getDate()).padStart(2, '0');
+				return y + m + day;
 			};
 
 			var oPayload = {
@@ -1403,7 +1545,82 @@ sap.ui.define(["./BaseController",
 				return d2.getFullYear() + String(d2.getMonth() + 1).padStart(2, '0') + String(d2.getDate()).padStart(2, '0');
 			}
 			return "";
+		},
+
+		_applyVendorMasterData: function (v, oModel) {
+			if (!v || !oModel) return;
+			var sStreet = (v.Address || v.Street || v.Stras || "").trim();
+			var sCity = (v.City || oModel.getProperty("/City") || "").trim();
+			var sZip = (v.ZipCode || v.PostalCode || oModel.getProperty("/ZipCode") || "").trim();
+			var sCountry = (v.Country || "").trim();
+
+			var sCityLine = [sCity, sZip, sCountry].filter(Boolean).join(" ");
+			var aLines = [];
+			if (sStreet) { aLines.push(sStreet); }
+			if (sCityLine) { aLines.push(sCityLine); }
+
+			var sFormattedAddress = aLines.join("\n");
+			if (!sFormattedAddress) {
+				sFormattedAddress = [sStreet, sCity, sZip, sCountry].filter(Boolean).join(", ");
+			}
+
+			if (v.Name || v.VendorName) {
+				oModel.setProperty("/VendorName", v.Name || v.VendorName);
+			}
+			if (v.VendorGST) {
+				oModel.setProperty("/VendorGST", v.VendorGST);
+			}
+
+			oModel.setProperty("/Address", sStreet);
+			oModel.setProperty("/City", sCity);
+			oModel.setProperty("/ZipCode", sZip);
+			oModel.setProperty("/Country", sCountry);
+			if (sFormattedAddress) {
+				oModel.setProperty("/VendorAddress", sFormattedAddress);
+			}
+		},
+
+		_enrichVendorAddressMaster: function (sVendorCode, sPlant, oModel) {
+			if (!sVendorCode || !oModel) return;
+			var oODataModel = this.getOwnerComponent().getModel();
+			if (!oODataModel) return;
+
+			var sRawVendor = String(sVendorCode).trim();
+			var sPaddedVendor = sRawVendor;
+			if (sPaddedVendor && /^\d+$/.test(sPaddedVendor) && sPaddedVendor.length < 10) {
+				sPaddedVendor = sPaddedVendor.padStart(10, "0");
+			}
+
+			var sPlantFilter = sPlant || "2301";
+			var that = this;
+
+			oODataModel.read("/ZVendorSet", {
+				filters: [
+					new sap.ui.model.Filter("Vendor", sap.ui.model.FilterOperator.EQ, sPaddedVendor),
+					new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sPlantFilter)
+				],
+				success: function (oData) {
+					var aRes = oData.results || [];
+					if (aRes.length > 0) {
+						that._applyVendorMasterData(aRes[0], oModel);
+					} else if (sPaddedVendor !== sRawVendor) {
+						oODataModel.read("/ZVendorSet", {
+							filters: [
+								new sap.ui.model.Filter("Vendor", sap.ui.model.FilterOperator.EQ, sRawVendor),
+								new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, sPlantFilter)
+							],
+							success: function (oData2) {
+								var aRes2 = oData2.results || [];
+								if (aRes2.length > 0) {
+									that._applyVendorMasterData(aRes2[0], oModel);
+								}
+							}
+						});
+					}
+				}
+			});
 		}
 
 	});
 });
+

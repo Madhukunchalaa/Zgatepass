@@ -29,7 +29,7 @@ sap.ui.define([
 				if (bIsGatepassUserOnly) {
 					var aUserOnlyAllowed = [
 						"home", "GatePassList", "GatePassCreation", "NRGPList", "GatePassAmendment", "IRGP", 
-						"ScrapRequestCreation", "ScrapRequestList", "AshGatePassCreation", "AshGatePassList",
+						"ScrapRequestCreation", "ScrapRequestList", "CoalGatePassCreation", "SecurityGateControl", "AshGatePassCreation", "AshGatePassList",
 						"AshGatePassRequest", "AshGatePassRequestList",
 						"OutGatePass", "NRGPDetail", "RGPDetail", "ScrapGatepassDetail", "StoreRequestDetail",
 						"AddInwardInsurance", "GatePassWithPO", "GatePassWithPODetail", "GatePassWithPOEdit",
@@ -42,7 +42,7 @@ sap.ui.define([
 				} else if (bIsHodUser) {
 					var aHodAllowed = [
 						"home", "GatePassList", "GatePassCreation", "NRGPList", "GatePassAmendment", "ScrapRequestList", 
-						"ScrapRequestDetail", "ScrapGatepassList", "AshGatePassList", "AshGatePassDetail", "HODRequestDetail",
+						"ScrapRequestDetail", "ScrapGatepassList", "CoalGatePassCreation", "SecurityGateControl", "AshGatePassList", "AshGatePassDetail", "HODRequestDetail",
 						"AshGatePassRequest", "AshGatePassRequestList",
 						"OutGatePass", "NRGPDetail", "RGPDetail", "ScrapGatepassDetail", "StoreRequestDetail",
 						"AddInwardInsurance", "GatePassWithPO", "GatePassWithPODetail", "GatePassWithPOEdit",
@@ -98,7 +98,7 @@ sap.ui.define([
 		_updateUserInfo: function () {
 			var oUserModel = sap.ui.getCore().getModel("user");
 			if (!oUserModel) return;
-			var sFullName = oUserModel.getProperty("/fullName") || oUserModel.getProperty("/id") || "User";
+			var sFullName = oUserModel.getProperty("/UserFullName") || oUserModel.getProperty("/fullName") || oUserModel.getProperty("/id") || "User";
 			var sInitials = sFullName.trim().split(/\s+/).map(function (p) { return p.charAt(0); }).join("").substring(0, 2).toUpperCase();
 			
 			this.byId("idWelcomeText").setText("Welcome, " + sFullName);

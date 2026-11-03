@@ -134,6 +134,7 @@
 										liveChange=".onQtyChange"
 										type="Text"
 										textAlign="Right"
+										editable="{= !${inward>/isClosed} }"
 										class="gpmsTableInput"/>
 									<Text text="{path: 'inward>balQty', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 3, maxFractionDigits: 3}}" textAlign="Right"/>
 									<Text text="{inward>uom}" wrapping="false"/>
@@ -199,6 +200,10 @@
 							<DatePicker value="{inward>/InsuranceDateDisplay}" valueFormat="dd-MM-yyyy" displayFormat="dd-MM-yyyy" class="gpmsFieldInput" width="100%"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
+							<Label text="Received Date" class="gpmsFieldLabel"/>
+							<DatePicker value="{inward>/InsuranceReceivedDateDisplay}" valueFormat="dd-MM-yyyy" displayFormat="dd-MM-yyyy" class="gpmsFieldInput" width="100%"/>
+						</VBox>
+						<VBox class="sapUiSmallMargin">
 							<Label text="Vendor" class="gpmsFieldLabel"/>
 							<Input value="{inward>/InsuranceVendor}" class="gpmsFieldInput"/>
 						</VBox>
@@ -238,7 +243,7 @@
 
 				<!-- Save Button -->
 				<HBox class="sapUiSmallMarginTop sapUiSmallMarginBottom">
-					<Button text="Save" type="Accept" press=".onPostInward" class="gpmsSubmitBtn" enabled="{= ${inward>/items}.length > 0 }"/>
+					<Button text="Save" type="Accept" press=".onPostInward" class="gpmsSubmitBtn" enabled="{= ${inward>/items}.length > 0 &amp;&amp; !${inward>/isClosed} }"/>
 				</HBox>
 
 			</VBox>

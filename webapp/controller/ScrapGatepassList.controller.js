@@ -150,10 +150,12 @@ sap.ui.define([
 						if (isNaN(oItemDate.getTime())) {
 							var p = String(vDate).split("-");
 							if (p.length === 3) {
+								var MONTHS_MAP = { JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11 };
+								var mIdx = isNaN(p[1]) ? MONTHS_MAP[p[1].toUpperCase()] : (parseInt(p[1], 10) - 1);
 								if (p[0].length === 4) {
-									oItemDate = new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+									oItemDate = new Date(parseInt(p[0], 10), mIdx, parseInt(p[2], 10));
 								} else {
-									oItemDate = new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+									oItemDate = new Date(parseInt(p[2], 10), mIdx, parseInt(p[0], 10));
 								}
 							}
 						}

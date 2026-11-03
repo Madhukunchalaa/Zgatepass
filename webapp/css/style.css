@@ -224,6 +224,37 @@
     z-index: 0 !important;
 }
 
+/* Plant-specific dynamic backgrounds */
+.gpmsDashboardHero.gpmsPlant_2301::before {
+    background-image: url('../assets/img/power_plant_2301.jpg') !important;
+    background-repeat: no-repeat !important;
+    background-position: center center !important;
+    background-size: cover !important;
+}
+
+.gpmsDashboardHero.gpmsPlant_3120::before {
+    background-image: url('../assets/img/power_plant_3120.png'), url('../assets/img/power_plant_3120.jpg'), url('../assets/img/power_plant.jpg') !important;
+    background-repeat: no-repeat !important;
+    background-position: center center !important;
+    background-size: cover !important;
+}
+
+.gpmsDashboardHero.gpmsPlant_2121::before {
+    background-image: url('../assets/img/power_plant_2121.png'), url('../assets/img/power_plant_2121.jpg'), url('../assets/img/power_plant.jpg') !important;
+    background-repeat: no-repeat !important;
+    background-position: center center !important;
+    background-size: cover !important;
+    z-index: 0 !important;
+}
+
+.gpmsDashboardHero.gpmsPlant_3121::before {
+    background-image: url('../assets/img/power_plant_3121.png'), url('../assets/img/power_plant_3121.jpg'), url('../assets/img/power_plant.jpg') !important;
+    background-repeat: no-repeat !important;
+    background-position: center center !important;
+    background-size: cover !important;
+    z-index: 0 !important;
+}
+
 .gpmsDashboardHero::after {
     content: "" !important;
     position: fixed !important;
@@ -1979,3 +2010,454 @@ body.sapUiBusy .sapUiBusyIndicator {
     color: #ffffff !important;
 }
 /* *****************************************8 */
+
+/* ─── Security Gate Control Modern UI ───────────────────── */
+.secHeroBanner {
+    background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%) !important;
+    border-radius: 16px !important;
+    padding: 1.5rem 2rem !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.3) !important;
+    margin-bottom: 1.5rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.secHeroTitle {
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    font-size: 1.5rem !important;
+    letter-spacing: 0.5px !important;
+}
+
+.secHeroSubtitle {
+    color: #94A3B8 !important;
+    font-size: 0.85rem !important;
+}
+
+.secBadgeLive {
+    background: rgba(34, 197, 94, 0.15) !important;
+    color: #4ADE80 !important;
+    border: 1px solid rgba(74, 222, 128, 0.3) !important;
+    border-radius: 20px !important;
+    padding: 4px 12px !important;
+    font-weight: 600 !important;
+    font-size: 0.75rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+/* Operation Mode Segmented Switch */
+.secModeSelector {
+    background: #F1F5F9 !important;
+    padding: 6px !important;
+    border-radius: 12px !important;
+    border: 1px solid #CBD5E1 !important;
+}
+
+.secModeSelector .sapMSegBBtn {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    border: none !important;
+    height: 42px !important;
+    padding: 0 1.5rem !important;
+    transition: all 0.2s ease !important;
+}
+
+.secModeSelector .sapMSegBBtnSel {
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 4px 12px rgba(30, 41, 59, 0.25) !important;
+}
+
+/* Content Cards */
+.secCard {
+    background: #FFFFFF !important;
+    border-radius: 16px !important;
+    border: 1px solid #E2E8F0 !important;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05) !important;
+    padding: 1.5rem !important;
+    margin-bottom: 1.5rem !important;
+}
+
+.secCardHeader {
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    color: #0F172A !important;
+    margin-bottom: 1rem !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.secMetricBox {
+    background: #F8FAFC !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 12px !important;
+    padding: 1rem !important;
+    text-align: center !important;
+}
+
+.secMetricVal {
+    font-size: 1.35rem !important;
+    font-weight: 700 !important;
+    color: #0F172A !important;
+}
+
+.secMetricLbl {
+    font-size: 0.75rem !important;
+    color: #64748B !important;
+    text-transform: uppercase !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* Verification Table */
+.secTable .sapMListTblHeader {
+    background: #F8FAFC !important;
+}
+
+.secTable .sapMText {
+    font-size: 0.875rem !important;
+}
+
+.secQtyBadge {
+    background: #E0F2FE !important;
+    color: #0369A1 !important;
+    font-weight: 700 !important;
+    padding: 4px 10px !important;
+    border-radius: 6px !important;
+}
+
+/* ─── Gate In & Gate Out Animation ───────────────────────── */
+.gateAnimContainer {
+    background: linear-gradient(180deg, #F8FAFC 0%, #EDF2F7 100%) !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 12px !important;
+    padding: 1.25rem 2rem !important;
+    margin-bottom: 1rem !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.gateBarrierPole {
+    width: 140px;
+    height: 10px;
+    background: repeating-linear-gradient(
+        45deg,
+        #E53E3E,
+        #E53E3E 14px,
+        #FFFFFF 14px,
+        #FFFFFF 28px
+    );
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transform-origin: left center;
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* When Gate is OPEN (Acknowledging / Inwarding) */
+.gateBarrierOpen {
+    transform: rotate(-65deg);
+}
+
+/* Gate IN Animation: Truck enters from Left to Center */
+.truckGateIn {
+    animation: truckDriveIn 2.2s infinite ease-in-out;
+}
+
+@keyframes truckDriveIn {
+    0% {
+        transform: translateX(-60px);
+        opacity: 0.2;
+    }
+    50% {
+        transform: translateX(10px);
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(10px);
+        opacity: 1;
+    }
+}
+
+/* Gate OUT Animation: Truck exits from Center to Right */
+.truckGateOut {
+    animation: truckDriveOut 2.2s infinite ease-in-out;
+}
+
+@keyframes truckDriveOut {
+    0% {
+        transform: translateX(-10px);
+        opacity: 1;
+    }
+    70% {
+        transform: translateX(70px);
+        opacity: 0.1;
+    }
+    100% {
+        transform: translateX(70px);
+        opacity: 0;
+    }
+}
+
+.gatePulseBadgeIn {
+    background: #EBF8F2 !important;
+    color: #1B6B3A !important;
+    border: 1px solid #A8D8B8 !important;
+    padding: 4px 12px !important;
+    border-radius: 16px !important;
+    font-weight: 600 !important;
+    font-size: 0.8rem !important;
+}
+
+.gatePulseBadgeOut {
+    background: #FFF5F5 !important;
+    color: #C53030 !important;
+    border: 1px solid #FEB2B2 !important;
+    padding: 4px 12px !important;
+    border-radius: 16px !important;
+    font-weight: 600 !important;
+    font-size: 0.8rem !important;
+}
+
+/* ─── Ultra Engaging Security Simulation Canvas ─────────────── */
+.secSimStage {
+    background: linear-gradient(180deg, #1A202C 0%, #2D3748 70%, #1A202C 100%) !important;
+    border-radius: 16px !important;
+    padding: 1.5rem 2rem !important;
+    position: relative !important;
+    overflow: hidden !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4) !important;
+    border: 2px solid #4A5568 !important;
+}
+
+/* Road with animated dashed lane markings */
+.secRoadLane {
+    height: 14px;
+    background: #111827;
+    border-radius: 7px;
+    position: relative;
+    overflow: hidden;
+    margin-top: 10px;
+    border-top: 2px solid #E2E8F0;
+    border-bottom: 2px solid #E2E8F0;
+}
+
+.secRoadLane::before {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: repeating-linear-gradient(90deg, #FBBF24, #FBBF24 15px, transparent 15px, transparent 30px);
+    animation: roadMove 1.2s linear infinite;
+}
+
+@keyframes roadMove {
+    0% { background-position: 0 0; }
+    100% { background-position: 60px 0; }
+}
+
+/* Working Stop / Go Traffic Light */
+.secTrafficLight {
+    background: #111827;
+    border: 2px solid #374151;
+    border-radius: 8px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+.secLightBulb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    opacity: 0.25;
+    transition: all 0.3s ease;
+}
+
+.secLightRed {
+    background: #EF4444;
+}
+
+.secLightGreen {
+    background: #10B981;
+}
+
+.secLightActive {
+    opacity: 1 !important;
+    box-shadow: 0 0 12px currentColor !important;
+}
+
+/* Big Interactive Mode Buttons (Touch Friendly for Security Tablets) */
+.secGateInBtn {
+    background: linear-gradient(135deg, #065F46 0%, #047857 100%) !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    height: 52px !important;
+    box-shadow: 0 6px 18px rgba(4, 120, 87, 0.4) !important;
+    transition: transform 0.2s, box-shadow 0.2s !important;
+}
+
+.secGateInBtn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 22px rgba(4, 120, 87, 0.5) !important;
+}
+
+.secGateOutBtn {
+    background: linear-gradient(135deg, #991B1B 0%, #DC2626 100%) !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    height: 52px !important;
+    box-shadow: 0 6px 18px rgba(220, 38, 38, 0.4) !important;
+    transition: transform 0.2s, box-shadow 0.2s !important;
+}
+
+.secGateOutBtn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 22px rgba(220, 38, 38, 0.5) !important;
+}
+
+/* Sound/Alarm pulse effect during acknowledgment */
+@keyframes gateOpenAlarm {
+    0% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.02); filter: brightness(1.2); }
+    100% { transform: scale(1); filter: brightness(1); }
+}
+
+.secGateClearing {
+    animation: gateOpenAlarm 0.8s infinite ease-in-out !important;
+}
+
+/* ─── Option 3: Minimalist Traffic Light & Clearance Wave ───── */
+.secPillStatus {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 6px 16px !important;
+    border-radius: 20px !important;
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.4px !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+/* State: STOP / AWAITING CLEARANCE */
+.secPillClosed {
+    background: #FFF1F2 !important;
+    color: #BE123C !important;
+    border: 1px solid #FECDD3 !important;
+}
+
+.secPillClosed .secPillDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #E11D48;
+    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.6);
+    animation: secPulseRed 1.8s infinite;
+}
+
+@keyframes secPulseRed {
+    0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.6); }
+    70% { box-shadow: 0 0 0 8px rgba(225, 29, 72, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
+}
+
+/* State: CLEARANCE GRANTED / GATE OPENED (with Green Ripple Wave) */
+.secPillOpen {
+    background: #ECFDF5 !important;
+    color: #047857 !important;
+    border: 1px solid #A7F3D0 !important;
+    animation: secClearanceWave 1.2s ease-out;
+}
+
+.secPillOpen .secPillDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10B981;
+    box-shadow: 0 0 10px #10B981;
+}
+
+@keyframes secClearanceWave {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8);
+        transform: scale(0.98);
+    }
+    50% {
+        box-shadow: 0 0 0 14px rgba(16, 185, 129, 0);
+        transform: scale(1.02);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+        transform: scale(1);
+    }
+}
+
+/* ─── Plant Badge on Home Dashboard ─────────────────────── */
+.gpmsPlantBadge {
+    background: rgba(255, 255, 255, 0.92) !important;
+    border: 1px solid rgba(26, 35, 126, 0.25) !important;
+    border-radius: 20px !important;
+    padding: 6px 18px !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    color: var(--navy) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* ─── High-Contrast White Plant Badge on Hero ───────────── */
+.gpmsPlantBadge,
+.gpmsPlantBadge .sapMObjStatusText,
+.gpmsPlantBadge .sapMObjStatusIcon,
+.gpmsPlantBadge.sapMObjStatusNone,
+.gpmsPlantBadge.sapMObjStatusInformation {
+    color: #FFFFFF !important;
+}
+
+.gpmsPlantBadge {
+    background: rgba(255, 255, 255, 0.18) !important;
+    border: 1px solid rgba(255, 255, 255, 0.45) !important;
+    border-radius: 20px !important;
+    padding: 6px 18px !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    letter-spacing: 0.8px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+    backdrop-filter: blur(8px) !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Security Gate Control Card */
+.gpmsDashCard.securityCard {
+    border-left-color: #0D47A1 !important;
+}
+.gpmsDashCard.securityCard .sapMGTTitle {
+    color: #0D47A1 !important;
+}
+.gpmsDashCard.securityCard .gpmsCardIcon.sapUiIcon {
+    color: #0D47A1 !important;
+}
+
+/* Coal Gate Pass Card */
+.gpmsDashCard.coalCard {
+    border-left-color: #263238 !important;
+}
+.gpmsDashCard.coalCard .sapMGTTitle {
+    color: #263238 !important;
+}
+.gpmsDashCard.coalCard .gpmsCardIcon.sapUiIcon {
+    color: #263238 !important;
+}

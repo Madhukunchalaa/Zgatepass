@@ -1,0 +1,199 @@
+<mvc:View
+	controllerName="zgpms.meilpower.com.controller.SecurityGateControl"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns="sap.m"
+	xmlns:layout="sap.ui.layout"
+	xmlns:core="sap.ui.core"
+	height="100%">
+
+	<Page id="idSecurityGatePage" title="Security Gate Entry &amp; Exit" class="sapUiContentPadding gpmsPage">
+		<headerContent>
+			<Button icon="sap-icon://home" press=".onNavBack" type="Transparent" tooltip="Back to Dashboard"/>
+		</headerContent>
+
+		<content>
+			<VBox class="gpmsMainContainer">
+
+				<!-- ─── SLEEK GATE BARRIER & VEHICLE ANIMATION ─── -->
+				<Panel expandable="false" class="gpmsPanel sapUiSmallMarginBottom">
+					<HBox justifyContent="SpaceBetween" alignItems="Center" class="gateAnimContainer">
+						
+						<!-- Left: Animated Truck and Boom Barrier -->
+						<HBox alignItems="Center">
+							<!-- Moving Truck icon -->
+							<core:Icon 
+								src="sap-icon://shipping-status" 
+								size="2.4rem" 
+								color="{= ${security>/operationType} === 'GATE_IN' ? '#1B6B3A' : '#CC2020' }" 
+								class="{= ${security>/operationType} === 'GATE_IN' ? 'truckGateIn sapUiMediumMarginEnd' : 'truckGateOut sapUiMediumMarginEnd' }"/>
+							
+							<!-- Boom Barrier Mechanism -->
+							<VBox alignItems="Start">
+								<Text text="MAIN SECURITY BOOM BARRIER" style="font-size: 0.68rem; font-weight: 700; color: #718096; letter-spacing: 0.5px; margin-bottom: 4px;"/>
+								<HBox alignItems="Center">
+									<!-- Vertical Base Pillar -->
+									<VBox width="10px" height="26px" style="background: #2D3748; border-radius: 2px;" class="sapUiTinyMarginEnd"/>
+									<!-- Horizontal Striped Boom Pole (smoothly rotates up 65 deg when acknowledged) -->
+									<VBox class="{= ${security>/isGateOpen} ? 'gateBarrierPole gateBarrierOpen' : 'gateBarrierPole' }"/>
+								</HBox>
+							</VBox>
+						</HBox>
+
+						<!-- Right: Status Badge -->
+						<VBox alignItems="End">
+							<HBox alignItems="Center" class="{= ${security>/isGateOpen} ? 'secPillStatus secPillOpen' : 'secPillStatus secPillClosed' }">
+								<VBox class="secPillDot"/>
+								<Text 
+									text="{= ${security>/isGateOpen} ? 'CLEARANCE GRANTED • GATE OPENED' : (${security>/operationType} === 'GATE_IN' ? 'STOP • GATE IN VERIFICATION' : 'STOP • GATE OUT VERIFICATION') }" 
+									style="font-size: 0.8rem; font-weight: 700;"/>
+							</HBox>
+							<Text 
+								text="{= ${security>/isGateOpen} ? 'Barrier: LIFTED (Vehicle May Pass)' : 'Barrier: CLOSED (Awaiting Security Acknowledgment)' }" 
+								style="font-size: 0.72rem; color: #718096; margin-top: 4px;"/>
+						</VBox>
+					</HBox>
+				</Panel>
+
+				<!-- ─── 1. CLEAN OPERATION SELECTOR & LOOKUP ─── -->
+				<Panel expandable="false" class="gpmsPanel sapUiSmallMarginBottom">
+					<headerToolbar>
+						<Toolbar height="3rem">
+							<core:Icon src="sap-icon://official-service" class="sapUiSmallMarginEnd"/>
+							<Title text="GATE ENTRY / EXIT VERIFICATION" level="H3"/>
+							<ToolbarSpacer/>
+							<ObjectStatus text="{= 'Plant: ' + ${security>/plant} }" state="Information" icon="sap-icon://factory" class="sapUiSmallMarginEnd"/>
+							<ObjectStatus text="{= ${security>/operationType} === 'GATE_IN' ? 'Mode: GATE IN' : 'Mode: GATE OUT' }" state="Success" icon="sap-icon://shipping-status"/>
+						</Toolbar>
+					</headerToolbar>
+
+					<layout:Grid defaultSpan="XL4 L4 M6 S12" vSpacing="0" class="gpmsGridForm">
+						
+						<!-- Operation Type Select -->
+						<VBox class="sapUiSmallMargin">
+							<Label text="Operation Mode" required="true" class="gpmsFieldLabel"/>
+							<Select id="idOperationType" selectedKey="{security>/operationType}" change=".onOperationTypeChange" width="100%" class="gpmsFieldInput">
+								<items>
+									<core:Item key="GATE_IN" text="Gate In (Inward Vehicle Entry)"/>
+									<core:Item key="GATE_OUT" text="Gate Out (Outward Vehicle Exit)"/>
+								</items>
+							</Select>
+						</VBox>
+
+						<!-- Plant -->
+						<VBox class="sapUiSmallMargin">
+							<Label text="Plant" class="gpmsFieldLabel"/>
+							<Input value="{security>/plant}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+
+						<!-- PO Number Search with F4 Value Help -->
+						<VBox class="sapUiSmallMargin">
+							<Label text="Purchase Order (PO)" required="true" class="gpmsFieldLabel"/>
+							<Input 
+								id="idPoInput" 
+								value="{security>/poNumber}" 
+								placeholder="Enter or select PO Number..." 
+								showValueHelp="true" 
+								valueHelpRequest=".onPOValueHelp" 
+								submit=".onSearchPO" 
+								class="gpmsFieldInput"/>
+						</VBox>
+
+					</layout:Grid>
+
+					<HBox justifyContent="End" class="sapUiSmallMargin">
+						<Button text="Lookup PO Details" type="Emphasized" icon="sap-icon://search" press=".onSearchPO"/>
+					</HBox>
+				</Panel>
+
+				<!-- ─── 2. VERIFIED DETAILS PANEL (Shown after lookup) ─── -->
+				<Panel expandable="true" expanded="true" visible="{security>/hasData}" class="gpmsPanel sapUiSmallMarginBottom">
+					<headerToolbar>
+						<Toolbar height="3rem">
+							<core:Icon src="sap-icon://supplier" class="sapUiSmallMarginEnd"/>
+							<Title text="TRANSPORTER &amp; VEHICLE DETAILS" level="H3"/>
+							<ToolbarSpacer/>
+							<ObjectStatus text="{= 'Total Items: ' + ${security>/totalItemsCount} }" state="None"/>
+						</Toolbar>
+					</headerToolbar>
+
+					<layout:Grid defaultSpan="XL3 L3 M6 S12" vSpacing="0" class="gpmsGridForm">
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vendor Code" class="gpmsFieldLabel"/>
+							<Input value="{security>/vendor}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vendor Name" class="gpmsFieldLabel"/>
+							<Input value="{security>/vendorDesc}" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Vehicle Number" required="true" class="gpmsFieldLabel"/>
+							<Input value="{security>/vehicleNo}" placeholder="Enter vehicle plate number" class="gpmsFieldInput"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<Label text="Security Guard" class="gpmsFieldLabel"/>
+							<Input value="{user>/Username} ({user>/id})" editable="false" class="gpmsFieldInput"/>
+						</VBox>
+
+						<VBox class="sapUiSmallMargin">
+							<layoutData>
+								<layout:GridData span="XL12 L12 M12 S12"/>
+							</layoutData>
+							<Label text="Security Remarks" class="gpmsFieldLabel"/>
+							<Input value="{security>/remarks}" placeholder="Enter any check remarks (optional)..." class="gpmsFieldInput"/>
+						</VBox>
+					</layout:Grid>
+				</Panel>
+
+				<!-- ─── 3. TABLE OF ITEMS ─── -->
+				<Panel expandable="true" expanded="true" visible="{security>/hasData}" class="gpmsPanel sapUiSmallMarginBottom">
+					<headerToolbar>
+						<Toolbar height="3rem">
+							<core:Icon src="sap-icon://table-view" class="sapUiSmallMarginEnd"/>
+							<Title text="TABLE OF ITEMS" level="H3"/>
+							<ToolbarSpacer/>
+						</Toolbar>
+					</headerToolbar>
+
+					<Table items="{security>/items}" noDataText="No line items found for this PO." class="sapUiResponsiveMargin">
+						<columns>
+							<Column width="5rem"><Text text="Item No" class="gpmsTableColHeader"/></Column>
+							<Column><Text text="Description" class="gpmsTableColHeader"/></Column>
+							<Column width="9rem" hAlign="End"><Text text="PO Qty" class="gpmsTableColHeader"/></Column>
+							<Column width="6rem"><Text text="UOM" class="gpmsTableColHeader"/></Column>
+						</columns>
+						<items>
+							<ColumnListItem>
+								<cells>
+									<Text text="{security>ItemNo}"/>
+									<Text text="{security>ItemDescription}"/>
+									<Text text="{security>POQuantity}"/>
+									<Text text="{security>UOM}"/>
+								</cells>
+							</ColumnListItem>
+						</items>
+					</Table>
+				</Panel>
+
+			</VBox>
+		</content>
+
+		<!-- ─── FOOTER BAR (Clean Fiori Footer) ─── -->
+		<footer>
+			<OverflowToolbar class="gpmsFooterBar">
+				<Button text="Back to Dashboard" press=".onNavBack"/>
+				<ToolbarSpacer/>
+				<Button 
+					text="{= ${security>/operationType} === 'GATE_IN' ? 'Acknowledge Gate In' : 'Acknowledge Gate Out' }" 
+					type="Accept" 
+					icon="sap-icon://accept" 
+					visible="{security>/hasData}" 
+					press=".onAcknowledge" 
+					class="sapUiSmallMarginEnd"/>
+			</OverflowToolbar>
+		</footer>
+
+	</Page>
+</mvc:View>

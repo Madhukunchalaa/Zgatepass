@@ -96,9 +96,9 @@
 		</content>
 		<footer>
 			<OverflowToolbar class="gpmsFooterBar">
-				<Button text="Approve" type="Accept" press=".onApprove" visible="{= (${user>/IsHodUser} &amp;&amp; ${scrap>/status} === 'Pending') || (${user>/IsStoreUser} &amp;&amp; ${scrap>/status} === 'Store Approval Pending')}" class="sapUiSmallMarginBegin"/>
-				<Button text="Reject" type="Reject" press=".onReject" visible="{= (${user>/IsHodUser} &amp;&amp; ${scrap>/status} === 'Pending') || (${user>/IsStoreUser} &amp;&amp; ${scrap>/status} === 'Store Approval Pending')}"/>
-				<Button text="Amend" type="Emphasized" press=".onAmend" visible="{= (${user>/IsHodUser} &amp;&amp; ${scrap>/status} === 'Pending') || (${user>/IsStoreUser} &amp;&amp; ${scrap>/status} === 'Store Approval Pending')}"/>
+				<Button text="Approve" type="Accept" icon="sap-icon://accept" press=".onApprove" visible="{= ${scrap>/status} !== 'Approved' &amp;&amp; ${scrap>/status} !== 'Rejected' &amp;&amp; ${scrap>/status} !== 'Closed' &amp;&amp; ${scrap>/status} !== 'Cancelled' }" class="sapUiSmallMarginBegin"/>
+				<Button text="Reject" type="Reject" icon="sap-icon://decline" press=".onReject" visible="{= ${scrap>/status} !== 'Approved' &amp;&amp; ${scrap>/status} !== 'Rejected' &amp;&amp; ${scrap>/status} !== 'Closed' &amp;&amp; ${scrap>/status} !== 'Cancelled' }"/>
+				<Button text="Amend" type="Emphasized" icon="sap-icon://edit" press=".onAmend" visible="{= ${scrap>/status} !== 'Approved' &amp;&amp; ${scrap>/status} !== 'Rejected' &amp;&amp; ${scrap>/status} !== 'Closed' &amp;&amp; ${scrap>/status} !== 'Cancelled' }"/>
 				<ToolbarSpacer/>
 				<Button text="Back" press=".onNavBack" />
 			</OverflowToolbar>

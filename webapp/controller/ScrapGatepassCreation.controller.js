@@ -1307,6 +1307,24 @@ onSaleOrderValueHelp: function () {
 				}
 				MessageToast.show("Sale Order details auto-filled successfully.");
 			}
+		},
+
+		onFileSizeExceed: function (oEvent) {
+			var sFileName = oEvent.getParameter("fileName") || "File";
+			MessageBox.error(sFileName + " exceeds the maximum file size limit of 1 MB. Please upload a smaller file.");
+		},
+
+		onFileChange: function (oEvent) {
+			var aFiles = oEvent.getParameter("files");
+			if (aFiles && aFiles.length > 0) {
+				for (var f = 0; f < aFiles.length; f++) {
+					if (aFiles[f].size > 1048576) {
+						MessageBox.error("File \"" + aFiles[f].name + "\" exceeds the maximum allowed size of 1 MB. Please upload a file under 1 MB.");
+						oEvent.getSource().clear();
+						return;
+					}
+				}
+			}
 		}
 	});
 });

@@ -28,14 +28,14 @@
 							<Label text="From Date" class="gpmsFieldLabel"/>
 							<DatePicker id="idReportFromDatePicker"
 								placeholder="Select From Date"
-								displayFormat="dd-MM-yyyy"
+								displayFormat="dd-MMM-yyyy"
 								class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin">
 							<Label text="To Date" class="gpmsFieldLabel"/>
 							<DatePicker id="idReportToDatePicker"
 								placeholder="Select To Date"
-								displayFormat="dd-MM-yyyy"
+								displayFormat="dd-MMM-yyyy"
 								class="gpmsFieldInput"/>
 						</VBox>
 						<VBox class="sapUiSmallMargin" justifyContent="End">

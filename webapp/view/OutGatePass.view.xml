@@ -364,7 +364,7 @@
 							<Button text="GENERATE GATE PASS" type="Accept" press="onSubmitOutgate" icon="sap-icon://accept" class="gpmsSubmitBtn sapUiSmallMarginEnd" visible="{= ${out>/ApprovalStatus} === 'APPROVED' &amp;&amp; !${out>/GatePassNo} &amp;&amp; ${user>/IsStoreUser} }"/>
 							<Button text="PRINT GATE PASS" type="Emphasized" press=".onPrintGatePass" icon="sap-icon://print" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd" visible="{= !!${out>/GatePassNo} &amp;&amp; ${user>/IsStoreUser} }"/>
 							<Button text="CANCEL GATE PASS" type="Reject" press=".onCancelGatePass" icon="sap-icon://cancel" class="gpmsDocBtn rejectBtn sapUiSmallMarginEnd" visible="{= !!${out>/GatePassNo} &amp;&amp; ${out>/Status} !== 'CANCELLED' &amp;&amp; ${user>/IsStoreUser} }"/>
-							<Button text="Generate DC" type="Emphasized" press=".onGenerateDC" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd" visible="{= ${out>/DocOptionIndex} === 1 &amp;&amp; !!${out>/GatePassNo} &amp;&amp; ${user>/IsStoreUser} }"/>
+							<Button text="Generate DC" type="Emphasized" press=".onGenerateDC" class="gpmsDocBtn dcBtn sapUiSmallMarginEnd" visible="{= !!${out>/GatePassNo} &amp;&amp; ${user>/IsStoreUser} }"/>
 							<!-- <Button text="Generate E-Way Bill" type="Emphasized" press=".onGenerateEWay" class="gpmsDocBtn ewayBtn sapUiSmallMarginEnd" visible="{= ${out>/DocOptionIndex} === 1 }"/> -->
 							<Button text="SAVE" type="Accept" press=".onSaveLogistics" icon="sap-icon://save" class="gpmsSubmitBtn" visible="{= !!${out>/GatePassNo} &amp;&amp; ${user>/IsStoreUser} }"/>
 						</HBox>

@@ -63,6 +63,7 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 				InsuranceAmount: "",
 				InsuranceInvoiceNo: "",
 				InsuranceDateDisplay: "",
+				InsuranceReceivedDateDisplay: "",
 				InsuranceVendor: "",
 				InsuranceVendorAddress: "",
 				InsuranceModeOfTransport: "Road",
@@ -206,10 +207,8 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 				return it.balQty === 0;
 			});
 
-			if (bAllFullyReceived) {
-				MessageBox.warning("All items for Gate Pass " + (oData.GatePassNo || "") + " have already been received.");
-			}
-
+			var bIsClosed = bAllFullyReceived || oData.GPStatus === "CLOSED" || oData.Status === "CLOSED";
+			oModel.setProperty("/isClosed", bIsClosed);
 			oModel.setProperty("/GatePassNo",     oData.GatePassNo || "");
 			oModel.setProperty("/GatePassDate",   this._formatDate(oData.GatePassDate));
 			oModel.setProperty("/DueDate",        this._formatDate(oData.ReturnableDate || oData.DueDate));
@@ -280,23 +279,36 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			var oModel   = this.getView().getModel("inward");
 
 			var fNow     = parseFloat(oSource.getValue() || 0);
-
-			oModel.setProperty(oContext.getPath() + "/recvdQty", fNow);
-
 			var fInitial = parseFloat(oItem._initialBal || oItem.sentQty || 0);
-			var fBal     = parseFloat((fInitial - fNow).toFixed(3));
 
-			if (fBal < 0) {
-				MessageToast.show("Received quantity exceeds the available balance!");
-				oSource.setValueState("Error");
+			if (fNow > fInitial) {
+				fNow = fInitial;
+				oSource.setValue(fInitial);
+				MessageToast.show("Received quantity cannot exceed available balance (" + fInitial + ")!");
+				oSource.setValueState("Warning");
+			} else if (fNow < 0) {
+				fNow = 0;
+				oSource.setValue(0);
+				oSource.setValueState("None");
 			} else {
 				oSource.setValueState("None");
 			}
 
+			oModel.setProperty(oContext.getPath() + "/recvdQty", fNow);
+
+			var fBal     = parseFloat((fInitial - fNow).toFixed(3));
 			oModel.setProperty(oContext.getPath() + "/balQty", fBal);
 
 			var fRate = parseFloat(oItem.rate || oItem._itemNetPrice || 0);
 			oModel.setProperty(oContext.getPath() + "/amount", parseFloat((fNow * fRate).toFixed(2)));
+
+			var aAllItems = oModel.getProperty("/items") || [];
+			var bAllComplete = aAllItems.length > 0 && aAllItems.every(function (it) {
+				return parseFloat(it.balQty || 0) <= 0 && parseFloat(it.recvdQty || 0) > 0;
+			});
+			if (bAllComplete) {
+				MessageToast.show("All items are now fully received!");
+			}
 
 			this._calculateFinalTotal();
 		},
@@ -390,14 +402,31 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 
 			oODataModel.create("/GateRetHdrSet", oPayload, {
 				success: function (oResponse) {
-					var sMsg = oResponse.Message || "Inward Gate Pass posted successfully!";
-					this._preserveOutGatePass(oODataModel, oHdr, aNavItems, sGatePassNo);
-					sap.ui.core.BusyIndicator.hide();
-					MessageBox.success(sMsg, {
-						onClose: function () {
-							this.getView().getModel("inward").setProperty("/showLogistics", true);
-						}.bind(this)
+					var bAllFullyReceived = aItems.length > 0 && aItems.every(function (it) {
+						return parseFloat(it.balQty || 0) <= 0;
 					});
+
+					this._preserveOutGatePass(oODataModel, oHdr, aNavItems, sGatePassNo, bAllFullyReceived);
+					this._postInwardInsurance(oODataModel, oHdr, sGatePassNo, oModel);
+					sap.ui.core.BusyIndicator.hide();
+
+					var that = this;
+					if (bAllFullyReceived) {
+						oModel.setProperty("/isClosed", true);
+						MessageBox.success("🎉 All items for Gate Pass (" + sGatePassNo + ") have been fully received! Gate Pass status changed to CLOSED.", {
+							title: "Gate Pass Closed",
+							onClose: function () {
+								that.getRouter().navTo("home");
+							}
+						});
+					} else {
+						MessageBox.success(oResponse.Message || "Inward Gate Pass posted successfully!", {
+							title: "Partial Inward Gate Pass Posted",
+							onClose: function () {
+								that.getRouter().navTo("home");
+							}
+						});
+					}
 				}.bind(this),
 				error: function (oError) {
 					sap.ui.core.BusyIndicator.hide();
@@ -408,8 +437,9 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 			});
 		},
 
-		_preserveOutGatePass: function (oODataModel, oHdr, aInwardItems, sGatePassNo) {
+		_preserveOutGatePass: function (oODataModel, oHdr, aInwardItems, sGatePassNo, bAllFullyReceived) {
 			var aRawItems = (oHdr.OutgateNav && oHdr.OutgateNav.results) || [];
+			var sNewStatus = bAllFullyReceived ? "CLOSED" : (oHdr.GPStatus || "OPEN");
 			var oOutPayload = {
 				GatePassreqNo:   oHdr.GatePassReqNo    || oHdr.GatePassreqNo || "",
 				FiscalYear:      oHdr.FiscalYear       || String(new Date().getFullYear()),
@@ -430,10 +460,8 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 				Department:      oHdr.Department        || "",
 				ChallanNumber:   oHdr.ChallanNumber     || "",
 				GatePassType:    "RGP",
-				VehicleNo:       oHdr.VehicleNo         || "",
 				ModeOfDispatch:  oHdr.ModeOfDispatch    || "",
-				Remarks:         oHdr.Remarks           || "",
-				GPStatus:        oHdr.GPStatus          || "",
+				GPStatus:        sNewStatus,
 				Message:         "",
 				GPbase64:        "",
 				DCbase64:        "",
@@ -457,7 +485,6 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 						GatePassNo:       sGatePassNo,
 						ItemNo:           it.ItemNo || String((i + 1) * 10).padStart(5, "0"),
 						Material:         it.Material || "",
-						HSNCode:          it.HSNCode || "",
 						HSNDesc:          it.HSNDesc || "",
 						UOM:              it.UOM || "",
 						ItemNetPrice:     it.ItemNetPrice || "0.00",
@@ -484,6 +511,119 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 
 		onNavHome: function () {
 			this.getRouter().navTo("home");
+		},
+		_postInwardInsurance: function (oODataModel, oHdr, sGatePassNo, oModel) {
+			if (!oHdr || !sGatePassNo) { return; }
+
+			var sInsReqStr = String(oHdr.InsuranceReq || oHdr.Insurance || "").trim().toUpperCase();
+			var bInsured = oHdr.InsuranceRequired || sInsReqStr === "X" || sInsReqStr === "YES" || sInsReqStr === "Y" || sInsReqStr === "1" || sInsReqStr === "TRUE";
+
+			// Check local storage for insurance required if missing on header
+			if (!bInsured) {
+				try {
+					var sKey = sGatePassNo || oHdr.GatePassReqNo || oHdr.GatePassreqNo || "";
+					var sSaved = localStorage.getItem("logistics_" + sKey) || localStorage.getItem("gp_logistics_" + sKey);
+					if (sSaved) {
+						var oSaved = JSON.parse(sSaved);
+						bInsured = !!(oSaved.bInsured || oSaved.InsuranceRequired);
+					}
+				} catch (e) {}
+			}
+
+			// Allow manual override from UI model if panel is open
+			if (oModel && oModel.getProperty("/showInsuranceDetails")) {
+				bInsured = true;
+			}
+
+			if (!bInsured) { return; }
+
+			var today = new Date();
+			var sTodaySAP = today.getFullYear() + String(today.getMonth() + 1).padStart(2, '0') + String(today.getDate()).padStart(2, '0');
+			var sTodayFmt = String(today.getDate()).padStart(2, '0') + "-" + String(today.getMonth() + 1).padStart(2, '0') + "-" + today.getFullYear();
+
+			var sInsDateRaw = (oModel && oModel.getProperty("/showInsuranceDetails") && oModel.getProperty("/InsuranceDateDisplay")) ? oModel.getProperty("/InsuranceDateDisplay").split("-").reverse().join("") : (oHdr.InsuranceDate || "");
+			var sInsDateFmt = sInsDateRaw ? (sInsDateRaw.length === 8 ? sInsDateRaw : sTodaySAP) : sTodaySAP;
+
+			var sRecDateRaw = (oModel && oModel.getProperty("/showInsuranceDetails") && oModel.getProperty("/InsuranceReceivedDateDisplay")) ? oModel.getProperty("/InsuranceReceivedDateDisplay").split("-").reverse().join("") : "";
+			var sRecDateFmt = sRecDateRaw ? (sRecDateRaw.length === 8 ? sRecDateRaw : sTodaySAP) : sTodaySAP;
+
+			var bUseModel = (oModel && oModel.getProperty("/showInsuranceDetails"));
+			var sLRVal = bUseModel ? oModel.getProperty("/InsuranceLRNumber") : (oHdr.LRNumber || oHdr.LRNnumber || oHdr.LRNo || "");
+			var sVehVal = bUseModel ? oModel.getProperty("/InsuranceVehicleNo") : (oHdr.VehicleNo || "");
+			var sVendor = bUseModel ? oModel.getProperty("/InsuranceVendor") : (oHdr.VendorName || oHdr.Vendor || "");
+			var sVendorAddr = bUseModel ? oModel.getProperty("/InsuranceVendorAddress") : ([oHdr.City, oHdr.ZipCode].filter(Boolean).join(", ") || "");
+			var sMode = bUseModel ? oModel.getProperty("/InsuranceModeOfTransport") : (oHdr.ModeOfDispatch || oHdr.ModeOfTransport || "Road");
+			var sValue = bUseModel ? oModel.getProperty("/InsuranceAmount") : (oHdr.InsuranceAmount || oHdr.Totalvalue || "0.00");
+			var sDesc = bUseModel ? oModel.getProperty("/InsuranceDescription") : (oHdr.CommonDesc || oHdr.Remarks || "Inward Gate Pass Return");
+
+			var oInsPayload = {
+				InvoiceNumber:   sGatePassNo || oHdr.GatePassReqNo || "",
+				InsuranceDate:   sInsDateFmt,
+				RecievedDate:    sRecDateFmt,
+				VendorName:      sVendor || "",
+				VendorAddress:   sVendorAddr || "",
+				ModeOfTransport: sMode || "Road",
+				LRNumber:        sLRVal || "",
+				VehicleNo:       sVehVal || "",
+				InvoiceValue:    sValue || "0.00",
+				RGPCoomonDesc:   sDesc || "Inward Gate Pass Return",
+				Message:         ""
+			};
+
+			// Save to localStorage for instant frontend availability without overwriting outward logistics
+			try {
+				var sSaveKey = sGatePassNo || oHdr.GatePassReqNo || "";
+				if (sSaveKey) {
+					var oExisting = {};
+					try {
+						var sExistingRaw = localStorage.getItem("logistics_" + sSaveKey) || localStorage.getItem("gp_logistics_" + sSaveKey);
+						if (sExistingRaw) { oExisting = JSON.parse(sExistingRaw); }
+					} catch (eEx) {}
+
+					// Preserve original Outward description and common description
+					var sPreservedOutwardDesc = oExisting.OutwardInsDesc || oExisting.CommonDesc || (oExisting.sInsDescription && oExisting.sInsDescription !== oInsPayload.RGPCoomonDesc ? oExisting.sInsDescription : "") || oHdr.CommonDesc || "";
+					var sPreservedCommonDesc = oExisting.CommonDesc || oHdr.CommonDesc || "";
+
+					var oLogToSave = Object.assign({}, oExisting, {
+						bInsured: true,
+						InsuranceRequired: true,
+						InwardInsDate: sTodayFmt,
+						ReturnedDate: sTodayFmt,
+						ActualReturnDate: sTodayFmt,
+						InwardInsAmount: sValue,
+						InwardLRNumber: sLRVal,
+						InwardLRNnumber: sLRVal,
+						InwardInsLRV: sLRVal || sVehVal,
+						InwardVehicleNo: sVehVal,
+						InwardInsDesc: oInsPayload.RGPCoomonDesc,
+						InwardInsuranceCreated: true
+					});
+
+					// Strictly preserve outward-specific fields
+					if (sPreservedOutwardDesc) {
+						oLogToSave.OutwardInsDesc = sPreservedOutwardDesc;
+					}
+					if (sPreservedCommonDesc) {
+						oLogToSave.CommonDesc = sPreservedCommonDesc;
+					}
+					if (oExisting.sInsDescription && oExisting.sInsDescription !== oInsPayload.RGPCoomonDesc) {
+						oLogToSave.sInsDescription = oExisting.sInsDescription;
+					}
+
+					localStorage.setItem("logistics_" + sSaveKey, JSON.stringify(oLogToSave));
+					localStorage.setItem("gp_logistics_" + sSaveKey, JSON.stringify(oLogToSave));
+				}
+			} catch (eLog) {}
+
+			oODataModel.create("/ZInwardInsuranceSet", oInsPayload, {
+				success: function (oData, oResponse) {
+					console.log("SUCCESSFULLY posted Inward Insurance:", oResponse);
+				},
+				error: function (oError) {
+					console.error("FAILED to post Inward Insurance:", oError);
+					sap.m.MessageToast.show("Warning: Failed to save inward insurance to backend.");
+				}
+			});
 		},
 
 		_getImageBase64: function (url) {
@@ -754,7 +894,7 @@ sap.ui.define(["zgpms/meilpower/com/controller/BaseController",
 						ModeOfTransport: oInwardData.ModeOfTransport || "",
 						VehicleNo: oInwardData.VehicleNo || "",
 						InvoiceValue: oInwardData.FinalTotal ? oInwardData.FinalTotal.toString().replace(/,/g, '') : "",
-						RgpDescription: oInwardData.Remarks || oInwardData.DCNotes || ""
+						RgpDescription: oInwardData.CommonDesc || oInwardData.Remarks || oInwardData.DCNotes || ""
 					});
 					oDialog.open();
 				});

@@ -36,16 +36,12 @@ sap.ui.define([
 				urlParameters: { "$expand": "GateInPoNav" },
 				success: function (oData) {
 					sap.ui.core.BusyIndicator.hide();
-					var aResults = oData.results || [];
+					var aResults = this.filterResultsByPlant(oData.results || [], sPlant);
 					
 					// Format dates for UI
 					aResults.forEach(function(item) {
-						if (item.GEDate && typeof item.GEDate === "string" && item.GEDate.length === 8) {
-							item.GEDateFormatted = item.GEDate.slice(0, 4) + "-" + item.GEDate.slice(4, 6) + "-" + item.GEDate.slice(6, 8);
-						} else {
-							item.GEDateFormatted = item.GEDate || "";
-						}
-					});
+						item.GEDateFormatted = this._formatDate(item.GEDate);
+					}.bind(this));
 
 					this.getView().getModel("poModel").setProperty("/results", aResults);
 				}.bind(this),

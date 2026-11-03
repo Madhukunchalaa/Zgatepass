@@ -200,6 +200,11 @@
 					"target": ["TargetAshGatePassRequest"]
 				},
 				{
+					"name": "CoalGatePassCreation",
+					"pattern": "CoalGatePassCreation",
+					"target": ["TargetCoalGatePassCreation"]
+				},
+				{
 					"name": "AshGatePassCreation",
 					"pattern": "AshGatePassCreation/:reqNo:",
 					"target": ["TargetAshGatePassCreation"]
@@ -218,6 +223,13 @@
 					"name": "AshGatePassDetail",
 					"pattern": "AshGatePassDetail/:gpNo:",
 					"target": ["TargetAshGatePassDetail"]
+				},
+				{
+					"name": "SecurityGateControl",
+					"pattern": "SecurityGateControl",
+					"target": [
+						"TargetSecurityGateControl"
+					]
 				},
 				{
 					"name": "ScrapRequestCreation",
@@ -383,6 +395,11 @@
 					"viewId": "AshGatePassRequest",
 					"viewName": "AshGatePassRequest"
 				},
+								"TargetCoalGatePassCreation": {
+					"viewType": "XML",
+					"viewId": "CoalGatePassCreation",
+					"viewName": "CoalGatePassCreation"
+				},
 				"TargetAshGatePassCreation": {
 					"viewType": "XML",
 					"viewId": "AshGatePassCreation",
@@ -462,6 +479,11 @@
 					"viewType": "XML",
 					"viewId": "PCPManageDetail",
 					"viewName": "PCPManageDetail"
+				},
+				"TargetSecurityGateControl": {
+					"viewType": "XML",
+					"viewId": "SecurityGateControl",
+					"viewName": "SecurityGateControl"
 				},
 				"TargetInspectionList": {
 					"viewType": "XML",

@@ -196,6 +196,8 @@
 							<unified:FileUploader
 								id="photoUploader"
 								buttonText="Browse &amp; Upload File(s)"
+								maximumFileSize="1"
+								fileSizeExceed=".onFileSizeExceed"
 								class="gpmsFileUploader"
 								multiple="true"
 								change=".onFileChange"
